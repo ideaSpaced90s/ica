@@ -28,7 +28,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with TickerProvider
 
     _progressController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 10000),
+      duration: const Duration(milliseconds: 3000), // Nominal duration
     );
 
     _progressAnimation = Tween<double>(begin: 0, end: 100).animate(
@@ -43,25 +43,36 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with TickerProvider
   }
 
   Future<void> _initFlow() async {
+    final startTime = DateTime.now();
     debugPrint('SplashScreen: Starting _initFlow...');
     final notifier = ref.read(chessProvider.notifier);
     
-    // Start services initialization in the background
+    // 1. Start services initialization in parallel
     debugPrint('SplashScreen: Triggering background service init...');
     final initFuture = _initServices(notifier);
 
-    // Static Image & Loading
-    debugPrint('SplashScreen: Starting 10s progress animation.');
-    final animationFuture = _progressController.forward();
+    // 2. Start a smooth progress animation
+    _progressController.forward();
     
+    // 3. Wait for actual services to load
     debugPrint('SplashScreen: Waiting for background services...');
     await initFuture;
     debugPrint('SplashScreen: Background services completed.');
 
-    // Wait for the gimmick animation to finish if it hasn't already
-    debugPrint('SplashScreen: Ensuring progress reaches 100%...');
-    await animationFuture;
-    await Future.delayed(const Duration(milliseconds: 400));
+    // 4. Enforce a small minimum time (e.g. 1.2s) for branding
+    final elapsed = DateTime.now().difference(startTime);
+    const minTime = Duration(milliseconds: 1200);
+    if (elapsed < minTime) {
+      await Future.delayed(minTime - elapsed);
+    }
+
+    // 5. Complete the progress bar quickly if not already done
+    if (_progressController.value < 1.0) {
+      await _progressController.animateTo(1.0, 
+        duration: const Duration(milliseconds: 400), 
+        curve: Curves.easeOutCubic
+      );
+    }
 
     if (mounted) {
       debugPrint('SplashScreen: Reverting to landscape orientation.');
@@ -105,7 +116,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with TickerProvider
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: ScholarlyTheme.backgroundStart,
+      backgroundColor: const Color(0xFF0F172A), // Dark Navy for immersive icon blending
       body: _buildStaticPhase(),
     );
   }
@@ -161,7 +172,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with TickerProvider
                 ],
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(40),
+                borderRadius: BorderRadius.circular(20), // Subtle rounding
                 child: Image.asset(
                   'assets/splash/splash.png',
                   height: MediaQuery.of(context).size.height * 0.52,
@@ -198,7 +209,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with TickerProvider
           '${_loadingValue.toInt()}%',
           style: GoogleFonts.inter(
             fontSize: 14,
-            color: ScholarlyTheme.textMuted,
+            color: Colors.white70,
             fontWeight: FontWeight.w600,
             letterSpacing: 1,
           ),
@@ -208,7 +219,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with TickerProvider
           width: 240,
           height: 4,
           decoration: BoxDecoration(
-            color: ScholarlyTheme.panelStroke,
+            color: Colors.white.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(2),
           ),
           child: FractionallySizedBox(
@@ -243,7 +254,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with TickerProvider
             Text(
               'powered by ',
               style: GoogleFonts.inter(
-                color: ScholarlyTheme.textSubtle,
+                color: Colors.white38,
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
                 letterSpacing: 0.5,
@@ -252,11 +263,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with TickerProvider
             Image.asset(
               'assets/splash/ideaspace.png',
               height: 16,
-              color: ScholarlyTheme.textPrimary, // Tint it if it's a solid logo, or omit
               errorBuilder: (context, error, stackTrace) => Text(
                 'ideaspace',
                 style: GoogleFonts.inter(
-                  color: ScholarlyTheme.textPrimary,
+                  color: Colors.white70,
                   fontWeight: FontWeight.bold,
                   fontSize: 12,
                 ),
@@ -268,7 +278,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with TickerProvider
         Text(
           'v1.0.0',
           style: GoogleFonts.inter(
-            color: ScholarlyTheme.textSubtle,
+            color: Colors.white24,
             fontSize: 11,
             fontWeight: FontWeight.w500,
           ),

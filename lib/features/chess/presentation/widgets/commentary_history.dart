@@ -107,13 +107,13 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
             child: TextField(
               controller: _textController,
               onSubmitted: (_) => _handleSend(),
-              style: GoogleFonts.inter(fontSize: 14, color: ScholarlyTheme.textPrimary),
+              style: GoogleFonts.inter(fontSize: 13, color: ScholarlyTheme.textPrimary),
               decoration: InputDecoration(
                 hintText: 'Ask the Council...',
-                hintStyle: GoogleFonts.inter(color: ScholarlyTheme.textSubtle, fontSize: 14),
+                hintStyle: GoogleFonts.inter(color: ScholarlyTheme.textSubtle, fontSize: 13),
                 border: InputBorder.none,
                 isDense: true,
-                contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                contentPadding: const EdgeInsets.symmetric(vertical: 8),
               ),
             ),
           ),
@@ -133,6 +133,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
     
     ref.read(chessProvider.notifier).sendUserQuery(text);
     _textController.clear();
+    FocusScope.of(context).unfocus();
   }
 
   Widget _buildContent(ChessState state, List<CommentaryEntry> history) {
@@ -199,14 +200,14 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
 
   Widget _buildUserBubble(CommentaryEntry entry) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.only(bottom: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Text(
             'YOU • ${_formatTime(entry.timestamp)}',
             style: GoogleFonts.inter(
-              fontSize: 11,
+              fontSize: 10,
               color: ScholarlyTheme.textSubtle,
               fontWeight: FontWeight.w600,
               letterSpacing: 0.5,
@@ -214,7 +215,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
           ),
           const SizedBox(height: 4),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
               color: ScholarlyTheme.accentBlueSoft.withValues(alpha: 0.3),
               borderRadius: const BorderRadius.only(
@@ -228,7 +229,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
               entry.text,
               style: GoogleFonts.inter(
                 color: ScholarlyTheme.textPrimary,
-                fontSize: 14,
+                fontSize: 13,
                 height: 1.4,
               ),
             ),
@@ -240,16 +241,16 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
 
   Widget _buildAiBubble(CommentaryEntry entry, bool isStreaming) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           CircleAvatar(
-            radius: 14,
+            radius: 12,
             backgroundColor: ScholarlyTheme.accentBlueSoft,
-            child: Icon(Icons.psychology, size: 16, color: ScholarlyTheme.accentBlue),
+            child: Icon(Icons.psychology, size: 14, color: ScholarlyTheme.accentBlue),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -257,7 +258,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
                 Text(
                   'COUNCIL • ${_formatTime(entry.timestamp)}',
                   style: GoogleFonts.inter(
-                    fontSize: 11,
+                    fontSize: 10,
                     color: ScholarlyTheme.textSubtle,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 0.5,
@@ -265,7 +266,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
                 ),
                 const SizedBox(height: 4),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
                     color: ScholarlyTheme.backgroundStart,
                     borderRadius: const BorderRadius.only(
@@ -282,7 +283,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
                           text: entry.text,
                           style: GoogleFonts.inter(
                             color: ScholarlyTheme.textPrimary,
-                            fontSize: 14,
+                            fontSize: 13,
                             height: 1.4,
                           ),
                         ),
@@ -291,7 +292,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
                             text: ' •••', 
                             style: GoogleFonts.inter(
                               color: ScholarlyTheme.textMuted,
-                              fontSize: 14,
+                              fontSize: 13,
                             ),
                           ),
                         if (isStreaming)
@@ -299,7 +300,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
                             text: ' ┃', 
                             style: GoogleFonts.inter(
                               color: ScholarlyTheme.accentBlue,
-                              fontSize: 14,
+                              fontSize: 13,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -317,18 +318,18 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
 
   Widget _buildThinkingIndicator(String dots) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           CircleAvatar(
-            radius: 14,
+            radius: 12,
             backgroundColor: ScholarlyTheme.accentBlueSoft,
-            child: Icon(Icons.psychology, size: 16, color: ScholarlyTheme.accentBlue),
+            child: Icon(Icons.psychology, size: 14, color: ScholarlyTheme.accentBlue),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
               color: ScholarlyTheme.backgroundStart,
               borderRadius: const BorderRadius.only(
@@ -341,7 +342,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
               'Thinking$dots',
               style: GoogleFonts.inter(
                 color: ScholarlyTheme.textMuted,
-                fontSize: 14,
+                fontSize: 13,
                 fontStyle: FontStyle.italic,
               ),
             ),

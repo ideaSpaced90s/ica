@@ -29,47 +29,7 @@ class _MainPageState extends ConsumerState<MainPage> {
       backgroundColor: ScholarlyTheme.backgroundStart,
       body: Stack(
         children: [
-          OrientationBuilder(
-            builder: (context, orientation) {
-              final isPortrait = orientation == Orientation.portrait;
-              if (isPortrait) {
-                return _buildPortraitLayout(context, ref, chessState);
-              } else {
-                return _buildLandscapeLayout(context, ref, chessState);
-              }
-            },
-          ),
-
-          // Overlay Chat System
-          if (_isCommentaryExpanded) ...[
-            Positioned.fill(
-              child: GestureDetector(
-                onTap: () => setState(() => _isCommentaryExpanded = false),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                  child: Container(color: Colors.black.withValues(alpha: 0.4)),
-                ),
-              ),
-            ),
-            Center(
-              child: Hero(
-                tag: 'commentary-panel',
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 40,
-                  ),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxWidth: 600,
-                      maxHeight: MediaQuery.of(context).size.height * 0.8,
-                    ),
-                    child: _buildCommentaryPanel(context, ref, chessState),
-                  ),
-                ),
-              ),
-            ),
-          ],
+          _buildPortraitLayout(context, ref, chessState),
 
           if (chessState.game.gameOver && !chessState.isGameOverDismissed)
             Positioned.fill(
@@ -191,32 +151,7 @@ class _MainPageState extends ConsumerState<MainPage> {
     }
   }
 
-  Widget _buildLandscapeLayout(
-    BuildContext context,
-    WidgetRef ref,
-    ChessState state,
-  ) {
-    final padding = MediaQuery.of(context).padding;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        padding.left > 0 ? padding.left : 16,
-        8,
-        padding.right > 0 ? padding.right : 16,
-        8,
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Container(
-            width: MediaQuery.of(context).size.width * 0.45,
-            padding: const EdgeInsets.fromLTRB(0, 4, 12, 4),
-            child: _buildControlPanel(context, ref, state),
-          ),
-          const Expanded(child: BoardStage()),
-        ],
-      ),
-    );
-  }
+
 
   Widget _buildPortraitLayout(
     BuildContext context,
@@ -231,13 +166,23 @@ class _MainPageState extends ConsumerState<MainPage> {
           padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
           child: EvaluationBar(evaluation: state.currentEvaluation),
         ),
-        const Expanded(child: BoardStage()),
-        const SizedBox(height: 8),
-        // Minimized Chat Option
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: _buildCollapsedCommentaryHeader(context, ref, state),
+        Expanded(
+          flex: _isCommentaryExpanded ? 5 : 9,
+          child: const BoardStage(),
         ),
+        if (_isCommentaryExpanded)
+          Expanded(
+            flex: 4,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: _buildCommentaryPanel(context, ref, state),
+            ),
+          )
+        else
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: _buildCollapsedCommentaryHeader(context, ref, state),
+          ),
         const SizedBox(height: 8),
         Padding(
           padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
@@ -257,84 +202,50 @@ class _MainPageState extends ConsumerState<MainPage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            'KINGSLAYER',
-            style: GoogleFonts.inter(
-              color: ScholarlyTheme.textPrimary,
-              fontSize: 18,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 1.5,
-            ),
-          ),
           Row(
             children: [
+              GestureDetector(
+                onTap: () => ref.read(chessProvider.notifier).toggleAiOperational(),
+                child: _AiProfileAnimation(
+                  isOperational: state.isAiOperational,
+                  child: Container(
+                    width: 32,
+                    height: 32,
+                    decoration: const BoxDecoration(
+                      image: DecorationImage(
+                        image: AssetImage('assets/board/profile.png'),
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
               Text(
-                'powered by ideaspace',
+                'KINGSLAYER',
                 style: GoogleFonts.inter(
-                  color: ScholarlyTheme.textMuted,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w500,
+                  color: ScholarlyTheme.textPrimary,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.5,
                 ),
               ),
             ],
+          ),
+          Text(
+            'powered by ideaspace',
+            style: GoogleFonts.inter(
+              color: ScholarlyTheme.textMuted,
+              fontSize: 10,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildControlPanel(
-    BuildContext context,
-    WidgetRef ref,
-    ChessState state,
-  ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _buildHeader(context, ref, state),
-        const SizedBox(height: 8),
-        EvaluationBar(evaluation: state.currentEvaluation),
-        const Spacer(),
-        // Minimized Chat Option
-        _buildCollapsedCommentaryHeader(context, ref, state),
-        const SizedBox(height: 8),
-        _buildActionRow(context, ref, state),
-        const SizedBox(height: 4),
-      ],
-    );
-  }
 
-  Widget _buildHeader(BuildContext context, WidgetRef ref, ChessState state) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            'KINGSLAYER',
-            style: GoogleFonts.inter(
-              color: ScholarlyTheme.textPrimary,
-              fontSize: 16,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 1.5,
-            ),
-          ),
-          Row(
-            children: [
-              Text(
-                'powered by ideaspace',
-                style: GoogleFonts.inter(
-                  color: ScholarlyTheme.textMuted,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildActionRow(
     BuildContext context,
@@ -429,28 +340,16 @@ class _MainPageState extends ConsumerState<MainPage> {
     ChessState state,
   ) {
     return GlassPanel(
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildCommentaryHeader(context, ref, state, isExpanded: true),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           Expanded(
             child: state.showLog
                 ? _buildMoveLog(context, state)
                 : CommentaryHistory(state: state),
-          ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            children: [
-              MetricMiniChip(label: 'EV', value: _formatScore(state.analysis)),
-              MetricMiniChip(
-                label: 'DP',
-                value: state.analysis['depth']?.toString() ?? '--',
-              ),
-              MetricMiniChip(label: 'AI', value: _statusLabel(state)),
-            ],
           ),
         ],
       ),
@@ -485,35 +384,6 @@ class _MainPageState extends ConsumerState<MainPage> {
   }) {
     return Row(
       children: [
-        GestureDetector(
-          onTap: () => ref.read(chessProvider.notifier).toggleAiOperational(),
-          child: _AiProfileAnimation(
-            isOperational: state.isAiOperational,
-            child: Container(
-              width: isExpanded ? 40 : 34,
-              height: isExpanded ? 40 : 34,
-              decoration: const BoxDecoration(
-                image: DecorationImage(
-                  image: AssetImage('assets/board/profile.png'),
-                  fit: BoxFit.cover,
-                ),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Flexible(
-          child: Text(
-            'Kingslayer AI',
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.inter(
-              color: ScholarlyTheme.textPrimary,
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-        const Spacer(),
         MiniClock(
           label: 'W',
           isActive: state.clockStarted && state.activeClockSide == 'white',
@@ -527,7 +397,7 @@ class _MainPageState extends ConsumerState<MainPage> {
           timeLeft: state.blackTimeLeft,
           isPaused: state.isPaused,
         ),
-        const SizedBox(width: 10),
+        const Spacer(),
         _buildHeaderIconButton(
           icon: state.showLog
               ? Icons.chat_bubble_outline_rounded
