@@ -16,7 +16,7 @@ class MatrixPiecePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final mainColor = isWhite ? const Color(0xFF00FF88) : const Color(0xFF006644);
+    final mainColor = isWhite ? const Color(0xFF00FF88) : const Color(0xFF00CCFF);
     
     // 1. Draw Piece Silhouette using TextPainter (to get the path/region)
     final charMap = {

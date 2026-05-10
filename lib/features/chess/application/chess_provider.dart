@@ -51,6 +51,8 @@ class _BoardSnapshot {
     this.moveAnimation,
     required this.isAiOperational,
     required this.isAnimationsEnabled,
+    required this.isPlayerWhite,
+    required this.isBoardFlipped,
   });
 
   final String fen;
@@ -79,6 +81,8 @@ class _BoardSnapshot {
   final MoveAnimationData? moveAnimation;
   final bool isAiOperational;
   final bool isAnimationsEnabled;
+  final bool isPlayerWhite;
+  final bool isBoardFlipped;
 }
 
 class MoveAnimationData {
@@ -845,6 +849,8 @@ class ChessNotifier extends StateNotifier<ChessState> {
       moveAnimation: state.moveAnimation,
       isAiOperational: state.isAiOperational,
       isAnimationsEnabled: state.isAnimationsEnabled,
+      isPlayerWhite: state.isPlayerWhite,
+      isBoardFlipped: state.isBoardFlipped,
     );
   }
 
@@ -879,6 +885,8 @@ class ChessNotifier extends StateNotifier<ChessState> {
       engineSelectionSquare: snapshot.engineSelectionSquare,
       moveAnimation: snapshot.moveAnimation,
       isAiOperational: snapshot.isAiOperational,
+      isPlayerWhite: snapshot.isPlayerWhite,
+      isBoardFlipped: snapshot.isBoardFlipped,
     );
     _syncUndoRedoFlags();
     if (state.clockStarted) {
@@ -1084,20 +1092,17 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
   void toggleBoardOrientation() {
     final newFlipped = !state.isBoardFlipped;
+    final newIsPlayerWhite = !state.isPlayerWhite; // Always toggle to maintain "Down = User"
     
-    // If we rotate at the very start of the game, assume the user wants to play as Black (or switch sides).
-    bool newIsPlayerWhite = state.isPlayerWhite;
-    if (state.recentMoves.isEmpty) {
-      newIsPlayerWhite = !state.isPlayerWhite;
-      debugPrint('ChessNotifier: Starting position rotation. Switching player to ${newIsPlayerWhite ? 'White' : 'Black'}.');
-    }
+    debugPrint('ChessNotifier: Rotation triggered. Switching player to ${newIsPlayerWhite ? 'White' : 'Black'} to maintain Down=User.');
 
     state = state.copyWith(
       isBoardFlipped: newFlipped,
       isPlayerWhite: newIsPlayerWhite,
+      threatenedSquares: const [], // Clear visual noise during rotation
     );
     
-    // Auto-move on rotation if it's engine turn (e.g. S-engine is White and we just became Black)
+    // Auto-move on rotation if it's now the engine's turn
     if (_isAiTurn() && !state.game.gameOver) {
       debugPrint('ChessNotifier: Rotation triggered engine analysis.');
       unawaited(ensureGameServicesStarted(analyzeCurrentPosition: true));

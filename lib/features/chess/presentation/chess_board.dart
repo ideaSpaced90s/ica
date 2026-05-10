@@ -8,28 +8,24 @@ import 'chess_piece_widget.dart';
 import 'orbiting_star_animation.dart';
 import 'scholarly_theme.dart';
 import '../domain/chess_game.dart';
-import '../domain/board_theme.dart' as domain;
 import 'widgets/promotion_overlay.dart';
 import 'widgets/forest_effects.dart';
 import 'widgets/toy_effects.dart';
 import 'widgets/steampunk_effects.dart';
 import 'widgets/matrix_effects.dart';
-import 'widgets/matrix_theme_painter.dart';
 import 'widgets/electric_effects.dart';
-import 'widgets/electric_theme_painter.dart';
 import 'package:chess/chess.dart' as chess_lib;
 import 'widgets/high_contrast_piece.dart';
 import 'widgets/ink_theme.dart';
 import 'widgets/slate_theme.dart';
 import 'widgets/liquid_theme.dart';
-import 'widgets/walnut_theme_painter.dart';
 import 'widgets/platinum_theme.dart';
-import 'widgets/grease_theme.dart';
 import 'widgets/grease_effects.dart';
 import 'animation/signature_move_overlay.dart';
 import 'animation/landing_feedback.dart';
 import 'animation/tap_ripple.dart';
 import 'animation/piece_motion_profile.dart';
+import 'themes/theme_registry.dart';
 
 
 class ChessBoard extends ConsumerStatefulWidget {
@@ -109,11 +105,9 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
   @override
   Widget build(BuildContext context) {
     final chessState = ref.watch(chessProvider);
+    final chessTheme = ThemeRegistry.getTheme(chessState.boardThemeId);
+    
 
-    final boardTheme = domain.BoardTheme.allThemes.firstWhere(
-      (t) => t.id == chessState.boardThemeId,
-      orElse: () => domain.BoardTheme.allThemes.first,
-    );
 
     // Use currentBoardFen for display during analysis/history viewing
     final displayGame = ChessGame(fen: chessState.currentBoardFen);
@@ -130,12 +124,10 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
             child: Container(
               clipBehavior: Clip.none,
               decoration: BoxDecoration(
-                borderRadius:
-                    boardTheme.id == 'theme2' || boardTheme.id == 'theme7'
+                borderRadius: chessTheme.id == 'theme2' || chessTheme.id == 'theme7'
                     ? BorderRadius.circular(12)
                     : null,
-                boxShadow:
-                    boardTheme.id == 'theme2' || boardTheme.id == 'theme7'
+                boxShadow: chessTheme.id == 'theme2' || chessTheme.id == 'theme7'
                     ? [
                         BoxShadow(
                           color: Colors.black.withValues(alpha: 0.18),
@@ -148,110 +140,12 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  if (boardTheme.id == 'theme2' &&
-                      chessState.isAnimationsEnabled)
-                    const ForestDustOverlay(),
-                  if (boardTheme.id == 'theme3' &&
-                      chessState.isAnimationsEnabled)
-                    const Positioned.fill(child: InkCheckSlash()),
-                  if (boardTheme.id == 'theme3' && chessState.game.inCheck)
-                    const Positioned.fill(child: InkCheckSlash()),
-                  if (boardTheme.id == 'theme4' &&
-                      chessState.isAnimationsEnabled)
-                    const FloatingBubblesOverlay(),
-                  if (boardTheme.id == 'theme5' &&
-                      chessState.isAnimationsEnabled)
-                    const IndustrialAtmosphereOverlay(),
-                  if (boardTheme.id == 'theme6' &&
-                      chessState.isAnimationsEnabled)
-                    const MatrixFallingCodeOverlay(),
+                  // 1. Background Effects
+                  chessTheme.buildBackground(context, chessState.isAnimationsEnabled),
 
-                  if (boardTheme.id == 'theme6' &&
-                      chessState.isAnimationsEnabled)
-                    const ScanlineOverlay(),
-                  if (boardTheme.id == 'theme4' &&
-                      chessState.isAnimationsEnabled)
-                    IgnorePointer(
-                      child: AnimatedBuilder(
-                        animation: _hologramEffectController,
-                        builder: (context, _) => CustomPaint(
-                          painter: PlatinumBoardPainter(
-                            isLight: true,
-                            animationValue: _hologramEffectController.value,
-                          ),
-                          size: Size.infinite,
-                        ),
-                      ),
-                    ),
-                  if (boardTheme.id == 'theme8' &&
-                      chessState.isAnimationsEnabled)
-                    const InsetShadowOverlay(),
-                  if (boardTheme.id == 'theme9' &&
-                      chessState.isAnimationsEnabled)
-                    const FloatingBubblesOverlay(),
-                  if (boardTheme.id == 'theme9' &&
-                      chessState.isAnimationsEnabled)
-                    const StaticDischargeOverlay(),
-                  if (boardTheme.id == 'theme2' && chessState.game.inCheck)
-                    Positioned.fill(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: Colors.redAccent.withValues(alpha: 0.5),
-                            width: 4,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.redAccent.withValues(alpha: 0.3),
-                              blurRadius: 10,
-                              spreadRadius: 2,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  if (boardTheme.id == 'theme3' && chessState.game.inCheck)
-                    const Positioned.fill(child: InkCheckSlash()),
-                  if (boardTheme.id == 'theme5' && chessState.game.inCheck)
-                    const Positioned.fill(child: GreaseCheckPulse()),
-                  if (boardTheme.id == 'theme7' && chessState.game.inCheck)
-                    const Positioned.fill(child: SlateCheckBorder()),
-
-                  if (boardTheme.id == 'theme6' && chessState.game.inCheck)
-                    const Positioned.fill(child: MatrixCheckRedPulse()),
-                  if (boardTheme.id == 'theme9' && chessState.game.inCheck)
-                    Positioned.fill(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: const Color(
-                              0xFF00BFFF,
-                            ).withValues(alpha: 0.5),
-                            width: 3,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(
-                                0xFF00BFFF,
-                              ).withValues(alpha: 0.3),
-                              blurRadius: 10,
-                              spreadRadius: 2,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  if (boardTheme.id == 'theme3')
-                    Positioned.fill(
-                      child: IgnorePointer(
-                        child: CustomPaint(
-                          painter: InkBoardPainter(
-                            isLight: true,
-                          ), // Placeholder for general grain
-                          size: Size.infinite,
-                        ),
-                      ),
-                    ),
+                  // 2. Check Effects
+                  if (chessState.game.inCheck)
+                    chessTheme.buildCheckEffect(context),
                   GridView.builder(
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
@@ -311,23 +205,23 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
                                 curve: Curves.easeOutCubic,
                                 decoration: BoxDecoration(
                                   color: isLight
-                                      ? boardTheme.lightSquare
-                                      : boardTheme.darkSquare,
+                                      ? chessTheme.lightSquare
+                                      : chessTheme.darkSquare,
                                   borderRadius:
-                                      boardTheme.id == 'theme2' ||
-                                          boardTheme.id == 'theme4' ||
-                                          boardTheme.id == 'theme8' ||
-                                          boardTheme.id == 'theme9'
+                                      chessTheme.id == 'theme2' ||
+                                          chessTheme.id == 'theme4' ||
+                                          chessTheme.id == 'theme8' ||
+                                          chessTheme.id == 'theme9'
                                       ? BorderRadius.circular(10)
                                       : null,
-                                  border: boardTheme.id == 'theme10'
+                                  border: chessTheme.id == 'theme10'
                                       ? Border.all(
                                           color: const Color(0xFF2A2A2A),
                                           width: 1.0,
                                         )
                                       : Border.all(
                                           color: isSelected
-                                              ? (boardTheme.id == 'theme2'
+                                              ? (chessTheme.id == 'theme2'
                                                     ? Colors.transparent
                                                     : ScholarlyTheme.accentGold)
                                               : isDragHover
@@ -347,292 +241,35 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
                                     ),
                                     child: Stack(
                                       children: [
-                                        if (boardTheme.id == 'theme2')
+                                        // 3. Square Texture/Painter
+                                        if (chessTheme.getSquarePainter(isLight, 0) != null)
                                           CustomPaint(
-                                            painter: LeafTexturePainter(),
-                                            size: Size.infinite,
-                                          ),
-                                        if (boardTheme.id == 'theme3')
-                                          CustomPaint(
-                                            painter: InkBoardPainter(
-                                              isLight: isLight,
+                                            painter: chessTheme.getSquarePainter(
+                                              isLight,
+                                              _matrixEffectController.value, // Matrix specific
                                             ),
                                             size: Size.infinite,
                                           ),
-                                        if (boardTheme.id == 'theme5')
-                                          CustomPaint(
-                                            painter: GreaseBoardPainter(
-                                              isLight: isLight,
-                                            ),
-                                            size: Size.infinite,
-                                          ),
-
-                                        if (boardTheme.id == 'theme6' &&
-                                            chessState.isAnimationsEnabled)
-                                          AnimatedBuilder(
-                                            animation: _matrixEffectController,
-                                            builder: (context, _) =>
-                                                CustomPaint(
-                                                  painter: MatrixSquarePainter(
-                                                    isLight: isLight,
-                                                    animationValue:
-                                                        _matrixEffectController
-                                                            .value,
-                                                  ),
-                                                  size: Size.infinite,
-                                                ),
-                                          ),
-                                        if (boardTheme.id == 'theme9' &&
-                                            chessState.isAnimationsEnabled)
-                                          AnimatedBuilder(
-                                            animation:
-                                                _electricEffectController,
-                                            builder: (context, _) => CustomPaint(
-                                              painter: ElectricGridPainter(
-                                                isLight: isLight,
-                                                animationValue:
-                                                    _electricEffectController
-                                                        .value,
-                                              ),
-                                              size: Size.infinite,
-                                            ),
-                                          ),
-                                        if (boardTheme.id == 'theme9')
-                                          const SizedBox.shrink(),
-
-                                        if (boardTheme.id == 'theme8')
-                                          CustomPaint(
-                                            painter: WalnutBoardPainter(
-                                              isLight: isLight,
-                                              baseColor: isLight
-                                                  ? boardTheme.lightSquare
-                                                  : boardTheme.darkSquare,
-                                            ),
-                                            size: Size.infinite,
-                                          ),
+                                        // 4. Selection Effects
                                         if (isSelected)
-                                          boardTheme.id == 'theme2'
-                                              ? const SelectionGlowRing(
-                                                  isActive: true,
-                                                )
-                                              : boardTheme.id == 'theme3'
-                                              ? const InkRippleIndicator(
-                                                  isActive: true,
-                                                )
-                                              : boardTheme.id == 'theme4'
-                                              ? AnimatedBuilder(
-                                                  animation:
-                                                      _hologramEffectController,
-                                                  builder: (context, _) => CustomPaint(
-                                                    painter:
-                                                        PlatinumSelectionPainter(
-                                                          animationValue:
-                                                              _hologramEffectController
-                                                                  .value,
-                                                          color: Colors.white,
-                                                        ),
-                                                    size: Size.infinite,
-                                                  ),
-                                                )
-                                              : boardTheme.id == 'theme7'
-                                              ? CustomPaint(
-                                                  painter:
-                                                      const SlateSelectionPainter(),
-                                                  size: Size.infinite,
-                                                )
-                                              : boardTheme.id == 'theme5'
-                                              ? AnimatedBuilder(
-                                                  animation: _gearController,
-                                                  builder: (context, _) =>
-                                                      CustomPaint(
-                                                        painter:
-                                                            GreaseSelectionPainter(
-                                                              animationValue:
-                                                                  _gearController
-                                                                      .value,
-                                                            ),
-                                                        size: Size.infinite,
-                                                      ),
-                                                )
-                                              : boardTheme.id == 'theme6'
-                                              ? AnimatedBuilder(
-                                                  animation:
-                                                      _matrixEffectController,
-                                                  builder: (context, _) => CustomPaint(
-                                                    painter: DigitalPulsePainter(
-                                                      animationValue:
-                                                          _matrixEffectController
-                                                              .value,
-                                                      color: const Color(
-                                                        0xFF00FF88,
-                                                      ),
-                                                    ),
-                                                    size: Size.infinite,
-                                                  ),
-                                                )
-                                              : boardTheme.id == 'theme9'
-                                              ? AnimatedBuilder(
-                                                  animation:
-                                                      _electricEffectController,
-                                                  builder: (context, _) => CustomPaint(
-                                                    painter: EnergySurgePainter(
-                                                      animationValue:
-                                                          _electricEffectController
-                                                              .value,
-                                                      color: const Color(
-                                                        0xFF00BFFF,
-                                                      ),
-                                                    ),
-                                                    size: Size.infinite,
-                                                  ),
-                                                )
-                                              : boardTheme.id == 'theme10'
-                                              ? const ShadowSelectionPulse()
-                                              : const OrbitingStarAnimation(
-                                                  color: ScholarlyTheme
-                                                      .accentBlueSoft,
-                                                  isActive: true,
-                                                ),
-                                        if (boardTheme.id == 'theme4')
-                                          AnimatedBuilder(
-                                            animation:
-                                                _hologramEffectController,
-                                            builder: (context, _) => CustomPaint(
-                                              painter: PlatinumBoardPainter(
-                                                isLight: isLight,
-                                                animationValue:
-                                                    _hologramEffectController
-                                                        .value,
-                                              ),
-                                              size: Size.infinite,
-                                            ),
+                                          chessTheme.buildSelectionEffect(
+                                            context,
+                                            _gearController.value,
+                                          ).runtimeType == SizedBox ?
+                                          const OrbitingStarAnimation(
+                                            color: ScholarlyTheme.accentBlueSoft,
+                                            isActive: true,
+                                          ) : chessTheme.buildSelectionEffect(
+                                            context,
+                                            chessTheme.id == 'theme4' ? _hologramEffectController.value :
+                                            chessTheme.id == 'theme5' ? _gearController.value :
+                                            chessTheme.id == 'theme6' ? _matrixEffectController.value :
+                                            chessTheme.id == 'theme9' ? _electricEffectController.value :
+                                            _gearController.value,
                                           ),
+                                        // 5. Move Hints
                                         if (isHint)
-                                          boardTheme.id == 'theme3'
-                                              ? InkMoveHint(
-                                                  isEnemy: piece != null,
-                                                )
-                                              : boardTheme.id == 'theme4'
-                                              ? CustomPaint(
-                                                  painter:
-                                                      PlatinumMoveHintPainter(
-                                                        isEnemy: piece != null,
-                                                      ),
-                                                  size: Size.infinite,
-                                                )
-                                              : boardTheme.id == 'theme5'
-                                              ? OilPuddleIndicator(
-                                                  isEnemy: piece != null,
-                                                )
-                                              : boardTheme.id == 'theme6'
-                                              ? AnimatedBuilder(
-                                                  animation:
-                                                      _matrixEffectController,
-                                                  builder: (context, _) => CustomPaint(
-                                                    painter: MatrixMoveHintPainter(
-                                                      animationValue:
-                                                          _matrixEffectController
-                                                              .value,
-                                                    ),
-                                                    size: Size.square(
-                                                      piece == null ? 20 : 45,
-                                                    ),
-                                                  ),
-                                                )
-                                              : boardTheme.id == 'theme7'
-                                              ? CustomPaint(
-                                                  painter: SlateMoveHintPainter(
-                                                    isEnemy: piece != null,
-                                                  ),
-                                                  size: Size.infinite,
-                                                )
-                                              : boardTheme.id == 'theme10'
-                                              ? Center(
-                                                  child: Container(
-                                                    width: piece == null
-                                                        ? 14
-                                                        : 40,
-                                                    height: piece == null
-                                                        ? 14
-                                                        : 40,
-                                                    decoration: BoxDecoration(
-                                                      shape: BoxShape.circle,
-                                                      color: piece == null
-                                                          ? Colors.white
-                                                                .withValues(
-                                                                  alpha: 0.45,
-                                                                )
-                                                          : Colors.transparent,
-                                                      border: piece != null
-                                                          ? Border.all(
-                                                              color: Colors
-                                                                  .white
-                                                                  .withValues(
-                                                                    alpha: 0.8,
-                                                                  ),
-                                                              width: 2.5,
-                                                            )
-                                                          : null,
-                                                    ),
-                                                  ),
-                                                )
-                                              : boardTheme.id == 'theme8'
-                                              ? Center(
-                                                  child: Container(
-                                                    width: piece == null
-                                                        ? 10
-                                                        : 35,
-                                                    height: piece == null
-                                                        ? 10
-                                                        : 35,
-                                                    decoration: BoxDecoration(
-                                                      shape: BoxShape.circle,
-                                                      color: piece == null
-                                                          ? Colors.black
-                                                                .withValues(
-                                                                  alpha: 0.3,
-                                                                )
-                                                          : Colors.transparent,
-                                                      border: piece != null
-                                                          ? Border.all(
-                                                              color: Colors
-                                                                  .black
-                                                                  .withValues(
-                                                                    alpha: 0.3,
-                                                                  ),
-                                                              width: 2.0,
-                                                            )
-                                                          : null,
-                                                    ),
-                                                  ),
-                                                )
-                                              : Center(
-                                                  child: Container(
-                                                    width: piece == null
-                                                        ? 12
-                                                        : 38,
-                                                    height: piece == null
-                                                        ? 12
-                                                        : 38,
-                                                    decoration: BoxDecoration(
-                                                      shape: BoxShape.circle,
-                                                      color: piece == null
-                                                          ? ScholarlyTheme
-                                                                .accentBlueSoft
-                                                                .withValues(
-                                                                  alpha: 0.75,
-                                                                )
-                                                          : Colors.transparent,
-                                                      border: piece != null
-                                                          ? Border.all(
-                                                              color: ScholarlyTheme
-                                                                  .accentBlueSoft,
-                                                              width: 2.8,
-                                                            )
-                                                          : null,
-                                                    ),
-                                                  ),
-                                                ),
+                                          chessTheme.buildMoveHint(context, piece != null),
                                         if (chessState.engineSelectionSquare ==
                                                 squareName &&
                                             chessState.isAnimationsEnabled)
@@ -646,17 +283,14 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
                                             color: Colors.redAccent,
                                             isActive: true,
                                           ),
+                                        // 6. Last Move Highlight
                                         if (isLastMove)
-                                          // Fade-out last-move highlight.
-                                          // TweenAnimationBuilder goes FROM full
-                                          // opacity TO 0.0 over 1.8s.
-                                          // ValueKey resets tween on each new move.
                                           TweenAnimationBuilder<double>(
                                             key: ValueKey(
                                               'lm_${chessState.lastMove}',
                                             ),
                                             tween: Tween(
-                                              begin: boardTheme.id == 'theme8'
+                                              begin: chessTheme.id == 'theme8'
                                                   ? 0.10
                                                   : 0.18,
                                               end: 0.0,
@@ -669,20 +303,7 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
                                                 : Duration.zero,
                                             curve: Curves.easeIn,
                                             builder: (context, opacity, _) {
-                                              return Container(
-                                                decoration: BoxDecoration(
-                                                  color:
-                                                      boardTheme.id == 'theme8'
-                                                      ? Colors.white.withValues(
-                                                          alpha: opacity,
-                                                        )
-                                                      : ScholarlyTheme
-                                                            .accentGold
-                                                            .withValues(
-                                                              alpha: opacity,
-                                                            ),
-                                                ),
-                                              );
+                                              return chessTheme.buildLastMoveHighlight(context, opacity);
                                             },
                                           ),
                                         if (isSuggestedFrom || isSuggestedTo)
@@ -712,8 +333,8 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
                                         ShakeAnimation(
                                           isActive:
                                               chessState.isAnimationsEnabled &&
-                                              (boardTheme.id == 'theme4' ||
-                                                  boardTheme.id == 'theme9') &&
+                                              (chessTheme.id == 'theme4' ||
+                                                  chessTheme.id == 'theme9') &&
                                               chessState.game.inCheck &&
                                               piece?.type ==
                                                   chess_lib.PieceType.KING &&
@@ -911,31 +532,32 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
     if (_selectedSquare != null && _legalTargets.contains(squareName)) {
       final isCapture = displayGame.getPiece(squareName) != null;
       if (isCapture && chessState.isAnimationsEnabled) {
-        if (ref.read(chessProvider).boardThemeId == 'theme2') {
+        final themeId = chessState.boardThemeId;
+        if (themeId == 'theme2') {
           _triggerLeafScatter(squareName);
-        } else if (ref.read(chessProvider).boardThemeId == 'theme3') {
+        } else if (themeId == 'theme3') {
           _triggerInkSplash(squareName);
-        } else if (ref.read(chessProvider).boardThemeId == 'theme4') {
+        } else if (themeId == 'theme4') {
           _triggerPlatinumCapture(squareName);
-        } else if (ref.read(chessProvider).boardThemeId == 'theme5') {
+        } else if (themeId == 'theme5') {
           _triggerOilSplash(squareName);
-        } else if (ref.read(chessProvider).boardThemeId == 'theme6') {
+        } else if (themeId == 'theme6') {
           _triggerMatrixGlitch(squareName);
-        } else if (ref.read(chessProvider).boardThemeId == 'theme8') {
+        } else if (themeId == 'theme8') {
           _triggerLiquidSplash(squareName);
-        } else if (ref.read(chessProvider).boardThemeId == 'theme10') {
+        } else if (themeId == 'theme10') {
           final capturedPiece = displayGame.getPiece(squareName);
           if (capturedPiece != null) {
             _triggerShadowCapture(squareName, capturedPiece);
           }
-        } else if (ref.read(chessProvider).boardThemeId == 'theme7') {
+        } else if (themeId == 'theme7') {
           _triggerSlateCapture(squareName);
-        } else if (ref.read(chessProvider).boardThemeId == 'theme9') {
+        } else if (themeId == 'theme9') {
           _triggerToyConfetti(squareName);
         }
       }
-      if (ref.read(chessProvider).boardThemeId == 'theme5' &&
-          ref.read(chessProvider).isAnimationsEnabled) {
+      if (chessState.boardThemeId == 'theme5' &&
+          chessState.isAnimationsEnabled) {
         _triggerGreaseTrail(_selectedSquare!, squareName);
       }
       ref.read(chessProvider.notifier).makeMove(_selectedSquare!, squareName);
@@ -1497,3 +1119,5 @@ class _ShadowCaptureEffectState extends State<ShadowCaptureEffect>
     );
   }
 }
+
+

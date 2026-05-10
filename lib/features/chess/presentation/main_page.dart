@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../application/chess_provider.dart';
 import 'evaluation_bar.dart';
+import 'chess_clock.dart';
 import 'scholarly_theme.dart';
 import 'widgets/commentary_history.dart';
 import 'widgets/game_metrics.dart';
@@ -164,6 +166,33 @@ class _MainPageState extends ConsumerState<MainPage> {
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
           child: EvaluationBar(evaluation: state.currentEvaluation),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _KnightTurnIndicator(
+                isActive: _isPlayerTurn(state),
+                isWhite: state.isPlayerWhite,
+              ),
+              const Spacer(),
+              _KnightTimeDisplay(
+                isActive: _isPlayerTurn(state),
+                timeLeft: state.isPlayerWhite ? state.whiteTimeLeft : state.blackTimeLeft,
+              ),
+              const SizedBox(width: 12),
+              _KnightTimeDisplay(
+                isActive: !_isPlayerTurn(state),
+                timeLeft: state.isPlayerWhite ? state.blackTimeLeft : state.whiteTimeLeft,
+              ),
+              const Spacer(),
+              _KnightTurnIndicator(
+                isActive: !_isPlayerTurn(state),
+                isWhite: !state.isPlayerWhite,
+              ),
+            ],
+          ),
         ),
         Expanded(
           flex: _isCommentaryExpanded ? 5 : 9,
@@ -383,19 +412,6 @@ class _MainPageState extends ConsumerState<MainPage> {
   }) {
     return Row(
       children: [
-        MiniClock(
-          label: 'W',
-          isActive: state.clockStarted && state.activeClockSide == 'white',
-          timeLeft: state.whiteTimeLeft,
-          isPaused: state.isPaused,
-        ),
-        const SizedBox(width: 8),
-        MiniClock(
-          label: 'B',
-          isActive: state.clockStarted && state.activeClockSide == 'black',
-          timeLeft: state.blackTimeLeft,
-          isPaused: state.isPaused,
-        ),
         const Spacer(),
         _buildHeaderIconButton(
           icon: state.showLog
@@ -771,6 +787,135 @@ class _AiProfileAnimationState extends State<_AiProfileAnimation>
         );
       },
       child: content,
+    );
+  }
+}
+
+
+
+class _KnightTimeDisplay extends StatelessWidget {
+  final bool isActive;
+  final Duration timeLeft;
+
+  const _KnightTimeDisplay({
+    required this.isActive,
+    required this.timeLeft,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: ScholarlyTheme.modernDecoration(sunken: !isActive).copyWith(
+        color: isActive ? ScholarlyTheme.panelBase : ScholarlyTheme.backgroundEnd,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isActive ? ScholarlyTheme.accentBlue : ScholarlyTheme.panelStroke,
+          width: isActive ? 1.5 : 1,
+        ),
+        boxShadow: isActive ? ScholarlyTheme.cardShadow : [],
+      ),
+      child: ChessClock(
+        isActive: isActive,
+        timeLeft: timeLeft,
+      ),
+    );
+  }
+}
+
+class _KnightTurnIndicator extends StatefulWidget {
+  final bool isActive;
+  final bool isWhite;
+
+  const _KnightTurnIndicator({
+    required this.isActive,
+    required this.isWhite,
+  });
+
+  @override
+  State<_KnightTurnIndicator> createState() => _KnightTurnIndicatorState();
+}
+
+class _KnightTurnIndicatorState extends State<_KnightTurnIndicator>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    );
+    if (widget.isActive) _controller.repeat(reverse: true);
+  }
+
+  @override
+  void didUpdateWidget(_KnightTurnIndicator oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isActive && !_controller.isAnimating) {
+      _controller.repeat(reverse: true);
+    } else if (!widget.isActive) {
+      _controller.stop();
+      _controller.animateTo(0, duration: const Duration(milliseconds: 400));
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bgColor = widget.isWhite ? Colors.black87 : Colors.white;
+    final pieceAsset = widget.isWhite ? 'assets/pieces/wN.svg' : 'assets/pieces/bN.svg';
+    final accentColor = widget.isWhite ? Colors.blueAccent : Colors.orangeAccent;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        AnimatedBuilder(
+          animation: _controller,
+          builder: (context, child) {
+            return Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: bgColor,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: widget.isActive
+                      ? accentColor.withValues(alpha: 0.8)
+                      : Colors.grey.withValues(alpha: 0.3),
+                  width: widget.isActive ? 3 : 1.5,
+                ),
+                boxShadow: widget.isActive
+                    ? [
+                        BoxShadow(
+                          color: accentColor.withValues(
+                            alpha: 0.4 * _controller.value,
+                          ),
+                          blurRadius: 12 * _controller.value,
+                          spreadRadius: 4 * _controller.value,
+                        )
+                      ]
+                    : [],
+              ),
+              padding: const EdgeInsets.all(6),
+              child: SvgPicture.asset(
+                pieceAsset,
+                colorFilter: widget.isActive ? null : ColorFilter.mode(
+                  Colors.grey.withValues(alpha: 0.5),
+                  BlendMode.srcIn,
+                ),
+              ),
+            );
+          },
+        ),
+      ],
     );
   }
 }

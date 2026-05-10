@@ -18,8 +18,8 @@ class WoodenPiecePainter extends CustomPainter {
 
     final woodGradient = LinearGradient(
       colors: isWhite
-          ? [const Color(0xFFD7B682), const Color(0xFF8B5A2B)]
-          : [const Color(0xFF5D4037), const Color(0xFF2B1B17)],
+          ? [const Color(0xFFF5E6CC), const Color(0xFFA67C52)] // Lightened
+          : [const Color(0xFF3E2723), const Color(0xFF1A0F0E)], // Darkened
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
