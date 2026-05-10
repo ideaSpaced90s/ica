@@ -44,17 +44,36 @@ class MiniClock extends StatelessWidget {
     required this.label,
     required this.isActive,
     required this.timeLeft,
+    required this.isPaused,
   });
 
   final String label;
   final bool isActive;
   final Duration timeLeft;
+  final bool isPaused;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
+        // Status Dot
+        Container(
+          width: 6,
+          height: 6,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: isPaused ? Colors.red : Colors.green,
+            boxShadow: [
+              BoxShadow(
+                color: (isPaused ? Colors.red : Colors.green).withValues(alpha: 0.5),
+                blurRadius: 4,
+                spreadRadius: 1,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 6),
         Text(
           label,
           style: TextStyle(

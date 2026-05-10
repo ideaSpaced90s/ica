@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -18,7 +19,7 @@ class MainPage extends ConsumerStatefulWidget {
 }
 
 class _MainPageState extends ConsumerState<MainPage> {
-  bool _isCommentaryExpanded = true;
+  bool _isCommentaryExpanded = false;
 
   @override
   Widget build(BuildContext context) {
@@ -38,6 +39,37 @@ class _MainPageState extends ConsumerState<MainPage> {
               }
             },
           ),
+          
+          // Overlay Chat System
+          if (_isCommentaryExpanded) ...[
+            Positioned.fill(
+              child: GestureDetector(
+                onTap: () => setState(() => _isCommentaryExpanded = false),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                  child: Container(
+                    color: Colors.black.withValues(alpha: 0.4),
+                  ),
+                ),
+              ),
+            ),
+            Center(
+              child: Hero(
+                tag: 'commentary-panel',
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 40),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: 600,
+                      maxHeight: MediaQuery.of(context).size.height * 0.8,
+                    ),
+                    child: _buildCommentaryPanel(context, ref, chessState),
+                  ),
+                ),
+              ),
+            ),
+          ],
+
           if (chessState.game.gameOver && !chessState.isGameOverDismissed)
             Positioned.fill(
               child: Container(
@@ -122,59 +154,6 @@ class _MainPageState extends ConsumerState<MainPage> {
                 ),
               ),
             ),
-          if (chessState.isPaused && !chessState.game.inCheckmate)
-            Positioned.fill(
-              child: Container(
-                color: Colors.black54,
-                child: Center(
-                  child: Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: ScholarlyTheme.modernDecoration(),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'Paused',
-                          style: GoogleFonts.inter(
-                            color: ScholarlyTheme.textPrimary,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 20,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        const Icon(
-                          Icons.pause_circle_filled_rounded,
-                          size: 48,
-                          color: ScholarlyTheme.accentBlue,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Game is Paused',
-                          style: GoogleFonts.inter(
-                            color: ScholarlyTheme.textPrimary,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        FilledButton(
-                          onPressed: () => ref.read(chessProvider.notifier).togglePause(),
-                          style: FilledButton.styleFrom(
-                            backgroundColor: ScholarlyTheme.accentBlue,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                          ),
-                          child: Text(
-                            'Resume',
-                            style: GoogleFonts.inter(fontWeight: FontWeight.w600),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
         ],
       ),
     );
@@ -235,38 +214,17 @@ class _MainPageState extends ConsumerState<MainPage> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _buildPortraitHeader(context, ref, state),
-        AnimatedSize(
-          duration: const Duration(milliseconds: 240),
-          curve: Curves.easeOutCubic,
-          alignment: Alignment.topCenter,
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 180),
-            switchInCurve: Curves.easeOutCubic,
-            switchOutCurve: Curves.easeInCubic,
-            child: _isCommentaryExpanded
-                ? const SizedBox.shrink(key: ValueKey('expanded-spacer'))
-                : Padding(
-                    key: const ValueKey('collapsed-chat-header'),
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: _buildCollapsedCommentaryHeader(context, ref, state),
-                  ),
-          ),
+        // Minimized Chat Option
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: _buildCollapsedCommentaryHeader(context, ref, state),
         ),
-        if (_isCommentaryExpanded)
-          Expanded(
-            flex: 4,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: _buildCommentaryPanel(context, ref, state),
-            ),
-          ),
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
           child: EvaluationBar(evaluation: state.currentEvaluation),
         ),
-        Expanded(
-          flex: _isCommentaryExpanded ? 5 : 9,
-          child: const BoardStage(),
+        const Expanded(
+          child: BoardStage(),
         ),
         const SizedBox(height: 8),
         Padding(
@@ -327,7 +285,7 @@ class _MainPageState extends ConsumerState<MainPage> {
         const SizedBox(height: 6),
         EvaluationBar(evaluation: state.currentEvaluation),
         const SizedBox(height: 8),
-        Expanded(child: _buildCommentaryPanel(context, ref, state)),
+        _buildCollapsedCommentaryHeader(context, ref, state),
       ],
     );
   }
@@ -492,7 +450,12 @@ class _MainPageState extends ConsumerState<MainPage> {
   ) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: () => setState(() => _isCommentaryExpanded = true),
+      onTap: () {
+        setState(() => _isCommentaryExpanded = true);
+        if (!state.isPaused) {
+          ref.read(chessProvider.notifier).togglePause();
+        }
+      },
       child: GlassPanel(
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
         child: _buildCommentaryHeader(context, ref, state, isExpanded: false),
@@ -541,12 +504,14 @@ class _MainPageState extends ConsumerState<MainPage> {
           label: 'W',
           isActive: state.clockStarted && state.activeClockSide == 'white',
           timeLeft: state.whiteTimeLeft,
+          isPaused: state.isPaused,
         ),
         const SizedBox(width: 8),
         MiniClock(
           label: 'B',
           isActive: state.clockStarted && state.activeClockSide == 'black',
           timeLeft: state.blackTimeLeft,
+          isPaused: state.isPaused,
         ),
         const SizedBox(width: 10),
         _buildHeaderIconButton(
@@ -559,10 +524,15 @@ class _MainPageState extends ConsumerState<MainPage> {
         const SizedBox(width: 6),
         _buildHeaderIconButton(
           icon: isExpanded
-              ? Icons.keyboard_arrow_up_rounded
-              : Icons.keyboard_arrow_down_rounded,
+              ? Icons.close_rounded
+              : Icons.keyboard_arrow_up_rounded,
           onTap: () {
-            setState(() => _isCommentaryExpanded = !isExpanded);
+            setState(() {
+              _isCommentaryExpanded = !isExpanded;
+              if (_isCommentaryExpanded && !state.isPaused) {
+                ref.read(chessProvider.notifier).togglePause();
+              }
+            });
           },
         ),
       ],
