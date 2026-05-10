@@ -613,6 +613,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
     if (parsed.containsKey('bestMove')) {
       final bestMove = parsed['bestMove'] as String?;
+      final aiTurn = _isAiTurn();
+      debugPrint('ChessNotifier: [SCOUT] bestMove=$bestMove, isAiTurn=$aiTurn, isPaused=${state.isPaused}, gameOver=${state.game.gameOver}');
+      
       if (bestMove != null &&
           _pendingHintFen != null &&
           _pendingHintFen == state.game.fen) {
@@ -620,18 +623,11 @@ class ChessNotifier extends StateNotifier<ChessState> {
         unawaited(_runHintFlow(bestMove));
       }
 
-      if (bestMove != null && _isAiTurn() && !state.game.gameOver && !state.isPaused) {
-        if (!state.isAiOperational) {
-          // Instant Strike logic: Bypass Bard and move immediately
-          debugPrint('ChessNotifier: Bard is silent. Metal strikes instantly: $bestMove');
-          _makeEngineMove(bestMove);
-        } else {
-          // Narrated Flow logic: Store and wait for the Bard to narrate
-          state = state.copyWith(
-            pendingEngineMove: bestMove,
-          );
-          debugPrint('ChessNotifier: Scout found $bestMove. Waiting for Bard to narrate.');
-        }
+      if (bestMove != null && aiTurn && !state.game.gameOver && !state.isPaused) {
+        debugPrint('ChessNotifier: [SCOUT] Executing engine move: $bestMove');
+        _makeEngineMove(bestMove);
+      } else if (bestMove != null) {
+        debugPrint('ChessNotifier: [SCOUT] Move ignored. Turn match: $aiTurn');
       }
     }
   }
@@ -988,7 +984,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
     _startClockTicker();
 
     // The Scout (Stockfish) starts its calculation
+    debugPrint('ChessNotifier: Player move completed. Starting engine analysis...');
     await ensureGameServicesStarted(analyzeCurrentPosition: true);
+    debugPrint('ChessNotifier: Engine analysis requested for FEN: ${state.game.fen}');
 
     state = state.copyWith(
       isEngineThinking: state.engineReady,
@@ -1026,12 +1024,24 @@ class ChessNotifier extends StateNotifier<ChessState> {
   }
 
   void toggleBoardOrientation() {
-    state = state.copyWith(isBoardFlipped: !state.isBoardFlipped);
+    final newFlipped = !state.isBoardFlipped;
     
-    // Auto-move on rotation if it's engine turn
-    if (_isAiTurn() && !state.game.gameOver && state.servicesStarted) {
-      _engine.analyzePosition(state.game.fen);
-      state = state.copyWith(isEngineThinking: true);
+    // If we rotate at the very start of the game, assume the user wants to play as Black (or switch sides).
+    bool newIsPlayerWhite = state.isPlayerWhite;
+    if (state.recentMoves.isEmpty) {
+      newIsPlayerWhite = !state.isPlayerWhite;
+      debugPrint('ChessNotifier: Starting position rotation. Switching player to ${newIsPlayerWhite ? 'White' : 'Black'}.');
+    }
+
+    state = state.copyWith(
+      isBoardFlipped: newFlipped,
+      isPlayerWhite: newIsPlayerWhite,
+    );
+    
+    // Auto-move on rotation if it's engine turn (e.g. S-engine is White and we just became Black)
+    if (_isAiTurn() && !state.game.gameOver) {
+      debugPrint('ChessNotifier: Rotation triggered engine analysis.');
+      unawaited(ensureGameServicesStarted(analyzeCurrentPosition: true));
     }
   }
 
@@ -1192,6 +1202,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
     }
 
     state = state.copyWith(
+      game: ChessGame(fen: state.game.fen), // Force a new instance for Riverpod deep updates
       lastMove: lastMove,
       recentMoves: updatedMoves,
       previousEvaluation: state.currentEvaluation,
@@ -1367,45 +1378,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
           isCommentaryStreaming: false,
         );
 
-        // --- SEQUENCE ORCHESTRATION ---
-        
-        if (player != 'Engine') {
-          // Bard has finished narrating the USER. Now wait for the SCOUT (Robot).
-          debugPrint('Bard: I have finished narrating the mortal. Scout, do you have a move?');
-          
-          state = state.copyWith(isCommentaryLoading: true);
-
-          // Wait for engine to provide a move (max 10s)
-          int safetyCount = 0;
-          while (state.pendingEngineMove == null && safetyCount < 100) {
-            await Future.delayed(const Duration(milliseconds: 100));
-            safetyCount++;
-            if (_isDisposed || !state.isAiOperational) return;
-          }
-
-          if (state.pendingEngineMove != null) {
-            final engineMove = state.pendingEngineMove!;
-            // Now the Bard narrates the ROBOT's move
-            await _runCommentary(
-              player: 'Engine',
-              move: _formatMoveForPrompt(engineMove),
-              evalScore: _formatEvalForPrompt(state.currentEvaluation),
-              isNested: true,
-            );
-          }
-        } else {
-          // NOW we wait for the dramatic pause (user configured) before moving the piece.
-          debugPrint('Bard: I have finished narrating the machine. Let them see the steel.');
-          await Future.delayed(state.autoPlayDelay);
-          if (_isDisposed || !state.isAiOperational) return;
-
-          // Reveal the Robot's move now.
-          if (state.pendingEngineMove != null) {
-            final engineMove = state.pendingEngineMove!;
-            state = state.copyWith(pendingEngineMove: null);
-            _makeEngineMove(engineMove);
-          }
-        }
+        // --- NO AUTOMATIC ORCHESTRATION ---
+        // The High Council (AI) only reveals its intelligence when asked.
+        // It no longer gates the S-engine (Stockfish) moves.
 
         if (revealHintAfterTyping && state.hintFrom != null && state.hintTo != null) {
           state = state.copyWith(isHintVisible: true, isHintLoading: false);

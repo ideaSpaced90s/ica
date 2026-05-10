@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -525,24 +524,6 @@ class _MainPageState extends ConsumerState<MainPage> {
     );
   }
 
-  String _statusLabel(ChessState state) {
-    if (state.servicesStarting) {
-      return 'BOOT';
-    }
-    if (!state.servicesStarted) {
-      return 'COLD';
-    }
-    if (state.isCommentaryLoading) {
-      return 'THINK';
-    }
-    if (state.isCommentaryStreaming) {
-      return 'WRITE';
-    }
-    if (state.isHintVisible) {
-      return 'HINT';
-    }
-    return 'READY';
-  }
 
   Future<void> _handleNewGame(BuildContext context, WidgetRef ref) async {
     final state = ref.read(chessProvider);
@@ -682,20 +663,6 @@ class _MainPageState extends ConsumerState<MainPage> {
     );
   }
 
-  String _formatScore(Map<String, dynamic> analysis) {
-    if (!analysis.containsKey('score')) {
-      return '--';
-    }
-
-    final score = analysis['score'];
-    final type = analysis['scoreType'];
-    if (type == 'mate') {
-      return 'M${score.abs()}';
-    }
-
-    final eval = (score is num ? score : 0) / 100;
-    return eval > 0 ? '+${eval.toStringAsFixed(2)}' : eval.toStringAsFixed(2);
-  }
 }
 
 class _AiProfileAnimation extends StatefulWidget {

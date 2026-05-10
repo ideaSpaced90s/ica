@@ -56,9 +56,6 @@ flutter_launcher_icons:
   image_path: "assets/board/appicon.png"
   adaptive_icon_background: "#0F172A"
   adaptive_icon_foreground: "assets/board/appicon.png"
-  windows:
-    generate: true
-    icon_size: 256
 
 flutter:
   uses-material-design: true

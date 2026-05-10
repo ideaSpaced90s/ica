@@ -149,10 +149,10 @@ class SettingsPage extends ConsumerWidget {
                       // Audio & Visual (Compact Grid)
                       const _SectionHeader(title: 'PREFERENCES'),
                       GlassPanel(
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(10),
                         child: Wrap(
-                          spacing: 12,
-                          runSpacing: 12,
+                          spacing: 10,
+                          runSpacing: 10,
                           alignment: WrapAlignment.start,
                           children: [
                             _SquareSettingsButton(
@@ -163,7 +163,7 @@ class SettingsPage extends ConsumerWidget {
                                 state.isMusicEnabled
                                     ? Icons.music_note_rounded
                                     : Icons.music_off_rounded,
-                                size: 28,
+                                size: 20,
                                 color: state.isMusicEnabled
                                     ? ScholarlyTheme.accentBlue
                                     : ScholarlyTheme.textPrimary,
@@ -177,7 +177,7 @@ class SettingsPage extends ConsumerWidget {
                                 state.isSoundEnabled
                                     ? Icons.volume_up_rounded
                                     : Icons.volume_off_rounded,
-                                size: 28,
+                                size: 20,
                                 color: state.isSoundEnabled
                                     ? ScholarlyTheme.accentBlue
                                     : ScholarlyTheme.textPrimary,
@@ -191,7 +191,7 @@ class SettingsPage extends ConsumerWidget {
                                 state.isAnimationsEnabled
                                     ? Icons.movie_filter_rounded
                                     : Icons.movie_filter_outlined,
-                                size: 28,
+                                size: 20,
                                 color: state.isAnimationsEnabled
                                     ? ScholarlyTheme.accentBlue
                                     : ScholarlyTheme.textPrimary,
@@ -205,10 +205,10 @@ class SettingsPage extends ConsumerWidget {
                       // Chessboard Themes
                       const _SectionHeader(title: 'CHESSBOARD'),
                       GlassPanel(
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(10),
                         child: Wrap(
-                          spacing: 12,
-                          runSpacing: 12,
+                          spacing: 10,
+                          runSpacing: 10,
                           alignment: WrapAlignment.start,
                           children: [
                             _SquareSettingsButton(
@@ -309,10 +309,10 @@ class SettingsPage extends ConsumerWidget {
                       // Time Controls
                       const _SectionHeader(title: 'TIME CONTROLS'),
                       GlassPanel(
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(10),
                         child: Wrap(
-                          spacing: 12,
-                          runSpacing: 12,
+                          spacing: 10,
+                          runSpacing: 10,
                           alignment: WrapAlignment.start,
                           children: [
                             _SquareSettingsButton(
@@ -408,10 +408,10 @@ class SettingsPage extends ConsumerWidget {
                       // Auto Play Delay
                       const _SectionHeader(title: 'AUTO PLAY'),
                       GlassPanel(
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(10),
                         child: Wrap(
-                          spacing: 12,
-                          runSpacing: 12,
+                          spacing: 10,
+                          runSpacing: 10,
                           alignment: WrapAlignment.start,
                           children: [
                             _SquareSettingsButton(
@@ -506,10 +506,10 @@ class SettingsPage extends ConsumerWidget {
                       // Actions Grid
                       const _SectionHeader(title: 'ACTIONS'),
                       GlassPanel(
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(10),
                         child: Wrap(
-                          spacing: 12,
-                          runSpacing: 12,
+                          spacing: 10,
+                          runSpacing: 10,
                           alignment: WrapAlignment.start,
                           children: [
                             _SquareSettingsButton(
@@ -517,7 +517,7 @@ class SettingsPage extends ConsumerWidget {
                               onTap: () => _showSavedGamesSheet(context, ref),
                               child: Icon(
                                 Icons.folder_open_rounded,
-                                size: 28,
+                                size: 20,
                                 color: ScholarlyTheme.textPrimary,
                               ),
                             ),
@@ -526,7 +526,7 @@ class SettingsPage extends ConsumerWidget {
                               onTap: () => notifier.saveCurrentGame(),
                               child: Icon(
                                 Icons.save_rounded,
-                                size: 28,
+                                size: 20,
                                 color: ScholarlyTheme.textPrimary,
                               ),
                             ),
@@ -535,7 +535,7 @@ class SettingsPage extends ConsumerWidget {
                               onTap: () => _confirmSaveAndExit(context, ref),
                               child: Icon(
                                 Icons.exit_to_app_rounded,
-                                size: 28,
+                                size: 20,
                                 color: Colors.red.shade600,
                               ),
                             ),
@@ -632,7 +632,7 @@ class SettingsPage extends ConsumerWidget {
             return Padding(
               padding: const EdgeInsets.all(16),
               child: GlassPanel(
-                padding: const EdgeInsets.all(18),
+                padding: const EdgeInsets.all(14),
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
                     maxHeight: MediaQuery.of(context).size.height * 0.72,
@@ -644,7 +644,7 @@ class SettingsPage extends ConsumerWidget {
                         'Saved games',
                         style: GoogleFonts.inter(
                           color: ScholarlyTheme.textPrimary,
-                          fontSize: 18,
+                          fontSize: 16,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -655,7 +655,7 @@ class SettingsPage extends ConsumerWidget {
                             : 'Tap a save to restore it.',
                         style: GoogleFonts.inter(
                           color: ScholarlyTheme.textMuted,
-                          fontSize: 13,
+                          fontSize: 12,
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -793,9 +793,9 @@ class _SquareSettingsButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final sizeInfo = MediaQuery.of(context);
     final isPortrait = sizeInfo.orientation == Orientation.portrait;
-    final double portraitBase = sizeInfo.size.height * 0.12;
-    final size = (isPortrait ? portraitBase.clamp(40.0, 80.0) : 40.0);
-    final outerSize = size + 16;
+    final double portraitBase = sizeInfo.size.height * 0.08;
+    final size = (isPortrait ? portraitBase.clamp(32.0, 56.0) : 32.0);
+    final outerSize = size + 12;
 
     return GestureDetector(
       onTap: onTap,
@@ -814,7 +814,7 @@ class _SquareSettingsButton extends StatelessWidget {
           ),
           borderRadius: BorderRadius.circular(12),
         ),
-        padding: const EdgeInsets.all(8),
+        padding: const EdgeInsets.all(6),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -826,7 +826,7 @@ class _SquareSettingsButton extends StatelessWidget {
                   label!,
                   textAlign: TextAlign.center,
                   style: GoogleFonts.inter(
-                    fontSize: isPortrait ? 11 : 9,
+                    fontSize: isPortrait ? 9 : 8,
                     fontWeight: sunken ? FontWeight.w600 : FontWeight.w500,
                     color: sunken
                         ? ScholarlyTheme.accentBlue
