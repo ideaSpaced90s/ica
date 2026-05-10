@@ -14,6 +14,7 @@ import '../domain/chess_game.dart';
 import '../services/commentary_engine.dart';
 import '../services/chess_sound_service.dart';
 import '../services/ai_context_service.dart';
+import '../data/settings_repository.dart';
 
 const _sentinel = Object();
 // Commentary default
@@ -134,7 +135,7 @@ class ChessState {
     this.pendingEngineMove,
     this.engineSelectionSquare,
     this.moveAnimation,
-    this.boardThemeId = 'theme4',
+    this.boardThemeId = 'classic',
     this.isSoundEnabled = true,
     this.isMusicEnabled = false,
     this.showLog = false,
@@ -359,7 +360,7 @@ class ChessState {
 }
 
 class ChessNotifier extends StateNotifier<ChessState> {
-  ChessNotifier(this._engine, this._commentaryEngine, this._savedGameRepository, this._soundService, this._aiContextService)
+  ChessNotifier(this._engine, this._commentaryEngine, this._savedGameRepository, this._soundService, this._aiContextService, this._settingsRepository)
       : super(ChessState(
           game: ChessGame(),
           commentaryHistory: [
@@ -371,18 +372,68 @@ class ChessNotifier extends StateNotifier<ChessState> {
           ],
         )) {
     _soundService.updateSettings(sfxEnabled: true, bgmEnabled: false);
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    try {
+      final s = await _settingsRepository.loadSettings();
+      state = state.copyWith(
+        boardThemeId: s.boardThemeId,
+        isSoundEnabled: s.isSoundEnabled,
+        isMusicEnabled: s.isMusicEnabled,
+        isAnimationsEnabled: s.isAnimationsEnabled,
+        isHapticsEnabled: s.isHapticsEnabled,
+        autoPlayDelay: Duration(seconds: s.autoPlayDelaySeconds),
+        showCoordinates: s.showCoordinates,
+        engineLevel: s.engineLevel,
+        isAiOperational: s.isAiOperational,
+        whiteTimeLeft: Duration(minutes: s.totalTimeMinutes),
+        blackTimeLeft: Duration(minutes: s.totalTimeMinutes),
+        incrementDuration: Duration(seconds: s.incrementSeconds),
+      );
+      _soundService.updateSettings(
+        sfxEnabled: s.isSoundEnabled,
+        bgmEnabled: s.isMusicEnabled,
+      );
+    } catch (e) {
+      debugPrint('Failed to load settings: $e');
+    }
+  }
+
+  Future<void> _saveSettings() async {
+    try {
+      final s = AppSettings(
+        boardThemeId: state.boardThemeId,
+        isSoundEnabled: state.isSoundEnabled,
+        isMusicEnabled: state.isMusicEnabled,
+        isAnimationsEnabled: state.isAnimationsEnabled,
+        isHapticsEnabled: state.isHapticsEnabled,
+        autoPlayDelaySeconds: state.autoPlayDelay.inSeconds,
+        showCoordinates: state.showCoordinates,
+        engineLevel: state.engineLevel,
+        isAiOperational: state.isAiOperational,
+        totalTimeMinutes: state.whiteTimeLeft.inMinutes,
+        incrementSeconds: state.incrementDuration.inSeconds,
+      );
+      await _settingsRepository.saveSettings(s);
+    } catch (e) {
+      debugPrint('Failed to save settings: $e');
+    }
   }
 
   void toggleSound() {
     final newEnabled = !state.isSoundEnabled;
     state = state.copyWith(isSoundEnabled: newEnabled);
     _soundService.updateSettings(sfxEnabled: newEnabled, bgmEnabled: state.isMusicEnabled);
+    _saveSettings();
   }
 
   void toggleMusic() {
     final newEnabled = !state.isMusicEnabled;
     state = state.copyWith(isMusicEnabled: newEnabled);
     _soundService.updateSettings(sfxEnabled: state.isSoundEnabled, bgmEnabled: newEnabled);
+    _saveSettings();
   }
 
   void toggleLog() {
@@ -391,14 +442,17 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
   void toggleCoordinates() {
     state = state.copyWith(showCoordinates: !state.showCoordinates);
+    _saveSettings();
   }
 
   void setBoardTheme(String themeId) {
     state = state.copyWith(boardThemeId: themeId);
+    _saveSettings();
   }
 
   void setAutoPlayDelay(Duration delay) {
     state = state.copyWith(autoPlayDelay: delay);
+    _saveSettings();
   }
 
   void setTimeControl(Duration total, Duration increment) {
@@ -410,14 +464,17 @@ class ChessNotifier extends StateNotifier<ChessState> {
       activeClockSide: null,
     );
     _stopClock();
+    _saveSettings();
   }
 
   void toggleHaptics() {
     state = state.copyWith(isHapticsEnabled: !state.isHapticsEnabled);
+    _saveSettings();
   }
 
   void toggleAnimations() {
     state = state.copyWith(isAnimationsEnabled: !state.isAnimationsEnabled);
+    _saveSettings();
   }
 
   void togglePause() {
@@ -443,6 +500,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
   void toggleAiOperational() {
     final newState = !state.isAiOperational;
     state = state.copyWith(isAiOperational: newState);
+    _saveSettings();
   }
 
   void dismissGameOver() {
@@ -495,6 +553,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
   final SavedGameRepository _savedGameRepository;
   final ChessSoundService _soundService;
   final AiContextService _aiContextService;
+  final SettingsRepository _settingsRepository;
   final _uuid = const Uuid();
 
   Timer? _engineMoveTimer;
@@ -1077,6 +1136,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
     }
     
     await _engine.setSkillLevel(skillLevel);
+    _saveSettings();
     if (state.servicesStarted && _isAiTurn()) {
       _engine.analyzePosition(state.game.fen, depth: depth);
     }
@@ -1550,12 +1610,35 @@ class ChessNotifier extends StateNotifier<ChessState> {
     _pendingHintFen = null;
     _stopClock();
  
+    final preserveTheme = state.boardThemeId;
+    final preserveSound = state.isSoundEnabled;
+    final preserveMusic = state.isMusicEnabled;
+    final preserveAnimations = state.isAnimationsEnabled;
+    final preserveHaptics = state.isHapticsEnabled;
+    final preserveAutoPlay = state.autoPlayDelay;
+    final preserveCoordinates = state.showCoordinates;
+    final preserveAiOperational = state.isAiOperational;
+    final preserveWhiteTime = state.whiteTimeLeft;
+    final preserveBlackTime = state.blackTimeLeft;
+    final preserveIncrement = state.incrementDuration;
+
     state = ChessState(
       game: ChessGame(),
       isPlayerWhite: preservePlayerWhite,
       isBoardFlipped: preserveBoardFlipped,
       isEngineVsEngine: preserveEvE,
       engineLevel: preserveLevel,
+      boardThemeId: preserveTheme,
+      isSoundEnabled: preserveSound,
+      isMusicEnabled: preserveMusic,
+      isAnimationsEnabled: preserveAnimations,
+      isHapticsEnabled: preserveHaptics,
+      autoPlayDelay: preserveAutoPlay,
+      showCoordinates: preserveCoordinates,
+      isAiOperational: preserveAiOperational,
+      whiteTimeLeft: preserveWhiteTime,
+      blackTimeLeft: preserveBlackTime,
+      incrementDuration: preserveIncrement,
       isEngineThinking: false,
       servicesStarted: state.servicesStarted,
       servicesStarting: false,
@@ -1564,7 +1647,6 @@ class ChessNotifier extends StateNotifier<ChessState> {
       commentaryError: _commentaryEngine.lastError,
       savedGames: state.savedGames,
       pendingEngineMove: null, // Clear pending move on reset
-      isAiOperational: state.isAiOperational,
       isGameOverDismissed: false,
     );
 
@@ -1608,6 +1690,7 @@ final chessSoundServiceProvider = Provider((ref) {
 });
 final commentaryEngineProvider = Provider((ref) => CommentaryEngine());
 final savedGameRepositoryProvider = Provider((ref) => SavedGameRepository());
+final settingsRepositoryProvider = Provider((ref) => SettingsRepository());
 
 final chessProvider = StateNotifierProvider<ChessNotifier, ChessState>((ref) {
   final engine = ref.watch(stockfishServiceProvider);
@@ -1615,6 +1698,7 @@ final chessProvider = StateNotifierProvider<ChessNotifier, ChessState>((ref) {
   final savedGameRepository = ref.watch(savedGameRepositoryProvider);
   final soundService = ref.watch(chessSoundServiceProvider);
   final aiContextService = ref.watch(aiContextServiceProvider);
+  final settingsRepository = ref.watch(settingsRepositoryProvider);
   return ChessNotifier(
-      engine, commentaryEngine, savedGameRepository, soundService, aiContextService);
+      engine, commentaryEngine, savedGameRepository, soundService, aiContextService, settingsRepository);
 });
