@@ -1,0 +1,1745 @@
+import 'dart:async';
+import 'package:chess/chess.dart' as chess_lib;
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
+
+import '../data/saved_game.dart';
+import '../data/saved_game_repository.dart';
+import '../data/stockfish_service.dart';
+import '../data/uci_parser.dart';
+import '../domain/chess_game.dart';
+import '../presentation/analysis_animation_controller.dart';
+import '../services/commentary_engine.dart';
+import '../services/chess_sound_service.dart';
+import '../services/ai_context_service.dart';
+
+const _sentinel = Object();
+// Commentary default
+const defaultCommentary = 'Make the first move to awaken the board.';
+const _initialClock = Duration(minutes: 10);
+const _clockWhite = 'white';
+const _clockBlack = 'black';
+
+class _BoardSnapshot {
+  const _BoardSnapshot({
+    required this.fen,
+    required this.lastMove,
+    required this.recentMoves,
+    required this.previousEvaluation,
+    required this.currentEvaluation,
+    required this.commentaryHistory,
+    required this.isCommentaryStreaming,
+    required this.isCommentaryLoading,
+    required this.isCommentaryEngineLoading,
+    required this.commentaryError,
+    required this.isEngineThinking,
+    required this.hintBestMove,
+    required this.hintFrom,
+    required this.hintTo,
+    required this.isHintVisible,
+    required this.isHintLoading,
+    required this.whiteTimeLeft,
+    required this.blackTimeLeft,
+    required this.clockStarted,
+    required this.activeClockSide,
+    required this.threatenedSquares,
+    this.pendingEngineMove,
+    this.engineSelectionSquare,
+    this.moveAnimation,
+    required this.isAiOperational,
+    required this.isAnimationsEnabled,
+  });
+
+  final String fen;
+  final String? lastMove;
+  final List<String> recentMoves;
+  final double previousEvaluation;
+  final double currentEvaluation;
+  final List<CommentaryEntry> commentaryHistory;
+  final bool isCommentaryStreaming;
+  final bool isCommentaryLoading;
+  final bool isCommentaryEngineLoading;
+  final String? commentaryError;
+  final bool isEngineThinking;
+  final String? hintBestMove;
+  final String? hintFrom;
+  final String? hintTo;
+  final bool isHintVisible;
+  final bool isHintLoading;
+  final Duration whiteTimeLeft;
+  final Duration blackTimeLeft;
+  final bool clockStarted;
+  final String? activeClockSide;
+  final List<String> threatenedSquares;
+  final String? pendingEngineMove;
+  final String? engineSelectionSquare;
+  final MoveAnimationData? moveAnimation;
+  final bool isAiOperational;
+  final bool isAnimationsEnabled;
+}
+
+class MoveAnimationData {
+  final String from;
+  final String to;
+  final String pieceCode;
+
+  const MoveAnimationData({
+    required this.from,
+    required this.to,
+    required this.pieceCode,
+  });
+}
+
+
+
+class ChessState {
+  ChessState({
+    required this.game,
+    this.lastMove,
+    this.recentMoves = const [],
+    this.analysis = const {},
+    this.isAnalysisMode = true,
+    this.previousEvaluation = 0.0,
+    this.currentEvaluation = 0.0,
+    this.isEngineThinking = false,
+    this.isPlayerWhite = true,
+    this.isBoardFlipped = false,
+    this.isEngineVsEngine = false,
+    this.engineLevel = 'B',
+    this.canUndo = false,
+    this.canRedo = false,
+    this.commentaryHistory = const [],
+    this.isCommentaryStreaming = false,
+    this.isCommentaryLoading = false,
+    this.isCommentaryEngineLoading = false,
+    this.commentaryError,
+    this.hintBestMove,
+    this.hintFrom,
+    this.hintTo,
+    this.isHintVisible = false,
+    this.isHintLoading = false,
+    this.servicesStarted = false,
+    this.servicesStarting = false,
+    this.engineReady = false,
+    this.startupError,
+    this.whiteTimeLeft = _initialClock,
+    this.blackTimeLeft = _initialClock,
+    this.clockStarted = false,
+    this.activeClockSide,
+    this.savedGames = const [],
+    this.isSavedGamesLoading = false,
+    this.isSavingGame = false,
+    this.threatenedSquares = const [],
+    this.pendingEngineMove,
+    this.engineSelectionSquare,
+    this.moveAnimation,
+    this.boardThemeId = 'theme4',
+    this.isSoundEnabled = true,
+    this.isMusicEnabled = false,
+    this.showLog = false,
+    this.showCoordinates = true,
+    this.incrementDuration = const Duration(seconds: 0),
+    this.isHapticsEnabled = true,
+    this.isPaused = false,
+    this.viewingMoveIndex,
+    this.isAiOperational = true,
+    this.isGameOverDismissed = false,
+    this.isPromoting = false,
+    this.promotionSource,
+    this.promotionDestination,
+    this.autoPlayDelay = const Duration(seconds: 3),
+    this.isAnimationsEnabled = true,
+    this.isCouncilOnline = false,
+  });
+
+  final ChessGame game;
+  final String? lastMove;
+  final List<String> recentMoves;
+  final Map<String, dynamic> analysis;
+  final bool isAnalysisMode;
+  final double previousEvaluation;
+  final double currentEvaluation;
+  final bool isEngineThinking;
+  final bool isPlayerWhite;
+  final bool isBoardFlipped;
+  final bool isEngineVsEngine;
+  final String engineLevel;
+  final bool canUndo;
+  final bool canRedo;
+  final List<CommentaryEntry> commentaryHistory;
+  final bool isCommentaryStreaming;
+  final bool isCommentaryLoading;
+  final bool isCommentaryEngineLoading;
+  final String? commentaryError;
+  final String? hintBestMove;
+  final String? hintFrom;
+  final String? hintTo;
+  final bool isHintVisible;
+  final bool isHintLoading;
+  final bool servicesStarted;
+  final bool servicesStarting;
+  final bool engineReady;
+  final String? startupError;
+  final Duration whiteTimeLeft;
+  final Duration blackTimeLeft;
+  final bool clockStarted;
+  final String? activeClockSide;
+  final List<SavedGameEntry> savedGames;
+  final bool isSavedGamesLoading;
+  final bool isSavingGame;
+  final List<String> threatenedSquares;
+  final String? pendingEngineMove;
+  final String? engineSelectionSquare;
+  final MoveAnimationData? moveAnimation;
+  final String boardThemeId;
+  final bool isSoundEnabled;
+  final bool isMusicEnabled;
+  final bool showLog;
+  final bool showCoordinates;
+  final Duration incrementDuration;
+  final bool isHapticsEnabled;
+  final bool isPaused;
+  final int? viewingMoveIndex;
+  final bool isAiOperational;
+  final bool isGameOverDismissed;
+  final bool isPromoting;
+  final String? promotionSource;
+  final String? promotionDestination;
+  final Duration autoPlayDelay;
+  final bool isAnimationsEnabled;
+  final bool isCouncilOnline;
+
+  String get currentBoardFen {
+    if (viewingMoveIndex == null || viewingMoveIndex! >= recentMoves.length) {
+      return game.fen;
+    }
+    final tempGame = chess_lib.Chess();
+    for (int i = 0; i <= viewingMoveIndex!; i++) {
+      tempGame.move(recentMoves[i]);
+    }
+    return tempGame.fen;
+  }
+
+  ChessState copyWith({
+    ChessGame? game,
+    Object? lastMove = _sentinel,
+    List<String>? recentMoves,
+    Map<String, dynamic>? analysis,
+    bool? isAnalysisMode,
+    double? previousEvaluation,
+    double? currentEvaluation,
+    bool? isEngineThinking,
+    bool? isPlayerWhite,
+    bool? isBoardFlipped,
+    bool? isEngineVsEngine,
+    String? engineLevel,
+    bool? canUndo,
+    bool? canRedo,
+    List<CommentaryEntry>? commentaryHistory,
+    bool? isCommentaryStreaming,
+    bool? isCommentaryLoading,
+    bool? isCommentaryEngineLoading,
+    Object? commentaryError = _sentinel,
+    Object? hintBestMove = _sentinel,
+    Object? hintFrom = _sentinel,
+    Object? hintTo = _sentinel,
+    bool? isHintVisible,
+    bool? isHintLoading,
+    bool? servicesStarted,
+    bool? servicesStarting,
+    bool? engineReady,
+    Object? startupError = _sentinel,
+    Duration? whiteTimeLeft,
+    Duration? blackTimeLeft,
+    bool? clockStarted,
+    Object? activeClockSide = _sentinel,
+    List<SavedGameEntry>? savedGames,
+    bool? isSavedGamesLoading,
+    bool? isSavingGame,
+    List<String>? threatenedSquares,
+    Object? pendingEngineMove = _sentinel,
+    Object? engineSelectionSquare = _sentinel,
+    Object? moveAnimation = _sentinel,
+    String? boardThemeId,
+    bool? isSoundEnabled,
+    bool? isMusicEnabled,
+    bool? showLog,
+    bool? showCoordinates,
+    Duration? incrementDuration,
+    bool? isHapticsEnabled,
+    bool? isPaused,
+    Object? viewingMoveIndex = _sentinel,
+    bool? isAiOperational,
+    bool? isGameOverDismissed,
+    bool? isPromoting,
+    Object? promotionSource = _sentinel,
+    Object? promotionDestination = _sentinel,
+    Duration? autoPlayDelay,
+    bool? isAnimationsEnabled,
+    bool? isCouncilOnline,
+  }) {
+    return ChessState(
+      game: game ?? this.game,
+      lastMove: identical(lastMove, _sentinel) ? this.lastMove : lastMove as String?,
+      recentMoves: recentMoves ?? this.recentMoves,
+      analysis: analysis ?? this.analysis,
+      isAnalysisMode: isAnalysisMode ?? this.isAnalysisMode,
+      previousEvaluation: previousEvaluation ?? this.previousEvaluation,
+      currentEvaluation: currentEvaluation ?? this.currentEvaluation,
+      isEngineThinking: isEngineThinking ?? this.isEngineThinking,
+      isPlayerWhite: isPlayerWhite ?? this.isPlayerWhite,
+      isBoardFlipped: isBoardFlipped ?? this.isBoardFlipped,
+      isEngineVsEngine: isEngineVsEngine ?? this.isEngineVsEngine,
+      engineLevel: engineLevel ?? this.engineLevel,
+      canUndo: canUndo ?? this.canUndo,
+      canRedo: canRedo ?? this.canRedo,
+      commentaryHistory: commentaryHistory ?? this.commentaryHistory,
+      isCommentaryStreaming: isCommentaryStreaming ?? this.isCommentaryStreaming,
+      isCommentaryLoading: isCommentaryLoading ?? this.isCommentaryLoading,
+      isCommentaryEngineLoading:
+          isCommentaryEngineLoading ?? this.isCommentaryEngineLoading,
+      commentaryError: identical(commentaryError, _sentinel)
+          ? this.commentaryError
+          : commentaryError as String?,
+      hintBestMove: identical(hintBestMove, _sentinel)
+          ? this.hintBestMove
+          : hintBestMove as String?,
+      hintFrom: identical(hintFrom, _sentinel) ? this.hintFrom : hintFrom as String?,
+      hintTo: identical(hintTo, _sentinel) ? this.hintTo : hintTo as String?,
+      isHintVisible: isHintVisible ?? this.isHintVisible,
+      isHintLoading: isHintLoading ?? this.isHintLoading,
+      servicesStarted: servicesStarted ?? this.servicesStarted,
+      servicesStarting: servicesStarting ?? this.servicesStarting,
+      engineReady: engineReady ?? this.engineReady,
+      startupError: identical(startupError, _sentinel)
+          ? this.startupError
+          : startupError as String?,
+      whiteTimeLeft: whiteTimeLeft ?? this.whiteTimeLeft,
+      blackTimeLeft: blackTimeLeft ?? this.blackTimeLeft,
+      clockStarted: clockStarted ?? this.clockStarted,
+      activeClockSide: identical(activeClockSide, _sentinel)
+          ? this.activeClockSide
+          : activeClockSide as String?,
+      savedGames: savedGames ?? this.savedGames,
+      isSavedGamesLoading: isSavedGamesLoading ?? this.isSavedGamesLoading,
+      isSavingGame: isSavingGame ?? this.isSavingGame,
+      threatenedSquares: threatenedSquares ?? this.threatenedSquares,
+      pendingEngineMove: identical(pendingEngineMove, _sentinel)
+          ? this.pendingEngineMove
+          : pendingEngineMove as String?,
+      engineSelectionSquare: identical(engineSelectionSquare, _sentinel)
+          ? this.engineSelectionSquare
+          : engineSelectionSquare as String?,
+      moveAnimation: identical(moveAnimation, _sentinel)
+          ? this.moveAnimation
+          : moveAnimation as MoveAnimationData?,
+      boardThemeId: boardThemeId ?? this.boardThemeId,
+      isSoundEnabled: isSoundEnabled ?? this.isSoundEnabled,
+      isMusicEnabled: isMusicEnabled ?? this.isMusicEnabled,
+      showLog: showLog ?? this.showLog,
+      showCoordinates: showCoordinates ?? this.showCoordinates,
+      incrementDuration: incrementDuration ?? this.incrementDuration,
+      isHapticsEnabled: isHapticsEnabled ?? this.isHapticsEnabled,
+      isPaused: isPaused ?? this.isPaused,
+      viewingMoveIndex: identical(viewingMoveIndex, _sentinel)
+          ? this.viewingMoveIndex
+          : viewingMoveIndex as int?,
+      isAiOperational: isAiOperational ?? this.isAiOperational,
+      isGameOverDismissed: isGameOverDismissed ?? this.isGameOverDismissed,
+      isPromoting: isPromoting ?? this.isPromoting,
+      promotionSource: identical(promotionSource, _sentinel)
+          ? this.promotionSource
+          : promotionSource as String?,
+      promotionDestination: identical(promotionDestination, _sentinel)
+          ? this.promotionDestination
+          : promotionDestination as String?,
+      autoPlayDelay: autoPlayDelay ?? this.autoPlayDelay,
+      isAnimationsEnabled: isAnimationsEnabled ?? this.isAnimationsEnabled,
+      isCouncilOnline: isCouncilOnline ?? this.isCouncilOnline,
+    );
+  }
+}
+
+class ChessNotifier extends StateNotifier<ChessState> {
+  ChessNotifier(this._engine, this._commentaryEngine, this._savedGameRepository, this._soundService, this._aiContextService)
+      : super(ChessState(game: ChessGame())) {
+    _soundService.updateSettings(sfxEnabled: true, bgmEnabled: false);
+  }
+
+  void toggleSound() {
+    final newEnabled = !state.isSoundEnabled;
+    state = state.copyWith(isSoundEnabled: newEnabled);
+    _soundService.updateSettings(sfxEnabled: newEnabled, bgmEnabled: state.isMusicEnabled);
+  }
+
+  void toggleMusic() {
+    final newEnabled = !state.isMusicEnabled;
+    state = state.copyWith(isMusicEnabled: newEnabled);
+    _soundService.updateSettings(sfxEnabled: state.isSoundEnabled, bgmEnabled: newEnabled);
+  }
+
+  void toggleLog() {
+    state = state.copyWith(showLog: !state.showLog);
+  }
+
+  void toggleCoordinates() {
+    state = state.copyWith(showCoordinates: !state.showCoordinates);
+  }
+
+  void setBoardTheme(String themeId) {
+    state = state.copyWith(boardThemeId: themeId);
+  }
+
+  void setAutoPlayDelay(Duration delay) {
+    state = state.copyWith(autoPlayDelay: delay);
+  }
+
+  void setTimeControl(Duration total, Duration increment) {
+    state = state.copyWith(
+      whiteTimeLeft: total,
+      blackTimeLeft: total,
+      incrementDuration: increment,
+      clockStarted: false,
+      activeClockSide: null,
+    );
+    _stopClock();
+  }
+
+  void toggleHaptics() {
+    state = state.copyWith(isHapticsEnabled: !state.isHapticsEnabled);
+  }
+
+  void toggleAnimations() {
+    state = state.copyWith(isAnimationsEnabled: !state.isAnimationsEnabled);
+  }
+
+  void togglePause() {
+    final newPaused = !state.isPaused;
+    state = state.copyWith(isPaused: newPaused);
+    if (newPaused) {
+      _stopClock();
+      _engineMoveTimer?.cancel();
+    } else {
+      // Clear analysis position when resuming game
+      state = state.copyWith(viewingMoveIndex: null, threatenedSquares: const []);
+      
+      if (state.clockStarted) {
+        _startClockTicker();
+      }
+      if (state.servicesStarted && _isAiTurn() && !state.game.gameOver && state.pendingEngineMove == null) {
+        _engine.analyzePosition(state.game.fen);
+        state = state.copyWith(isEngineThinking: true);
+      }
+    }
+  }
+
+  void toggleAiOperational() {
+    final newState = !state.isAiOperational;
+    state = state.copyWith(isAiOperational: newState);
+    
+    // 1. If the Bard is awakened during a turn where it should be narrating, trigger it.
+    if (newState && _isAiTurn() && !state.game.gameOver && !_isCommentarySequenceRunning) {
+      final player = _playerWhoJustMoved();
+      unawaited(_runCommentary(
+        player: player,
+        move: _formatMoveForPrompt(state.lastMove ?? ''),
+        evalScore: _formatEvalForPrompt(state.currentEvaluation),
+      ));
+    }
+    
+    // 2. If the Bard is silenced while an engine move was waiting for narration, release it instantly.
+    if (!newState && _isAiTurn() && !state.game.gameOver && state.pendingEngineMove != null) {
+      final move = state.pendingEngineMove!;
+      state = state.copyWith(pendingEngineMove: null);
+      debugPrint('ChessNotifier: Bard silenced mid-turn. Releasing move instantly: $move');
+      _makeEngineMove(move);
+    }
+  }
+
+  void dismissGameOver() {
+    state = state.copyWith(isGameOverDismissed: true);
+  }
+
+  void jumpToMove(int index) {
+    if (index < -1 || index >= state.recentMoves.length) return;
+    state = state.copyWith(viewingMoveIndex: index == -1 ? null : index);
+    
+    // Auto-analyze position when jumping in analysis
+    if (state.isPaused) {
+      unawaited(ensureGameServicesStarted(analyzeCurrentPosition: true));
+    }
+  }
+
+  void stepMove(int delta) {
+    final currentIndex = state.viewingMoveIndex ?? (state.recentMoves.length - 1);
+    jumpToMove(currentIndex + delta);
+  }
+
+  void goToStart() {
+    jumpToMove(-1);
+  }
+
+  void goToEnd() {
+    jumpToMove(state.recentMoves.length - 1);
+  }
+
+  void toggleEngine() {
+    final newState = !state.isAnalysisMode;
+    state = state.copyWith(isAnalysisMode: newState);
+    if (newState) {
+      ensureGameServicesStarted(analyzeCurrentPosition: true);
+    } else {
+      _engine.stopAnalysis();
+    }
+  }
+
+  void showThreats() {
+    final fen = state.currentBoardFen;
+    final game = ChessGame(fen: fen);
+    final turn = game.turn;
+    final opponentColor = turn == chess_lib.Color.WHITE ? chess_lib.Color.BLACK : chess_lib.Color.WHITE;
+    
+    final threatened = <String>[];
+    for (final square in chess_lib.Chess.SQUARES.keys) {
+      if (game.isAttacked(square, opponentColor)) {
+        final piece = game.getPiece(square);
+        if (piece != null && piece.color == turn) {
+          threatened.add(square);
+        }
+      }
+    }
+    state = state.copyWith(threatenedSquares: threatened);
+  }
+
+  final StockfishService _engine;
+  final CommentaryEngine _commentaryEngine;
+  final SavedGameRepository _savedGameRepository;
+  final ChessSoundService _soundService;
+  final AiContextService _aiContextService;
+  final _uuid = const Uuid();
+
+  Timer? _engineMoveTimer;
+  Timer? _commentaryRevealTimer;
+  Timer? _clockTimer;
+  StreamSubscription<String>? _engineOutputSubscription;
+  final List<_BoardSnapshot> _undoStack = [];
+  final List<_BoardSnapshot> _redoStack = [];
+
+  String? _pendingHintFen;
+  bool _isCommentarySequenceRunning = false;
+  Future<void>? _startupFuture;
+  bool _isDisposed = false;
+
+  Future<void> ensureGameServicesStarted({
+    bool analyzeCurrentPosition = false,
+    int depth = 15,
+  }) async {
+    if (_isDisposed) {
+      return;
+    }
+
+    if (state.servicesStarted) {
+      if (analyzeCurrentPosition) {
+        _engine.analyzePosition(state.game.fen, depth: depth);
+      }
+      return;
+    }
+
+    if (_startupFuture != null) {
+      await _startupFuture;
+      if (analyzeCurrentPosition && state.engineReady) {
+        _engine.analyzePosition(state.game.fen, depth: depth);
+      }
+      return;
+    }
+
+    state = state.copyWith(
+      servicesStarting: true,
+      startupError: null,
+      commentaryError: null,
+    );
+
+    _startupFuture = _startServices(
+      depth: depth,
+      analyzeCurrentPosition: analyzeCurrentPosition,
+    );
+    await _startupFuture;
+    _startupFuture = null;
+  }
+
+  Future<void> _startServices({
+    required int depth,
+    required bool analyzeCurrentPosition,
+  }) async {
+    try {
+      // Start listening BEFORE init so we don't miss uciok/readyok
+      _engineOutputSubscription ??=
+          _engine.outputStream.listen(_handleEngineOutput);
+          
+      await _engine.init();
+      
+      state = state.copyWith(
+        servicesStarted: true,
+        servicesStarting: false,
+        engineReady: _engine.isReady,
+        isCouncilOnline: _commentaryEngine.isInitialized,
+        startupError: null,
+      );
+      // Initialization will happen on-demand in _runCommentary
+      // unawaited(_initializeCommentaryEngine());
+      if (analyzeCurrentPosition) {
+        _engine.analyzePosition(state.game.fen, depth: depth);
+      }
+    } catch (error, stackTrace) {
+      debugPrint('ChessNotifier startup failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      state = state.copyWith(
+        servicesStarting: false,
+        servicesStarted: false,
+        engineReady: false,
+        startupError: 'Unable to start the engine.',
+      );
+    }
+  }
+
+
+  void _handleEngineOutput(String line) {
+    if (_isDisposed) {
+      return;
+    }
+
+    final parsed = UCIParser.parseLine(line);
+    if (parsed.isEmpty) {
+      return;
+    }
+
+    double? newEval;
+    if (parsed.containsKey('score')) {
+      final score = parsed['score'] as int;
+      newEval = parsed['scoreType'] == 'mate'
+          ? (score > 0 ? 99.0 : -99.0)
+          : score / 100.0;
+    }
+
+    state = state.copyWith(
+      analysis: {...state.analysis, ...parsed},
+      currentEvaluation: newEval ?? state.currentEvaluation,
+      engineReady: true,
+    );
+
+    debugPrint('ChessNotifier: Parsed engine output. type: ${parsed['type']}, isAiTurn: ${_isAiTurn()}, isEngineThinking: ${state.isEngineThinking}');    if (newEval != null) {
+      // Just record the evaluation, don't trigger commentary here anymore.
+      // The orchestration is handled in makeMove and _runCommentary.
+      debugPrint('ChessNotifier: Score updated: $newEval');
+    }
+
+    if (parsed.containsKey('bestMove')) {
+      final bestMove = parsed['bestMove'] as String?;
+      if (bestMove != null &&
+          _pendingHintFen != null &&
+          _pendingHintFen == state.game.fen) {
+        _pendingHintFen = null;
+        unawaited(_runHintFlow(bestMove));
+      }
+
+      if (bestMove != null && _isAiTurn() && !state.game.gameOver && !state.isPaused) {
+        if (!state.isAiOperational) {
+          // Instant Strike logic: Bypass Bard and move immediately
+          debugPrint('ChessNotifier: Bard is silent. Metal strikes instantly: $bestMove');
+          _makeEngineMove(bestMove);
+        } else {
+          // Narrated Flow logic: Store and wait for the Bard to narrate
+          state = state.copyWith(
+            pendingEngineMove: bestMove,
+          );
+          debugPrint('ChessNotifier: Scout found $bestMove. Waiting for Bard to narrate.');
+        }
+      }
+    }
+  }
+
+  void sendCommand(String command) {
+    _engine.sendCommand(command);
+  }
+
+  Future<List<SavedGameEntry>> loadSavedGames() async {
+    state = state.copyWith(isSavedGamesLoading: true);
+    try {
+      final saves = await _savedGameRepository.listSaves();
+      state = state.copyWith(
+        savedGames: saves,
+        isSavedGamesLoading: false,
+      );
+      return saves;
+    } catch (error, stackTrace) {
+      debugPrint('Failed to load saved games: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      state = state.copyWith(
+        isSavedGamesLoading: false,
+        commentaryError: 'Could not load saved games.',
+      );
+      return state.savedGames;
+    }
+  }
+
+  Future<SavedGameEntry?> saveCurrentGame() async {
+    state = state.copyWith(isSavingGame: true);
+    try {
+      final entry = SavedGameEntry(
+        id: _uuid.v4(),
+        savedAt: DateTime.now(),
+        fen: state.game.fen,
+        recentMoves: List<String>.from(state.recentMoves),
+        isPlayerWhite: state.isPlayerWhite,
+        isBoardFlipped: state.isBoardFlipped,
+        whiteTimeLeftMs: state.whiteTimeLeft.inMilliseconds,
+        blackTimeLeftMs: state.blackTimeLeft.inMilliseconds,
+        clockStarted: state.clockStarted,
+        activeClockSide: state.activeClockSide,
+        lastMove: state.lastMove,
+        commentaryHistory: state.commentaryHistory,
+      );
+      final saves = await _savedGameRepository.save(entry);
+      state = state.copyWith(
+        savedGames: saves,
+        isSavingGame: false,
+        commentaryError: null,
+      );
+      return entry;
+    } catch (error, stackTrace) {
+      debugPrint('Failed to save game: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      state = state.copyWith(
+        isSavingGame: false,
+        commentaryError: 'Could not save the game.',
+      );
+      return null;
+    }
+  }
+
+  Future<void> deleteSavedGame(String id) async {
+    try {
+      final saves = await _savedGameRepository.delete(id);
+      state = state.copyWith(savedGames: saves);
+    } catch (error, stackTrace) {
+      debugPrint('Failed to delete save: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      state = state.copyWith(commentaryError: 'Could not delete the save.');
+    }
+  }
+
+  Future<void> loadSavedGame(SavedGameEntry entry) async {
+    _engineMoveTimer?.cancel();
+    _cancelCommentaryReveal();
+    _pendingHintFen = null;
+    _undoStack.clear();
+    _redoStack.clear();
+    _stopClock();
+
+    final restoredGame = ChessGame(fen: entry.fen);
+    state = ChessState(
+      game: restoredGame,
+      lastMove: entry.lastMove,
+      recentMoves: entry.recentMoves,
+      isPlayerWhite: entry.isPlayerWhite,
+      isBoardFlipped: entry.isBoardFlipped,
+      commentaryHistory: entry.commentaryHistory,
+      servicesStarted: state.servicesStarted,
+      servicesStarting: state.servicesStarting,
+      engineReady: state.engineReady,
+      isCommentaryEngineLoading: _commentaryEngine.isInitializing,
+      commentaryError: _commentaryEngine.lastError,
+      whiteTimeLeft: Duration(milliseconds: entry.whiteTimeLeftMs),
+      blackTimeLeft: Duration(milliseconds: entry.blackTimeLeftMs),
+      clockStarted: entry.clockStarted,
+      activeClockSide: entry.clockStarted
+          ? (entry.activeClockSide ?? _clockSideForGame(restoredGame))
+          : null,
+      savedGames: state.savedGames,
+      threatenedSquares: const [],
+      isAnimationsEnabled: state.isAnimationsEnabled,
+    );
+
+    _syncUndoRedoFlags();
+
+    if (state.clockStarted) {
+      _startClockTicker();
+    }
+
+    if (state.clockStarted && _isAiTurn() && !state.game.gameOver) {
+      await ensureGameServicesStarted(analyzeCurrentPosition: true);
+    }
+  }
+
+  void _saveSnapshotForUndo() {
+    _undoStack.add(_captureCurrentSnapshot());
+    _redoStack.clear();
+    _syncUndoRedoFlags();
+  }
+
+  void _syncUndoRedoFlags() {
+    state = state.copyWith(
+      canUndo: _undoStack.isNotEmpty,
+      canRedo: _redoStack.isNotEmpty,
+    );
+  }
+
+  _BoardSnapshot _captureCurrentSnapshot() {
+    return _BoardSnapshot(
+      fen: state.game.fen,
+      lastMove: state.lastMove,
+      recentMoves: List<String>.from(state.recentMoves),
+      previousEvaluation: state.previousEvaluation,
+      currentEvaluation: state.currentEvaluation,
+      commentaryHistory: List.from(state.commentaryHistory),
+      isCommentaryStreaming: state.isCommentaryStreaming,
+      isCommentaryLoading: state.isCommentaryLoading,
+      isCommentaryEngineLoading: state.isCommentaryEngineLoading,
+      commentaryError: state.commentaryError,
+      isEngineThinking: state.isEngineThinking,
+      hintBestMove: state.hintBestMove,
+      hintFrom: state.hintFrom,
+      hintTo: state.hintTo,
+      isHintVisible: state.isHintVisible,
+      isHintLoading: state.isHintLoading,
+      whiteTimeLeft: state.whiteTimeLeft,
+      blackTimeLeft: state.blackTimeLeft,
+      clockStarted: state.clockStarted,
+      activeClockSide: state.activeClockSide,
+      threatenedSquares: List<String>.from(state.threatenedSquares),
+      pendingEngineMove: state.pendingEngineMove,
+      engineSelectionSquare: state.engineSelectionSquare,
+      moveAnimation: state.moveAnimation,
+      isAiOperational: state.isAiOperational,
+      isAnimationsEnabled: state.isAnimationsEnabled,
+    );
+  }
+
+  void _restoreSnapshot(_BoardSnapshot snapshot) {
+    _cancelCommentaryReveal();
+    _pendingHintFen = null;
+
+    state = state.copyWith(
+      game: ChessGame(fen: snapshot.fen),
+      lastMove: snapshot.lastMove,
+      recentMoves: snapshot.recentMoves,
+      previousEvaluation: snapshot.previousEvaluation,
+      currentEvaluation: snapshot.currentEvaluation,
+      commentaryHistory: snapshot.commentaryHistory,
+      isCommentaryStreaming: snapshot.isCommentaryStreaming,
+      isCommentaryLoading: snapshot.isCommentaryLoading,
+      isCommentaryEngineLoading: snapshot.isCommentaryEngineLoading,
+      commentaryError: snapshot.commentaryError,
+      isEngineThinking: snapshot.isEngineThinking,
+      analysis: const {},
+      hintBestMove: snapshot.hintBestMove,
+      hintFrom: snapshot.hintFrom,
+      hintTo: snapshot.hintTo,
+      isHintVisible: snapshot.isHintVisible,
+      isHintLoading: snapshot.isHintLoading,
+      whiteTimeLeft: snapshot.whiteTimeLeft,
+      blackTimeLeft: snapshot.blackTimeLeft,
+      clockStarted: snapshot.clockStarted,
+      activeClockSide: snapshot.activeClockSide,
+      threatenedSquares: snapshot.threatenedSquares,
+      pendingEngineMove: snapshot.pendingEngineMove,
+      engineSelectionSquare: snapshot.engineSelectionSquare,
+      moveAnimation: snapshot.moveAnimation,
+      isAiOperational: snapshot.isAiOperational,
+    );
+    _syncUndoRedoFlags();
+    if (state.clockStarted) {
+      _startClockTicker();
+    } else {
+      _stopClock();
+    }
+    if (state.servicesStarted && _isAiTurn()) {
+      _engine.analyzePosition(state.game.fen);
+    }
+  }
+
+  void _makeEngineMove(String moveStr) {
+    if (moveStr.length < 4) {
+      return;
+    }
+    final from = moveStr.substring(0, 2);
+    final to = moveStr.substring(2, 4);
+    final promotion = moveStr.length > 4 ? moveStr[4] : 'q';
+
+    final piece = state.game.getPiece(from);
+    final colorPrefix = piece?.color == chess_lib.Color.WHITE ? 'w' : 'b';
+    final pieceCode = piece != null ? '$colorPrefix${piece.type.toUpperCase()}' : 'bP';
+
+    // Trigger animation before the actual move is made in the game state
+    state = state.copyWith(
+      moveAnimation: MoveAnimationData(
+        from: from,
+        to: to,
+        pieceCode: pieceCode,
+      ),
+      engineSelectionSquare: null, // Clear selection when move starts
+    );
+
+    _saveSnapshotForUndo();
+    _clearHint();
+    final moveMade = state.game.makeMove({
+      'from': from,
+      'to': to,
+      'promotion': promotion,
+    });
+    if (moveMade) {
+      _onMoveCompleted('$from$to');
+      
+      // Always trigger analysis after an engine move to get the score for commentary
+      if (!state.game.gameOver) {
+        unawaited(ensureGameServicesStarted(analyzeCurrentPosition: true));
+      }
+    }
+  }
+
+  bool _isWhite(Object? color) {
+    if (color == null) return false;
+    final s = color.toString().toLowerCase();
+    return s == 'white' || s == 'w' || s.contains('white');
+  }
+
+  bool _isBlack(Object? color) {
+    if (color == null) return false;
+    final s = color.toString().toLowerCase();
+    return s == 'black' || s == 'b' || s.contains('black');
+  }
+
+  // Public version for UI
+  bool isWhite(Object? color) => _isWhite(color);
+  bool isBlack(Object? color) => _isBlack(color);
+
+  void clearMoveAnimation() {
+    state = state.copyWith(moveAnimation: null);
+  }
+
+  bool _isPlayerTurn() {
+    final turn = state.game.turn;
+    if (state.isPlayerWhite) {
+      return turn == chess_lib.Color.WHITE;
+    } else {
+      return turn == chess_lib.Color.BLACK;
+    }
+  }
+
+  bool _isAiTurn() {
+    if (state.game.gameOver || state.isPaused) return false;
+    
+    // If auto-play is enabled, it's always the AI's turn to move if it's not paused
+    if (state.isEngineVsEngine) return true;
+
+    final turn = state.game.turn;
+    if (state.isPlayerWhite) {
+      return turn == chess_lib.Color.BLACK;
+    } else {
+      return turn == chess_lib.Color.WHITE;
+    }
+  }
+
+  String _playerWhoJustMoved() {
+    // If it's now White's turn, Black just moved.
+    return state.game.turn == chess_lib.Color.WHITE ? 'Black' : 'White';
+  }
+
+  String _sideToMoveLabel() {
+    return state.game.turn == chess_lib.Color.WHITE ? 'White' : 'Black';
+  }
+
+  Future<void> makeMove(String from, String to) async {
+    if (state.game.gameOver || state.isPaused) return;
+
+    if (!_isPlayerTurn() && !state.isEngineVsEngine) {
+      debugPrint('ChessNotifier: Not player turn. Ignoring move.');
+      return;
+    }
+
+    final piece = state.game.getPiece(from);
+    final colorPrefix = piece?.color == chess_lib.Color.WHITE ? 'w' : 'b';
+    final pieceCode = piece != null ? '$colorPrefix${piece.type.toUpperCase()}' : 'wP';
+
+    _saveSnapshotForUndo();
+    _clearHint();
+
+    // Detect Promotion
+    final isPawn = piece?.type.toUpperCase() == 'P';
+    final targetRank = to.substring(1);
+    final isPromotionRank = (piece?.color == chess_lib.Color.WHITE && targetRank == '8') ||
+                            (piece?.color == chess_lib.Color.BLACK && targetRank == '1');
+
+    if (isPawn && isPromotionRank) {
+      state = state.copyWith(
+        isPromoting: true,
+        promotionSource: from,
+        promotionDestination: to,
+        moveAnimation: null, // Don't animate until piece is chosen
+      );
+      return;
+    }
+
+    // Trigger animation
+    state = state.copyWith(
+      moveAnimation: MoveAnimationData(
+        from: from,
+        to: to,
+        pieceCode: pieceCode,
+      ),
+    );
+
+    final moveMade = state.game.makeMove({
+      'from': from,
+      'to': to,
+      'promotion': 'q',
+    });
+    if (!moveMade) {
+      state = state.copyWith(moveAnimation: null); // Revert animation if move failed
+      return;
+    }
+
+    final wasClockStarted = state.clockStarted;
+    _onMoveCompleted('$from$to');
+
+    if (!wasClockStarted) {
+      state = state.copyWith(clockStarted: true);
+    }
+
+    _setActiveClockSide(_clockSideForTurn());
+    _startClockTicker();
+
+    // The Scout (Stockfish) starts its calculation
+    await ensureGameServicesStarted(analyzeCurrentPosition: true);
+    
+    // The Bard (AI) starts its narration immediately
+    if (!_isCommentarySequenceRunning) {
+      unawaited(_runCommentary(
+        player: state.game.turn == chess_lib.Color.WHITE ? 'Black' : 'White',
+        move: _formatMoveForPrompt('$from$to'),
+        evalScore: _formatEvalForPrompt(state.currentEvaluation),
+      ));
+    }
+
+    state = state.copyWith(
+      isEngineThinking: state.engineReady,
+      isCommentaryLoading: state.isAiOperational, // Show the Bard is thinking only if operational
+    );
+  }
+
+  Future<void> switchSides() async {
+    _undoStack.clear();
+    _redoStack.clear();
+    _cancelCommentaryReveal();
+    _pendingHintFen = null;
+    _stopClock();
+
+    final newIsPlayerWhite = !state.isPlayerWhite;
+    state = state.copyWith(
+      game: ChessGame(),
+      isPlayerWhite: newIsPlayerWhite,
+      isBoardFlipped: !newIsPlayerWhite,
+      isEngineThinking: !newIsPlayerWhite && state.servicesStarted,
+      servicesStarted: state.servicesStarted,
+      servicesStarting: state.servicesStarting,
+      engineReady: state.engineReady,
+      isCommentaryEngineLoading: _commentaryEngine.isInitializing,
+      commentaryError: _commentaryEngine.lastError,
+      savedGames: state.savedGames,
+      threatenedSquares: const [],
+      isPromoting: false,
+    );
+
+    _syncUndoRedoFlags();
+    if (!newIsPlayerWhite) {
+      await ensureGameServicesStarted(analyzeCurrentPosition: true);
+      state = state.copyWith(isEngineThinking: state.engineReady);
+    }
+  }
+
+  void toggleBoardOrientation() {
+    state = state.copyWith(isBoardFlipped: !state.isBoardFlipped);
+    
+    // Auto-move on rotation if it's engine turn
+    if (_isAiTurn() && !state.game.gameOver && state.servicesStarted) {
+      _engine.analyzePosition(state.game.fen);
+      state = state.copyWith(isEngineThinking: true);
+    }
+  }
+
+  Future<void> toggleEngineVsEngine() async {
+    final newVal = !state.isEngineVsEngine;
+    state = state.copyWith(isEngineVsEngine: newVal);
+    
+    if (newVal && !state.game.gameOver && !state.isPaused) {
+      // Start the clock if not already started when enabling auto-play
+      if (!state.clockStarted) {
+        state = state.copyWith(clockStarted: true);
+        _startClockTicker();
+      }
+      
+      await ensureGameServicesStarted(analyzeCurrentPosition: true);
+      state = state.copyWith(isEngineThinking: state.engineReady);
+
+      // Immediately trigger the automated sequence (Calculation + Optional Narration)
+      if (state.isAiOperational && !_isCommentarySequenceRunning) {
+        final player = _playerWhoJustMoved();
+        unawaited(_runCommentary(
+          player: player,
+          move: _formatMoveForPrompt(state.lastMove ?? 'Opening'),
+          evalScore: _formatEvalForPrompt(state.currentEvaluation),
+        ));
+      }
+    }
+  }
+
+  Future<void> setEngineLevel(String level) async {
+    state = state.copyWith(engineLevel: level);
+    
+    int skillLevel;
+    int depth;
+    
+    switch (level) {
+      case 'A': skillLevel = 20; depth = 20; break;
+      case 'B': skillLevel = 15; depth = 15; break;
+      case 'C': skillLevel = 10; depth = 10; break;
+      case 'D': skillLevel = 5; depth = 5; break;
+      case 'E': skillLevel = 0; depth = 2; break;
+      default: skillLevel = 15; depth = 15;
+    }
+    
+    await _engine.setSkillLevel(skillLevel);
+    if (state.servicesStarted && _isAiTurn()) {
+      _engine.analyzePosition(state.game.fen, depth: depth);
+    }
+  }
+
+  Future<void> requestHint() async {
+    if (state.game.gameOver || state.isHintLoading || state.isEngineThinking) {
+      return;
+    }
+
+    _cancelCommentaryReveal();
+    _pendingHintFen = state.game.fen;
+    state = state.copyWith(
+      isHintLoading: true,
+      isHintVisible: false,
+      hintBestMove: null,
+      hintFrom: null,
+      hintTo: null,
+      commentaryError: null,
+    );
+    await ensureGameServicesStarted();
+    if (state.engineReady) {
+      _engine.analyzePosition(state.game.fen, depth: 12);
+    }
+  }
+
+  void clearHint() {
+    _clearHint();
+  }
+
+  void completePromotion(String promotionPiece) async {
+    if (!state.isPromoting || state.promotionSource == null || state.promotionDestination == null) {
+      return;
+    }
+
+    final from = state.promotionSource!;
+    final to = state.promotionDestination!;
+
+    final piece = state.game.getPiece(from);
+    final colorPrefix = piece?.color == chess_lib.Color.WHITE ? 'w' : 'b';
+    final pieceCode = piece != null ? '$colorPrefix${piece.type.toUpperCase()}' : 'wP';
+
+    state = state.copyWith(
+      isPromoting: false,
+      promotionSource: null,
+      promotionDestination: null,
+      moveAnimation: MoveAnimationData(
+        from: from,
+        to: to,
+        pieceCode: pieceCode,
+      ),
+    );
+
+    final moveMade = state.game.makeMove({
+      'from': from,
+      'to': to,
+      'promotion': promotionPiece,
+    });
+
+    if (!moveMade) {
+      state = state.copyWith(moveAnimation: null);
+      return;
+    }
+
+    final wasClockStarted = state.clockStarted;
+    _onMoveCompleted('$from$to');
+
+    if (!wasClockStarted) {
+      state = state.copyWith(clockStarted: true);
+    }
+
+    _setActiveClockSide(_clockSideForTurn());
+    _startClockTicker();
+
+    await ensureGameServicesStarted(analyzeCurrentPosition: true);
+    
+    if (!_isCommentarySequenceRunning) {
+      unawaited(_runCommentary(
+        player: state.game.turn == chess_lib.Color.WHITE ? 'Black' : 'White',
+        move: _formatMoveForPrompt('$from$to$promotionPiece'),
+        evalScore: _formatEvalForPrompt(state.currentEvaluation),
+      ));
+    }
+
+    state = state.copyWith(
+      isEngineThinking: state.engineReady,
+      isCommentaryLoading: state.isAiOperational,
+    );
+  }
+
+  void _onMoveCompleted(String lastMove) {
+    final updatedMoves = state.game.moveHistoryLabels();
+
+    final player = _playerWhoJustMoved();
+    
+    // Immediate Trigger for commentary if Bard is active
+    if (!_isCommentarySequenceRunning && state.isAiOperational) {
+      unawaited(_runCommentary(
+        player: player,
+        move: _formatMoveForPrompt(lastMove),
+        evalScore: _formatEvalForPrompt(state.currentEvaluation),
+      ));
+    }
+
+    // Apply Clock Increment
+    if (state.clockStarted && !state.game.gameOver) {
+      if (player == 'White') {
+        state = state.copyWith(whiteTimeLeft: state.whiteTimeLeft + state.incrementDuration);
+      } else {
+        state = state.copyWith(blackTimeLeft: state.blackTimeLeft + state.incrementDuration);
+      }
+    }
+
+    // Professional Haptics
+    if (state.isHapticsEnabled) {
+      if (state.game.inCheckmate) {
+        HapticFeedback.heavyImpact();
+      } else if (state.game.inCheck) {
+        HapticFeedback.mediumImpact();
+      } else {
+        HapticFeedback.lightImpact();
+      }
+    }
+
+    final threatened = <String>[];
+    final opponentColor = state.game.turn;
+    final sideWhoJustMoved = opponentColor == chess_lib.Color.WHITE
+        ? chess_lib.Color.BLACK
+        : chess_lib.Color.WHITE;
+
+    for (final file in ChessGame.files) {
+      for (final rank in ChessGame.ranks) {
+        final square = '$file$rank';
+        final piece = state.game.getPiece(square);
+        if (piece != null && piece.color == opponentColor) {
+          if (state.game.isAttacked(square, sideWhoJustMoved)) {
+            threatened.add(square);
+          }
+        }
+      }
+    }
+
+    state = state.copyWith(
+      lastMove: lastMove,
+      recentMoves: updatedMoves,
+      previousEvaluation: state.currentEvaluation,
+      isEngineThinking: _isAiTurn() && state.servicesStarted,
+      commentaryError: null,
+      activeClockSide:
+          state.clockStarted ? _clockSideForTurn() : state.activeClockSide,
+      threatenedSquares: threatened,
+    );
+
+    _playMoveSound();
+  }
+
+  void _playMoveSound() {
+    final history = state.game.history;
+    if (history.isEmpty) return;
+
+    final lastState = history.last;
+    final lastMove = lastState.move;
+    
+    if (lastMove == null) return;
+
+    // 1. Check for capture
+    bool isCapture = lastMove.captured != null;
+
+    if (isCapture) {
+      _soundService.playCapture();
+      return;
+    }
+
+    // 2. Identify piece type for move sound
+    final piece = lastMove.piece; // Piece type that moved
+    final type = piece.toString().toLowerCase();
+
+    if (type == 'k') {
+      _soundService.playKingMove();
+    } else if (type == 'p') {
+      _soundService.playPawnMove();
+    } else {
+      _soundService.playWhoosh();
+    }
+  }
+
+  void playNotify() {
+    _soundService.playNotify();
+  }
+
+  Future<void> _runHintFlow(String bestMove) async {
+    final player = _sideToMoveLabel();
+    final formattedMove = _formatMoveForPrompt(bestMove);
+    final from = bestMove.length >= 2 ? bestMove.substring(0, 2) : null;
+    final to = bestMove.length >= 4 ? bestMove.substring(2, 4) : null;
+
+    state = state.copyWith(
+      hintBestMove: bestMove,
+      hintFrom: from,
+      hintTo: to,
+      isHintLoading: true,
+      isHintVisible: false,
+    );
+
+    await _runCommentary(
+      player: player,
+      move: formattedMove,
+      evalScore: _formatEvalForPrompt(state.currentEvaluation),
+      revealHintAfterTyping: true,
+    );
+  }
+
+  Future<void> _runCommentary({
+    required String player,
+    required String move,
+    required String evalScore,
+    bool revealHintAfterTyping = false,
+    bool isNested = false,
+  }) async {
+    if (!state.isAiOperational) {
+      // AI is deoperational. Skip narration logic and proceed to move execution logic.
+      await _handleDeoperationalAiFlow(player);
+      return;
+    }
+
+    _isCommentarySequenceRunning = true;
+    _cancelCommentaryReveal();
+
+    final newEntry = CommentaryEntry(
+      text: '',
+      timestamp: DateTime.now(),
+      isComplete: false,
+    );
+
+    // Update state IMMEDIATELY to show "Thinking"
+    state = state.copyWith(
+      commentaryHistory: [...state.commentaryHistory, newEntry],
+      isCommentaryLoading: true,
+      isCommentaryStreaming: false,
+    );
+
+    try {
+      // 1. Wait briefly for a fresh evaluation if it's the start of a turn
+      if (!isNested) {
+         await Future.delayed(const Duration(seconds: 1));
+      }
+
+      String? structuredPrompt;
+      try {
+        final bestMove = state.analysis['bestMove'] as String?;
+        final pvRaw = state.analysis['pv'];
+        final List<String> pv = pvRaw is List ? List<String>.from(pvRaw) : [];
+
+        structuredPrompt = _aiContextService.generateCommentaryPrompt(
+          move: move,
+          currentEval: state.currentEvaluation,
+          previousEval: state.previousEvaluation,
+          game: state.game,
+          bestMove: bestMove,
+          pvLine: pv,
+        );
+      } catch (e) {
+        debugPrint('KingSlayer: Context injection failed: $e');
+      }
+
+      final stream = _commentaryEngine.generateCommentaryStream(
+        player: player,
+        move: move,
+        evalScore: evalScore,
+        structuredPrompt: structuredPrompt,
+      );
+
+      await for (final chunk in stream) {
+        if (_isDisposed || !state.isAiOperational) break;
+        
+        final updatedHistory = List<CommentaryEntry>.from(state.commentaryHistory);
+        if (updatedHistory.isNotEmpty) {
+          updatedHistory[updatedHistory.length - 1] = 
+              updatedHistory.last.copyWith(text: chunk);
+        }
+
+        state = state.copyWith(
+          commentaryHistory: updatedHistory,
+          isCommentaryLoading: false,
+          isCommentaryStreaming: true,
+        );
+      }
+
+      if (!_isDisposed) {
+        // Mark current commentary as complete
+        final finalHistory = List<CommentaryEntry>.from(state.commentaryHistory);
+        if (finalHistory.isNotEmpty) {
+           finalHistory[finalHistory.length - 1] = 
+              finalHistory.last.copyWith(isComplete: true);
+        }
+        state = state.copyWith(
+          commentaryHistory: finalHistory,
+          isCommentaryStreaming: false,
+        );
+
+        // --- SEQUENCE ORCHESTRATION ---
+        
+        if (player != 'Engine') {
+          // Bard has finished narrating the USER. Now wait for the SCOUT (Robot).
+          debugPrint('Bard: I have finished narrating the mortal. Scout, do you have a move?');
+          
+          state = state.copyWith(isCommentaryLoading: true);
+
+          // Wait for engine to provide a move (max 10s)
+          int safetyCount = 0;
+          while (state.pendingEngineMove == null && safetyCount < 100) {
+            await Future.delayed(const Duration(milliseconds: 100));
+            safetyCount++;
+            if (_isDisposed || !state.isAiOperational) return;
+          }
+
+          if (state.pendingEngineMove != null) {
+            final engineMove = state.pendingEngineMove!;
+            // Now the Bard narrates the ROBOT's move
+            await _runCommentary(
+              player: 'Engine',
+              move: _formatMoveForPrompt(engineMove),
+              evalScore: _formatEvalForPrompt(state.currentEvaluation),
+              isNested: true,
+            );
+          }
+        } else {
+          // NOW we wait for the dramatic pause (user configured) before moving the piece.
+          debugPrint('Bard: I have finished narrating the machine. Let them see the steel.');
+          await Future.delayed(state.autoPlayDelay);
+          if (_isDisposed || !state.isAiOperational) return;
+
+          // Reveal the Robot's move now.
+          if (state.pendingEngineMove != null) {
+            final engineMove = state.pendingEngineMove!;
+            state = state.copyWith(pendingEngineMove: null);
+            _makeEngineMove(engineMove);
+          }
+        }
+
+        if (revealHintAfterTyping && state.hintFrom != null && state.hintTo != null) {
+          state = state.copyWith(isHintVisible: true, isHintLoading: false);
+        }
+      }
+    } catch (e) {
+      debugPrint('KingSlayer: Bard sequence failed: $e');
+      if (!_isDisposed) {
+        state = state.copyWith(isCommentaryLoading: false);
+        // Fallback: Reveal robot move if bard failed
+        if (state.pendingEngineMove != null) {
+          final engineMove = state.pendingEngineMove!;
+          state = state.copyWith(pendingEngineMove: null);
+          _makeEngineMove(engineMove);
+        }
+      }
+    } finally {
+      if (!_isDisposed && !isNested) {
+        _isCommentarySequenceRunning = false;
+        state = state.copyWith(isCommentaryLoading: false);
+
+        // Robot Mode Continuity: If Auto-play is on, immediately trigger the next turn's sequence
+        if (state.isEngineVsEngine && !state.game.gameOver && !state.isPaused && state.isAiOperational) {
+          final player = _playerWhoJustMoved();
+          unawaited(_runCommentary(
+            player: player,
+            move: _formatMoveForPrompt(state.lastMove ?? ''),
+            evalScore: _formatEvalForPrompt(state.currentEvaluation),
+          ));
+        }
+      }
+    }
+  }
+
+  /// Handles the move flow when the AI (Bard) is deoperational.
+  /// Skips narration and reduces delays for faster engine performance.
+  Future<void> _handleDeoperationalAiFlow(String player) async {
+    if (player != 'Engine') {
+      // It was a player move. We just need to wait for the engine to find its move.
+      debugPrint('Bard: I am silent. Scout, do you have a move?');
+      
+      // Wait for engine to provide a move (max 5s, less than narration mode)
+      int safetyCount = 0;
+      while (state.pendingEngineMove == null && safetyCount < 50) {
+        await Future.delayed(const Duration(milliseconds: 100));
+        safetyCount++;
+        if (_isDisposed) return;
+      }
+
+      if (state.pendingEngineMove != null) {
+        // Execute engine move flow
+        await _handleDeoperationalAiFlow('Engine');
+      }
+    } else {
+      // It was an engine move.
+      debugPrint('Bard: silent. Steel strikes fast.');
+      // A small realistic delay instead of the 3s dramatic pause
+      await Future.delayed(state.autoPlayDelay);
+      if (_isDisposed) return;
+
+      if (state.pendingEngineMove != null) {
+        final engineMove = state.pendingEngineMove!;
+        state = state.copyWith(pendingEngineMove: null);
+        _makeEngineMove(engineMove);
+      }
+    }
+  }
+
+  void _cancelCommentaryReveal() {
+    _commentaryRevealTimer?.cancel();
+    _commentaryRevealTimer = null;
+  }
+
+  void _clearHint() {
+    _pendingHintFen = null;
+    state = state.copyWith(
+      hintBestMove: null,
+      hintFrom: null,
+      hintTo: null,
+      isHintVisible: false,
+      isHintLoading: false,
+    );
+  }
+
+  void _startClockTicker() {
+    if (!state.clockStarted || state.activeClockSide == null) {
+      _stopClock();
+      return;
+    }
+
+    _clockTimer?.cancel();
+    _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (_isDisposed || !state.clockStarted || state.activeClockSide == null) {
+        return;
+      }
+
+      final side = state.activeClockSide;
+      if (side == _clockWhite) {
+        final next = state.whiteTimeLeft - const Duration(seconds: 1);
+        if (next <= Duration.zero) {
+          _handleClockTimeout(_clockWhite);
+          return;
+        }
+        state = state.copyWith(whiteTimeLeft: next);
+        return;
+      }
+
+      final next = state.blackTimeLeft - const Duration(seconds: 1);
+      if (next <= Duration.zero) {
+        _handleClockTimeout(_clockBlack);
+        return;
+      }
+      state = state.copyWith(blackTimeLeft: next);
+    });
+  }
+
+  void _setActiveClockSide(String? side) {
+    if (!state.clockStarted || side == null || state.game.gameOver) {
+      state = state.copyWith(activeClockSide: null);
+      _stopClock();
+      return;
+    }
+    state = state.copyWith(activeClockSide: side);
+  }
+
+  void _handleClockTimeout(String side) {
+    _stopClock();
+    state = state.copyWith(
+      whiteTimeLeft: side == _clockWhite ? Duration.zero : state.whiteTimeLeft,
+      blackTimeLeft: side == _clockBlack ? Duration.zero : state.blackTimeLeft,
+      clockStarted: false,
+      activeClockSide: null,
+      isEngineThinking: false,
+      commentaryError: side == _clockWhite
+          ? 'White ran out of time.'
+          : 'Black ran out of time.',
+    );
+  }
+
+  void _stopClock() {
+    _clockTimer?.cancel();
+    _clockTimer = null;
+  }
+
+  String _clockSideForTurn() {
+    return state.game.turn == chess_lib.Color.WHITE ? _clockWhite : _clockBlack;
+  }
+
+  String _clockSideForGame(ChessGame game) {
+    return game.turn == chess_lib.Color.WHITE ? _clockWhite : _clockBlack;
+  }
+
+  String _formatMoveForPrompt(String move) {
+    if (move.length < 4) {
+      return move;
+    }
+    final from = move.substring(0, 2);
+    final to = move.substring(2, 4);
+    final promotion = move.length > 4 ? '=${move.substring(4).toUpperCase()}' : '';
+    return '$from-$to$promotion';
+  }
+
+  String _formatEvalForPrompt(double eval) {
+    if (eval >= 90) {
+      return '+M';
+    }
+    if (eval <= -90) {
+      return '-M';
+    }
+    final formatted = eval.toStringAsFixed(1);
+    return eval > 0 ? '+$formatted' : formatted;
+  }
+
+  void undo() {
+    if (_undoStack.isEmpty) {
+      return;
+    }
+    _redoStack.add(_captureCurrentSnapshot());
+    final snapshot = _undoStack.removeLast();
+    _restoreSnapshot(snapshot);
+  }
+
+  void redo() {
+    if (_redoStack.isEmpty) {
+      return;
+    }
+    _undoStack.add(_captureCurrentSnapshot());
+    final snapshot = _redoStack.removeLast();
+    _restoreSnapshot(snapshot);
+  }
+
+  Future<void> reset() async {
+    final preservePlayerWhite = state.isPlayerWhite;
+    final preserveBoardFlipped = state.isBoardFlipped;
+    final preserveEvE = state.isEngineVsEngine;
+    final preserveLevel = state.engineLevel;
+    
+    _undoStack.clear();
+    _redoStack.clear();
+    _cancelCommentaryReveal();
+    _pendingHintFen = null;
+    _stopClock();
+ 
+    state = ChessState(
+      game: ChessGame(),
+      isPlayerWhite: preservePlayerWhite,
+      isBoardFlipped: preserveBoardFlipped,
+      isEngineVsEngine: preserveEvE,
+      engineLevel: preserveLevel,
+      isEngineThinking: false,
+      servicesStarted: state.servicesStarted,
+      servicesStarting: false,
+      engineReady: state.engineReady,
+      isCommentaryEngineLoading: _commentaryEngine.isInitializing,
+      commentaryError: _commentaryEngine.lastError,
+      savedGames: state.savedGames,
+      pendingEngineMove: null, // Clear pending move on reset
+      isAiOperational: state.isAiOperational,
+      isGameOverDismissed: false,
+    );
+
+    _syncUndoRedoFlags();
+    
+    // Always start thinking if Robot Mode is on OR if it's currently the Engine's turn
+    if (preserveEvE || !preservePlayerWhite) {
+      await ensureGameServicesStarted(analyzeCurrentPosition: true);
+      state = state.copyWith(isEngineThinking: state.engineReady);
+    }
+  }
+
+  Future<void> shutdown() async {
+    _engineMoveTimer?.cancel();
+    _stopClock();
+    _cancelCommentaryReveal();
+    await _engineOutputSubscription?.cancel();
+    _engineOutputSubscription = null;
+    _engine.dispose();
+    await _commentaryEngine.dispose();
+  }
+
+  void playAnalysisSequence(
+    List<String> moves,
+    AnalysisAnimationController anim,
+  ) {
+    anim.playPVSequence(
+      moves,
+      getPieceAt: (square) {
+        final piece = state.game.getPiece(square);
+        if (piece == null) {
+          return '';
+        }
+
+        final colorStr = piece.color.toString().toLowerCase();
+        final colorPrefix =
+            colorStr.startsWith('w') || colorStr.contains('white') ? 'w' : 'b';
+
+        return '$colorPrefix${piece.type.toUpperCase()}';
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    _engineMoveTimer?.cancel();
+    _stopClock();
+    _cancelCommentaryReveal();
+    _engineOutputSubscription?.cancel();
+    _engine.dispose();
+    unawaited(_commentaryEngine.dispose());
+    super.dispose();
+  }
+}
+
+// Removed duplicate stockfishServiceProvider
+final chessSoundServiceProvider = Provider((ref) {
+  final service = ChessSoundService();
+  ref.onDispose(() => service.dispose());
+  return service;
+});
+final commentaryEngineProvider = Provider((ref) => CommentaryEngine());
+final savedGameRepositoryProvider = Provider((ref) => SavedGameRepository());
+
+final chessProvider = StateNotifierProvider<ChessNotifier, ChessState>((ref) {
+  final engine = ref.watch(stockfishServiceProvider);
+  final commentaryEngine = ref.watch(commentaryEngineProvider);
+  final savedGameRepository = ref.watch(savedGameRepositoryProvider);
+  final soundService = ref.watch(chessSoundServiceProvider);
+  final aiContextService = ref.watch(aiContextServiceProvider);
+  return ChessNotifier(
+      engine, commentaryEngine, savedGameRepository, soundService, aiContextService);
+});

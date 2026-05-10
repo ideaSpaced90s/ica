@@ -1,0 +1,8 @@
+*.task filter=lfs diff=lfs merge=lfs -text
+assets/engine/android/stockfish filter=lfs diff=lfs merge=lfs -text
+*.so filter=lfs diff=lfs merge=lfs -text
+stockfish-android-armv8 filter=lfs diff=lfs merge=lfs -text
+*.armv8 filter=lfs diff=lfs merge=lfs -text
+assets/engine/*.exe filter=lfs diff=lfs merge=lfs -text
+*.onnx filter=lfs diff=lfs merge=lfs -text
+assets/engine/stockfish.exe filter=lfs diff=lfs merge=lfs -text
