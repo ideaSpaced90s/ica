@@ -97,7 +97,23 @@ class MoveAnimationData {
   });
 }
 
+class CameraMotionCue {
+  final int id;
+  final String from;
+  final String to;
+  final bool isCapture;
+  final bool isCheck;
+  final bool isCheckmate;
 
+  const CameraMotionCue({
+    required this.id,
+    required this.from,
+    required this.to,
+    required this.isCapture,
+    required this.isCheck,
+    required this.isCheckmate,
+  });
+}
 
 class ChessState {
   ChessState({
@@ -139,6 +155,7 @@ class ChessState {
     this.pendingEngineMove,
     this.engineSelectionSquare,
     this.moveAnimation,
+    this.cameraMotionCue,
     this.boardThemeId = 'classic',
     this.isSoundEnabled = true,
     this.isMusicEnabled = false,
@@ -196,6 +213,7 @@ class ChessState {
   final String? pendingEngineMove;
   final String? engineSelectionSquare;
   final MoveAnimationData? moveAnimation;
+  final CameraMotionCue? cameraMotionCue;
   final String boardThemeId;
   final bool isSoundEnabled;
   final bool isMusicEnabled;
@@ -264,6 +282,7 @@ class ChessState {
     Object? pendingEngineMove = _sentinel,
     Object? engineSelectionSquare = _sentinel,
     Object? moveAnimation = _sentinel,
+    Object? cameraMotionCue = _sentinel,
     String? boardThemeId,
     bool? isSoundEnabled,
     bool? isMusicEnabled,
@@ -284,7 +303,9 @@ class ChessState {
   }) {
     return ChessState(
       game: game ?? this.game,
-      lastMove: identical(lastMove, _sentinel) ? this.lastMove : lastMove as String?,
+      lastMove: identical(lastMove, _sentinel)
+          ? this.lastMove
+          : lastMove as String?,
       recentMoves: recentMoves ?? this.recentMoves,
       analysis: analysis ?? this.analysis,
       previousEvaluation: previousEvaluation ?? this.previousEvaluation,
@@ -297,7 +318,8 @@ class ChessState {
       canUndo: canUndo ?? this.canUndo,
       canRedo: canRedo ?? this.canRedo,
       commentaryHistory: commentaryHistory ?? this.commentaryHistory,
-      isCommentaryStreaming: isCommentaryStreaming ?? this.isCommentaryStreaming,
+      isCommentaryStreaming:
+          isCommentaryStreaming ?? this.isCommentaryStreaming,
       isCommentaryLoading: isCommentaryLoading ?? this.isCommentaryLoading,
       isCommentaryEngineLoading:
           isCommentaryEngineLoading ?? this.isCommentaryEngineLoading,
@@ -307,7 +329,9 @@ class ChessState {
       hintBestMove: identical(hintBestMove, _sentinel)
           ? this.hintBestMove
           : hintBestMove as String?,
-      hintFrom: identical(hintFrom, _sentinel) ? this.hintFrom : hintFrom as String?,
+      hintFrom: identical(hintFrom, _sentinel)
+          ? this.hintFrom
+          : hintFrom as String?,
       hintTo: identical(hintTo, _sentinel) ? this.hintTo : hintTo as String?,
       isHintVisible: isHintVisible ?? this.isHintVisible,
       isHintLoading: isHintLoading ?? this.isHintLoading,
@@ -336,6 +360,9 @@ class ChessState {
       moveAnimation: identical(moveAnimation, _sentinel)
           ? this.moveAnimation
           : moveAnimation as MoveAnimationData?,
+      cameraMotionCue: identical(cameraMotionCue, _sentinel)
+          ? this.cameraMotionCue
+          : cameraMotionCue as CameraMotionCue?,
       boardThemeId: boardThemeId ?? this.boardThemeId,
       isSoundEnabled: isSoundEnabled ?? this.isSoundEnabled,
       isMusicEnabled: isMusicEnabled ?? this.isMusicEnabled,
@@ -364,17 +391,26 @@ class ChessState {
 }
 
 class ChessNotifier extends StateNotifier<ChessState> {
-  ChessNotifier(this._engine, this._commentaryEngine, this._savedGameRepository, this._soundService, this._aiContextService, this._settingsRepository)
-      : super(ChessState(
+  ChessNotifier(
+    this._engine,
+    this._commentaryEngine,
+    this._savedGameRepository,
+    this._soundService,
+    this._aiContextService,
+    this._settingsRepository,
+  ) : super(
+        ChessState(
           game: ChessGame(),
           commentaryHistory: [
             CommentaryEntry(
-              text: "Welcome, Commander. I am the High Council. The board is set. How can I assist your strategy today?",
+              text:
+                  "Welcome, Commander. I am the High Council. The board is set. How can I assist your strategy today?",
               timestamp: DateTime.now(),
               isUser: false,
             ),
           ],
-        )) {
+        ),
+      ) {
     _soundService.updateSettings(sfxEnabled: true, bgmEnabled: false);
     _loadSettings();
   }
@@ -429,14 +465,20 @@ class ChessNotifier extends StateNotifier<ChessState> {
   void toggleSound() {
     final newEnabled = !state.isSoundEnabled;
     state = state.copyWith(isSoundEnabled: newEnabled);
-    _soundService.updateSettings(sfxEnabled: newEnabled, bgmEnabled: state.isMusicEnabled);
+    _soundService.updateSettings(
+      sfxEnabled: newEnabled,
+      bgmEnabled: state.isMusicEnabled,
+    );
     _saveSettings();
   }
 
   void toggleMusic() {
     final newEnabled = !state.isMusicEnabled;
     state = state.copyWith(isMusicEnabled: newEnabled);
-    _soundService.updateSettings(sfxEnabled: state.isSoundEnabled, bgmEnabled: newEnabled);
+    _soundService.updateSettings(
+      sfxEnabled: state.isSoundEnabled,
+      bgmEnabled: newEnabled,
+    );
     _saveSettings();
   }
 
@@ -489,12 +531,18 @@ class ChessNotifier extends StateNotifier<ChessState> {
       _engineMoveTimer?.cancel();
     } else {
       // Clear analysis position when resuming game
-      state = state.copyWith(viewingMoveIndex: null, threatenedSquares: const []);
-      
+      state = state.copyWith(
+        viewingMoveIndex: null,
+        threatenedSquares: const [],
+      );
+
       if (state.clockStarted) {
         _startClockTicker();
       }
-      if (state.servicesStarted && _isAiTurn() && !state.game.gameOver && state.pendingEngineMove == null) {
+      if (state.servicesStarted &&
+          _isAiTurn() &&
+          !state.game.gameOver &&
+          state.pendingEngineMove == null) {
         _engine.analyzePosition(state.game.fen);
         state = state.copyWith(isEngineThinking: true);
       }
@@ -514,7 +562,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
   void jumpToMove(int index) {
     if (index < -1 || index >= state.recentMoves.length) return;
     state = state.copyWith(viewingMoveIndex: index == -1 ? null : index);
-    
+
     // Auto-analyze position when jumping in analysis
     if (state.isPaused) {
       unawaited(ensureGameServicesStarted(analyzeCurrentPosition: true));
@@ -522,7 +570,8 @@ class ChessNotifier extends StateNotifier<ChessState> {
   }
 
   void stepMove(int delta) {
-    final currentIndex = state.viewingMoveIndex ?? (state.recentMoves.length - 1);
+    final currentIndex =
+        state.viewingMoveIndex ?? (state.recentMoves.length - 1);
     jumpToMove(currentIndex + delta);
   }
 
@@ -538,8 +587,10 @@ class ChessNotifier extends StateNotifier<ChessState> {
     final fen = state.currentBoardFen;
     final game = ChessGame(fen: fen);
     final turn = game.turn;
-    final opponentColor = turn == chess_lib.Color.WHITE ? chess_lib.Color.BLACK : chess_lib.Color.WHITE;
-    
+    final opponentColor = turn == chess_lib.Color.WHITE
+        ? chess_lib.Color.BLACK
+        : chess_lib.Color.WHITE;
+
     final threatened = <String>[];
     for (final square in chess_lib.Chess.SQUARES.keys) {
       if (game.isAttacked(square, opponentColor)) {
@@ -570,6 +621,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
   String? _pendingHintFen;
   Future<void>? _startupFuture;
   bool _isDisposed = false;
+  int _cameraMotionCueId = 0;
 
   Future<void> ensureGameServicesStarted({
     bool analyzeCurrentPosition = false,
@@ -614,11 +666,12 @@ class ChessNotifier extends StateNotifier<ChessState> {
   }) async {
     try {
       // Start listening BEFORE init so we don't miss uciok/readyok
-      _engineOutputSubscription ??=
-          _engine.outputStream.listen(_handleEngineOutput);
-          
+      _engineOutputSubscription ??= _engine.outputStream.listen(
+        _handleEngineOutput,
+      );
+
       await _engine.init();
-      
+
       state = state.copyWith(
         servicesStarted: true,
         servicesStarting: false,
@@ -642,7 +695,6 @@ class ChessNotifier extends StateNotifier<ChessState> {
       );
     }
   }
-
 
   void _handleEngineOutput(String line) {
     if (_isDisposed) {
@@ -668,7 +720,10 @@ class ChessNotifier extends StateNotifier<ChessState> {
       engineReady: true,
     );
 
-    debugPrint('ChessNotifier: Parsed engine output. type: ${parsed['type']}, isAiTurn: ${_isAiTurn()}, isEngineThinking: ${state.isEngineThinking}');    if (newEval != null) {
+    debugPrint(
+      'ChessNotifier: Parsed engine output. type: ${parsed['type']}, isAiTurn: ${_isAiTurn()}, isEngineThinking: ${state.isEngineThinking}',
+    );
+    if (newEval != null) {
       // Just record the evaluation, don't trigger commentary here anymore.
       // The orchestration is handled in makeMove and _runCommentary.
       debugPrint('ChessNotifier: Score updated: $newEval');
@@ -677,8 +732,10 @@ class ChessNotifier extends StateNotifier<ChessState> {
     if (parsed.containsKey('bestMove')) {
       final bestMove = parsed['bestMove'] as String?;
       final aiTurn = _isAiTurn();
-      debugPrint('ChessNotifier: [SCOUT] bestMove=$bestMove, isAiTurn=$aiTurn, isPaused=${state.isPaused}, gameOver=${state.game.gameOver}');
-      
+      debugPrint(
+        'ChessNotifier: [SCOUT] bestMove=$bestMove, isAiTurn=$aiTurn, isPaused=${state.isPaused}, gameOver=${state.game.gameOver}',
+      );
+
       if (bestMove != null &&
           _pendingHintFen != null &&
           _pendingHintFen == state.game.fen) {
@@ -686,7 +743,10 @@ class ChessNotifier extends StateNotifier<ChessState> {
         unawaited(_runHintFlow(bestMove));
       }
 
-      if (bestMove != null && aiTurn && !state.game.gameOver && !state.isPaused) {
+      if (bestMove != null &&
+          aiTurn &&
+          !state.game.gameOver &&
+          !state.isPaused) {
         debugPrint('ChessNotifier: [SCOUT] Executing engine move: $bestMove');
         _makeEngineMove(bestMove);
       } else if (bestMove != null) {
@@ -703,10 +763,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
     state = state.copyWith(isSavedGamesLoading: true);
     try {
       final saves = await _savedGameRepository.listSaves();
-      state = state.copyWith(
-        savedGames: saves,
-        isSavedGamesLoading: false,
-      );
+      state = state.copyWith(savedGames: saves, isSavedGamesLoading: false);
       return saves;
     } catch (error, stackTrace) {
       debugPrint('Failed to load saved games: $error');
@@ -884,6 +941,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
       pendingEngineMove: snapshot.pendingEngineMove,
       engineSelectionSquare: snapshot.engineSelectionSquare,
       moveAnimation: snapshot.moveAnimation,
+      cameraMotionCue: null,
       isAiOperational: snapshot.isAiOperational,
       isPlayerWhite: snapshot.isPlayerWhite,
       isBoardFlipped: snapshot.isBoardFlipped,
@@ -909,7 +967,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
     final piece = state.game.getPiece(from);
     final colorPrefix = piece?.color == chess_lib.Color.WHITE ? 'w' : 'b';
-    final pieceCode = piece != null ? '$colorPrefix${piece.type.toUpperCase()}' : 'bP';
+    final pieceCode = piece != null
+        ? '$colorPrefix${piece.type.toUpperCase()}'
+        : 'bP';
 
     // Trigger animation before the actual move is made in the game state
     state = state.copyWith(
@@ -930,7 +990,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
     });
     if (moveMade) {
       _onMoveCompleted('$from$to');
-      
+
       // Always trigger analysis after an engine move to get the score for commentary
       if (!state.game.gameOver) {
         unawaited(ensureGameServicesStarted(analyzeCurrentPosition: true));
@@ -969,7 +1029,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
   bool _isAiTurn() {
     if (state.game.gameOver || state.isPaused) return false;
-    
+
     // If auto-play is enabled, it's always the AI's turn to move if it's not paused
     if (state.isEngineVsEngine) return true;
 
@@ -1000,7 +1060,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
     final piece = state.game.getPiece(from);
     final colorPrefix = piece?.color == chess_lib.Color.WHITE ? 'w' : 'b';
-    final pieceCode = piece != null ? '$colorPrefix${piece.type.toUpperCase()}' : 'wP';
+    final pieceCode = piece != null
+        ? '$colorPrefix${piece.type.toUpperCase()}'
+        : 'wP';
 
     _saveSnapshotForUndo();
     _clearHint();
@@ -1008,8 +1070,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
     // Detect Promotion
     final isPawn = piece?.type.toUpperCase() == 'P';
     final targetRank = to.substring(1);
-    final isPromotionRank = (piece?.color == chess_lib.Color.WHITE && targetRank == '8') ||
-                            (piece?.color == chess_lib.Color.BLACK && targetRank == '1');
+    final isPromotionRank =
+        (piece?.color == chess_lib.Color.WHITE && targetRank == '8') ||
+        (piece?.color == chess_lib.Color.BLACK && targetRank == '1');
 
     if (isPawn && isPromotionRank) {
       state = state.copyWith(
@@ -1036,7 +1099,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
       'promotion': 'q',
     });
     if (!moveMade) {
-      state = state.copyWith(moveAnimation: null); // Revert animation if move failed
+      state = state.copyWith(
+        moveAnimation: null,
+      ); // Revert animation if move failed
       return;
     }
 
@@ -1051,13 +1116,15 @@ class ChessNotifier extends StateNotifier<ChessState> {
     _startClockTicker();
 
     // The Scout (Stockfish) starts its calculation
-    debugPrint('ChessNotifier: Player move completed. Starting engine analysis...');
-    await ensureGameServicesStarted(analyzeCurrentPosition: true);
-    debugPrint('ChessNotifier: Engine analysis requested for FEN: ${state.game.fen}');
-
-    state = state.copyWith(
-      isEngineThinking: state.engineReady,
+    debugPrint(
+      'ChessNotifier: Player move completed. Starting engine analysis...',
     );
+    await ensureGameServicesStarted(analyzeCurrentPosition: true);
+    debugPrint(
+      'ChessNotifier: Engine analysis requested for FEN: ${state.game.fen}',
+    );
+
+    state = state.copyWith(isEngineThinking: state.engineReady);
   }
 
   Future<void> switchSides() async {
@@ -1092,16 +1159,19 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
   void toggleBoardOrientation() {
     final newFlipped = !state.isBoardFlipped;
-    final newIsPlayerWhite = !state.isPlayerWhite; // Always toggle to maintain "Down = User"
-    
-    debugPrint('ChessNotifier: Rotation triggered. Switching player to ${newIsPlayerWhite ? 'White' : 'Black'} to maintain Down=User.');
+    final newIsPlayerWhite =
+        !state.isPlayerWhite; // Always toggle to maintain "Down = User"
+
+    debugPrint(
+      'ChessNotifier: Rotation triggered. Switching player to ${newIsPlayerWhite ? 'White' : 'Black'} to maintain Down=User.',
+    );
 
     state = state.copyWith(
       isBoardFlipped: newFlipped,
       isPlayerWhite: newIsPlayerWhite,
       threatenedSquares: const [], // Clear visual noise during rotation
     );
-    
+
     // Auto-move on rotation if it's now the engine's turn
     if (_isAiTurn() && !state.game.gameOver) {
       debugPrint('ChessNotifier: Rotation triggered engine analysis.');
@@ -1112,14 +1182,14 @@ class ChessNotifier extends StateNotifier<ChessState> {
   Future<void> toggleEngineVsEngine() async {
     final newVal = !state.isEngineVsEngine;
     state = state.copyWith(isEngineVsEngine: newVal);
-    
+
     if (newVal && !state.game.gameOver && !state.isPaused) {
       // Start the clock if not already started when enabling auto-play
       if (!state.clockStarted) {
         state = state.copyWith(clockStarted: true);
         _startClockTicker();
       }
-      
+
       await ensureGameServicesStarted(analyzeCurrentPosition: true);
       state = state.copyWith(isEngineThinking: state.engineReady);
     }
@@ -1127,19 +1197,36 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
   Future<void> setEngineLevel(String level) async {
     state = state.copyWith(engineLevel: level);
-    
+
     int skillLevel;
     int depth;
-    
+
     switch (level) {
-      case 'A': skillLevel = 20; depth = 20; break;
-      case 'B': skillLevel = 15; depth = 15; break;
-      case 'C': skillLevel = 10; depth = 10; break;
-      case 'D': skillLevel = 5; depth = 5; break;
-      case 'E': skillLevel = 0; depth = 2; break;
-      default: skillLevel = 15; depth = 15;
+      case 'A':
+        skillLevel = 20;
+        depth = 20;
+        break;
+      case 'B':
+        skillLevel = 15;
+        depth = 15;
+        break;
+      case 'C':
+        skillLevel = 10;
+        depth = 10;
+        break;
+      case 'D':
+        skillLevel = 5;
+        depth = 5;
+        break;
+      case 'E':
+        skillLevel = 0;
+        depth = 2;
+        break;
+      default:
+        skillLevel = 15;
+        depth = 15;
     }
-    
+
     await _engine.setSkillLevel(skillLevel);
     _saveSettings();
     if (state.servicesStarted && _isAiTurn()) {
@@ -1173,7 +1260,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
   }
 
   void completePromotion(String promotionPiece) async {
-    if (!state.isPromoting || state.promotionSource == null || state.promotionDestination == null) {
+    if (!state.isPromoting ||
+        state.promotionSource == null ||
+        state.promotionDestination == null) {
       return;
     }
 
@@ -1182,7 +1271,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
     final piece = state.game.getPiece(from);
     final colorPrefix = piece?.color == chess_lib.Color.WHITE ? 'w' : 'b';
-    final pieceCode = piece != null ? '$colorPrefix${piece.type.toUpperCase()}' : 'wP';
+    final pieceCode = piece != null
+        ? '$colorPrefix${piece.type.toUpperCase()}'
+        : 'wP';
 
     state = state.copyWith(
       isPromoting: false,
@@ -1218,22 +1309,25 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
     await ensureGameServicesStarted(analyzeCurrentPosition: true);
 
-    state = state.copyWith(
-      isEngineThinking: state.engineReady,
-    );
+    state = state.copyWith(isEngineThinking: state.engineReady);
   }
 
   void _onMoveCompleted(String lastMove) {
     final updatedMoves = state.game.moveHistoryLabels();
+    final move = _lastMoveFromHistory();
 
     final player = _playerWhoJustMoved();
-    
+
     // Apply Clock Increment
     if (state.clockStarted && !state.game.gameOver) {
       if (player == 'White') {
-        state = state.copyWith(whiteTimeLeft: state.whiteTimeLeft + state.incrementDuration);
+        state = state.copyWith(
+          whiteTimeLeft: state.whiteTimeLeft + state.incrementDuration,
+        );
       } else {
-        state = state.copyWith(blackTimeLeft: state.blackTimeLeft + state.incrementDuration);
+        state = state.copyWith(
+          blackTimeLeft: state.blackTimeLeft + state.incrementDuration,
+        );
       }
     }
 
@@ -1267,27 +1361,44 @@ class ChessNotifier extends StateNotifier<ChessState> {
     }
 
     state = state.copyWith(
-      game: ChessGame(fen: state.game.fen), // Force a new instance for Riverpod deep updates
+      game: ChessGame(
+        fen: state.game.fen,
+      ), // Force a new instance for Riverpod deep updates
       lastMove: lastMove,
       recentMoves: updatedMoves,
       previousEvaluation: state.currentEvaluation,
       isEngineThinking: _isAiTurn() && state.servicesStarted,
       commentaryError: null,
-      activeClockSide:
-          state.clockStarted ? _clockSideForTurn() : state.activeClockSide,
+      activeClockSide: state.clockStarted
+          ? _clockSideForTurn()
+          : state.activeClockSide,
       threatenedSquares: threatened,
+      cameraMotionCue: CameraMotionCue(
+        id: ++_cameraMotionCueId,
+        from: lastMove.length >= 2 ? lastMove.substring(0, 2) : '',
+        to: lastMove.length >= 4 ? lastMove.substring(2, 4) : '',
+        isCapture: move?.captured != null,
+        isCheck: state.game.inCheck,
+        isCheckmate: state.game.inCheckmate,
+      ),
     );
 
+    if (state.game.inCheckmate) {
+      unawaited(_soundService.duckBgmTemporarily());
+    }
     _playMoveSound();
   }
 
-  void _playMoveSound() {
+  chess_lib.Move? _lastMoveFromHistory() {
     final history = state.game.history;
-    if (history.isEmpty) return;
-
+    if (history.isEmpty) return null;
     final lastState = history.last;
-    final lastMove = lastState.move;
-    
+    return lastState.move as chess_lib.Move?;
+  }
+
+  void _playMoveSound() {
+    final lastMove = _lastMoveFromHistory();
+
     if (lastMove == null) return;
 
     // 1. Check for capture
@@ -1386,7 +1497,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
     try {
       // 1. Wait briefly for a fresh evaluation if it's the start of a turn
       if (!isNested) {
-         await Future.delayed(const Duration(milliseconds: 500));
+        await Future.delayed(const Duration(milliseconds: 500));
       }
 
       String? structuredPrompt;
@@ -1417,11 +1528,13 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
       await for (final chunk in stream) {
         if (_isDisposed) break;
-        
-        final updatedHistory = List<CommentaryEntry>.from(state.commentaryHistory);
+
+        final updatedHistory = List<CommentaryEntry>.from(
+          state.commentaryHistory,
+        );
         if (updatedHistory.isNotEmpty) {
-          updatedHistory[updatedHistory.length - 1] = 
-              updatedHistory.last.copyWith(text: chunk);
+          updatedHistory[updatedHistory.length - 1] = updatedHistory.last
+              .copyWith(text: chunk);
         }
 
         state = state.copyWith(
@@ -1433,10 +1546,13 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
       if (!_isDisposed) {
         // Mark current commentary as complete
-        final finalHistory = List<CommentaryEntry>.from(state.commentaryHistory);
+        final finalHistory = List<CommentaryEntry>.from(
+          state.commentaryHistory,
+        );
         if (finalHistory.isNotEmpty) {
-           finalHistory[finalHistory.length - 1] = 
-              finalHistory.last.copyWith(isComplete: true);
+          finalHistory[finalHistory.length - 1] = finalHistory.last.copyWith(
+            isComplete: true,
+          );
         }
         state = state.copyWith(
           commentaryHistory: finalHistory,
@@ -1447,7 +1563,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
         // The High Council (AI) only reveals its intelligence when asked.
         // It no longer gates the S-engine (Stockfish) moves.
 
-        if (revealHintAfterTyping && state.hintFrom != null && state.hintTo != null) {
+        if (revealHintAfterTyping &&
+            state.hintFrom != null &&
+            state.hintTo != null) {
           state = state.copyWith(isHintVisible: true, isHintLoading: false);
         }
       }
@@ -1467,18 +1585,22 @@ class ChessNotifier extends StateNotifier<ChessState> {
         state = state.copyWith(isCommentaryLoading: false);
 
         // Robot Mode Continuity: If Auto-play is on, immediately trigger the next turn's sequence
-        if (state.isEngineVsEngine && !state.game.gameOver && !state.isPaused && state.isAiOperational) {
+        if (state.isEngineVsEngine &&
+            !state.game.gameOver &&
+            !state.isPaused &&
+            state.isAiOperational) {
           final player = _playerWhoJustMoved();
-          unawaited(_runCommentary(
-            player: player,
-            move: _formatMoveForPrompt(state.lastMove ?? ''),
-            evalScore: _formatEvalForPrompt(state.currentEvaluation),
-          ));
+          unawaited(
+            _runCommentary(
+              player: player,
+              move: _formatMoveForPrompt(state.lastMove ?? ''),
+              evalScore: _formatEvalForPrompt(state.currentEvaluation),
+            ),
+          );
         }
       }
     }
   }
-
 
   void _cancelCommentaryReveal() {
     _commentaryRevealTimer?.cancel();
@@ -1570,7 +1692,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
     }
     final from = move.substring(0, 2);
     final to = move.substring(2, 4);
-    final promotion = move.length > 4 ? '=${move.substring(4).toUpperCase()}' : '';
+    final promotion = move.length > 4
+        ? '=${move.substring(4).toUpperCase()}'
+        : '';
     return '$from-$to$promotion';
   }
 
@@ -1608,13 +1732,13 @@ class ChessNotifier extends StateNotifier<ChessState> {
     final preserveBoardFlipped = state.isBoardFlipped;
     final preserveEvE = state.isEngineVsEngine;
     final preserveLevel = state.engineLevel;
-    
+
     _undoStack.clear();
     _redoStack.clear();
     _cancelCommentaryReveal();
     _pendingHintFen = null;
     _stopClock();
- 
+
     final preserveTheme = state.boardThemeId;
     final preserveSound = state.isSoundEnabled;
     final preserveMusic = state.isMusicEnabled;
@@ -1656,7 +1780,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
     );
 
     _syncUndoRedoFlags();
-    
+
     // Always start thinking if Robot Mode is on OR if it's currently the Engine's turn
     if (preserveEvE || !preservePlayerWhite) {
       await ensureGameServicesStarted(analyzeCurrentPosition: true);
@@ -1705,5 +1829,11 @@ final chessProvider = StateNotifierProvider<ChessNotifier, ChessState>((ref) {
   final aiContextService = ref.watch(aiContextServiceProvider);
   final settingsRepository = ref.watch(settingsRepositoryProvider);
   return ChessNotifier(
-      engine, commentaryEngine, savedGameRepository, soundService, aiContextService, settingsRepository);
+    engine,
+    commentaryEngine,
+    savedGameRepository,
+    soundService,
+    aiContextService,
+    settingsRepository,
+  );
 });

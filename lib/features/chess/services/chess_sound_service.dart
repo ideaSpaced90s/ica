@@ -10,6 +10,8 @@ class ChessSoundService {
   String? _currentTrack;
   Duration? _activeDuration;
   bool _transitionTriggered = false;
+  double _bgmVolumeScale = 1.0;
+  int _duckToken = 0;
 
   final List<StreamSubscription> _subscriptions = [];
 
@@ -57,19 +59,35 @@ class ChessSoundService {
       _cancelSubscriptions();
 
       // Listen for duration and position to trigger overlapping transitions with subscription safety
-      _subscriptions.add(_bgmPlayer1.onDurationChanged.listen((d) {
-        if (_activePlayer == _bgmPlayer1) _activeDuration = d;
-      }));
-      _subscriptions.add(_bgmPlayer2.onDurationChanged.listen((d) {
-        if (_activePlayer == _bgmPlayer2) _activeDuration = d;
-      }));
+      _subscriptions.add(
+        _bgmPlayer1.onDurationChanged.listen((d) {
+          if (_activePlayer == _bgmPlayer1) _activeDuration = d;
+        }),
+      );
+      _subscriptions.add(
+        _bgmPlayer2.onDurationChanged.listen((d) {
+          if (_activePlayer == _bgmPlayer2) _activeDuration = d;
+        }),
+      );
 
-      _subscriptions.add(_bgmPlayer1.onPositionChanged.listen((p) => _checkTransition(_bgmPlayer1, p)));
-      _subscriptions.add(_bgmPlayer2.onPositionChanged.listen((p) => _checkTransition(_bgmPlayer2, p)));
-      
+      _subscriptions.add(
+        _bgmPlayer1.onPositionChanged.listen(
+          (p) => _checkTransition(_bgmPlayer1, p),
+        ),
+      );
+      _subscriptions.add(
+        _bgmPlayer2.onPositionChanged.listen(
+          (p) => _checkTransition(_bgmPlayer2, p),
+        ),
+      );
+
       // Safety fallback for completion
-      _subscriptions.add(_bgmPlayer1.onPlayerComplete.listen((_) => _onTrackFinish(_bgmPlayer1)));
-      _subscriptions.add(_bgmPlayer2.onPlayerComplete.listen((_) => _onTrackFinish(_bgmPlayer2)));
+      _subscriptions.add(
+        _bgmPlayer1.onPlayerComplete.listen((_) => _onTrackFinish(_bgmPlayer1)),
+      );
+      _subscriptions.add(
+        _bgmPlayer2.onPlayerComplete.listen((_) => _onTrackFinish(_bgmPlayer2)),
+      );
     } catch (e) {
       debugPrint('ChessSoundService Init Error: $e');
     }
@@ -83,7 +101,11 @@ class ChessSoundService {
   }
 
   void _checkTransition(AudioPlayer player, Duration position) {
-    if (player != _activePlayer || _transitionTriggered || _activeDuration == null) return;
+    if (player != _activePlayer ||
+        _transitionTriggered ||
+        _activeDuration == null) {
+      return;
+    }
 
     final remaining = _activeDuration! - position;
     if (remaining <= const Duration(seconds: 5)) {
@@ -100,7 +122,7 @@ class ChessSoundService {
 
   void updateSettings({required bool sfxEnabled, required bool bgmEnabled}) {
     isSfxEnabled = sfxEnabled;
-    
+
     if (isBgmEnabled != bgmEnabled) {
       isBgmEnabled = bgmEnabled;
       if (isBgmEnabled) {
@@ -127,8 +149,10 @@ class ChessSoundService {
     _currentTrack = nextTrack;
 
     final prevPlayer = _activePlayer;
-    final nextPlayer = (_activePlayer == _bgmPlayer1) ? _bgmPlayer2 : _bgmPlayer1;
-    
+    final nextPlayer = (_activePlayer == _bgmPlayer1)
+        ? _bgmPlayer2
+        : _bgmPlayer1;
+
     _activePlayer = nextPlayer;
 
     try {
@@ -147,16 +171,18 @@ class ChessSoundService {
   void _crossfade(AudioPlayer? from, AudioPlayer to) async {
     const duration = Duration(milliseconds: 5000); // 5 seconds crossfade
     const steps = 50;
-    final stepDuration = Duration(milliseconds: duration.inMilliseconds ~/ steps);
+    final stepDuration = Duration(
+      milliseconds: duration.inMilliseconds ~/ steps,
+    );
 
     for (int i = 1; i <= steps; i++) {
       if (!isBgmEnabled || to != _activePlayer) return;
-      
+
       final volume = i / steps;
       try {
-        await to.setVolume(volume);
+        await to.setVolume(volume * _bgmVolumeScale);
         if (from != null) {
-          await from.setVolume(1.0 - volume);
+          await from.setVolume((1.0 - volume) * _bgmVolumeScale);
         }
       } catch (e) {
         // Stop fade on error
@@ -181,6 +207,8 @@ class ChessSoundService {
     _currentTrack = null;
     _activeDuration = null;
     _transitionTriggered = false;
+    _bgmVolumeScale = 1.0;
+    _duckToken++;
   }
 
   Future<void> _playSound(String fileName) async {
@@ -199,7 +227,7 @@ class ChessSoundService {
       if (player.state == PlayerState.playing) {
         await player.stop();
       }
-      
+
       // We seek to zero and resume since the source is already mapped
       await player.seek(Duration.zero);
       await player.resume();
@@ -214,6 +242,40 @@ class ChessSoundService {
   Future<void> playWhoosh() async => _playSound('whoosh.mp3');
   Future<void> playPawnMove() async => _playSound('piecemove.mp3');
   Future<void> playKingMove() async => _playSound('move-self.mp3');
+
+  Future<void> duckBgmTemporarily({
+    Duration hold = const Duration(milliseconds: 900),
+  }) async {
+    if (!isBgmEnabled || _activePlayer == null) return;
+
+    final token = ++_duckToken;
+    await _fadeBgmScale(to: 0.32, duration: const Duration(milliseconds: 180));
+    await Future.delayed(hold);
+    if (token != _duckToken || !isBgmEnabled || _activePlayer == null) return;
+    await _fadeBgmScale(to: 1.0, duration: const Duration(milliseconds: 420));
+  }
+
+  Future<void> _fadeBgmScale({
+    required double to,
+    required Duration duration,
+  }) async {
+    final from = _bgmVolumeScale;
+    const steps = 18;
+    final stepDuration = Duration(
+      milliseconds: duration.inMilliseconds ~/ steps,
+    );
+
+    for (int i = 1; i <= steps; i++) {
+      if (!isBgmEnabled || _activePlayer == null) return;
+      _bgmVolumeScale = from + ((to - from) * (i / steps));
+      try {
+        await _activePlayer?.setVolume(_bgmVolumeScale);
+      } catch (e) {
+        break;
+      }
+      await Future.delayed(stepDuration);
+    }
+  }
 
   void dispose() {
     _cancelSubscriptions();

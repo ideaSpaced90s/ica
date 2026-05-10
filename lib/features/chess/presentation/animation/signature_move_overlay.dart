@@ -16,6 +16,7 @@ class SignatureMoveOverlay extends ConsumerStatefulWidget {
   final MoveAnimationData data;
   final double boardSize;
   final bool isFlipped;
+  final bool isCheckmate;
   final VoidCallback onComplete;
 
   /// Called with the landing square when movement completes.
@@ -27,6 +28,7 @@ class SignatureMoveOverlay extends ConsumerStatefulWidget {
     required this.data,
     required this.boardSize,
     required this.isFlipped,
+    this.isCheckmate = false,
     required this.onComplete,
     this.onLand,
   });
@@ -81,13 +83,19 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
   }
 
   Duration get _effectiveMoveDuration {
+    final baseDuration = widget.isCheckmate
+        ? Duration(
+            milliseconds: (_profile.moveDuration.inMilliseconds * 1.7).round(),
+          )
+        : _profile.moveDuration;
+
     if (widget.boardSize >= 520) {
-      return _profile.moveDuration;
+      return baseDuration;
     }
 
     const mobileMinimum = Duration(milliseconds: 320);
-    if (_profile.moveDuration >= mobileMinimum) {
-      return _profile.moveDuration;
+    if (baseDuration >= mobileMinimum) {
+      return baseDuration;
     }
     return mobileMinimum;
   }
@@ -117,6 +125,17 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant SignatureMoveOverlay oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isCheckmate &&
+        !oldWidget.isCheckmate &&
+        _controller.value < 1.0) {
+      _controller.duration = _effectiveMoveDuration;
+      _controller.forward(from: _controller.value);
+    }
   }
 
   // ── Path Calculation (identical to TrailMovementOverlay) ─────────────────

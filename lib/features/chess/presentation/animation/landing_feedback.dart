@@ -20,6 +20,7 @@ class LandingFeedback extends StatefulWidget {
   final int squareRow;
   final int squareCol;
   final bool isFlipped;
+  final bool isCritical;
 
   /// Fires when the settle animation is fully complete.
   final VoidCallback onComplete;
@@ -32,6 +33,7 @@ class LandingFeedback extends StatefulWidget {
     required this.squareRow,
     required this.squareCol,
     required this.isFlipped,
+    this.isCritical = false,
     required this.onComplete,
   });
 
@@ -41,7 +43,6 @@ class LandingFeedback extends StatefulWidget {
 
 class _LandingFeedbackState extends State<LandingFeedback>
     with SingleTickerProviderStateMixin {
-
   late AnimationController _controller;
   late Animation<double> _scaleAnim;
   late Animation<double> _opacityAnim;
@@ -50,8 +51,8 @@ class _LandingFeedbackState extends State<LandingFeedback>
   void initState() {
     super.initState();
 
-    // Pieces with zero compression skip immediately
-    if (widget.profile.landingCompression == 0.0) {
+    // Pieces with zero compression skip immediately unless this is a mate beat.
+    if (widget.profile.landingCompression == 0.0 && !widget.isCritical) {
       WidgetsBinding.instance.addPostFrameCallback((_) => widget.onComplete());
       _controller = AnimationController(vsync: this, duration: Duration.zero);
       _scaleAnim = const AlwaysStoppedAnimation(1.0);
@@ -59,26 +60,33 @@ class _LandingFeedbackState extends State<LandingFeedback>
       return;
     }
 
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 90),
-    )..addStatusListener((status) {
-        if (status == AnimationStatus.completed) {
-          widget.onComplete();
-        }
-      });
+    _controller =
+        AnimationController(
+          vsync: this,
+          duration: widget.isCritical
+              ? const Duration(milliseconds: 180)
+              : const Duration(milliseconds: 90),
+        )..addStatusListener((status) {
+          if (status == AnimationStatus.completed) {
+            widget.onComplete();
+          }
+        });
 
     // Scale: compress briefly then spring back to 1.0
     // Goes: 1.0 → (1.0 - compression) → 1.0 using a custom sequence
     _scaleAnim = TweenSequence<double>([
       TweenSequenceItem(
-        tween: Tween(begin: 1.0, end: 1.0 - widget.profile.landingCompression)
-            .chain(CurveTween(curve: Curves.easeIn)),
+        tween: Tween(
+          begin: 1.0,
+          end: 1.0 - _compression,
+        ).chain(CurveTween(curve: Curves.easeIn)),
         weight: 40,
       ),
       TweenSequenceItem(
-        tween: Tween(begin: 1.0 - widget.profile.landingCompression, end: 1.0)
-            .chain(CurveTween(curve: Curves.easeOut)),
+        tween: Tween(
+          begin: 1.0 - _compression,
+          end: 1.0,
+        ).chain(CurveTween(curve: Curves.easeOut)),
         weight: 60,
       ),
     ]).animate(_controller);
@@ -86,18 +94,29 @@ class _LandingFeedbackState extends State<LandingFeedback>
     // Optional square highlight flash — opacity only, no color
     _opacityAnim = TweenSequence<double>([
       TweenSequenceItem(
-        tween: Tween(begin: 0.0, end: 0.12)
-            .chain(CurveTween(curve: Curves.easeIn)),
+        tween: Tween(
+          begin: 0.0,
+          end: widget.isCritical ? 0.22 : 0.12,
+        ).chain(CurveTween(curve: Curves.easeIn)),
         weight: 30,
       ),
       TweenSequenceItem(
-        tween: Tween(begin: 0.12, end: 0.0)
-            .chain(CurveTween(curve: Curves.easeOut)),
+        tween: Tween(
+          begin: widget.isCritical ? 0.22 : 0.12,
+          end: 0.0,
+        ).chain(CurveTween(curve: Curves.easeOut)),
         weight: 70,
       ),
     ]).animate(_controller);
 
     _controller.forward();
+  }
+
+  double get _compression {
+    if (widget.isCritical) {
+      return widget.profile.landingCompression.clamp(0.018, 0.032).toDouble();
+    }
+    return widget.profile.landingCompression;
   }
 
   @override
@@ -108,7 +127,7 @@ class _LandingFeedbackState extends State<LandingFeedback>
 
   @override
   Widget build(BuildContext context) {
-    if (widget.profile.landingCompression == 0.0) {
+    if (widget.profile.landingCompression == 0.0 && !widget.isCritical) {
       return const SizedBox.shrink();
     }
 
@@ -131,9 +150,7 @@ class _LandingFeedbackState extends State<LandingFeedback>
               // Square flash highlight (opacity only)
               Opacity(
                 opacity: _opacityAnim.value,
-                child: Container(
-                  color: Colors.white,
-                ),
+                child: Container(color: Colors.white),
               ),
               // Scale compression effect centered on square
               Center(
