@@ -39,7 +39,7 @@ class _MainPageState extends ConsumerState<MainPage> {
               }
             },
           ),
-          
+
           // Overlay Chat System
           if (_isCommentaryExpanded) ...[
             Positioned.fill(
@@ -47,9 +47,7 @@ class _MainPageState extends ConsumerState<MainPage> {
                 onTap: () => setState(() => _isCommentaryExpanded = false),
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                  child: Container(
-                    color: Colors.black.withValues(alpha: 0.4),
-                  ),
+                  child: Container(color: Colors.black.withValues(alpha: 0.4)),
                 ),
               ),
             ),
@@ -57,7 +55,10 @@ class _MainPageState extends ConsumerState<MainPage> {
               child: Hero(
                 tag: 'commentary-panel',
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 40),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 40,
+                  ),
                   child: ConstrainedBox(
                     constraints: BoxConstraints(
                       maxWidth: 600,
@@ -122,21 +123,33 @@ class _MainPageState extends ConsumerState<MainPage> {
                               },
                               style: FilledButton.styleFrom(
                                 backgroundColor: ScholarlyTheme.accentBlue,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                  vertical: 12,
+                                ),
                               ),
                               child: Text(
                                 'Yes',
-                                style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                                style: GoogleFonts.inter(
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
                             const SizedBox(width: 16),
                             TextButton(
                               onPressed: () {
-                                ref.read(chessProvider.notifier).dismissGameOver();
+                                ref
+                                    .read(chessProvider.notifier)
+                                    .dismissGameOver();
                               },
                               style: TextButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                  vertical: 12,
+                                ),
                               ),
                               child: Text(
                                 'No',
@@ -214,17 +227,16 @@ class _MainPageState extends ConsumerState<MainPage> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _buildPortraitHeader(context, ref, state),
-        // Minimized Chat Option
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: _buildCollapsedCommentaryHeader(context, ref, state),
-        ),
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
           child: EvaluationBar(evaluation: state.currentEvaluation),
         ),
-        const Expanded(
-          child: BoardStage(),
+        const Expanded(child: BoardStage()),
+        const SizedBox(height: 8),
+        // Minimized Chat Option
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: _buildCollapsedCommentaryHeader(context, ref, state),
         ),
         const SizedBox(height: 8),
         Padding(
@@ -280,12 +292,14 @@ class _MainPageState extends ConsumerState<MainPage> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _buildHeader(context, ref, state),
-        const SizedBox(height: 4),
-        _buildActionRow(context, ref, state),
-        const SizedBox(height: 6),
-        EvaluationBar(evaluation: state.currentEvaluation),
         const SizedBox(height: 8),
+        EvaluationBar(evaluation: state.currentEvaluation),
+        const Spacer(),
+        // Minimized Chat Option
         _buildCollapsedCommentaryHeader(context, ref, state),
+        const SizedBox(height: 8),
+        _buildActionRow(context, ref, state),
+        const SizedBox(height: 4),
       ],
     );
   }
@@ -551,16 +565,22 @@ class _MainPageState extends ConsumerState<MainPage> {
         width: 34,
         height: 34,
         decoration: ScholarlyTheme.modernDecoration().copyWith(
-          color: isActive ? ScholarlyTheme.accentBlueSoft : ScholarlyTheme.panelBase,
+          color: isActive
+              ? ScholarlyTheme.accentBlueSoft
+              : ScholarlyTheme.panelBase,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isActive ? ScholarlyTheme.accentBlue : ScholarlyTheme.panelStroke,
+            color: isActive
+                ? ScholarlyTheme.accentBlue
+                : ScholarlyTheme.panelStroke,
           ),
         ),
         padding: const EdgeInsets.all(4),
         child: Icon(
           icon,
-          color: isActive ? ScholarlyTheme.accentBlue : ScholarlyTheme.textPrimary,
+          color: isActive
+              ? ScholarlyTheme.accentBlue
+              : ScholarlyTheme.textPrimary,
           size: 20,
         ),
       ),
@@ -663,8 +683,13 @@ class _MainPageState extends ConsumerState<MainPage> {
         context: context,
         builder: (context) => AlertDialog(
           backgroundColor: ScholarlyTheme.panelBase,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text('New Game?', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Text(
+            'New Game?',
+            style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+          ),
           content: Text(
             'All progress in current game will be lost if not saved.',
             style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary),
@@ -672,15 +697,23 @@ class _MainPageState extends ConsumerState<MainPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: Text('No', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted)),
+              child: Text(
+                'No',
+                style: GoogleFonts.inter(color: ScholarlyTheme.textMuted),
+              ),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, true),
               style: FilledButton.styleFrom(
                 backgroundColor: ScholarlyTheme.accentBlue,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
-              child: Text('Yes', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+              child: Text(
+                'Yes',
+                style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+              ),
             ),
           ],
         ),

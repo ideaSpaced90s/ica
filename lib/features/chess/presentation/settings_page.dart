@@ -29,7 +29,11 @@ class SettingsPage extends ConsumerWidget {
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.settings, color: ScholarlyTheme.textPrimary, size: 24),
+                        Icon(
+                          Icons.settings,
+                          color: ScholarlyTheme.textPrimary,
+                          size: 24,
+                        ),
                         const SizedBox(width: 12),
                         Text(
                           'Settings',
@@ -42,16 +46,22 @@ class SettingsPage extends ConsumerWidget {
                       ],
                     ),
                     IconButton(
-                      icon: Icon(Icons.close, color: ScholarlyTheme.textPrimary),
+                      icon: Icon(
+                        Icons.close,
+                        color: ScholarlyTheme.textPrimary,
+                      ),
                       onPressed: () => Navigator.of(context).pop(),
                     ),
                   ],
                 ),
               ),
-              
+
               // Game Status Header
               GlassPanel(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -71,8 +81,8 @@ class SettingsPage extends ConsumerWidget {
                         Row(
                           children: [
                             Text(
-                              state.game.gameOver 
-                                  ? 'Game Over' 
+                              state.game.gameOver
+                                  ? 'Game Over'
                                   : (state.isPaused ? 'Paused' : 'In Progress'),
                               style: GoogleFonts.inter(
                                 color: ScholarlyTheme.textPrimary,
@@ -87,10 +97,16 @@ class SettingsPage extends ConsumerWidget {
                               height: 8,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                color: state.isCouncilOnline ? Colors.green : Colors.red,
+                                color: state.isCouncilOnline
+                                    ? Colors.green
+                                    : Colors.red,
                                 boxShadow: [
                                   BoxShadow(
-                                    color: (state.isCouncilOnline ? Colors.green : Colors.red).withValues(alpha: 0.4),
+                                    color:
+                                        (state.isCouncilOnline
+                                                ? Colors.green
+                                                : Colors.red)
+                                            .withValues(alpha: 0.4),
                                     blurRadius: 4,
                                     spreadRadius: 1,
                                   ),
@@ -106,13 +122,17 @@ class SettingsPage extends ConsumerWidget {
                         _StatusClock(
                           label: 'White',
                           timeLeft: state.whiteTimeLeft,
-                          isActive: state.clockStarted && state.activeClockSide == 'white',
+                          isActive:
+                              state.clockStarted &&
+                              state.activeClockSide == 'white',
                         ),
                         const SizedBox(width: 8),
                         _StatusClock(
                           label: 'Black',
                           timeLeft: state.blackTimeLeft,
-                          isActive: state.clockStarted && state.activeClockSide == 'black',
+                          isActive:
+                              state.clockStarted &&
+                              state.activeClockSide == 'black',
                         ),
                       ],
                     ),
@@ -140,9 +160,13 @@ class SettingsPage extends ConsumerWidget {
                               sunken: state.isMusicEnabled,
                               onTap: () => notifier.toggleMusic(),
                               child: Icon(
-                                state.isMusicEnabled ? Icons.music_note_rounded : Icons.music_off_rounded,
+                                state.isMusicEnabled
+                                    ? Icons.music_note_rounded
+                                    : Icons.music_off_rounded,
                                 size: 28,
-                                color: state.isMusicEnabled ? ScholarlyTheme.accentBlue : ScholarlyTheme.textPrimary,
+                                color: state.isMusicEnabled
+                                    ? ScholarlyTheme.accentBlue
+                                    : ScholarlyTheme.textPrimary,
                               ),
                             ),
                             _SquareSettingsButton(
@@ -150,9 +174,13 @@ class SettingsPage extends ConsumerWidget {
                               sunken: state.isSoundEnabled,
                               onTap: () => notifier.toggleSound(),
                               child: Icon(
-                                state.isSoundEnabled ? Icons.volume_up_rounded : Icons.volume_off_rounded,
+                                state.isSoundEnabled
+                                    ? Icons.volume_up_rounded
+                                    : Icons.volume_off_rounded,
                                 size: 28,
-                                color: state.isSoundEnabled ? ScholarlyTheme.accentBlue : ScholarlyTheme.textPrimary,
+                                color: state.isSoundEnabled
+                                    ? ScholarlyTheme.accentBlue
+                                    : ScholarlyTheme.textPrimary,
                               ),
                             ),
                             _SquareSettingsButton(
@@ -160,9 +188,13 @@ class SettingsPage extends ConsumerWidget {
                               sunken: state.isAnimationsEnabled,
                               onTap: () => notifier.toggleAnimations(),
                               child: Icon(
-                                state.isAnimationsEnabled ? Icons.movie_filter_rounded : Icons.movie_filter_outlined,
+                                state.isAnimationsEnabled
+                                    ? Icons.movie_filter_rounded
+                                    : Icons.movie_filter_outlined,
                                 size: 28,
-                                color: state.isAnimationsEnabled ? ScholarlyTheme.accentBlue : ScholarlyTheme.textPrimary,
+                                color: state.isAnimationsEnabled
+                                    ? ScholarlyTheme.accentBlue
+                                    : ScholarlyTheme.textPrimary,
                               ),
                             ),
                           ],
@@ -183,61 +215,91 @@ class SettingsPage extends ConsumerWidget {
                               label: 'Classic',
                               sunken: state.boardThemeId == 'classic',
                               onTap: () => notifier.setBoardTheme('classic'),
-                              child: _buildThemePreview(const Color(0xFFE8D1B5), const Color(0xFFB58863)),
+                              child: _buildThemePreview(
+                                const Color(0xFFE8D1B5),
+                                const Color(0xFFB58863),
+                              ),
                             ),
                             _SquareSettingsButton(
                               label: 'Theme 2',
                               sunken: state.boardThemeId == 'theme2',
                               onTap: () => notifier.setBoardTheme('theme2'),
-                              child: _buildThemePreview(const Color(0xFFDEE3E6), const Color(0xFF8CA2AD)),
+                              child: _buildThemePreview(
+                                const Color(0xFFDEE3E6),
+                                const Color(0xFF8CA2AD),
+                              ),
                             ),
                             _SquareSettingsButton(
                               label: 'Theme 3',
                               sunken: state.boardThemeId == 'theme3',
                               onTap: () => notifier.setBoardTheme('theme3'),
-                              child: _buildThemePreview(const Color(0xFFEBECD0), const Color(0xFF779556)),
+                              child: _buildThemePreview(
+                                const Color(0xFFEBECD0),
+                                const Color(0xFF779556),
+                              ),
                             ),
                             _SquareSettingsButton(
                               label: 'Theme 4',
                               sunken: state.boardThemeId == 'theme4',
                               onTap: () => notifier.setBoardTheme('theme4'),
-                              child: _buildThemePreview(const Color(0xFFBBBBBB), const Color(0xFF666666)),
+                              child: _buildThemePreview(
+                                const Color(0xFFBBBBBB),
+                                const Color(0xFF666666),
+                              ),
                             ),
                             _SquareSettingsButton(
                               label: 'Theme 5',
                               sunken: state.boardThemeId == 'theme5',
                               onTap: () => notifier.setBoardTheme('theme5'),
-                              child: _buildThemePreview(const Color(0xFFF3E5F5), const Color(0xFF9575CD)),
+                              child: _buildThemePreview(
+                                const Color(0xFFF3E5F5),
+                                const Color(0xFF9575CD),
+                              ),
                             ),
                             _SquareSettingsButton(
                               label: 'Theme 6',
                               sunken: state.boardThemeId == 'theme6',
                               onTap: () => notifier.setBoardTheme('theme6'),
-                              child: _buildThemePreview(const Color(0xFFE0F2F1), const Color(0xFF006064)),
+                              child: _buildThemePreview(
+                                const Color(0xFFE0F2F1),
+                                const Color(0xFF006064),
+                              ),
                             ),
                             _SquareSettingsButton(
                               label: 'Theme 7',
                               sunken: state.boardThemeId == 'theme7',
                               onTap: () => notifier.setBoardTheme('theme7'),
-                              child: _buildThemePreview(const Color(0xFFFFF3E0), const Color(0xFFE64A19)),
+                              child: _buildThemePreview(
+                                const Color(0xFFFFF3E0),
+                                const Color(0xFFE64A19),
+                              ),
                             ),
                             _SquareSettingsButton(
                               label: 'Theme 8',
                               sunken: state.boardThemeId == 'theme8',
                               onTap: () => notifier.setBoardTheme('theme8'),
-                              child: _buildThemePreview(const Color(0xFFECEFF1), const Color(0xFF263238)),
+                              child: _buildThemePreview(
+                                const Color(0xFFECEFF1),
+                                const Color(0xFF263238),
+                              ),
                             ),
                             _SquareSettingsButton(
                               label: 'Theme 9',
                               sunken: state.boardThemeId == 'theme9',
                               onTap: () => notifier.setBoardTheme('theme9'),
-                              child: _buildThemePreview(const Color(0xFFF1F8E9), const Color(0xFF33691E)),
+                              child: _buildThemePreview(
+                                const Color(0xFFF1F8E9),
+                                const Color(0xFF33691E),
+                              ),
                             ),
                             _SquareSettingsButton(
                               label: 'Theme 10',
                               sunken: state.boardThemeId == 'theme10',
                               onTap: () => notifier.setBoardTheme('theme10'),
-                              child: _buildThemePreview(const Color(0xFFF3E5F5), const Color(0xFF4A148C)),
+                              child: _buildThemePreview(
+                                const Color(0xFFF3E5F5),
+                                const Color(0xFF4A148C),
+                              ),
                             ),
                           ],
                         ),
@@ -254,29 +316,89 @@ class SettingsPage extends ConsumerWidget {
                           alignment: WrapAlignment.start,
                           children: [
                             _SquareSettingsButton(
-                              onTap: () => notifier.setTimeControl(const Duration(minutes: 1), Duration.zero),
-                              sunken: state.whiteTimeLeft.inMinutes == 1 && state.incrementDuration.inSeconds == 0,
-                              child: Text('1+0', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary)),
+                              onTap: () => notifier.setTimeControl(
+                                const Duration(minutes: 1),
+                                Duration.zero,
+                              ),
+                              sunken:
+                                  state.whiteTimeLeft.inMinutes == 1 &&
+                                  state.incrementDuration.inSeconds == 0,
+                              child: Text(
+                                '1+0',
+                                style: GoogleFonts.inter(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: ScholarlyTheme.textPrimary,
+                                ),
+                              ),
                             ),
                             _SquareSettingsButton(
-                              onTap: () => notifier.setTimeControl(const Duration(minutes: 3), Duration.zero),
-                              sunken: state.whiteTimeLeft.inMinutes == 3 && state.incrementDuration.inSeconds == 0,
-                              child: Text('3+0', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary)),
+                              onTap: () => notifier.setTimeControl(
+                                const Duration(minutes: 3),
+                                Duration.zero,
+                              ),
+                              sunken:
+                                  state.whiteTimeLeft.inMinutes == 3 &&
+                                  state.incrementDuration.inSeconds == 0,
+                              child: Text(
+                                '3+0',
+                                style: GoogleFonts.inter(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: ScholarlyTheme.textPrimary,
+                                ),
+                              ),
                             ),
                             _SquareSettingsButton(
-                              onTap: () => notifier.setTimeControl(const Duration(minutes: 3), const Duration(seconds: 2)),
-                              sunken: state.whiteTimeLeft.inMinutes == 3 && state.incrementDuration.inSeconds == 2,
-                              child: Text('3+2', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary)),
+                              onTap: () => notifier.setTimeControl(
+                                const Duration(minutes: 3),
+                                const Duration(seconds: 2),
+                              ),
+                              sunken:
+                                  state.whiteTimeLeft.inMinutes == 3 &&
+                                  state.incrementDuration.inSeconds == 2,
+                              child: Text(
+                                '3+2',
+                                style: GoogleFonts.inter(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: ScholarlyTheme.textPrimary,
+                                ),
+                              ),
                             ),
                             _SquareSettingsButton(
-                              onTap: () => notifier.setTimeControl(const Duration(minutes: 10), Duration.zero),
-                              sunken: state.whiteTimeLeft.inMinutes == 10 && state.incrementDuration.inSeconds == 0,
-                              child: Text('10+0', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary)),
+                              onTap: () => notifier.setTimeControl(
+                                const Duration(minutes: 10),
+                                Duration.zero,
+                              ),
+                              sunken:
+                                  state.whiteTimeLeft.inMinutes == 10 &&
+                                  state.incrementDuration.inSeconds == 0,
+                              child: Text(
+                                '10+0',
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: ScholarlyTheme.textPrimary,
+                                ),
+                              ),
                             ),
                             _SquareSettingsButton(
-                              onTap: () => notifier.setTimeControl(const Duration(minutes: 10), const Duration(seconds: 5)),
-                              sunken: state.whiteTimeLeft.inMinutes == 10 && state.incrementDuration.inSeconds == 5,
-                              child: Text('10+5', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary)),
+                              onTap: () => notifier.setTimeControl(
+                                const Duration(minutes: 10),
+                                const Duration(seconds: 5),
+                              ),
+                              sunken:
+                                  state.whiteTimeLeft.inMinutes == 10 &&
+                                  state.incrementDuration.inSeconds == 5,
+                              child: Text(
+                                '10+5',
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: ScholarlyTheme.textPrimary,
+                                ),
+                              ),
                             ),
                           ],
                         ),
@@ -293,35 +415,88 @@ class SettingsPage extends ConsumerWidget {
                           alignment: WrapAlignment.start,
                           children: [
                             _SquareSettingsButton(
-                              onTap: () => notifier.setAutoPlayDelay(Duration.zero),
+                              onTap: () =>
+                                  notifier.setAutoPlayDelay(Duration.zero),
                               sunken: state.autoPlayDelay.inSeconds == 0,
                               label: 'Instant',
-                              child: Text('0s', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary)),
+                              child: Text(
+                                '0s',
+                                style: GoogleFonts.inter(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: ScholarlyTheme.textPrimary,
+                                ),
+                              ),
                             ),
                             _SquareSettingsButton(
-                              onTap: () => notifier.setAutoPlayDelay(const Duration(seconds: 2)),
+                              onTap: () => notifier.setAutoPlayDelay(
+                                const Duration(seconds: 2),
+                              ),
                               sunken: state.autoPlayDelay.inSeconds == 2,
-                              child: Text('2s', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary)),
+                              child: Text(
+                                '2s',
+                                style: GoogleFonts.inter(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: ScholarlyTheme.textPrimary,
+                                ),
+                              ),
                             ),
                             _SquareSettingsButton(
-                              onTap: () => notifier.setAutoPlayDelay(const Duration(seconds: 3)),
+                              onTap: () => notifier.setAutoPlayDelay(
+                                const Duration(seconds: 3),
+                              ),
                               sunken: state.autoPlayDelay.inSeconds == 3,
-                              child: Text('3s', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary)),
+                              child: Text(
+                                '3s',
+                                style: GoogleFonts.inter(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: ScholarlyTheme.textPrimary,
+                                ),
+                              ),
                             ),
                             _SquareSettingsButton(
-                              onTap: () => notifier.setAutoPlayDelay(const Duration(seconds: 4)),
+                              onTap: () => notifier.setAutoPlayDelay(
+                                const Duration(seconds: 4),
+                              ),
                               sunken: state.autoPlayDelay.inSeconds == 4,
-                              child: Text('4s', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary)),
+                              child: Text(
+                                '4s',
+                                style: GoogleFonts.inter(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: ScholarlyTheme.textPrimary,
+                                ),
+                              ),
                             ),
                             _SquareSettingsButton(
-                              onTap: () => notifier.setAutoPlayDelay(const Duration(seconds: 5)),
+                              onTap: () => notifier.setAutoPlayDelay(
+                                const Duration(seconds: 5),
+                              ),
                               sunken: state.autoPlayDelay.inSeconds == 5,
-                              child: Text('5s', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary)),
+                              child: Text(
+                                '5s',
+                                style: GoogleFonts.inter(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: ScholarlyTheme.textPrimary,
+                                ),
+                              ),
                             ),
                             _SquareSettingsButton(
-                              onTap: () => notifier.setAutoPlayDelay(const Duration(seconds: 10)),
+                              onTap: () => notifier.setAutoPlayDelay(
+                                const Duration(seconds: 10),
+                              ),
                               sunken: state.autoPlayDelay.inSeconds == 10,
-                              child: Text('10s', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary)),
+                              child: Text(
+                                '10s',
+                                style: GoogleFonts.inter(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: ScholarlyTheme.textPrimary,
+                                ),
+                              ),
                             ),
                           ],
                         ),
@@ -340,17 +515,29 @@ class SettingsPage extends ConsumerWidget {
                             _SquareSettingsButton(
                               label: 'Saves',
                               onTap: () => _showSavedGamesSheet(context, ref),
-                              child: Icon(Icons.folder_open_rounded, size: 28, color: ScholarlyTheme.textPrimary),
+                              child: Icon(
+                                Icons.folder_open_rounded,
+                                size: 28,
+                                color: ScholarlyTheme.textPrimary,
+                              ),
                             ),
                             _SquareSettingsButton(
                               label: 'Save',
                               onTap: () => notifier.saveCurrentGame(),
-                              child: Icon(Icons.save_rounded, size: 28, color: ScholarlyTheme.textPrimary),
+                              child: Icon(
+                                Icons.save_rounded,
+                                size: 28,
+                                color: ScholarlyTheme.textPrimary,
+                              ),
                             ),
                             _SquareSettingsButton(
                               label: 'Exit',
                               onTap: () => _confirmSaveAndExit(context, ref),
-                              child: Icon(Icons.exit_to_app_rounded, size: 28, color: Colors.red.shade600),
+                              child: Icon(
+                                Icons.exit_to_app_rounded,
+                                size: 28,
+                                color: Colors.red.shade600,
+                              ),
                             ),
                           ],
                         ),
@@ -386,20 +573,33 @@ class SettingsPage extends ConsumerWidget {
       builder: (context) {
         return AlertDialog(
           backgroundColor: ScholarlyTheme.panelBase,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text('Save the game and exit?', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Text(
+            'Save the game and exit?',
+            style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: Text('No', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted)),
+              child: Text(
+                'No',
+                style: GoogleFonts.inter(color: ScholarlyTheme.textMuted),
+              ),
             ),
             FilledButton(
               onPressed: () => Navigator.of(context).pop(true),
               style: FilledButton.styleFrom(
                 backgroundColor: ScholarlyTheme.accentBlue,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
-              child: Text('Yes', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+              child: Text(
+                'Yes',
+                style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+              ),
             ),
           ],
         );
@@ -438,8 +638,8 @@ class SettingsPage extends ConsumerWidget {
                     maxHeight: MediaQuery.of(context).size.height * 0.72,
                   ),
                   child: Column(
-                     crossAxisAlignment: CrossAxisAlignment.start,
-                     children: [
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
                         'Saved games',
                         style: GoogleFonts.inter(
@@ -465,7 +665,8 @@ class SettingsPage extends ConsumerWidget {
                         Expanded(
                           child: ListView.separated(
                             itemCount: saves.length,
-                            separatorBuilder: (context, index) => const SizedBox(height: 10),
+                            separatorBuilder: (context, index) =>
+                                const SizedBox(height: 10),
                             itemBuilder: (context, index) {
                               final entry = saves[index];
                               return SavedGameTile(
@@ -475,7 +676,8 @@ class SettingsPage extends ConsumerWidget {
                                   Navigator.of(context).pop(); // close settings
                                   await notifier.loadSavedGame(entry);
                                 },
-                                onDelete: () => notifier.deleteSavedGame(entry.id),
+                                onDelete: () =>
+                                    notifier.deleteSavedGame(entry.id),
                               );
                             },
                           ),
@@ -536,20 +738,26 @@ class _StatusClock extends StatelessWidget {
       duration: const Duration(milliseconds: 200),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: ScholarlyTheme.modernDecoration().copyWith(
-        color: isActive ? ScholarlyTheme.accentBlueSoft : ScholarlyTheme.panelBase,
+        color: isActive
+            ? ScholarlyTheme.accentBlueSoft
+            : ScholarlyTheme.panelBase,
         border: Border.all(
-          color: isActive ? ScholarlyTheme.accentBlue : ScholarlyTheme.panelStroke,
+          color: isActive
+              ? ScholarlyTheme.accentBlue
+              : ScholarlyTheme.panelStroke,
         ),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         children: [
           Text(
-            label, 
+            label,
             style: GoogleFonts.inter(
-              fontSize: 10, 
+              fontSize: 10,
               fontWeight: FontWeight.w600,
-              color: isActive ? ScholarlyTheme.accentBlue : ScholarlyTheme.textMuted,
+              color: isActive
+                  ? ScholarlyTheme.accentBlue
+                  : ScholarlyTheme.textMuted,
             ),
           ),
           Text(
@@ -557,7 +765,9 @@ class _StatusClock extends StatelessWidget {
             style: GoogleFonts.jetBrainsMono(
               fontSize: 14,
               fontWeight: FontWeight.bold,
-              color: isActive ? ScholarlyTheme.accentBlue : ScholarlyTheme.textPrimary,
+              color: isActive
+                  ? ScholarlyTheme.accentBlue
+                  : ScholarlyTheme.textPrimary,
             ),
           ),
         ],
@@ -594,9 +804,13 @@ class _SquareSettingsButton extends StatelessWidget {
         width: outerSize,
         height: outerSize,
         decoration: ScholarlyTheme.modernDecoration().copyWith(
-          color: sunken ? ScholarlyTheme.accentBlueSoft : ScholarlyTheme.panelBase,
+          color: sunken
+              ? ScholarlyTheme.accentBlueSoft
+              : ScholarlyTheme.panelBase,
           border: Border.all(
-            color: sunken ? ScholarlyTheme.accentBlue : ScholarlyTheme.panelStroke,
+            color: sunken
+                ? ScholarlyTheme.accentBlue
+                : ScholarlyTheme.panelStroke,
           ),
           borderRadius: BorderRadius.circular(12),
         ),
@@ -604,9 +818,7 @@ class _SquareSettingsButton extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Expanded(
-              child: Center(child: child),
-            ),
+            Expanded(child: Center(child: child)),
             if (label != null)
               Padding(
                 padding: const EdgeInsets.only(top: 4),
@@ -616,7 +828,9 @@ class _SquareSettingsButton extends StatelessWidget {
                   style: GoogleFonts.inter(
                     fontSize: isPortrait ? 11 : 9,
                     fontWeight: sunken ? FontWeight.w600 : FontWeight.w500,
-                    color: sunken ? ScholarlyTheme.accentBlue : ScholarlyTheme.textPrimary,
+                    color: sunken
+                        ? ScholarlyTheme.accentBlue
+                        : ScholarlyTheme.textPrimary,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -628,5 +842,3 @@ class _SquareSettingsButton extends StatelessWidget {
     );
   }
 }
-
-
