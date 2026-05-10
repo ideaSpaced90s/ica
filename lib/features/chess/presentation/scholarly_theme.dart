@@ -1,30 +1,40 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class ScholarlyTheme {
-  // Win98 Palette
-  static const Color backgroundStart = Color(0xFF008080); // Classic Teal
-  static const Color backgroundEnd = Color(0xFF008080);
-  static const Color panelBase = Color(0xFFC0C0C0); // Classic Grey
-  static const Color panelGlass = Color(0xFFC0C0C0);
-  static const Color panelStroke = Color(0xFF808080);
-  static const Color boardFrame = Color(0xFF808080);
-  static const Color accentGold = Color(0xFF000080); // Classic Navy for title bars
-  static const Color accentBlue = Color(0xFF008080);
-  static const Color accentBlueSoft = Color(0xFF00FFFF);
+  // Modern Office App Palette
+  static const Color backgroundStart = Color(0xFFF8F9FA); // Clean off-white
+  static const Color backgroundEnd = Color(0xFFE9ECEF);
+  static const Color panelBase = Color(0xFFFFFFFF); // Clean white for panels
+  static const Color panelGlass = Color(0xFFFFFFFF);
+  static const Color panelStroke = Color(0xFFDEE2E6); // Subtle border
+  static const Color boardFrame = Color(0xFFCED4DA);
+  static const Color accentGold = Color(0xFF0056B3); // Professional Cobalt Blue
+  static const Color accentBlue = Color(0xFF0D6EFD); // Primary Blue
+  static const Color accentBlueSoft = Color(0xFFE7F1FF); // Soft Blue Background
+  
+  // Kept original board colors as requested
   static const Color lightSquare = Color(0xFFC0C0C0);
   static const Color darkSquare = Color(0xFF808080);
-  static const Color textPrimary = Color(0xFF000000);
-  static const Color textMuted = Color(0xFF404040);
-  static const Color textSubtle = Color(0xFF808080);
-  static const Color activeClock = Color(0xFF000080);
-  static const Color inactiveClock = Color(0xFF808080);
-  static const Color moveHint = Color(0xAA000080);
-  static const Color selectedGlow = Color(0x99000080);
+  
+  static const Color textPrimary = Color(0xFF1E293B);
+  static const Color textMuted = Color(0xFF64748B);
+  
+  // Constants
+  static const Color shadowColor = Color(0xFF0F172A);
+  static const double shadowOffset = 4.0;
+  static const double insetOffset = 2.0;
 
-  // Win98 is all about square boxes
-  static const double radiusLarge = 0;
-  static const double radiusMedium = 0;
-  static const double radiusSmall = 0;
+  static const Color textSubtle = Color(0xFFADB5BD);
+  static const Color activeClock = Color(0xFF0056B3);
+  static const Color inactiveClock = Color(0xFF6C757D);
+  static const Color moveHint = Color(0x330D6EFD); // Light blue hint
+  static const Color selectedGlow = Color(0x660D6EFD);
+
+  // Modern rounded shapes
+  static const double radiusLarge = 24.0;
+  static const double radiusMedium = 16.0;
+  static const double radiusSmall = 8.0;
 
   static LinearGradient get backgroundGradient => const LinearGradient(
     colors: [backgroundStart, backgroundEnd],
@@ -36,47 +46,78 @@ class ScholarlyTheme {
     colors: [panelBase, panelBase],
   );
 
-  static List<BoxShadow> get cardShadow => [];
-  static List<BoxShadow> get boardShadow => [];
+  static List<BoxShadow> get cardShadow => [
+    BoxShadow(
+      color: Colors.black.withValues(alpha: 0.05),
+      blurRadius: 10,
+      offset: const Offset(0, 4),
+      spreadRadius: 0,
+    )
+  ];
+  static List<BoxShadow> get boardShadow => [
+    BoxShadow(
+      color: Colors.black.withValues(alpha: 0.1),
+      blurRadius: 20,
+      offset: const Offset(0, 8),
+      spreadRadius: 0,
+    )
+  ];
 
   static ThemeData get themeData {
     return ThemeData(
       brightness: Brightness.light,
-      useMaterial3: false, // Old school!
+      useMaterial3: true,
       scaffoldBackgroundColor: backgroundStart,
-      primaryColor: const Color(0xFF000080),
-      textTheme: const TextTheme(
-        headlineSmall: TextStyle(
+      primaryColor: accentBlue,
+      textTheme: GoogleFonts.interTextTheme().copyWith(
+        headlineSmall: GoogleFonts.inter(
           color: textPrimary,
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
-          fontFamily: 'Tahoma', // Common Win98 font
+          fontSize: 20,
+          fontWeight: FontWeight.w700,
         ),
-        titleMedium: TextStyle(
+        titleMedium: GoogleFonts.inter(
           color: textPrimary,
-          fontSize: 14,
-          fontWeight: FontWeight.bold,
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
         ),
-        bodyLarge: TextStyle(color: textPrimary, fontSize: 13, height: 1.2, fontFamily: 'Tahoma'),
-        bodyMedium: TextStyle(color: textPrimary, fontSize: 11, height: 1.2, fontFamily: 'Tahoma'),
+        bodyLarge: GoogleFonts.inter(color: textPrimary, fontSize: 14, height: 1.5),
+        bodyMedium: GoogleFonts.inter(color: textMuted, fontSize: 13, height: 1.5),
       ),
     );
   }
 
-  // Win98 Bevel Decoration
-  static BoxDecoration win98Decoration({bool sunken = false}) {
+  // Modern Card Decoration
+  static BoxDecoration modernDecoration({bool sunken = false}) {
+    if (sunken) {
+      return BoxDecoration(
+        color: panelBase,
+        border: Border.all(color: panelStroke, width: 1.5),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: shadowColor.withValues(alpha: 0.1),
+            blurRadius: 4,
+            offset: const Offset(insetOffset, insetOffset),
+            spreadRadius: -1,
+          ),
+        ],
+      );
+    }
+    
     return BoxDecoration(
       color: panelBase,
-      border: Border(
-        top: BorderSide(color: sunken ? const Color(0xFF808080) : Colors.white, width: 2),
-        left: BorderSide(color: sunken ? const Color(0xFF808080) : Colors.white, width: 2),
-        right: BorderSide(color: sunken ? Colors.white : const Color(0xFF808080), width: 2),
-        bottom: BorderSide(color: sunken ? Colors.white : const Color(0xFF808080), width: 2),
-      ),
+      border: Border.all(color: panelStroke, width: 1),
+      borderRadius: BorderRadius.circular(12),
+      boxShadow: [
+        BoxShadow(
+          color: shadowColor.withValues(alpha: 0.05),
+          blurRadius: 10,
+          offset: const Offset(shadowOffset, shadowOffset),
+        ),
+      ],
     );
   }
 }
-
 
 class GlassPanel extends StatelessWidget {
   final Widget child;
@@ -88,7 +129,7 @@ class GlassPanel extends StatelessWidget {
   const GlassPanel({
     super.key,
     required this.child,
-    this.padding = const EdgeInsets.all(12),
+    this.padding = const EdgeInsets.all(16),
     this.borderRadius,
     this.strokeColor,
     this.sunken = false,
@@ -98,7 +139,10 @@ class GlassPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: padding,
-      decoration: ScholarlyTheme.win98Decoration(sunken: sunken),
+      decoration: ScholarlyTheme.modernDecoration(sunken: sunken).copyWith(
+        borderRadius: borderRadius ?? BorderRadius.circular(ScholarlyTheme.radiusMedium),
+        border: strokeColor != null ? Border.all(color: strokeColor!) : null,
+      ),
       child: child,
     );
   }

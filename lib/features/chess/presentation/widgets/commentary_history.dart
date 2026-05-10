@@ -1,23 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../application/chess_provider.dart';
 import '../../data/saved_game.dart';
 import '../scholarly_theme.dart';
 
-class CommentaryHistory extends StatefulWidget {
+class CommentaryHistory extends ConsumerStatefulWidget {
   const CommentaryHistory({super.key, required this.state});
 
   final ChessState state;
 
   @override
-  State<CommentaryHistory> createState() => _CommentaryHistoryState();
+  ConsumerState<CommentaryHistory> createState() => _CommentaryHistoryState();
 }
 
-class _CommentaryHistoryState extends State<CommentaryHistory> {
+class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
   late final Ticker _ticker;
   int _pulse = 0;
   final ScrollController _scrollController = ScrollController();
+  final TextEditingController _textController = TextEditingController();
 
   @override
   void initState() {
@@ -56,6 +58,7 @@ class _CommentaryHistoryState extends State<CommentaryHistory> {
   void dispose() {
     _ticker.dispose();
     _scrollController.dispose();
+    _textController.dispose();
     super.dispose();
   }
 
@@ -69,51 +72,108 @@ class _CommentaryHistoryState extends State<CommentaryHistory> {
     final history = state.commentaryHistory;
     
     return Container(
-      decoration: ScholarlyTheme.win98Decoration(sunken: true).copyWith(
-        color: Colors.white,
-      ),
-      padding: const EdgeInsets.all(8),
-      child: SelectionArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: _buildContent(state, history),
+      decoration: ScholarlyTheme.modernDecoration(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: SelectionArea(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: _buildContent(state, history),
+              ),
             ),
-          ],
-        ),
+          ),
+          const Divider(height: 1, color: ScholarlyTheme.panelStroke),
+          _buildInput(context),
+        ],
       ),
     );
   }
 
+  Widget _buildInput(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: ScholarlyTheme.backgroundStart.withValues(alpha: 0.5),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(16),
+          bottomRight: Radius.circular(16),
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _textController,
+              onSubmitted: (_) => _handleSend(),
+              style: GoogleFonts.inter(fontSize: 14, color: ScholarlyTheme.textPrimary),
+              decoration: InputDecoration(
+                hintText: 'Ask the Council...',
+                hintStyle: GoogleFonts.inter(color: ScholarlyTheme.textSubtle, fontSize: 14),
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(vertical: 10),
+              ),
+            ),
+          ),
+          IconButton(
+            onPressed: _handleSend,
+            icon: Icon(Icons.send_rounded, size: 20, color: ScholarlyTheme.accentBlue),
+            tooltip: 'Send Message',
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _handleSend() {
+    final text = _textController.text.trim();
+    if (text.isEmpty) return;
+    
+    ref.read(chessProvider.notifier).sendUserQuery(text);
+    _textController.clear();
+  }
+
   Widget _buildContent(ChessState state, List<CommentaryEntry> history) {
     if (state.startupError != null || state.commentaryError != null) {
-      return Text(
-        state.startupError ?? state.commentaryError!,
-        style: GoogleFonts.vt323(color: Colors.red, fontSize: 16),
+      return Center(
+        child: Text(
+          state.startupError ?? state.commentaryError!,
+          style: GoogleFonts.inter(color: Colors.red.shade700, fontSize: 14, fontWeight: FontWeight.w500),
+          textAlign: TextAlign.center,
+        ),
       );
     }
 
     if (state.isCommentaryEngineLoading && history.isEmpty) {
       return Center(
-        child: Text(
-          'Initializing Kingslayer AI...',
-          style: GoogleFonts.vt323(
-            color: Colors.black,
-            fontSize: 18,
-          ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: ScholarlyTheme.accentBlue,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Initializing Kingslayer AI...',
+              style: GoogleFonts.inter(
+                color: ScholarlyTheme.textMuted,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
         ),
       );
     }
 
-    if (history.isEmpty && !state.isCommentaryLoading) {
-      return Text(
-        'KINGSLAYER awaits your opening gambit.',
-        style: GoogleFonts.vt323(color: Colors.black54, fontSize: 18),
-      );
-    }
-
-    final dots = '■' * _pulse; 
+    final dots = '.' * _pulse; 
 
     return ListView.builder(
       controller: _scrollController,
@@ -121,64 +181,173 @@ class _CommentaryHistoryState extends State<CommentaryHistory> {
       itemCount: history.length + (state.isCommentaryLoading && !state.isCommentaryStreaming ? 1 : 0),
       itemBuilder: (context, index) {
         if (index == history.length) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Text(
-              'KINGSLAYER is thinking $dots',
-              style: GoogleFonts.vt323(
-                color: Colors.black87,
-                fontSize: 16,
-              ),
-            ),
-          );
+          return _buildThinkingIndicator(dots);
         }
 
         final entry = history[index];
         final isLast = index == history.length - 1;
         final isStreaming = isLast && state.isCommentaryStreaming;
         
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Text.rich(
-            TextSpan(
+        if (entry.isUser) {
+          return _buildUserBubble(entry);
+        }
+
+        return _buildAiBubble(entry, isStreaming);
+      },
+    );
+  }
+
+  Widget _buildUserBubble(CommentaryEntry entry) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Text(
+            'YOU • ${_formatTime(entry.timestamp)}',
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              color: ScholarlyTheme.textSubtle,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: ScholarlyTheme.accentBlueSoft.withValues(alpha: 0.3),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(12),
+                bottomLeft: Radius.circular(12),
+                bottomRight: Radius.circular(12),
+              ),
+              border: Border.all(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.2)),
+            ),
+            child: Text(
+              entry.text,
+              style: GoogleFonts.inter(
+                color: ScholarlyTheme.textPrimary,
+                fontSize: 14,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAiBubble(CommentaryEntry entry, bool isStreaming) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            radius: 14,
+            backgroundColor: ScholarlyTheme.accentBlueSoft,
+            child: Icon(Icons.psychology, size: 16, color: ScholarlyTheme.accentBlue),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                TextSpan(
-                  text: '[${_formatTime(entry.timestamp)}] ',
-                  style: GoogleFonts.vt323(
-                    color: Colors.black45,
-                    fontSize: 14,
+                Text(
+                  'COUNCIL • ${_formatTime(entry.timestamp)}',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: ScholarlyTheme.textSubtle,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.5,
                   ),
                 ),
-                TextSpan(
-                  text: entry.text,
-                  style: GoogleFonts.vt323(
-                    color: Colors.black,
-                    fontSize: 18,
-                    height: 1.1,
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: ScholarlyTheme.backgroundStart,
+                    borderRadius: const BorderRadius.only(
+                      topRight: Radius.circular(12),
+                      bottomLeft: Radius.circular(12),
+                      bottomRight: Radius.circular(12),
+                    ),
+                    border: Border.all(color: ScholarlyTheme.panelStroke.withValues(alpha: 0.5)),
+                  ),
+                  child: Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(
+                          text: entry.text,
+                          style: GoogleFonts.inter(
+                            color: ScholarlyTheme.textPrimary,
+                            fontSize: 14,
+                            height: 1.4,
+                          ),
+                        ),
+                        if (!entry.isComplete && !isStreaming)
+                           TextSpan(
+                            text: ' •••', 
+                            style: GoogleFonts.inter(
+                              color: ScholarlyTheme.textMuted,
+                              fontSize: 14,
+                            ),
+                          ),
+                        if (isStreaming)
+                          TextSpan(
+                            text: ' ┃', 
+                            style: GoogleFonts.inter(
+                              color: ScholarlyTheme.accentBlue,
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
-                if (!entry.isComplete && !isStreaming)
-                   TextSpan(
-                    text: ' ■', 
-                    style: GoogleFonts.vt323(
-                      color: Colors.black,
-                      fontSize: 18,
-                    ),
-                  ),
-                if (isStreaming)
-                  TextSpan(
-                    text: ' |', 
-                    style: GoogleFonts.vt323(
-                      color: Colors.black,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
               ],
             ),
           ),
-        );
-      },
+        ],
+      ),
+    );
+  }
+
+  Widget _buildThinkingIndicator(String dots) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            radius: 14,
+            backgroundColor: ScholarlyTheme.accentBlueSoft,
+            child: Icon(Icons.psychology, size: 16, color: ScholarlyTheme.accentBlue),
+          ),
+          const SizedBox(width: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: ScholarlyTheme.backgroundStart,
+              borderRadius: const BorderRadius.only(
+                topRight: Radius.circular(12),
+                bottomLeft: Radius.circular(12),
+                bottomRight: Radius.circular(12),
+              ),
+            ),
+            child: Text(
+              'Thinking$dots',
+              style: GoogleFonts.inter(
+                color: ScholarlyTheme.textMuted,
+                fontSize: 14,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

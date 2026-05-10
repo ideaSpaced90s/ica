@@ -45,6 +45,7 @@ class CommentaryEngine {
     String? move,
     String? evalScore,
     String? structuredPrompt,
+    String? userQuery,
   }) async* {
     if (!isInitialized) {
       await initialize();
@@ -75,6 +76,7 @@ class CommentaryEngine {
           'move': move ?? 'Unknown',
           'eval_score': evalScore ?? '0.0',
           'history': structuredPrompt ?? '',
+          'user_query': userQuery ?? '',
         }),
       ).timeout(const Duration(seconds: 15));
 

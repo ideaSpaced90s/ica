@@ -3,21 +3,25 @@ class CommentaryEntry {
     required this.text,
     required this.timestamp,
     this.isComplete = true,
+    this.isUser = false,
   });
 
   final String text;
   final DateTime timestamp;
   final bool isComplete;
+  final bool isUser;
 
   CommentaryEntry copyWith({
     String? text,
     DateTime? timestamp,
     bool? isComplete,
+    bool? isUser,
   }) {
     return CommentaryEntry(
       text: text ?? this.text,
       timestamp: timestamp ?? this.timestamp,
       isComplete: isComplete ?? this.isComplete,
+      isUser: isUser ?? this.isUser,
     );
   }
 
@@ -26,6 +30,7 @@ class CommentaryEntry {
       text: json['text'] as String,
       timestamp: DateTime.parse(json['timestamp'] as String),
       isComplete: json['isComplete'] as bool? ?? true,
+      isUser: json['isUser'] as bool? ?? false,
     );
   }
 
@@ -34,6 +39,7 @@ class CommentaryEntry {
       'text': text,
       'timestamp': timestamp.toIso8601String(),
       'isComplete': isComplete,
+      'isUser': isUser,
     };
   }
 }

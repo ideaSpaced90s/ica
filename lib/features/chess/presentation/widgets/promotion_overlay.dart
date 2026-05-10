@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:chess/chess.dart' as chess_lib;
 import '../../application/chess_provider.dart';
 import '../scholarly_theme.dart';
@@ -35,25 +36,28 @@ class PromotionOverlay extends ConsumerWidget {
         // Selection Menu
         Center(
           child: Container(
-            padding: const EdgeInsets.all(4), // Win98 menu padding
-            decoration: ScholarlyTheme.win98Decoration(),
+            padding: const EdgeInsets.all(12),
+            decoration: ScholarlyTheme.modernDecoration(),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 // Title Bar
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  color: ScholarlyTheme.accentGold, // Navy blue in Win98
-                  child: const Row(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: ScholarlyTheme.backgroundStart,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
                         'CHOOSE ASCENSION',
-                        style: TextStyle(
-                          color: Colors.white,
+                        style: GoogleFonts.inter(
+                          color: ScholarlyTheme.textPrimary,
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
-                          fontFamily: 'Tahoma',
+                          letterSpacing: 1,
                         ),
                       ),
                     ],
@@ -127,11 +131,18 @@ class _PromotionOptionState extends State<_PromotionOption> {
       child: MouseRegion(
         onEnter: (_) => setState(() => _isHovered = true),
         onExit: (_) => setState(() => _isHovered = false),
-        child: Container(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
           width: 54,
           height: 54,
-          decoration: ScholarlyTheme.win98Decoration(sunken: _isHovered),
-          padding: const EdgeInsets.all(4),
+          decoration: ScholarlyTheme.modernDecoration().copyWith(
+            color: _isHovered ? ScholarlyTheme.accentBlueSoft : ScholarlyTheme.panelBase,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: _isHovered ? ScholarlyTheme.accentBlue : ScholarlyTheme.panelStroke,
+            ),
+          ),
+          padding: const EdgeInsets.all(8),
           child: ChessPieceWidget(
             squareName: 'none', 
             pieceCode: widget.pieceCode,

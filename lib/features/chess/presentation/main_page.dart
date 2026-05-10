@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../application/chess_provider.dart';
 import 'evaluation_bar.dart';
 import 'scholarly_theme.dart';
@@ -7,7 +8,6 @@ import 'widgets/commentary_history.dart';
 import 'widgets/game_metrics.dart';
 import 'widgets/game_controls.dart';
 import 'widgets/board_stage.dart';
-import 'analysis_board_page.dart';
 import 'settings_page.dart';
 
 class MainPage extends ConsumerStatefulWidget {
@@ -44,25 +44,20 @@ class _MainPageState extends ConsumerState<MainPage> {
                 color: Colors.black54,
                 child: Center(
                   child: Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: ScholarlyTheme.win98Decoration(),
+                    padding: const EdgeInsets.all(24),
+                    decoration: ScholarlyTheme.modernDecoration(),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Container(
-                          color: const Color(0xFF000080),
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(4),
-                          margin: const EdgeInsets.only(bottom: 16),
-                          child: const Text(
-                            'Game Over',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Tahoma',
-                            ),
+                        Text(
+                          'Game Over',
+                          style: GoogleFonts.inter(
+                            color: ScholarlyTheme.textPrimary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 20,
                           ),
                         ),
+                        const SizedBox(height: 16),
                         Icon(
                           chessState.game.inDraw
                               ? Icons.handshake_rounded
@@ -71,64 +66,51 @@ class _MainPageState extends ConsumerState<MainPage> {
                                     ? Icons.emoji_events_rounded
                                     : Icons.sentiment_dissatisfied_rounded),
                           size: 48,
-                          color: Colors.black,
+                          color: ScholarlyTheme.accentBlue,
                         ),
                         const SizedBox(height: 16),
                         Text(
                           chessState.game.inDraw
                               ? 'Game Draw. New game?'
                               : '${_getGameOverMessage(chessState)}. New game?',
-                          style: const TextStyle(
-                            color: Colors.black,
+                          style: GoogleFonts.inter(
+                            color: ScholarlyTheme.textPrimary,
                             fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'Tahoma',
+                            fontWeight: FontWeight.w600,
                           ),
+                          textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 24),
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            GestureDetector(
-                              onTap: () {
+                            FilledButton(
+                              onPressed: () {
                                 ref.read(chessProvider.notifier).reset();
                               },
-                              child: Container(
-                                decoration: ScholarlyTheme.win98Decoration(),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 24,
-                                  vertical: 8,
-                                ),
-                                child: const Text(
-                                  'Yes',
-                                  style: TextStyle(
-                                    color: Colors.black,
-                                    fontWeight: FontWeight.bold,
-                                    fontFamily: 'Tahoma',
-                                  ),
-                                ),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: ScholarlyTheme.accentBlue,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                              ),
+                              child: Text(
+                                'Yes',
+                                style: GoogleFonts.inter(fontWeight: FontWeight.w600),
                               ),
                             ),
                             const SizedBox(width: 16),
-                            GestureDetector(
-                              onTap: () {
-                                ref
-                                    .read(chessProvider.notifier)
-                                    .dismissGameOver();
+                            TextButton(
+                              onPressed: () {
+                                ref.read(chessProvider.notifier).dismissGameOver();
                               },
-                              child: Container(
-                                decoration: ScholarlyTheme.win98Decoration(),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 24,
-                                  vertical: 8,
-                                ),
-                                child: const Text(
-                                  'No',
-                                  style: TextStyle(
-                                    color: Colors.black,
-                                    fontWeight: FontWeight.bold,
-                                    fontFamily: 'Tahoma',
-                                  ),
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                              ),
+                              child: Text(
+                                'No',
+                                style: GoogleFonts.inter(
+                                  color: ScholarlyTheme.textMuted,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
                             ),
@@ -146,58 +128,45 @@ class _MainPageState extends ConsumerState<MainPage> {
                 color: Colors.black54,
                 child: Center(
                   child: Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: ScholarlyTheme.win98Decoration(),
+                    padding: const EdgeInsets.all(24),
+                    decoration: ScholarlyTheme.modernDecoration(),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Container(
-                          color: const Color(0xFF000080),
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(4),
-                          margin: const EdgeInsets.only(bottom: 16),
-                          child: const Text(
-                            'Paused',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Tahoma',
-                            ),
+                        Text(
+                          'Paused',
+                          style: GoogleFonts.inter(
+                            color: ScholarlyTheme.textPrimary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 20,
                           ),
                         ),
+                        const SizedBox(height: 16),
                         const Icon(
                           Icons.pause_circle_filled_rounded,
                           size: 48,
-                          color: Colors.black,
+                          color: ScholarlyTheme.accentBlue,
                         ),
                         const SizedBox(height: 16),
-                        const Text(
+                        Text(
                           'Game is Paused',
-                          style: TextStyle(
-                            color: Colors.black,
+                          style: GoogleFonts.inter(
+                            color: ScholarlyTheme.textPrimary,
                             fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'Tahoma',
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                         const SizedBox(height: 24),
-                        GestureDetector(
-                          onTap: () =>
-                              ref.read(chessProvider.notifier).togglePause(),
-                          child: Container(
-                            decoration: ScholarlyTheme.win98Decoration(),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 8,
-                            ),
-                            child: const Text(
-                              'Resume',
-                              style: TextStyle(
-                                color: Colors.black,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'Tahoma',
-                              ),
-                            ),
+                        FilledButton(
+                          onPressed: () => ref.read(chessProvider.notifier).togglePause(),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: ScholarlyTheme.accentBlue,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          ),
+                          child: Text(
+                            'Resume',
+                            style: GoogleFonts.inter(fontWeight: FontWeight.w600),
                           ),
                         ),
                       ],
@@ -313,30 +282,28 @@ class _MainPageState extends ConsumerState<MainPage> {
     WidgetRef ref,
     ChessState state,
   ) {
-    return Container(
-      decoration: const BoxDecoration(color: Color(0xFF000080)),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      margin: const EdgeInsets.fromLTRB(4, 4, 4, 4),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Text(
-            ' KINGSLAYER ',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              fontFamily: 'Tahoma',
+          Text(
+            'KINGSLAYER',
+            style: GoogleFonts.inter(
+              color: ScholarlyTheme.textPrimary,
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.5,
             ),
           ),
           Row(
             children: [
-              const Text(
+              Text(
                 'powered by ideaspace',
-                style: TextStyle(
-                  color: Colors.white70,
+                style: GoogleFonts.inter(
+                  color: ScholarlyTheme.textMuted,
                   fontSize: 10,
-                  fontFamily: 'Tahoma',
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ],
@@ -366,29 +333,28 @@ class _MainPageState extends ConsumerState<MainPage> {
   }
 
   Widget _buildHeader(BuildContext context, WidgetRef ref, ChessState state) {
-    return Container(
-      decoration: const BoxDecoration(color: Color(0xFF000080)),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Text(
-            ' KINGSLAYER ',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              fontFamily: 'Tahoma',
+          Text(
+            'KINGSLAYER',
+            style: GoogleFonts.inter(
+              color: ScholarlyTheme.textPrimary,
+              fontSize: 16,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.5,
             ),
           ),
           Row(
             children: [
-              const Text(
+              Text(
                 'powered by ideaspace',
-                style: TextStyle(
-                  color: Colors.white70,
+                style: GoogleFonts.inter(
+                  color: ScholarlyTheme.textMuted,
                   fontSize: 10,
-                  fontFamily: 'Tahoma',
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ],
@@ -474,25 +440,11 @@ class _MainPageState extends ConsumerState<MainPage> {
           const SizedBox(width: 6),
           ActionIconButton(
             icon: Icons.lightbulb_outline_rounded,
-            isEnabled: !state.isHintLoading && !state.isEngineThinking,
+            isEnabled: true, // Keep it enabled but non-functional
             isActive: state.isHintVisible,
-            onTap: (!state.isHintLoading && !state.isEngineThinking)
-                ? () {
-                    ref.read(chessProvider.notifier).togglePause();
-                    Navigator.of(context)
-                        .push(
-                          MaterialPageRoute(
-                            builder: (context) => const AnalysisBoardPage(),
-                          ),
-                        )
-                        .then((_) {
-                          // Resume if it was paused when coming back
-                          if (ref.read(chessProvider).isPaused) {
-                            ref.read(chessProvider.notifier).togglePause();
-                          }
-                        });
-                  }
-                : null,
+            onTap: () {
+              // Placeholder: Navigation to analysis page removed
+            },
           ),
         ],
       ),
@@ -573,15 +525,14 @@ class _MainPageState extends ConsumerState<MainPage> {
           ),
         ),
         const SizedBox(width: 10),
-        const Flexible(
+        Flexible(
           child: Text(
-            'Kingslayer Ai',
+            'Kingslayer AI',
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: Colors.black,
-              fontSize: 11,
+            style: GoogleFonts.inter(
+              color: ScholarlyTheme.textPrimary,
+              fontSize: 13,
               fontWeight: FontWeight.bold,
-              fontFamily: 'Tahoma',
             ),
           ),
         ),
@@ -625,15 +576,22 @@ class _MainPageState extends ConsumerState<MainPage> {
   }) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
         width: 34,
         height: 34,
-        decoration: ScholarlyTheme.win98Decoration(sunken: isActive),
+        decoration: ScholarlyTheme.modernDecoration().copyWith(
+          color: isActive ? ScholarlyTheme.accentBlueSoft : ScholarlyTheme.panelBase,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isActive ? ScholarlyTheme.accentBlue : ScholarlyTheme.panelStroke,
+          ),
+        ),
         padding: const EdgeInsets.all(4),
         child: Icon(
           icon,
-          color: isActive ? ScholarlyTheme.accentGold : Colors.black,
-          size: 22,
+          color: isActive ? ScholarlyTheme.accentBlue : ScholarlyTheme.textPrimary,
+          size: 20,
         ),
       ),
     );
@@ -672,8 +630,8 @@ class _MainPageState extends ConsumerState<MainPage> {
                 width: 24,
                 child: Text(
                   '${index + 1}.',
-                  style: const TextStyle(
-                    color: ScholarlyTheme.accentGold,
+                  style: GoogleFonts.jetBrainsMono(
+                    color: ScholarlyTheme.accentBlue,
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
                   ),
@@ -682,7 +640,7 @@ class _MainPageState extends ConsumerState<MainPage> {
               Expanded(
                 child: Text(
                   pair[0],
-                  style: const TextStyle(
+                  style: GoogleFonts.inter(
                     color: ScholarlyTheme.textPrimary,
                     fontSize: 12,
                   ),
@@ -692,7 +650,7 @@ class _MainPageState extends ConsumerState<MainPage> {
                 Expanded(
                   child: Text(
                     pair[1],
-                    style: const TextStyle(
+                    style: GoogleFonts.inter(
                       color: ScholarlyTheme.textPrimary,
                       fontSize: 12,
                     ),
@@ -735,21 +693,24 @@ class _MainPageState extends ConsumerState<MainPage> {
         context: context,
         builder: (context) => AlertDialog(
           backgroundColor: ScholarlyTheme.panelBase,
-          title: const Text('New Game?'),
-          content: const Text(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text('New Game?', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+          content: Text(
             'All progress in current game will be lost if not saved.',
+            style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('No'),
+              child: Text('No', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted)),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, true),
               style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF000080),
+                backgroundColor: ScholarlyTheme.accentBlue,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
-              child: const Text('Yes'),
+              child: Text('Yes', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
             ),
           ],
         ),
@@ -778,9 +739,9 @@ class _MainPageState extends ConsumerState<MainPage> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Engine Strength',
-                        style: TextStyle(
+                        style: GoogleFonts.inter(
                           color: ScholarlyTheme.textPrimary,
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -804,21 +765,21 @@ class _MainPageState extends ConsumerState<MainPage> {
                               height: 44,
                               decoration: BoxDecoration(
                                 color: isSelected
-                                    ? ScholarlyTheme.accentGold
-                                    : Colors.white.withValues(alpha: 0.05),
+                                    ? ScholarlyTheme.accentBlue
+                                    : ScholarlyTheme.panelBase,
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(
                                   color: isSelected
-                                      ? ScholarlyTheme.accentGold
-                                      : Colors.white.withValues(alpha: 0.1),
+                                      ? ScholarlyTheme.accentBlue
+                                      : ScholarlyTheme.panelStroke,
                                 ),
                               ),
                               child: Center(
                                 child: Text(
                                   level,
-                                  style: TextStyle(
+                                  style: GoogleFonts.inter(
                                     color: isSelected
-                                        ? Colors.black
+                                        ? Colors.white
                                         : ScholarlyTheme.textPrimary,
                                     fontWeight: FontWeight.bold,
                                     fontSize: 16,
@@ -830,9 +791,9 @@ class _MainPageState extends ConsumerState<MainPage> {
                         }).toList(),
                       ),
                       const SizedBox(height: 12),
-                      const Text(
+                      Text(
                         'A: Grandmaster (Strongest)  |  E: Beginner (Weakest)',
-                        style: TextStyle(
+                        style: GoogleFonts.inter(
                           color: ScholarlyTheme.textMuted,
                           fontSize: 12,
                         ),
@@ -957,7 +918,7 @@ class _AiProfileAnimationState extends State<_AiProfileAnimation>
             boxShadow: widget.isOperational
                 ? [
                     BoxShadow(
-                      color: ScholarlyTheme.accentGold.withValues(
+                      color: ScholarlyTheme.accentBlue.withValues(
                         alpha: 0.3 * (1.0 - _controller.value),
                       ),
                       blurRadius: _glowAnimation.value * 2,

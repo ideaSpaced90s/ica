@@ -114,15 +114,60 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with TickerProvider
     return Stack(
       fit: StackFit.expand,
       children: [
+        // Ambient background glow
+        Center(
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.8,
+            height: MediaQuery.of(context).size.width * 0.8,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [
+                  ScholarlyTheme.accentBlue.withValues(alpha: 0.08),
+                  ScholarlyTheme.backgroundStart.withValues(alpha: 0),
+                ],
+              ),
+            ),
+          ),
+        ),
+        
         // Background Logo (Centered and maximized) moved 20% up
         Align(
           alignment: const Alignment(0, -0.4),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 60),
-            child: Image.asset(
-              'assets/splash/splash.png',
-              height: MediaQuery.of(context).size.height * 0.65, // Maximized size
-              fit: BoxFit.contain,
+          child: TweenAnimationBuilder<double>(
+            tween: Tween<double>(begin: 0.0, end: 1.0),
+            duration: const Duration(milliseconds: 1500),
+            curve: Curves.easeOutCubic,
+            builder: (context, value, child) {
+              return Opacity(
+                opacity: value,
+                child: Transform.scale(
+                  scale: 0.9 + (0.1 * value),
+                  child: child,
+                ),
+              );
+            },
+            child: Container(
+              margin: const EdgeInsets.symmetric(vertical: 60),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(40),
+                boxShadow: [
+                  BoxShadow(
+                    color: ScholarlyTheme.shadowColor.withValues(alpha: 0.12),
+                    blurRadius: 50,
+                    spreadRadius: 2,
+                    offset: const Offset(0, 25),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(40),
+                child: Image.asset(
+                  'assets/splash/splash.png',
+                  height: MediaQuery.of(context).size.height * 0.52,
+                  fit: BoxFit.contain,
+                ),
+              ),
             ),
           ),
         ),
@@ -151,33 +196,33 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with TickerProvider
       children: [
         Text(
           '${_loadingValue.toInt()}%',
-          style: GoogleFonts.silkscreen(
-            fontSize: 18,
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 2,
+          style: GoogleFonts.inter(
+            fontSize: 14,
+            color: ScholarlyTheme.textMuted,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 1,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         Container(
-          width: 200,
-          height: 2,
+          width: 240,
+          height: 4,
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.2),
-            borderRadius: BorderRadius.circular(1),
+            color: ScholarlyTheme.panelStroke,
+            borderRadius: BorderRadius.circular(2),
           ),
           child: FractionallySizedBox(
             alignment: Alignment.centerLeft,
             widthFactor: _loadingValue / 100,
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(1),
+                color: ScholarlyTheme.accentBlue,
+                borderRadius: BorderRadius.circular(2),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.white.withValues(alpha: 0.4),
-                    blurRadius: 10,
-                    spreadRadius: 1,
+                    color: ScholarlyTheme.accentBlue.withValues(alpha: 0.3),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
@@ -188,7 +233,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with TickerProvider
     );
   }
 
-
   Widget _buildFooter() {
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -198,28 +242,35 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with TickerProvider
           children: [
             Text(
               'powered by ',
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.6),
+              style: GoogleFonts.inter(
+                color: ScholarlyTheme.textSubtle,
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
-                letterSpacing: 1.2,
+                letterSpacing: 0.5,
               ),
             ),
             Image.asset(
               'assets/splash/ideaspace.png',
-              height: 18,
-              errorBuilder: (context, error, stackTrace) => const Text('ideaspace', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              height: 16,
+              color: ScholarlyTheme.textPrimary, // Tint it if it's a solid logo, or omit
+              errorBuilder: (context, error, stackTrace) => Text(
+                'ideaspace',
+                style: GoogleFonts.inter(
+                  color: ScholarlyTheme.textPrimary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         Text(
           'v1.0.0',
-          style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.4),
-            fontSize: 10,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 1,
+          style: GoogleFonts.inter(
+            color: ScholarlyTheme.textSubtle,
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
           ),
         ),
       ],

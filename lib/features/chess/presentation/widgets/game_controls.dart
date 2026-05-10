@@ -38,19 +38,25 @@ class _ActionIconButtonState extends State<ActionIconButton> {
       onTapUp: widget.isEnabled ? (_) => setState(() => _isPressed = false) : null,
       onTapCancel: () => setState(() => _isPressed = false),
       onTap: widget.isEnabled ? widget.onTap : null,
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 100),
         width: size + 16,
         height: size + 16,
-        decoration: ScholarlyTheme.win98Decoration(
+        decoration: ScholarlyTheme.modernDecoration(
           sunken: _isPressed || widget.isActive,
+        ).copyWith(
+          color: (widget.isActive || _isPressed) 
+              ? ScholarlyTheme.accentBlueSoft 
+              : ScholarlyTheme.panelBase,
+          borderRadius: BorderRadius.circular(12),
         ),
         padding: const EdgeInsets.all(4),
         child: Center(
           child: Icon(
             widget.icon,
             color: widget.isEnabled 
-                ? (widget.isActive ? ScholarlyTheme.accentGold : Colors.black)
-                : Colors.grey,
+                ? (widget.isActive ? ScholarlyTheme.accentBlue : ScholarlyTheme.textPrimary)
+                : ScholarlyTheme.textSubtle,
             size: size,
           ),
         ),
@@ -79,16 +85,23 @@ class TimePresetChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: () => ref.read(chessProvider.notifier).setTimeControl(total, inc),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: ScholarlyTheme.win98Decoration(sunken: isSelected),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: ScholarlyTheme.modernDecoration(sunken: isSelected).copyWith(
+          color: isSelected ? ScholarlyTheme.accentBlueSoft : ScholarlyTheme.panelBase,
+          borderRadius: BorderRadius.circular(20), // Pill shape
+          border: Border.all(
+            color: isSelected ? ScholarlyTheme.accentBlue : ScholarlyTheme.panelStroke,
+            width: 1,
+          ),
+        ),
         child: Text(
           label,
           style: TextStyle(
-            color: Colors.black,
-            fontSize: 11,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            fontFamily: 'Tahoma',
+            color: isSelected ? ScholarlyTheme.accentBlue : ScholarlyTheme.textPrimary,
+            fontSize: 12,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
           ),
         ),
       ),

@@ -4,11 +4,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../application/chess_provider.dart';
-import 'analysis_animation_controller.dart';
 import 'chess_piece_widget.dart';
 import 'orbiting_star_animation.dart';
 import 'scholarly_theme.dart';
-import 'widgets/best_move_arrow.dart';
 import '../domain/chess_game.dart';
 import '../domain/board_theme.dart' as domain;
 import 'widgets/promotion_overlay.dart';
@@ -33,9 +31,6 @@ import 'animation/landing_feedback.dart';
 import 'animation/tap_ripple.dart';
 import 'animation/piece_motion_profile.dart';
 
-final animationProvider = ChangeNotifierProvider(
-  (ref) => AnalysisAnimationController(),
-);
 
 class ChessBoard extends ConsumerStatefulWidget {
   const ChessBoard({super.key});
@@ -114,7 +109,6 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
   @override
   Widget build(BuildContext context) {
     final chessState = ref.watch(chessProvider);
-    final anim = ref.watch(animationProvider);
 
     final boardTheme = domain.BoardTheme.allThemes.firstWhere(
       (t) => t.id == chessState.boardThemeId,
@@ -289,8 +283,6 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
                       final isThreatened = chessState.threatenedSquares
                           .contains(squareName);
                       final piece = displayGame.getPiece(squareName);
-                      final isBlinking =
-                          anim.blinkingSquare == squareName && !anim.isVisible;
 
                       return DragTarget<String>(
                         onWillAcceptWithDetails: (details) =>
@@ -305,7 +297,7 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
                           final isDragHover = candidateData.isNotEmpty;
                           return AnimatedOpacity(
                             duration: const Duration(milliseconds: 120),
-                            opacity: isBlinking ? 0.22 : 1.0,
+                            opacity: 1.0,
                             child: GestureDetector(
                               behavior: HitTestBehavior.opaque,
                               onTap: () => _handleSquareTap(
@@ -778,16 +770,6 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
                       );
                     },
                   ),
-                  if (chessState.isAnalysisMode &&
-                      chessState.isHintVisible &&
-                      chessState.hintFrom != null &&
-                      chessState.hintTo != null)
-                    BestMoveArrowOverlay(
-                      from: chessState.hintFrom!,
-                      to: chessState.hintTo!,
-                      boardSize: boardSize,
-                      isFlipped: chessState.isBoardFlipped,
-                    ),
                   if (chessState.moveAnimation != null)
                     SignatureMoveOverlay(
                       data: chessState.moveAnimation!,

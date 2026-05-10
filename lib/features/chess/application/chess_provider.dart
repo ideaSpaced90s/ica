@@ -11,7 +11,6 @@ import '../data/saved_game_repository.dart';
 import '../data/stockfish_service.dart';
 import '../data/uci_parser.dart';
 import '../domain/chess_game.dart';
-import '../presentation/analysis_animation_controller.dart';
 import '../services/commentary_engine.dart';
 import '../services/chess_sound_service.dart';
 import '../services/ai_context_service.dart';
@@ -101,7 +100,6 @@ class ChessState {
     this.lastMove,
     this.recentMoves = const [],
     this.analysis = const {},
-    this.isAnalysisMode = true,
     this.previousEvaluation = 0.0,
     this.currentEvaluation = 0.0,
     this.isEngineThinking = false,
@@ -159,7 +157,6 @@ class ChessState {
   final String? lastMove;
   final List<String> recentMoves;
   final Map<String, dynamic> analysis;
-  final bool isAnalysisMode;
   final double previousEvaluation;
   final double currentEvaluation;
   final bool isEngineThinking;
@@ -228,7 +225,6 @@ class ChessState {
     Object? lastMove = _sentinel,
     List<String>? recentMoves,
     Map<String, dynamic>? analysis,
-    bool? isAnalysisMode,
     double? previousEvaluation,
     double? currentEvaluation,
     bool? isEngineThinking,
@@ -286,7 +282,6 @@ class ChessState {
       lastMove: identical(lastMove, _sentinel) ? this.lastMove : lastMove as String?,
       recentMoves: recentMoves ?? this.recentMoves,
       analysis: analysis ?? this.analysis,
-      isAnalysisMode: isAnalysisMode ?? this.isAnalysisMode,
       previousEvaluation: previousEvaluation ?? this.previousEvaluation,
       currentEvaluation: currentEvaluation ?? this.currentEvaluation,
       isEngineThinking: isEngineThinking ?? this.isEngineThinking,
@@ -365,7 +360,16 @@ class ChessState {
 
 class ChessNotifier extends StateNotifier<ChessState> {
   ChessNotifier(this._engine, this._commentaryEngine, this._savedGameRepository, this._soundService, this._aiContextService)
-      : super(ChessState(game: ChessGame())) {
+      : super(ChessState(
+          game: ChessGame(),
+          commentaryHistory: [
+            CommentaryEntry(
+              text: "Welcome, Commander. I am the High Council. The board is set. How can I assist your strategy today?",
+              timestamp: DateTime.now(),
+              isUser: false,
+            ),
+          ],
+        )) {
     _soundService.updateSettings(sfxEnabled: true, bgmEnabled: false);
   }
 
@@ -439,24 +443,6 @@ class ChessNotifier extends StateNotifier<ChessState> {
   void toggleAiOperational() {
     final newState = !state.isAiOperational;
     state = state.copyWith(isAiOperational: newState);
-    
-    // 1. If the Bard is awakened during a turn where it should be narrating, trigger it.
-    if (newState && _isAiTurn() && !state.game.gameOver && !_isCommentarySequenceRunning) {
-      final player = _playerWhoJustMoved();
-      unawaited(_runCommentary(
-        player: player,
-        move: _formatMoveForPrompt(state.lastMove ?? ''),
-        evalScore: _formatEvalForPrompt(state.currentEvaluation),
-      ));
-    }
-    
-    // 2. If the Bard is silenced while an engine move was waiting for narration, release it instantly.
-    if (!newState && _isAiTurn() && !state.game.gameOver && state.pendingEngineMove != null) {
-      final move = state.pendingEngineMove!;
-      state = state.copyWith(pendingEngineMove: null);
-      debugPrint('ChessNotifier: Bard silenced mid-turn. Releasing move instantly: $move');
-      _makeEngineMove(move);
-    }
   }
 
   void dismissGameOver() {
@@ -484,16 +470,6 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
   void goToEnd() {
     jumpToMove(state.recentMoves.length - 1);
-  }
-
-  void toggleEngine() {
-    final newState = !state.isAnalysisMode;
-    state = state.copyWith(isAnalysisMode: newState);
-    if (newState) {
-      ensureGameServicesStarted(analyzeCurrentPosition: true);
-    } else {
-      _engine.stopAnalysis();
-    }
   }
 
   void showThreats() {
@@ -529,7 +505,6 @@ class ChessNotifier extends StateNotifier<ChessState> {
   final List<_BoardSnapshot> _redoStack = [];
 
   String? _pendingHintFen;
-  bool _isCommentarySequenceRunning = false;
   Future<void>? _startupFuture;
   bool _isDisposed = false;
 
@@ -1014,19 +989,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
     // The Scout (Stockfish) starts its calculation
     await ensureGameServicesStarted(analyzeCurrentPosition: true);
-    
-    // The Bard (AI) starts its narration immediately
-    if (!_isCommentarySequenceRunning) {
-      unawaited(_runCommentary(
-        player: state.game.turn == chess_lib.Color.WHITE ? 'Black' : 'White',
-        move: _formatMoveForPrompt('$from$to'),
-        evalScore: _formatEvalForPrompt(state.currentEvaluation),
-      ));
-    }
 
     state = state.copyWith(
       isEngineThinking: state.engineReady,
-      isCommentaryLoading: state.isAiOperational, // Show the Bard is thinking only if operational
     );
   }
 
@@ -1083,16 +1048,6 @@ class ChessNotifier extends StateNotifier<ChessState> {
       
       await ensureGameServicesStarted(analyzeCurrentPosition: true);
       state = state.copyWith(isEngineThinking: state.engineReady);
-
-      // Immediately trigger the automated sequence (Calculation + Optional Narration)
-      if (state.isAiOperational && !_isCommentarySequenceRunning) {
-        final player = _playerWhoJustMoved();
-        unawaited(_runCommentary(
-          player: player,
-          move: _formatMoveForPrompt(state.lastMove ?? 'Opening'),
-          evalScore: _formatEvalForPrompt(state.currentEvaluation),
-        ));
-      }
     }
   }
 
@@ -1187,18 +1142,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
     _startClockTicker();
 
     await ensureGameServicesStarted(analyzeCurrentPosition: true);
-    
-    if (!_isCommentarySequenceRunning) {
-      unawaited(_runCommentary(
-        player: state.game.turn == chess_lib.Color.WHITE ? 'Black' : 'White',
-        move: _formatMoveForPrompt('$from$to$promotionPiece'),
-        evalScore: _formatEvalForPrompt(state.currentEvaluation),
-      ));
-    }
 
     state = state.copyWith(
       isEngineThinking: state.engineReady,
-      isCommentaryLoading: state.isAiOperational,
     );
   }
 
@@ -1207,15 +1153,6 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
     final player = _playerWhoJustMoved();
     
-    // Immediate Trigger for commentary if Bard is active
-    if (!_isCommentarySequenceRunning && state.isAiOperational) {
-      unawaited(_runCommentary(
-        player: player,
-        move: _formatMoveForPrompt(lastMove),
-        evalScore: _formatEvalForPrompt(state.currentEvaluation),
-      ));
-    }
-
     // Apply Clock Increment
     if (state.clockStarted && !state.game.gameOver) {
       if (player == 'White') {
@@ -1324,26 +1261,43 @@ class ChessNotifier extends StateNotifier<ChessState> {
     );
   }
 
+  Future<void> sendUserQuery(String query) async {
+    if (query.trim().isEmpty) return;
+
+    final userEntry = CommentaryEntry(
+      text: query,
+      timestamp: DateTime.now(),
+      isUser: true,
+    );
+
+    state = state.copyWith(
+      commentaryHistory: [...state.commentaryHistory, userEntry],
+      commentaryError: null,
+    );
+
+    await _runCommentary(
+      player: _playerWhoJustMoved(),
+      move: _formatMoveForPrompt(state.lastMove ?? 'Opening'),
+      evalScore: _formatEvalForPrompt(state.currentEvaluation),
+      userQuery: query,
+    );
+  }
+
   Future<void> _runCommentary({
     required String player,
     required String move,
     required String evalScore,
+    String? userQuery,
     bool revealHintAfterTyping = false,
     bool isNested = false,
   }) async {
-    if (!state.isAiOperational) {
-      // AI is deoperational. Skip narration logic and proceed to move execution logic.
-      await _handleDeoperationalAiFlow(player);
-      return;
-    }
-
-    _isCommentarySequenceRunning = true;
     _cancelCommentaryReveal();
 
     final newEntry = CommentaryEntry(
       text: '',
       timestamp: DateTime.now(),
       isComplete: false,
+      isUser: false,
     );
 
     // Update state IMMEDIATELY to show "Thinking"
@@ -1356,7 +1310,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
     try {
       // 1. Wait briefly for a fresh evaluation if it's the start of a turn
       if (!isNested) {
-         await Future.delayed(const Duration(seconds: 1));
+         await Future.delayed(const Duration(milliseconds: 500));
       }
 
       String? structuredPrompt;
@@ -1382,10 +1336,11 @@ class ChessNotifier extends StateNotifier<ChessState> {
         move: move,
         evalScore: evalScore,
         structuredPrompt: structuredPrompt,
+        userQuery: userQuery,
       );
 
       await for (final chunk in stream) {
-        if (_isDisposed || !state.isAiOperational) break;
+        if (_isDisposed) break;
         
         final updatedHistory = List<CommentaryEntry>.from(state.commentaryHistory);
         if (updatedHistory.isNotEmpty) {
@@ -1469,7 +1424,6 @@ class ChessNotifier extends StateNotifier<ChessState> {
       }
     } finally {
       if (!_isDisposed && !isNested) {
-        _isCommentarySequenceRunning = false;
         state = state.copyWith(isCommentaryLoading: false);
 
         // Robot Mode Continuity: If Auto-play is on, immediately trigger the next turn's sequence
@@ -1485,39 +1439,6 @@ class ChessNotifier extends StateNotifier<ChessState> {
     }
   }
 
-  /// Handles the move flow when the AI (Bard) is deoperational.
-  /// Skips narration and reduces delays for faster engine performance.
-  Future<void> _handleDeoperationalAiFlow(String player) async {
-    if (player != 'Engine') {
-      // It was a player move. We just need to wait for the engine to find its move.
-      debugPrint('Bard: I am silent. Scout, do you have a move?');
-      
-      // Wait for engine to provide a move (max 5s, less than narration mode)
-      int safetyCount = 0;
-      while (state.pendingEngineMove == null && safetyCount < 50) {
-        await Future.delayed(const Duration(milliseconds: 100));
-        safetyCount++;
-        if (_isDisposed) return;
-      }
-
-      if (state.pendingEngineMove != null) {
-        // Execute engine move flow
-        await _handleDeoperationalAiFlow('Engine');
-      }
-    } else {
-      // It was an engine move.
-      debugPrint('Bard: silent. Steel strikes fast.');
-      // A small realistic delay instead of the 3s dramatic pause
-      await Future.delayed(state.autoPlayDelay);
-      if (_isDisposed) return;
-
-      if (state.pendingEngineMove != null) {
-        final engineMove = state.pendingEngineMove!;
-        state = state.copyWith(pendingEngineMove: null);
-        _makeEngineMove(engineMove);
-      }
-    }
-  }
 
   void _cancelCommentaryReveal() {
     _commentaryRevealTimer?.cancel();
@@ -1689,27 +1610,6 @@ class ChessNotifier extends StateNotifier<ChessState> {
     _engineOutputSubscription = null;
     _engine.dispose();
     await _commentaryEngine.dispose();
-  }
-
-  void playAnalysisSequence(
-    List<String> moves,
-    AnalysisAnimationController anim,
-  ) {
-    anim.playPVSequence(
-      moves,
-      getPieceAt: (square) {
-        final piece = state.game.getPiece(square);
-        if (piece == null) {
-          return '';
-        }
-
-        final colorStr = piece.color.toString().toLowerCase();
-        final colorPrefix =
-            colorStr.startsWith('w') || colorStr.contains('white') ? 'w' : 'b';
-
-        return '$colorPrefix${piece.type.toUpperCase()}';
-      },
-    );
   }
 
   @override
