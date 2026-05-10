@@ -7,7 +7,7 @@ import 'evaluation_bar.dart';
 import 'chess_clock.dart';
 import 'scholarly_theme.dart';
 import 'widgets/commentary_history.dart';
-import 'widgets/game_metrics.dart';
+
 import 'widgets/game_controls.dart';
 import 'widgets/board_stage.dart';
 import 'settings_page.dart';
