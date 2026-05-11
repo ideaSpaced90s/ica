@@ -1,13 +1,38 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../chess_board.dart';
+import '../../application/chess_provider.dart';
+import 'captured_pieces_bar.dart';
 
-class BoardStage extends StatelessWidget {
+class BoardStage extends ConsumerWidget {
   const BoardStage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: ChessBoard(),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(chessProvider);
+    final isFlipped = state.isBoardFlipped;
+
+    final capturedByWhite = state.game.capturedByWhite;
+    final capturedByBlack = state.game.capturedByBlack;
+
+    // Logic: Bottom player captures go to the bottom bar.
+    // If not flipped: White is bottom. Bottom bar shows pieces captured BY White (Black pieces).
+    // If flipped: Black is bottom. Bottom bar shows pieces captured BY Black (White pieces).
+    
+    final topPieces = isFlipped ? capturedByWhite : capturedByBlack;
+    final bottomPieces = isFlipped ? capturedByBlack : capturedByWhite;
+
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        CapturedPiecesBar(pieces: topPieces),
+        const Expanded(
+          child: Center(
+            child: ChessBoard(),
+          ),
+        ),
+        CapturedPiecesBar(pieces: bottomPieces),
+      ],
     );
   }
 }

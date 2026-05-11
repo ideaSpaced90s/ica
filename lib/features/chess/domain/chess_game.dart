@@ -83,4 +83,18 @@ class ChessGame {
   void load(String fen) {
     _chess.load(fen);
   }
+
+  List<chess_lib.Piece> get capturedByWhite {
+    return _chess.history
+        .where((h) => h.move.color == chess_lib.Color.WHITE && h.move.captured != null)
+        .map((h) => chess_lib.Piece(h.move.captured!, chess_lib.Color.BLACK))
+        .toList();
+  }
+
+  List<chess_lib.Piece> get capturedByBlack {
+    return _chess.history
+        .where((h) => h.move.color == chess_lib.Color.BLACK && h.move.captured != null)
+        .map((h) => chess_lib.Piece(h.move.captured!, chess_lib.Color.WHITE))
+        .toList();
+  }
 }
