@@ -395,37 +395,47 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
       adjustedProgress = (rawProgress - captureDelay) / (1.0 - captureDelay);
     }
 
-    // 2. Teleport Phases
-    // 0.0 - 0.45: Blink at Point A
-    // 0.45 - 0.90: Blink at Point B
-    // 0.90 - 1.0: Final stabilize at Point B
+    // 2. Teleport Phases (To-and-Fro Airy Flickering)
+    // We alternate between A and B to create a "phase-shifting" look.
+    // 4 hops of 400ms each = 1.6s total (adjustedProgress).
     
     Offset teleportPos;
-    bool isVisible = true;
+    double blinkOpacity = 1.0;
 
-    if (adjustedProgress < 0.45) {
+    // Use a fast sine wave to drive the "airy" flickering across the whole duration
+    // 4 cycles total (A -> B -> A -> B)
+    final double cycleProgress = (adjustedProgress * 4) % 1.0;
+    final int cycleIndex = (adjustedProgress * 4).floor().clamp(0, 3);
+    
+    // Cycle 0: Point A
+    // Cycle 1: Point B
+    // Cycle 2: Point A
+    // Cycle 3: Point B
+    if (cycleIndex % 2 == 0) {
       teleportPos = _path.first;
-      // 3 blinks: 6 segments (on/off/on/off/on/off)
-      final blinkProgress = adjustedProgress / 0.45;
-      isVisible = (blinkProgress * 6).floor() % 2 == 0;
-    } else if (adjustedProgress < 0.90) {
-      teleportPos = _path.last;
-      // 3 blinks at target
-      final blinkProgress = (adjustedProgress - 0.45) / 0.45;
-      isVisible = (blinkProgress * 6).floor() % 2 == 0;
     } else {
       teleportPos = _path.last;
-      isVisible = true; // Stabilize
     }
 
-    if (!isVisible) return const SizedBox.shrink();
+    // "Airy" fade: pulses 1.0 -> 0.3 -> 1.0 during each 400ms hop
+    blinkOpacity = 0.65 + 0.35 * math.sin(cycleProgress * math.pi * 2 + math.pi / 2);
+    
+    // Final stabilization: in the last 10% of the final hop, stay at B and solid
+    if (adjustedProgress > 0.95) {
+      teleportPos = _path.last;
+      blinkOpacity = 1.0;
+    }
 
     return Positioned(
+      key: ValueKey('queen_teleport_${teleportPos.toString()}_${cycleIndex}'),
       left: teleportPos.dx - _squareSize / 2,
       top: teleportPos.dy - _squareSize / 2,
-      child: Transform.scale(
-        scale: 1.0, // Clean teleport, no arc scaling
-        child: movingPiece,
+      child: Opacity(
+        opacity: blinkOpacity.clamp(0.0, 1.0),
+        child: Transform.scale(
+          scale: 1.0,
+          child: movingPiece,
+        ),
       ),
     );
   }

@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:async';
 import 'package:chess/chess.dart' as chess_lib;
 
@@ -574,7 +575,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
           _isAiTurn() &&
           !state.game.gameOver &&
           state.pendingEngineMove == null) {
-        _engine.analyzePosition(state.game.fen);
+        _startAnalysis();
         state = state.copyWith(isEngineThinking: true);
       }
     }
@@ -646,6 +647,8 @@ class ChessNotifier extends StateNotifier<ChessState> {
   Timer? _engineMoveTimer;
   Timer? _commentaryRevealTimer;
   Timer? _clockTimer;
+  Timer? _maxThinkingTimer;
+  DateTime? _engineStartTime;
   StreamSubscription<String>? _engineOutputSubscription;
   final List<_BoardSnapshot> _undoStack = [];
   final List<_BoardSnapshot> _redoStack = [];
@@ -665,11 +668,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
     if (state.servicesStarted) {
       if (analyzeCurrentPosition) {
-        try {
-          _engine.analyzePosition(state.game.fen, depth: depth);
-        } catch (e) {
-          debugPrint('ChessNotifier: Failed to trigger engine analysis: $e');
-        }
+        _startAnalysis(depth: depth);
       }
       return;
     }
@@ -677,11 +676,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
     if (_startupFuture != null) {
       await _startupFuture;
       if (analyzeCurrentPosition && state.engineReady) {
-        try {
-          _engine.analyzePosition(state.game.fen, depth: depth);
-        } catch (e) {
-          debugPrint('ChessNotifier: Failed to trigger engine analysis after startup: $e');
-        }
+        _startAnalysis(depth: depth);
       }
       return;
     }
@@ -722,7 +717,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
       // Initialization will happen on-demand in _runCommentary
       // unawaited(_initializeCommentaryEngine());
       if (analyzeCurrentPosition) {
-        _engine.analyzePosition(state.game.fen, depth: depth);
+        _startAnalysis(depth: depth);
       }
     } catch (error, stackTrace) {
       debugPrint('ChessNotifier startup failed: $error');
@@ -790,10 +785,17 @@ class ChessNotifier extends StateNotifier<ChessState> {
         debugPrint(
           'ChessNotifier: [SCOUT] Engine move found: $bestMove. isAnimationsEnabled: ${state.isAnimationsEnabled}',
         );
-        _engineMoveTimer?.cancel();
+        _maxThinkingTimer?.cancel();
+        _maxThinkingTimer = null;
+
         if (state.isAnimationsEnabled) {
-          debugPrint('ChessNotifier: [SCOUT] Delaying engine move for 1.2s...');
-          _engineMoveTimer = Timer(const Duration(milliseconds: 1200), () {
+          final now = DateTime.now();
+          final elapsed = now.difference(_engineStartTime ?? now).inMilliseconds;
+          // Ensure at least 2s total time (thinking + delay)
+          final remainingDelay = math.max(0, 2000 - elapsed);
+          
+          debugPrint('ChessNotifier: [SCOUT] Delaying engine move for ${remainingDelay}ms (elapsed: ${elapsed}ms)...');
+          _engineMoveTimer = Timer(Duration(milliseconds: remainingDelay), () {
             if (!_isDisposed && !state.isPaused) {
               _makeEngineMove(bestMove);
             }
@@ -1010,7 +1012,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
       _stopClock();
     }
     if (state.servicesStarted && _isAiTurn()) {
-      _engine.analyzePosition(state.game.fen);
+      _startAnalysis();
     }
   }
 
@@ -1186,6 +1188,32 @@ class ChessNotifier extends StateNotifier<ChessState> {
     );
 
     state = state.copyWith(isEngineThinking: state.engineReady);
+  }
+
+  void _startAnalysis({int depth = 15}) {
+    if (_isDisposed) return;
+
+    // Record start time for the 2s minimum delay logic
+    _engineStartTime = DateTime.now();
+
+    // Cancel any existing max thinking timer
+    _maxThinkingTimer?.cancel();
+    _maxThinkingTimer = null;
+
+    // Only force move (10s timeout) if it's the AI's turn to respond
+    if (_isAiTurn()) {
+      debugPrint('ChessNotifier: [SCOUT] Starting AI analysis with 10s timeout floor...');
+      _maxThinkingTimer = Timer(const Duration(seconds: 10), () {
+        debugPrint('ChessNotifier: [SCOUT] Max thinking time reached (10s). Forcing engine stop...');
+        _engine.sendCommand('stop');
+      });
+    }
+
+    try {
+      _engine.analyzePosition(state.game.fen, depth: depth);
+    } catch (e) {
+      debugPrint('ChessNotifier: Failed to trigger engine analysis: $e');
+    }
   }
 
   Future<void> switchSides() async {
@@ -1870,6 +1898,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
   void dispose() {
     _isDisposed = true;
     _engineMoveTimer?.cancel();
+    _maxThinkingTimer?.cancel();
     _stopClock();
     _cancelCommentaryReveal();
     _engineOutputSubscription?.cancel();

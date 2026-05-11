@@ -133,8 +133,8 @@ class PieceMotionProfile {
   /// fastest mover, confident glide, clean minimal settle.
   /// Now features a unique "Teleport" blink signature.
   static const PieceMotionProfile queen = PieceMotionProfile(
-    moveDuration: Duration(milliseconds: 1200), // Extended for blink sequence
-    moveCurve: Curves.linear, // Linear progress for easier blink timing
+    moveDuration: Duration(milliseconds: 1600), // 400ms per hop (A -> B -> A -> B)
+    moveCurve: Curves.linear,
     verticalArcFactor: 0.0,
     midRotationDeg: 0.0,
     hasGhostTrail: false,

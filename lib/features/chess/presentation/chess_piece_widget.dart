@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../application/chess_provider.dart';
 import 'scholarly_theme.dart';
-import 'widgets/toy_effects.dart';
 import 'animation/piece_motion_profile.dart';
 
 import 'utils/contrast_utility.dart';
@@ -211,27 +210,18 @@ class _ChessPieceWidgetState extends ConsumerState<ChessPieceWidget>
       }
     }
 
-    if (widget.pieceCode != null) return pieceWidget;
-
-    // Apply 30% fade during movement animation
-    // Apply wiggle if selected (for Toy themes)
-    if (ref.read(chessProvider.notifier).isAnimationTypeEnabled('themeEffects') && (boardThemeId == 'theme4' || boardThemeId == 'theme9') && widget.highlighted) {
-      pieceWidget = WiggleAnimation(
-        isActive: true,
-        child: pieceWidget,
-      );
-    }
-
+    // ── Interaction and Visibility ───────────────────────────────────────
     final interactivePiece = widget.isMoving && !widget.forceVisible
         ? Opacity(opacity: 0.0, child: pieceWidget)
         : pieceWidget;
+
+    if (widget.pieceCode != null) return interactivePiece;
 
     return Draggable<String>(
       data: widget.squareName,
       onDragStarted: widget.onDragStarted,
       onDragEnd: (_) => widget.onDragEnd?.call(),
       feedback: Transform.translate(
-        // Subtle 2px positional lag illusion — makes dragging feel tactile
         offset: const Offset(2.0, 2.0),
         child: Transform.scale(
           scale: 1.15,
