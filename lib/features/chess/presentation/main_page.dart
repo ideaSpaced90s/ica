@@ -164,11 +164,11 @@ class _MainPageState extends ConsumerState<MainPage> {
       children: [
         _buildPortraitHeader(context, ref, state),
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+          padding: const EdgeInsets.fromLTRB(8, 2, 8, 2),
           child: EvaluationBar(evaluation: state.currentEvaluation),
         ),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -194,13 +194,20 @@ class _MainPageState extends ConsumerState<MainPage> {
             ],
           ),
         ),
-        Expanded(
-          flex: _isCommentaryExpanded ? 5 : 9,
-          child: const BoardStage(),
-        ),
+        // Board Area
+        if (_isCommentaryExpanded)
+          AspectRatio(
+            aspectRatio: 1.0,
+            child: BoardStage(isExpanded: true),
+          )
+        else
+          Expanded(
+            child: const BoardStage(isExpanded: false),
+          ),
+
+        // Chat Area
         if (_isCommentaryExpanded)
           Expanded(
-            flex: 4,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),
               child: _buildCommentaryPanel(context, ref, state),
@@ -226,7 +233,7 @@ class _MainPageState extends ConsumerState<MainPage> {
     ChessState state,
   ) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -350,13 +357,32 @@ class _MainPageState extends ConsumerState<MainPage> {
           ),
           const SizedBox(width: 6),
           ActionIconButton(
-            icon: Icons.lightbulb_outline_rounded,
-            isEnabled: true, // Keep it enabled but non-functional
+            icon: state.isHintVisible
+                ? Icons.lightbulb_rounded
+                : Icons.lightbulb_outline_rounded,
+            isEnabled: true,
             isActive: state.isHintVisible,
             onTap: () {
               // Placeholder: Navigation to analysis page removed
             },
           ),
+          if (_isCommentaryExpanded) ...[
+            const SizedBox(width: 6),
+            ActionIconButton(
+              icon: state.showLog
+                  ? Icons.chat_bubble_outline_rounded
+                  : Icons.history_edu_rounded,
+              isActive: state.showLog,
+              onTap: () => ref.read(chessProvider.notifier).toggleLog(),
+            ),
+            const SizedBox(width: 6),
+            ActionIconButton(
+              icon: Icons.close_rounded,
+              onTap: () {
+                setState(() => _isCommentaryExpanded = false);
+              },
+            ),
+          ],
         ],
       ),
     );
@@ -368,19 +394,10 @@ class _MainPageState extends ConsumerState<MainPage> {
     ChessState state,
   ) {
     return GlassPanel(
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildCommentaryHeader(context, ref, state, isExpanded: true),
-          const SizedBox(height: 8),
-          Expanded(
-            child: state.showLog
-                ? _buildMoveLog(context, state)
-                : CommentaryHistory(state: state),
-          ),
-        ],
-      ),
+      padding: const EdgeInsets.fromLTRB(12, 4, 12, 4), // Reduced padding
+      child: state.showLog
+          ? _buildMoveLog(context, state)
+          : CommentaryHistory(state: state),
     );
   }
 

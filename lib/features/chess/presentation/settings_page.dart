@@ -415,103 +415,44 @@ class SettingsPage extends ConsumerWidget {
                                 ),
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Auto Play Delay
-                      const _SectionHeader(title: 'AUTO PLAY'),
-                      GlassPanel(
-                        padding: const EdgeInsets.all(10),
-                        child: Wrap(
-                          spacing: 10,
-                          runSpacing: 10,
-                          alignment: WrapAlignment.start,
-                          children: [
                             _SquareSettingsButton(
-                              onTap: () =>
-                                  notifier.setAutoPlayDelay(Duration.zero),
-                              sunken: state.autoPlayDelay.inSeconds == 0,
-                              label: 'Instant',
+                              onTap: () => notifier.setTimeControl(
+                                const Duration(minutes: 5),
+                                const Duration(seconds: 25),
+                              ),
+                              sunken:
+                                  state.whiteTimeLeft.inMinutes == 5 &&
+                                  state.incrementDuration.inSeconds == 25,
                               child: Text(
-                                '0s',
+                                '5+25',
                                 style: GoogleFonts.inter(
-                                  fontSize: 16,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.bold,
                                   color: ScholarlyTheme.textPrimary,
                                 ),
                               ),
                             ),
                             _SquareSettingsButton(
-                              onTap: () => notifier.setAutoPlayDelay(
-                                const Duration(seconds: 2),
+                              onTap: () => notifier.setTimeControl(
+                                const Duration(minutes: 3),
+                                const Duration(seconds: 20),
                               ),
-                              sunken: state.autoPlayDelay.inSeconds == 2,
+                              sunken:
+                                  state.whiteTimeLeft.inMinutes == 3 &&
+                                  state.incrementDuration.inSeconds == 20,
                               child: Text(
-                                '2s',
+                                '3+20',
                                 style: GoogleFonts.inter(
-                                  fontSize: 16,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.bold,
                                   color: ScholarlyTheme.textPrimary,
                                 ),
                               ),
                             ),
-                            _SquareSettingsButton(
-                              onTap: () => notifier.setAutoPlayDelay(
-                                const Duration(seconds: 3),
-                              ),
-                              sunken: state.autoPlayDelay.inSeconds == 3,
-                              child: Text(
-                                '3s',
-                                style: GoogleFonts.inter(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: ScholarlyTheme.textPrimary,
-                                ),
-                              ),
-                            ),
-                            _SquareSettingsButton(
-                              onTap: () => notifier.setAutoPlayDelay(
-                                const Duration(seconds: 4),
-                              ),
-                              sunken: state.autoPlayDelay.inSeconds == 4,
-                              child: Text(
-                                '4s',
-                                style: GoogleFonts.inter(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: ScholarlyTheme.textPrimary,
-                                ),
-                              ),
-                            ),
-                            _SquareSettingsButton(
-                              onTap: () => notifier.setAutoPlayDelay(
-                                const Duration(seconds: 5),
-                              ),
-                              sunken: state.autoPlayDelay.inSeconds == 5,
-                              child: Text(
-                                '5s',
-                                style: GoogleFonts.inter(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: ScholarlyTheme.textPrimary,
-                                ),
-                              ),
-                            ),
-                            _SquareSettingsButton(
-                              onTap: () => notifier.setAutoPlayDelay(
-                                const Duration(seconds: 10),
-                              ),
-                              sunken: state.autoPlayDelay.inSeconds == 10,
-                              child: Text(
-                                '10s',
-                                style: GoogleFonts.inter(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: ScholarlyTheme.textPrimary,
-                                ),
-                              ),
+                            _CustomTimeControlButton(
+                              currentTotal: state.whiteTimeLeft,
+                              currentIncrement: state.incrementDuration,
+                              onTap: () => _showCustomTimeDialog(context, ref),
                             ),
                           ],
                         ),
@@ -701,6 +642,79 @@ class SettingsPage extends ConsumerWidget {
                   ),
                 ),
               ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showCustomTimeDialog(BuildContext context, WidgetRef ref) {
+    int totalMinutes = ref.read(chessProvider).whiteTimeLeft.inMinutes;
+    int incrementSeconds = ref.read(chessProvider).incrementDuration.inSeconds;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: ScholarlyTheme.backgroundStart,
+              surfaceTintColor: Colors.transparent,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: Text(
+                'Custom Time Control',
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.bold,
+                  color: ScholarlyTheme.textPrimary,
+                ),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _TimeSliderRow(
+                    label: 'Minutes',
+                    value: totalMinutes.toDouble(),
+                    min: 1,
+                    max: 60,
+                    onChanged: (v) => setDialogState(() => totalMinutes = v.toInt()),
+                  ),
+                  const SizedBox(height: 24),
+                  _TimeSliderRow(
+                    label: 'Increment',
+                    value: incrementSeconds.toDouble(),
+                    min: 0,
+                    max: 60,
+                    onChanged: (v) => setDialogState(() => incrementSeconds = v.toInt()),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(
+                    'Cancel',
+                    style: GoogleFonts.inter(color: ScholarlyTheme.textMuted),
+                  ),
+                ),
+                FilledButton(
+                  onPressed: () {
+                    ref.read(chessProvider.notifier).setTimeControl(
+                      Duration(minutes: totalMinutes),
+                      Duration(seconds: incrementSeconds),
+                    );
+                    Navigator.of(context).pop();
+                  },
+                  style: FilledButton.styleFrom(
+                    backgroundColor: ScholarlyTheme.accentBlue,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: Text(
+                    'Apply',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
             );
           },
         );
@@ -1010,6 +1024,106 @@ class _StatusClock extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _CustomTimeControlButton extends StatelessWidget {
+  final Duration currentTotal;
+  final Duration currentIncrement;
+  final VoidCallback onTap;
+
+  const _CustomTimeControlButton({
+    required this.currentTotal,
+    required this.currentIncrement,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return _SquareSettingsButton(
+      onTap: onTap,
+      label: 'Custom',
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.edit_calendar_rounded,
+            size: 18,
+            color: ScholarlyTheme.textPrimary,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            '${currentTotal.inMinutes}+${currentIncrement.inSeconds}',
+            style: GoogleFonts.inter(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: ScholarlyTheme.textPrimary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TimeSliderRow extends StatelessWidget {
+  final String label;
+  final double value;
+  final double min;
+  final double max;
+  final ValueChanged<double> onChanged;
+
+  const _TimeSliderRow({
+    required this.label,
+    required this.value,
+    required this.min,
+    required this.max,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                color: ScholarlyTheme.textMuted,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            Text(
+              '${value.toInt()}',
+              style: GoogleFonts.jetBrainsMono(
+                color: ScholarlyTheme.accentBlue,
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        SliderTheme(
+          data: SliderTheme.of(context).copyWith(
+            activeTrackColor: ScholarlyTheme.accentBlue,
+            inactiveTrackColor: ScholarlyTheme.panelStroke,
+            thumbColor: ScholarlyTheme.accentBlue,
+            overlayColor: ScholarlyTheme.accentBlue.withValues(alpha: 0.1),
+            trackHeight: 4,
+          ),
+          child: Slider(
+            value: value,
+            min: min,
+            max: max,
+            onChanged: onChanged,
+          ),
+        ),
+      ],
     );
   }
 }

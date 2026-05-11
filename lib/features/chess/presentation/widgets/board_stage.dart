@@ -5,7 +5,9 @@ import '../../application/chess_provider.dart';
 import 'captured_pieces_bar.dart';
 
 class BoardStage extends ConsumerWidget {
-  const BoardStage({super.key});
+  const BoardStage({super.key, this.isExpanded = false});
+
+  final bool isExpanded;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -25,13 +27,13 @@ class BoardStage extends ConsumerWidget {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        CapturedPiecesBar(pieces: topPieces),
+        if (!isExpanded) CapturedPiecesBar(pieces: topPieces),
         const Expanded(
           child: Center(
             child: ChessBoard(),
           ),
         ),
-        CapturedPiecesBar(pieces: bottomPieces),
+        if (!isExpanded) CapturedPiecesBar(pieces: bottomPieces),
       ],
     );
   }

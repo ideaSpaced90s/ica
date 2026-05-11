@@ -79,7 +79,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
           Expanded(
             child: SelectionArea(
               child: Padding(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 child: _buildContent(state, history),
               ),
             ),
@@ -93,7 +93,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
 
   Widget _buildInput(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
       decoration: BoxDecoration(
         color: ScholarlyTheme.backgroundStart.withValues(alpha: 0.5),
         borderRadius: const BorderRadius.only(
@@ -119,8 +119,10 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
           ),
           IconButton(
             onPressed: _handleSend,
-            icon: Icon(Icons.send_rounded, size: 20, color: ScholarlyTheme.accentBlue),
+            icon: Icon(Icons.send_rounded, size: 18, color: ScholarlyTheme.accentBlue),
             tooltip: 'Send Message',
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
           ),
         ],
       ),
@@ -200,7 +202,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
 
   Widget _buildUserBubble(CommentaryEntry entry) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
@@ -241,7 +243,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
 
   Widget _buildAiBubble(CommentaryEntry entry, bool isStreaming) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

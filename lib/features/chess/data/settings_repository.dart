@@ -10,7 +10,6 @@ class AppSettings {
   final bool isMusicEnabled;
   final bool isAnimationsEnabled;
   final bool isHapticsEnabled;
-  final int autoPlayDelaySeconds;
   final bool showCoordinates;
   final String engineLevel;
   final bool isAiOperational;
@@ -24,7 +23,6 @@ class AppSettings {
     this.isMusicEnabled = false,
     this.isAnimationsEnabled = true,
     this.isHapticsEnabled = true,
-    this.autoPlayDelaySeconds = 3,
     this.showCoordinates = true,
     this.engineLevel = 'B',
     this.isAiOperational = true,
@@ -47,7 +45,6 @@ class AppSettings {
         'isMusicEnabled': isMusicEnabled,
         'isAnimationsEnabled': isAnimationsEnabled,
         'isHapticsEnabled': isHapticsEnabled,
-        'autoPlayDelaySeconds': autoPlayDelaySeconds,
         'showCoordinates': showCoordinates,
         'engineLevel': engineLevel,
         'isAiOperational': isAiOperational,
@@ -62,7 +59,6 @@ class AppSettings {
         isMusicEnabled: json['isMusicEnabled'] ?? false,
         isAnimationsEnabled: json['isAnimationsEnabled'] ?? true,
         isHapticsEnabled: json['isHapticsEnabled'] ?? true,
-        autoPlayDelaySeconds: json['autoPlayDelaySeconds'] ?? 3,
         showCoordinates: json['showCoordinates'] ?? true,
         engineLevel: json['engineLevel'] ?? 'B',
         isAiOperational: json['isAiOperational'] ?? true,

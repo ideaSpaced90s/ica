@@ -170,7 +170,6 @@ class ChessState {
     this.isPromoting = false,
     this.promotionSource,
     this.promotionDestination,
-    this.autoPlayDelay = const Duration(seconds: 3),
     this.isAnimationsEnabled = true,
     this.animationSettings = const {
       'pieceMotion': true,
@@ -236,7 +235,6 @@ class ChessState {
   final bool isPromoting;
   final String? promotionSource;
   final String? promotionDestination;
-  final Duration autoPlayDelay;
   final bool isAnimationsEnabled;
   final Map<String, bool> animationSettings;
   final bool isCouncilOnline;
@@ -306,7 +304,6 @@ class ChessState {
     bool? isPromoting,
     Object? promotionSource = _sentinel,
     Object? promotionDestination = _sentinel,
-    Duration? autoPlayDelay,
     bool? isAnimationsEnabled,
     Map<String, bool>? animationSettings,
     bool? isCouncilOnline,
@@ -393,7 +390,6 @@ class ChessState {
       promotionDestination: identical(promotionDestination, _sentinel)
           ? this.promotionDestination
           : promotionDestination as String?,
-      autoPlayDelay: autoPlayDelay ?? this.autoPlayDelay,
       isAnimationsEnabled: isAnimationsEnabled ?? this.isAnimationsEnabled,
       animationSettings: animationSettings ?? this.animationSettings,
       isCouncilOnline: isCouncilOnline ?? this.isCouncilOnline,
@@ -438,7 +434,6 @@ class ChessNotifier extends StateNotifier<ChessState> {
         isAnimationsEnabled: s.isAnimationsEnabled,
         animationSettings: s.animationSettings,
         isHapticsEnabled: s.isHapticsEnabled,
-        autoPlayDelay: Duration(seconds: s.autoPlayDelaySeconds),
         showCoordinates: s.showCoordinates,
         engineLevel: s.engineLevel,
         isAiOperational: s.isAiOperational,
@@ -465,7 +460,6 @@ class ChessNotifier extends StateNotifier<ChessState> {
         isAnimationsEnabled: state.isAnimationsEnabled,
         animationSettings: state.animationSettings,
         isHapticsEnabled: state.isHapticsEnabled,
-        autoPlayDelaySeconds: state.autoPlayDelay.inSeconds,
         showCoordinates: state.showCoordinates,
         engineLevel: state.engineLevel,
         isAiOperational: state.isAiOperational,
@@ -509,11 +503,6 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
   void setBoardTheme(String themeId) {
     state = state.copyWith(boardThemeId: themeId);
-    _saveSettings();
-  }
-
-  void setAutoPlayDelay(Duration delay) {
-    state = state.copyWith(autoPlayDelay: delay);
     _saveSettings();
   }
 
@@ -785,8 +774,21 @@ class ChessNotifier extends StateNotifier<ChessState> {
           aiTurn &&
           !state.game.gameOver &&
           !state.isPaused) {
-        debugPrint('ChessNotifier: [SCOUT] Executing engine move: $bestMove');
-        _makeEngineMove(bestMove);
+        debugPrint(
+          'ChessNotifier: [SCOUT] Engine move found: $bestMove. isAnimationsEnabled: ${state.isAnimationsEnabled}',
+        );
+        _engineMoveTimer?.cancel();
+        if (state.isAnimationsEnabled) {
+          debugPrint('ChessNotifier: [SCOUT] Delaying engine move for 1.2s...');
+          _engineMoveTimer = Timer(const Duration(milliseconds: 1200), () {
+            if (!_isDisposed && !state.isPaused) {
+              _makeEngineMove(bestMove);
+            }
+          });
+        } else {
+          debugPrint('ChessNotifier: [SCOUT] Executing engine move immediately (animations off).');
+          _makeEngineMove(bestMove);
+        }
       } else if (bestMove != null) {
         debugPrint('ChessNotifier: [SCOUT] Move ignored. Turn match: $aiTurn');
       }
@@ -1795,7 +1797,6 @@ class ChessNotifier extends StateNotifier<ChessState> {
     final preserveMusic = state.isMusicEnabled;
     final preserveAnimations = state.isAnimationsEnabled;
     final preserveHaptics = state.isHapticsEnabled;
-    final preserveAutoPlay = state.autoPlayDelay;
     final preserveCoordinates = state.showCoordinates;
     final preserveAiOperational = state.isAiOperational;
     final preserveWhiteTime = state.whiteTimeLeft;
@@ -1813,7 +1814,6 @@ class ChessNotifier extends StateNotifier<ChessState> {
       isMusicEnabled: preserveMusic,
       isAnimationsEnabled: preserveAnimations,
       isHapticsEnabled: preserveHaptics,
-      autoPlayDelay: preserveAutoPlay,
       showCoordinates: preserveCoordinates,
       isAiOperational: preserveAiOperational,
       whiteTimeLeft: preserveWhiteTime,
