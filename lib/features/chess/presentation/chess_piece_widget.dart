@@ -16,6 +16,7 @@ class ChessPieceWidget extends ConsumerStatefulWidget {
   final String? pieceCode;
   final bool highlighted;
   final bool isMoving;
+  final bool forceVisible;
   final double rotation;
   final VoidCallback? onTap;
   final VoidCallback? onDragStarted;
@@ -27,6 +28,7 @@ class ChessPieceWidget extends ConsumerStatefulWidget {
     this.pieceCode,
     this.highlighted = false,
     this.isMoving = false,
+    this.forceVisible = false,
     this.rotation = 0.0,
     this.onTap,
     this.onDragStarted,
@@ -220,8 +222,8 @@ class _ChessPieceWidgetState extends ConsumerState<ChessPieceWidget>
       );
     }
 
-    final interactivePiece = widget.isMoving 
-        ? Opacity(opacity: 0.30, child: pieceWidget)
+    final interactivePiece = widget.isMoving && !widget.forceVisible
+        ? Opacity(opacity: 0.0, child: pieceWidget)
         : pieceWidget;
 
     return Draggable<String>(

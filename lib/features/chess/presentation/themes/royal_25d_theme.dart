@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'chess_theme.dart';
 
 class Royal25DTheme extends ChessTheme {
-  const Royal25DTheme() : super(id: 'theme11', name: 'Royal 2.5D');
+  const Royal25DTheme() : super(id: 'theme11', name: 'Royal');
 
   @override
   Color get lightSquare => const Color(0xFFF8FAFC); // Clean White

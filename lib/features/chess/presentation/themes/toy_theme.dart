@@ -6,7 +6,7 @@ import '../widgets/electric_theme_painter.dart';
 import '../widgets/cartoon_toy_painter.dart';
 
 class ToyTheme extends ChessTheme {
-  const ToyTheme() : super(id: 'theme9', name: 'Cartoon Toy');
+  const ToyTheme() : super(id: 'theme9', name: 'Toy');
 
   @override
   Color get lightSquare => const Color(0xFFFFF3E0);

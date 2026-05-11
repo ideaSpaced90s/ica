@@ -1,15 +1,15 @@
-import '../themes/chess_theme.dart';
-import '../themes/classic_theme.dart';
-import '../themes/forest_theme.dart';
-import '../themes/ink_theme.dart';
-import '../themes/platinum_theme.dart';
-import '../themes/steampunk_theme.dart';
-import '../themes/matrix_theme.dart';
-import '../themes/slate_theme.dart';
-import '../themes/walnut_theme.dart';
-import '../themes/toy_theme.dart';
-import '../themes/shadow_theme.dart';
-import '../themes/royal_25d_theme.dart';
+import 'chess_theme.dart';
+import 'classic_theme.dart';
+import 'forest_theme.dart';
+import 'ink_theme.dart';
+import 'platinum_theme.dart';
+import 'steampunk_theme.dart';
+import 'matrix_theme.dart';
+import 'slate_theme.dart';
+import 'walnut_theme.dart';
+import 'toy_theme.dart';
+import 'shadow_theme.dart';
+import 'royal_25d_theme.dart';
 
 class ThemeRegistry {
   static final Map<String, ChessTheme> _themes = {
@@ -29,4 +29,6 @@ class ThemeRegistry {
   static ChessTheme getTheme(String id) {
     return _themes[id] ?? _themes['classic']!;
   }
+
+  static List<ChessTheme> get allThemes => _themes.values.toList();
 }

@@ -27,6 +27,9 @@ class PieceMotionProfile {
   /// Currently: Bishop only.
   final bool hasGhostTrail;
 
+  /// Whether the piece uses a teleport (blink) animation instead of a glide.
+  final bool isTeleport;
+
   /// Scale factor applied at the moment of landing (compression amount).
   /// 0.0 = no compression, 0.015 = 1.5% compress, applied briefly then spring back.
   final double landingCompression;
@@ -50,6 +53,7 @@ class PieceMotionProfile {
     required this.verticalArcFactor,
     required this.midRotationDeg,
     required this.hasGhostTrail,
+    required this.isTeleport,
     required this.landingCompression,
     required this.hasBreathingSelection,
     required this.selectionBreathScale,
@@ -69,6 +73,7 @@ class PieceMotionProfile {
     verticalArcFactor: 0.05,    // almost flat
     midRotationDeg: 0.0,
     hasGhostTrail: false,
+    isTeleport: false,
     landingCompression: 0.010,  // tiny 1% compress for a quick thud
     hasBreathingSelection: true,
     selectionBreathScale: 0.012,
@@ -84,6 +89,7 @@ class PieceMotionProfile {
     verticalArcFactor: 0.3,     // noticeable arc (knight jumps)
     midRotationDeg: 2.5,        // degree tilt mid-air
     hasGhostTrail: false,
+    isTeleport: false,
     landingCompression: 0.0,    // firm, no compress
     hasBreathingSelection: true,
     selectionBreathScale: 0.015,
@@ -99,6 +105,7 @@ class PieceMotionProfile {
     verticalArcFactor: 0.0,     // perfectly flat diagonal glide
     midRotationDeg: 0.0,
     hasGhostTrail: true,        // ← Bishop signature
+    isTeleport: false,
     landingCompression: 0.0,    // absolutely clean stop
     hasBreathingSelection: true,
     selectionBreathScale: 0.010,
@@ -114,6 +121,7 @@ class PieceMotionProfile {
     verticalArcFactor: 0.0,     // strictly horizontal/vertical — no drift
     midRotationDeg: 0.0,
     hasGhostTrail: false,
+    isTeleport: false,
     landingCompression: 0.015,  // 1.5% compress — feels heavy landing
     hasBreathingSelection: true,
     selectionBreathScale: 0.008, // barely breathes — stable presence
@@ -122,14 +130,16 @@ class PieceMotionProfile {
   );
 
   /// ♛ Queen — Dominant & Fluid
-  /// Fastest mover, confident glide, clean minimal settle.
+  /// fastest mover, confident glide, clean minimal settle.
+  /// Now features a unique "Teleport" blink signature.
   static const PieceMotionProfile queen = PieceMotionProfile(
-    moveDuration: Duration(milliseconds: 500),
-    moveCurve: Curves.easeOutCubic,
-    verticalArcFactor: 0.1,     // slight arc — sense of presence
+    moveDuration: Duration(milliseconds: 1200), // Extended for blink sequence
+    moveCurve: Curves.linear, // Linear progress for easier blink timing
+    verticalArcFactor: 0.0,
     midRotationDeg: 0.0,
     hasGhostTrail: false,
-    landingCompression: 0.012,  // increased from 0.005 — power with control
+    isTeleport: true,           // ← Queen signature
+    landingCompression: 0.0,
     hasBreathingSelection: true,
     selectionBreathScale: 0.018, // most visible breath — dominant
     breathingPeriod: Duration(milliseconds: 1000),
@@ -144,6 +154,7 @@ class PieceMotionProfile {
     verticalArcFactor: 0.05,
     midRotationDeg: 0.0,
     hasGhostTrail: false,
+    isTeleport: false,
     landingCompression: 0.020,  // increased from 0.003 — heavy settle
     hasBreathingSelection: true,
     selectionBreathScale: 0.020, // most visible — signals importance

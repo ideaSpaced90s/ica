@@ -93,11 +93,13 @@ class MoveAnimationData {
   final String from;
   final String to;
   final String pieceCode;
+  final bool isCapture;
 
   const MoveAnimationData({
     required this.from,
     required this.to,
     required this.pieceCode,
+    this.isCapture = false,
   });
 }
 
@@ -1136,12 +1138,16 @@ class ChessNotifier extends StateNotifier<ChessState> {
       return;
     }
 
+    final targetPiece = state.game.getPiece(to);
+    final isCapture = targetPiece != null;
+
     // Trigger animation
     state = state.copyWith(
       moveAnimation: MoveAnimationData(
         from: from,
         to: to,
         pieceCode: pieceCode,
+        isCapture: isCapture,
       ),
     );
 
@@ -1333,6 +1339,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
         ? '$colorPrefix${piece.type.toUpperCase()}'
         : 'wP';
 
+    final targetPiece = state.game.getPiece(to);
+    final isCapture = targetPiece != null;
+
     state = state.copyWith(
       isPromoting: false,
       promotionSource: null,
@@ -1341,6 +1350,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
         from: from,
         to: to,
         pieceCode: pieceCode,
+        isCapture: isCapture,
       ),
     );
 

@@ -239,6 +239,7 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
             squareName: widget.data.from,
             pieceCode: widget.data.pieceCode,
             isMoving: true,
+            forceVisible: true,
           ),
         ),
       ),
@@ -313,6 +314,7 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
             squareName: widget.data.from,
             pieceCode: widget.data.pieceCode,
             isMoving: true,
+            forceVisible: true,
           ),
         );
 
@@ -328,7 +330,8 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
           clipBehavior: Clip.none,
           children: [
             // ── Trail painter (all non-matrix, non-electric themes) ──
-            if (!isMatrixTheme && !isElectricTheme && ref.read(chessProvider.notifier).isAnimationTypeEnabled('themeEffects'))
+            // Hidden for teleport moves to maintain clean jump feel
+            if (!_profile.isTeleport && !isMatrixTheme && !isElectricTheme && ref.read(chessProvider.notifier).isAnimationTypeEnabled('themeEffects'))
               CustomPaint(
                 size: Size(widget.boardSize, widget.boardSize),
                 painter: TrailPainter(
@@ -355,14 +358,75 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
                 _buildGhostPiece(progress - (i * 0.05), 0.35 / (i * 1.6)),
 
             // ── Moving piece ────────────────────────────────────────
-            Positioned(
-              left: piecePos.dx - _squareSize / 2 + vibration.dx,
-              top: piecePos.dy - _squareSize / 2 + verticalLift + vibration.dy,
-              child: Transform.scale(scale: pieceScale, child: movingPiece),
-            ),
+            _buildMovingPiece(rawProgress, piecePos, pieceScale, verticalLift, vibration, midRotation, movingPiece),
           ],
         );
       },
+    );
+  }
+
+  Widget _buildMovingPiece(
+    double rawProgress,
+    Offset piecePos,
+    double pieceScale,
+    double verticalLift,
+    Offset vibration,
+    double midRotation,
+    Widget movingPiece,
+  ) {
+    if (!_profile.isTeleport) {
+      return Positioned(
+        left: piecePos.dx - _squareSize / 2 + vibration.dx,
+        top: piecePos.dy - _squareSize / 2 + verticalLift + vibration.dy,
+        child: Transform.scale(scale: pieceScale, child: movingPiece),
+      );
+    }
+
+    // ── Queen Teleport (Blink) Logic ─────────────────────────────────────
+    
+    // 1. Handle Capture Delay (wait for dust/vanish)
+    double adjustedProgress = rawProgress;
+    const captureDelay = 0.25; // 25% of duration spent waiting
+    
+    if (widget.data.isCapture) {
+      if (rawProgress < captureDelay) {
+        return const SizedBox.shrink(); // Hidden while waiting for capture effect
+      }
+      adjustedProgress = (rawProgress - captureDelay) / (1.0 - captureDelay);
+    }
+
+    // 2. Teleport Phases
+    // 0.0 - 0.45: Blink at Point A
+    // 0.45 - 0.90: Blink at Point B
+    // 0.90 - 1.0: Final stabilize at Point B
+    
+    Offset teleportPos;
+    bool isVisible = true;
+
+    if (adjustedProgress < 0.45) {
+      teleportPos = _path.first;
+      // 3 blinks: 6 segments (on/off/on/off/on/off)
+      final blinkProgress = adjustedProgress / 0.45;
+      isVisible = (blinkProgress * 6).floor() % 2 == 0;
+    } else if (adjustedProgress < 0.90) {
+      teleportPos = _path.last;
+      // 3 blinks at target
+      final blinkProgress = (adjustedProgress - 0.45) / 0.45;
+      isVisible = (blinkProgress * 6).floor() % 2 == 0;
+    } else {
+      teleportPos = _path.last;
+      isVisible = true; // Stabilize
+    }
+
+    if (!isVisible) return const SizedBox.shrink();
+
+    return Positioned(
+      left: teleportPos.dx - _squareSize / 2,
+      top: teleportPos.dy - _squareSize / 2,
+      child: Transform.scale(
+        scale: 1.0, // Clean teleport, no arc scaling
+        child: movingPiece,
+      ),
     );
   }
 }

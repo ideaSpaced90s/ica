@@ -3,7 +3,7 @@ import 'chess_theme.dart';
 import '../widgets/high_contrast_piece.dart';
 
 class ShadowTheme extends ChessTheme {
-  const ShadowTheme() : super(id: 'theme10', name: 'Shadow High-Contrast');
+  const ShadowTheme() : super(id: 'theme10', name: 'Shadow');
 
   @override
   Color get lightSquare => const Color(0xFF1C1C1C);

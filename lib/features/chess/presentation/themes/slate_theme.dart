@@ -3,7 +3,7 @@ import 'chess_theme.dart';
 import '../widgets/slate_theme.dart';
 
 class SlateTheme extends ChessTheme {
-  const SlateTheme() : super(id: 'theme7', name: 'Slate Minimal');
+  const SlateTheme() : super(id: 'theme7', name: 'Slate');
 
   @override
   Color get lightSquare => const Color(0xFFE5E7EB);

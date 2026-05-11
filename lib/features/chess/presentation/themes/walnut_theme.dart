@@ -6,7 +6,7 @@ import '../widgets/walnut_piece_painter.dart';
 import 'package:chess/chess.dart' as chess_lib;
 
 class WalnutTheme extends ChessTheme {
-  const WalnutTheme() : super(id: 'theme8', name: 'Walnut Wood');
+  const WalnutTheme() : super(id: 'theme8', name: 'Walnut');
 
   @override
   Color get lightSquare => const Color(0xFFE6C9A8);

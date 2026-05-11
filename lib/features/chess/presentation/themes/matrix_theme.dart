@@ -5,7 +5,7 @@ import '../widgets/matrix_theme_painter.dart';
 import '../widgets/matrix_piece_painter.dart';
 
 class MatrixTheme extends ChessTheme {
-  const MatrixTheme() : super(id: 'theme6', name: 'Digital Matrix');
+  const MatrixTheme() : super(id: 'theme6', name: 'Matrix');
 
   @override
   Color get lightSquare => const Color(0xFF1A1A1A);

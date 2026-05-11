@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../application/chess_provider.dart';
 import 'scholarly_theme.dart';
+import 'package:kingslayer_chess/features/chess/presentation/themes/theme_registry.dart';
 import 'widgets/saved_game_widgets.dart';
 
 class SettingsPage extends ConsumerWidget {
@@ -227,105 +228,17 @@ class SettingsPage extends ConsumerWidget {
                           runSpacing: 10,
                           alignment: WrapAlignment.start,
                           children: [
-                            _SquareSettingsButton(
-                              label: 'Classic',
-                              sunken: state.boardThemeId == 'classic',
-                              onTap: () => notifier.setBoardTheme('classic'),
-                              child: _buildThemePreview(
-                                const Color(0xFFE8D1B5),
-                                const Color(0xFFB58863),
-                              ),
-                            ),
-                            _SquareSettingsButton(
-                              label: 'Theme 2',
-                              sunken: state.boardThemeId == 'theme2',
-                              onTap: () => notifier.setBoardTheme('theme2'),
-                              child: _buildThemePreview(
-                                const Color(0xFFDEE3E6),
-                                const Color(0xFF8CA2AD),
-                              ),
-                            ),
-                            _SquareSettingsButton(
-                              label: 'Theme 3',
-                              sunken: state.boardThemeId == 'theme3',
-                              onTap: () => notifier.setBoardTheme('theme3'),
-                              child: _buildThemePreview(
-                                const Color(0xFFEBECD0),
-                                const Color(0xFF779556),
-                              ),
-                            ),
-                            _SquareSettingsButton(
-                              label: 'Theme 4',
-                              sunken: state.boardThemeId == 'theme4',
-                              onTap: () => notifier.setBoardTheme('theme4'),
-                              child: _buildThemePreview(
-                                const Color(0xFFBBBBBB),
-                                const Color(0xFF666666),
-                              ),
-                            ),
-                            _SquareSettingsButton(
-                              label: 'Theme 5',
-                              sunken: state.boardThemeId == 'theme5',
-                              onTap: () => notifier.setBoardTheme('theme5'),
-                              child: _buildThemePreview(
-                                const Color(0xFFF3E5F5),
-                                const Color(0xFF9575CD),
-                              ),
-                            ),
-                            _SquareSettingsButton(
-                              label: 'Theme 6',
-                              sunken: state.boardThemeId == 'theme6',
-                              onTap: () => notifier.setBoardTheme('theme6'),
-                              child: _buildThemePreview(
-                                const Color(0xFFE0F2F1),
-                                const Color(0xFF006064),
-                              ),
-                            ),
-                            _SquareSettingsButton(
-                              label: 'Theme 7',
-                              sunken: state.boardThemeId == 'theme7',
-                              onTap: () => notifier.setBoardTheme('theme7'),
-                              child: _buildThemePreview(
-                                const Color(0xFFFFF3E0),
-                                const Color(0xFFE64A19),
-                              ),
-                            ),
-                            _SquareSettingsButton(
-                              label: 'Theme 8',
-                              sunken: state.boardThemeId == 'theme8',
-                              onTap: () => notifier.setBoardTheme('theme8'),
-                              child: _buildThemePreview(
-                                const Color(0xFFECEFF1),
-                                const Color(0xFF263238),
-                              ),
-                            ),
-                            _SquareSettingsButton(
-                              label: 'Theme 9',
-                              sunken: state.boardThemeId == 'theme9',
-                              onTap: () => notifier.setBoardTheme('theme9'),
-                              child: _buildThemePreview(
-                                const Color(0xFFF1F8E9),
-                                const Color(0xFF33691E),
-                              ),
-                            ),
-                            _SquareSettingsButton(
-                              label: 'Theme 10',
-                              sunken: state.boardThemeId == 'theme10',
-                              onTap: () => notifier.setBoardTheme('theme10'),
-                              child: _buildThemePreview(
-                                const Color(0xFFF3E5F5),
-                                const Color(0xFF4A148C),
-                              ),
-                            ),
-                            _SquareSettingsButton(
-                              label: 'Royal 2.5D',
-                              sunken: state.boardThemeId == 'theme11',
-                              onTap: () => notifier.setBoardTheme('theme11'),
-                              child: _buildThemePreview(
-                                const Color(0xFFE0E0E0),
-                                const Color(0xFF1A237E),
-                              ),
-                            ),
+                            ...ThemeRegistry.allThemes.map((theme) {
+                              return _SquareSettingsButton(
+                                label: theme.name,
+                                sunken: state.boardThemeId == theme.id,
+                                onTap: () => notifier.setBoardTheme(theme.id),
+                                child: _buildThemePreview(
+                                  theme.lightSquare,
+                                  theme.darkSquare,
+                                ),
+                              );
+                            }),
                           ],
                         ),
                       ),

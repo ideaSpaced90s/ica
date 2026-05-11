@@ -179,6 +179,19 @@ class _TrailMovementOverlayState extends ConsumerState<TrailMovementOverlay>
           verticalLift = -arc * 25.0;
         }
 
+        // Piece-specific signature effects (Personal animations)
+        final isBishop = widget.data.pieceCode.endsWith('B');
+        final isRook = widget.data.pieceCode.endsWith('R');
+
+        if (isBishop) {
+          // Bishop Wind Effect: Subtle horizontal stretch and lift
+          pieceScale *= (1.0 + (arc * 0.15));
+          verticalLift -= (arc * 8.0);
+        } else if (isRook) {
+          // Rook Shaky Effect: Constant high-frequency vibration
+          vibration += Offset(math.sin(rawProgress * 60) * 2.5, 0);
+        }
+
         return Stack(
           children: [
             if (!isIceTheme && !isMatrixTheme && !isElectricTheme)
@@ -191,27 +204,6 @@ class _TrailMovementOverlayState extends ConsumerState<TrailMovementOverlay>
                 ),
               ),
             
-            if (isElectricTheme)
-              CustomPaint(
-                size: Size(widget.boardSize, widget.boardSize),
-                painter: _LightningArcPainter(
-                  from: _path.first,
-                  to: piecePos,
-                  progress: progress,
-                ),
-              ),
-            
-            // Render Ghost Trail for Ice Theme (Motion Blur Pro)
-            if (isIceTheme)
-              for (int i = 1; i <= 6; i++)
-                _buildGhostPiece(progress - (i * 0.04), 0.5 / (i * 1.5)),
-
-            // Render subtle Ghost Trail for Bishop (Signature identity)
-            // Gated by PieceCode and intentionally lower opacity (0.4)
-            if (!isIceTheme && !isMatrixTheme && widget.data.pieceCode.endsWith('B'))
-              for (int i = 1; i <= 4; i++)
-                _buildGhostPiece(progress - (i * 0.05), 0.4 / (i * 1.6)),
-
             Positioned(
               left: piecePos.dx - _squareSize / 2 + vibration.dx,
               top: piecePos.dy - _squareSize / 2 + verticalLift + vibration.dy,
@@ -234,27 +226,6 @@ class _TrailMovementOverlayState extends ConsumerState<TrailMovementOverlay>
     );
   }
 
-  Widget _buildGhostPiece(double t, double opacity) {
-    if (t <= 0) return const SizedBox.shrink();
-    if (t >= 1.0) return const SizedBox.shrink();
-    final pos = _getPositionOnPath(_path, t);
-    return Positioned(
-      left: pos.dx - _squareSize / 2,
-      top: pos.dy - _squareSize / 2,
-      child: Opacity(
-        opacity: opacity.clamp(0.0, 1.0),
-        child: SizedBox(
-          width: _squareSize,
-          height: _squareSize,
-          child: ChessPieceWidget(
-            squareName: widget.data.from,
-            pieceCode: widget.data.pieceCode,
-            isMoving: true,
-          ),
-        ),
-      ),
-    );
-  }
 
   Offset _getPositionOnPath(List<Offset> path, double t) {
     if (path.isEmpty) return Offset.zero;
@@ -326,45 +297,3 @@ class TrailPainter extends CustomPainter {
   bool shouldRepaint(covariant TrailPainter oldDelegate) => true;
 }
 
-class _LightningArcPainter extends CustomPainter {
-  final Offset from;
-  final Offset to;
-  final double progress;
-
-  _LightningArcPainter({required this.from, required this.to, required this.progress});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (progress <= 0 || progress >= 1.0) return;
-
-    final paint = Paint()
-      ..color = const Color(0xFF00BFFF)
-      ..strokeWidth = 2.0
-      ..style = PaintingStyle.stroke;
-    
-    final glowPaint = Paint()
-      ..color = const Color(0xFF00BFFF).withValues(alpha: 0.3)
-      ..strokeWidth = 6.0
-      ..style = PaintingStyle.stroke
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
-
-    final random = math.Random();
-    final path = Path()..moveTo(from.dx, from.dy);
-    
-    final dist = (to - from).distance;
-    final segments = (dist / 10).clamp(5, 20).toInt();
-    
-    for (int i = 1; i <= segments; i++) {
-        final t = i / segments;
-        final lerped = Offset.lerp(from, to, t)!;
-        final jitter = Offset((random.nextDouble() - 0.5) * 20, (random.nextDouble() - 0.5) * 20);
-        path.lineTo(lerped.dx + jitter.dx, lerped.dy + jitter.dy);
-    }
-
-    canvas.drawPath(path, glowPaint);
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(_LightningArcPainter oldDelegate) => true;
-}

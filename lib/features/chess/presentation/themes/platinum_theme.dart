@@ -5,7 +5,7 @@ import '../widgets/toy_effects.dart';
 import 'package:chess/chess.dart' as chess_lib;
 
 class PlatinumTheme extends ChessTheme {
-  const PlatinumTheme() : super(id: 'theme4', name: 'Platinum Metallic');
+  const PlatinumTheme() : super(id: 'theme4', name: 'Platinum');
 
   @override
   Color get lightSquare => const Color(0xFFD1D5DB);
