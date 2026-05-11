@@ -130,7 +130,22 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
   @override
   void didUpdateWidget(covariant SignatureMoveOverlay oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.isCheckmate &&
+    
+    // Handle new move data if it changes while the overlay is still mounted
+    if (widget.data != oldWidget.data) {
+      _path = _calculatePath();
+      _profile = PieceMotionProfile.forCode(widget.data.pieceCode);
+      _controller.duration = _effectiveMoveDuration;
+      
+      final boardThemeId = ref.read(chessProvider).boardThemeId;
+      _curvedProgress = CurvedAnimation(
+        parent: _controller,
+        curve: _profileAwareCurve(boardThemeId, _profile),
+      );
+      
+      _controller.reset();
+      _controller.forward();
+    } else if (widget.isCheckmate &&
         !oldWidget.isCheckmate &&
         _controller.value < 1.0) {
       _controller.duration = _effectiveMoveDuration;

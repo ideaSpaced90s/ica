@@ -108,12 +108,23 @@ class StockfishService {
             }
           }, onError: (err) {
             debugPrint('StockfishService: [STDOUT ERROR] $err');
+          }, onDone: () {
+            debugPrint('StockfishService: [STDOUT] Stream closed.');
+            _isReady = false;
           });
 
       _stderrSubscription = _process!.stderr
           .transform(utf8.decoder)
           .transform(const LineSplitter())
-          .listen((line) => debugPrint('Stockfish [STDERR] -> $line'));
+          .listen((line) => debugPrint('Stockfish [STDERR] -> $line'),
+          onDone: () => debugPrint('StockfishService: [STDERR] Stream closed.'));
+
+      // Monitor process exit
+      _process!.exitCode.then((code) {
+        debugPrint('StockfishService: Process exited with code $code');
+        _isReady = false;
+        _process = null;
+      });
 
       // Wait a tiny bit for the process to be fully ready for input
       await Future.delayed(const Duration(milliseconds: 500));
@@ -127,6 +138,9 @@ class StockfishService {
         onTimeout: () {
           debugPrint('StockfishService: TIMEOUT waiting for readyok.');
           _isError = true;
+          if (_readyCompleter != null && !_readyCompleter!.isCompleted) {
+            _readyCompleter!.complete();
+          }
         },
       );
       
@@ -141,10 +155,18 @@ class StockfishService {
   }
 
   Future<void> sendCommand(String command) async {
-    if (_process == null) return;
-    final cmd = command.endsWith('\n') ? command : '$command\n';
-    _process!.stdin.write(cmd);
-    await _process!.stdin.flush();
+    if (_process == null) {
+      debugPrint('StockfishService: Cannot send command "$command", process is NULL.');
+      return;
+    }
+    try {
+      final cmd = command.endsWith('\n') ? command : '$command\n';
+      _process!.stdin.write(cmd);
+      await _process!.stdin.flush();
+    } catch (e) {
+      debugPrint('StockfishService: Failed to send command "$command": $e');
+      _isReady = false;
+    }
   }
 
   Future<void> analyzePosition(String fen, {int depth = 15}) async {

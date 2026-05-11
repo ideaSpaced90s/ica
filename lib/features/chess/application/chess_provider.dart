@@ -633,7 +633,11 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
     if (state.servicesStarted) {
       if (analyzeCurrentPosition) {
-        _engine.analyzePosition(state.game.fen, depth: depth);
+        try {
+          _engine.analyzePosition(state.game.fen, depth: depth);
+        } catch (e) {
+          debugPrint('ChessNotifier: Failed to trigger engine analysis: $e');
+        }
       }
       return;
     }
@@ -641,7 +645,11 @@ class ChessNotifier extends StateNotifier<ChessState> {
     if (_startupFuture != null) {
       await _startupFuture;
       if (analyzeCurrentPosition && state.engineReady) {
-        _engine.analyzePosition(state.game.fen, depth: depth);
+        try {
+          _engine.analyzePosition(state.game.fen, depth: depth);
+        } catch (e) {
+          debugPrint('ChessNotifier: Failed to trigger engine analysis after startup: $e');
+        }
       }
       return;
     }
@@ -1361,13 +1369,11 @@ class ChessNotifier extends StateNotifier<ChessState> {
     }
 
     state = state.copyWith(
-      game: ChessGame(
-        fen: state.game.fen,
-      ), // Force a new instance for Riverpod deep updates
+      game: state.game, // Maintain the same instance to preserve history
       lastMove: lastMove,
       recentMoves: updatedMoves,
       previousEvaluation: state.currentEvaluation,
-      isEngineThinking: _isAiTurn() && state.servicesStarted,
+      isEngineThinking: _isAiTurn() && state.servicesStarted && state.engineReady,
       commentaryError: null,
       activeClockSide: state.clockStarted
           ? _clockSideForTurn()

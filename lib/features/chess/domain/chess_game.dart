@@ -28,22 +28,9 @@ class ChessGame {
   }
 
   List<String> legalDestinations(String fromSquare) {
-    final destinations = <String>[];
-    for (final file in files) {
-      for (final rank in ranks) {
-        final target = '$file$rank';
-        final next = ChessGame(fen: fen);
-        final moveMade = next.makeMove({
-          'from': fromSquare,
-          'to': target,
-          'promotion': 'q',
-        });
-        if (moveMade) {
-          destinations.add(target);
-        }
-      }
-    }
-    return destinations;
+    // Optimized: Use internal move generation instead of 64 hypothetical moves
+    final moves = _chess.generate_moves({'square': fromSquare});
+    return moves.map((m) => chess_lib.Chess.algebraic(m.to)).toList();
   }
 
   List<String> moveHistoryLabels() {
