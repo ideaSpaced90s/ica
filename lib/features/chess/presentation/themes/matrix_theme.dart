@@ -14,6 +14,12 @@ class MatrixTheme extends ChessTheme {
   Color get darkSquare => const Color(0xFF000000);
 
   @override
+  Color get lightCoordinateColor => Colors.greenAccent.withValues(alpha: 0.7);
+
+  @override
+  Color get darkCoordinateColor => Colors.greenAccent.withValues(alpha: 0.7);
+
+  @override
   Color get frameColor => const Color(0xFF000000);
 
   @override

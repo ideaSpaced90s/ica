@@ -12,6 +12,12 @@ class ShadowTheme extends ChessTheme {
   Color get darkSquare => const Color(0xFF000000);
 
   @override
+  Color get lightCoordinateColor => Colors.white.withValues(alpha: 0.7);
+
+  @override
+  Color get darkCoordinateColor => Colors.white.withValues(alpha: 0.7);
+
+  @override
   Color get frameColor => const Color(0xFF000000);
 
   @override

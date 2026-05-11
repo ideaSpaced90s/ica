@@ -14,6 +14,12 @@ class SteampunkTheme extends ChessTheme {
   Color get darkSquare => const Color(0xFF4E342E);
 
   @override
+  Color get lightCoordinateColor => Colors.black87.withValues(alpha: 0.7);
+
+  @override
+  Color get darkCoordinateColor => Colors.white70;
+
+  @override
   Color get frameColor => const Color(0xFF3E2723);
 
   @override

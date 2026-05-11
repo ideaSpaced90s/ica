@@ -15,6 +15,12 @@ class ToyTheme extends ChessTheme {
   Color get darkSquare => const Color(0xFFFFB74D);
 
   @override
+  Color get lightCoordinateColor => Colors.black87.withValues(alpha: 0.7);
+
+  @override
+  Color get darkCoordinateColor => Colors.black87.withValues(alpha: 0.7);
+
+  @override
   Color get frameColor => const Color(0xFFE65100);
 
   @override

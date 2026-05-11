@@ -12,6 +12,12 @@ class InkTheme extends ChessTheme {
   Color get darkSquare => const Color(0xFFD6D3D1);
 
   @override
+  Color get lightCoordinateColor => Colors.black87.withValues(alpha: 0.7);
+
+  @override
+  Color get darkCoordinateColor => Colors.black87.withValues(alpha: 0.7);
+
+  @override
   Color get frameColor => const Color(0xFF2C2C2C);
 
   @override

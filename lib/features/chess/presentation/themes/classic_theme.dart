@@ -12,6 +12,12 @@ class ClassicTheme extends ChessTheme {
   Color get darkSquare => const Color(0xFFB58863);
 
   @override
+  Color get lightCoordinateColor => Colors.black87.withValues(alpha: 0.7);
+
+  @override
+  Color get darkCoordinateColor => Colors.white70;
+
+  @override
   Color get frameColor => const Color(0xFF8B4513);
 
   @override

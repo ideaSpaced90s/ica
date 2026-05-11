@@ -13,6 +13,12 @@ class ForestTheme extends ChessTheme {
   Color get darkSquare => const Color(0xFF4F7942);
 
   @override
+  Color get lightCoordinateColor => Colors.black87.withValues(alpha: 0.7);
+
+  @override
+  Color get darkCoordinateColor => Colors.white70;
+
+  @override
   Color get frameColor => const Color(0xFF2E4D23);
 
   @override

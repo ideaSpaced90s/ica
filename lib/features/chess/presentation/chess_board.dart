@@ -29,6 +29,7 @@ import 'animation/knight_dust.dart';
 import 'animation/bishop_wind.dart';
 import 'animation/impact_shake.dart';
 import 'themes/theme_registry.dart';
+import 'themes/chess_theme.dart';
 
 class ChessBoard extends ConsumerStatefulWidget {
   const ChessBoard({super.key});
@@ -451,6 +452,7 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
                                               col,
                                               (row + col) % 2 == 0,
                                               chessState.isBoardFlipped,
+                                              chessTheme,
                                             ),
                                         ],
                                       ),
@@ -731,7 +733,7 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
     return '${files[fileIndex]}${ranks[rankIndex]}';
   }
 
-  Widget _buildCoordinates(int row, int col, bool isLight, bool isFlipped) {
+  Widget _buildCoordinates(int row, int col, bool isLight, bool isFlipped, ChessTheme chessTheme) {
     const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
     const ranks = ['8', '7', '6', '5', '4', '3', '2', '1'];
 
@@ -752,11 +754,9 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
             child: Text(
               ranks[rankIndex],
               style: TextStyle(
-                color:
-                    (isLight
-                            ? ScholarlyTheme.darkSquare
-                            : ScholarlyTheme.lightSquare)
-                        .withValues(alpha: 0.6),
+                color: isLight
+                    ? chessTheme.lightCoordinateColor
+                    : chessTheme.darkCoordinateColor,
                 fontSize: 9,
                 fontWeight: FontWeight.bold,
               ),
@@ -769,11 +769,9 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
             child: Text(
               files[fileIndex],
               style: TextStyle(
-                color:
-                    (isLight
-                            ? ScholarlyTheme.darkSquare
-                            : ScholarlyTheme.lightSquare)
-                        .withValues(alpha: 0.6),
+                color: isLight
+                    ? chessTheme.lightCoordinateColor
+                    : chessTheme.darkCoordinateColor,
                 fontSize: 9,
                 fontWeight: FontWeight.bold,
               ),

@@ -10,6 +10,9 @@ abstract class ChessTheme {
   Color get lightSquare;
   Color get darkSquare;
   
+  Color get lightCoordinateColor;
+  Color get darkCoordinateColor;
+  
   // Frame/Border color for the whole board
   Color get frameColor => Colors.transparent;
 
