@@ -483,6 +483,15 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
                               chessState.cameraMotionCue?.isCheckmate ??
                               false,
                         ),
+                        onActionTrigger: (action, position) {
+                          if (action == 'dust_puff' && ref.read(chessProvider.notifier).isAnimationTypeEnabled('themeEffects')) {
+                            setState(() {
+                              _knightDusts.add({
+                                'pos': position,
+                              });
+                            });
+                          }
+                        },
                       ),
 
                     // Landing micro-settle effects

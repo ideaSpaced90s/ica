@@ -28,6 +28,9 @@ class SignatureMoveOverlay extends ConsumerStatefulWidget {
     PieceMotionProfile profile,
   )? onLand;
 
+  /// Trigger for special visual effects (e.g. 'dust_puff')
+  final void Function(String action, Offset position)? onActionTrigger;
+
   const SignatureMoveOverlay({
     super.key,
     required this.data,
@@ -36,6 +39,7 @@ class SignatureMoveOverlay extends ConsumerStatefulWidget {
     this.isCheckmate = false,
     required this.onComplete,
     this.onLand,
+    this.onActionTrigger,
   });
 
   @override
@@ -50,16 +54,30 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
   late double _squareSize;
   late Animation<double> _curvedProgress;
   late PieceMotionProfile _profile;
+  
+  // Castling support
+  late List<Offset>? _rookPath;
+  late PieceMotionProfile? _rookProfile;
+  bool _hasTriggeredDust = false;
 
   @override
   void initState() {
     super.initState();
     _squareSize = widget.boardSize / 8;
-    _path = _calculatePath();
+    _path = _calculatePath(widget.data.from, widget.data.to);
     _profile = PieceMotionProfile.forCode(widget.data.pieceCode);
+
+    if (widget.data.isCastle) {
+      _rookPath = _calculatePath(widget.data.rookFrom!, widget.data.rookTo!);
+      _rookProfile = PieceMotionProfile.forCode(widget.data.rookPieceCode!);
+    } else {
+      _rookPath = null;
+      _rookProfile = null;
+    }
 
     _controller =
         AnimationController(vsync: this, duration: _effectiveMoveDuration)
+          ..addListener(_handleAnimationTick)
           ..addStatusListener((status) {
             if (status == AnimationStatus.completed) {
               // Fire landing callback before completing
@@ -143,8 +161,18 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
     
     // Handle new move data if it changes while the overlay is still mounted
     if (widget.data != oldWidget.data) {
-      _path = _calculatePath();
+      _path = _calculatePath(widget.data.from, widget.data.to);
       _profile = PieceMotionProfile.forCode(widget.data.pieceCode);
+      
+      if (widget.data.isCastle) {
+        _rookPath = _calculatePath(widget.data.rookFrom!, widget.data.rookTo!);
+        _rookProfile = PieceMotionProfile.forCode(widget.data.rookPieceCode!);
+      } else {
+        _rookPath = null;
+        _rookProfile = null;
+      }
+      
+      _hasTriggeredDust = false;
       _controller.duration = _effectiveMoveDuration;
       
       final boardThemeId = ref.read(chessProvider).boardThemeId;
@@ -163,13 +191,32 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
     }
   }
 
+  void _handleAnimationTick() {
+    if (widget.data.isCastle && !_hasTriggeredDust && _controller.value >= 0.5) {
+      _hasTriggeredDust = true;
+      
+      // Calculate mid-point position for dust puff
+      final fromOffset = _coordsToOffset(
+        widget.data.from.codeUnitAt(0) - 'a'.codeUnitAt(0),
+        8 - int.parse(widget.data.from[1]),
+      );
+      final toOffset = _coordsToOffset(
+        widget.data.to.codeUnitAt(0) - 'a'.codeUnitAt(0),
+        8 - int.parse(widget.data.to[1]),
+      );
+      
+      final midPos = Offset.lerp(fromOffset, toOffset, 0.5)!;
+      widget.onActionTrigger?.call('dust_puff', midPos);
+    }
+  }
+
   // ── Path Calculation (identical to TrailMovementOverlay) ─────────────────
 
-  List<Offset> _calculatePath() {
-    final fromCol = widget.data.from.codeUnitAt(0) - 'a'.codeUnitAt(0);
-    final fromRow = 8 - int.parse(widget.data.from[1]);
-    final toCol = widget.data.to.codeUnitAt(0) - 'a'.codeUnitAt(0);
-    final toRow = 8 - int.parse(widget.data.to[1]);
+  List<Offset> _calculatePath(String from, String to) {
+    final fromCol = from.codeUnitAt(0) - 'a'.codeUnitAt(0);
+    final fromRow = 8 - int.parse(from[1]);
+    final toCol = to.codeUnitAt(0) - 'a'.codeUnitAt(0);
+    final toRow = 8 - int.parse(to[1]);
 
     final path = <Offset>[];
     path.add(_coordsToOffset(fromCol, fromRow));
@@ -357,11 +404,78 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
               for (int i = 1; i <= 4; i++)
                 _buildGhostPiece(progress - (i * 0.05), 0.35 / (i * 1.6)),
 
-            // ── Moving piece ────────────────────────────────────────
+            // ── Moving pieces ────────────────────────────────────────
+            
+            // Rook (if castling)
+            if (widget.data.isCastle && _rookPath != null)
+              _buildSecondaryPiece(
+                rawProgress,
+                _getPositionOnPath(_rookPath!, progress),
+                widget.data.rookPieceCode!,
+                _rookProfile!,
+                arc,
+                isMatrixTheme,
+                isToyTheme,
+                isSteampunkTheme,
+              ),
+
+            // King (primary piece)
             _buildMovingPiece(rawProgress, piecePos, pieceScale, verticalLift, vibration, midRotation, movingPiece),
           ],
         );
       },
+    );
+  }
+
+  Widget _buildSecondaryPiece(
+    double rawProgress,
+    Offset pos,
+    String pieceCode,
+    PieceMotionProfile profile,
+    double arc,
+    bool isMatrixTheme,
+    bool isToyTheme,
+    bool isSteampunkTheme,
+  ) {
+    double scale = 1.0;
+    double lift = 0.0;
+    Offset vib = Offset.zero;
+
+    if (isMatrixTheme) {
+      final noise = math.sin(rawProgress * 80);
+      scale = 0.8 + (0.4 * noise.abs());
+      vib = Offset(noise * 3, 0);
+      if ((rawProgress * 20).floor() % 2 == 0) scale = 0.0;
+    } else if (isToyTheme && ref.read(chessProvider.notifier).isAnimationTypeEnabled('themeEffects')) {
+      lift = -arc * 60.0;
+      scale = 1.0 + (arc * 0.4);
+      if (rawProgress < 0.2 || rawProgress > 0.8) scale = 0.8;
+    } else if (isSteampunkTheme && ref.read(chessProvider.notifier).isAnimationTypeEnabled('themeEffects')) {
+      lift = -arc * 10.0;
+      vib = Offset(math.sin(rawProgress * 40) * 2.0, 0);
+    } else {
+      lift = -arc * _squareSize * profile.verticalArcFactor;
+      if (profile.verticalArcFactor > 0.05) {
+        scale = 1.0 + (arc * 0.15);
+      }
+    }
+
+    return Positioned(
+      left: pos.dx - _squareSize / 2 + vib.dx,
+      top: pos.dy - _squareSize / 2 + lift + vib.dy,
+      child: Transform.scale(
+        scale: scale,
+        child: SizedBox(
+          width: _squareSize,
+          height: _squareSize,
+          child: ChessPieceWidget(
+            squareName: widget.data.from, // Not strictly used for display
+            pieceCode: pieceCode,
+            isMoving: true,
+            forceVisible: true,
+          ),
+        ),
+      ),
     );
   }
 

@@ -4,8 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../application/chess_provider.dart';
 import 'scholarly_theme.dart';
+import 'history_page.dart';
 import 'package:kingslayer_chess/features/chess/presentation/themes/theme_registry.dart';
-import 'widgets/saved_game_widgets.dart';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
@@ -35,13 +35,6 @@ class SettingsPage extends ConsumerWidget {
               icon: const Icon(Icons.arrow_back_ios_new_rounded, color: ScholarlyTheme.textPrimary, size: 20),
               onPressed: () => Navigator.of(context).pop(),
             ),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.close_rounded, color: ScholarlyTheme.textPrimary),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-              const SizedBox(width: 8),
-            ],
           ),
 
           // Game Status Card
@@ -132,20 +125,33 @@ class SettingsPage extends ConsumerWidget {
                 title: 'MANAGEMENT',
                 children: [
                   _SettingsTile(
-                    label: 'Saved Games',
-                    description: 'View and restore previous matches',
-                    icon: Icons.folder_open_rounded,
-                    onTap: () => _showSavedGamesSheet(context, ref),
+                    label: 'Game History',
+                    description: 'View, resume, and manage your matches',
+                    icon: Icons.history_rounded,
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (context) => const HistoryPage()),
+                      );
+                    },
                   ),
                   _SettingsTile(
                     label: 'Save Current Game',
                     description: 'Sync progress to local storage',
                     icon: Icons.save_rounded,
-                    onTap: () {
-                      notifier.saveCurrentGame();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Game saved successfully')),
-                      );
+                    onTap: () async {
+                      final entry = await notifier.saveCurrentGame();
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(entry != null 
+                              ? 'Game saved successfully' 
+                              : 'Failed to save game'),
+                            backgroundColor: entry != null 
+                              ? ScholarlyTheme.accentBlue 
+                              : Colors.redAccent,
+                          ),
+                        );
+                      }
                     },
                   ),
                 ],
@@ -433,84 +439,6 @@ class SettingsPage extends ConsumerWidget {
     SystemNavigator.pop();
   }
 
-  Future<void> _showSavedGamesSheet(BuildContext context, WidgetRef ref) async {
-    await ref.read(chessProvider.notifier).loadSavedGames();
-    if (!context.mounted) return;
-
-    await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) {
-        return Consumer(
-          builder: (context, ref, _) {
-            final state = ref.watch(chessProvider);
-            final notifier = ref.read(chessProvider.notifier);
-            final saves = state.savedGames;
-
-            return Padding(
-              padding: const EdgeInsets.all(16),
-              child: GlassPanel(
-                padding: const EdgeInsets.all(14),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxHeight: MediaQuery.of(context).size.height * 0.72,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Saved games',
-                        style: GoogleFonts.inter(
-                          color: ScholarlyTheme.textPrimary,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        saves.isEmpty
-                            ? 'No saved games yet.'
-                            : 'Tap a save to restore it.',
-                        style: GoogleFonts.inter(
-                          color: ScholarlyTheme.textMuted,
-                          fontSize: 12,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      if (state.isSavedGamesLoading)
-                        const Center(child: CircularProgressIndicator())
-                      else
-                        Expanded(
-                          child: ListView.separated(
-                            itemCount: saves.length,
-                            separatorBuilder: (context, index) =>
-                                const SizedBox(height: 10),
-                            itemBuilder: (context, index) {
-                              final entry = saves[index];
-                              return SavedGameTile(
-                                entry: entry,
-                                onLoad: () async {
-                                  Navigator.of(context).pop(); // close sheet
-                                  Navigator.of(context).pop(); // close settings
-                                  await notifier.loadSavedGame(entry);
-                                },
-                                onDelete: () =>
-                                    notifier.deleteSavedGame(entry.id),
-                              );
-                            },
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
 
   Future<void> _showAnimationSettingsOverlay(
     BuildContext context,
@@ -725,10 +653,14 @@ class _GameStatusHeader extends StatelessWidget {
                       height: 10,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: state.isCouncilOnline ? Colors.green : Colors.red,
+                        color: state.game.gameOver 
+                            ? ScholarlyTheme.textMuted 
+                            : (state.isPaused ? Colors.red : Colors.green),
                         boxShadow: [
                           BoxShadow(
-                            color: (state.isCouncilOnline ? Colors.green : Colors.red).withValues(alpha: 0.4),
+                            color: (state.game.gameOver 
+                                ? ScholarlyTheme.textMuted 
+                                : (state.isPaused ? Colors.red : Colors.green)).withValues(alpha: 0.4),
                             blurRadius: 4,
                             spreadRadius: 1,
                           ),

@@ -58,6 +58,8 @@ class SavedGameEntry {
     required this.activeClockSide,
     this.lastMove,
     this.commentaryHistory = const [],
+    this.isFavorite = false,
+    this.customName,
   });
 
   final String id;
@@ -72,6 +74,8 @@ class SavedGameEntry {
   final String? activeClockSide;
   final String? lastMove;
   final List<CommentaryEntry> commentaryHistory;
+  final bool isFavorite;
+  final String? customName;
 
   SavedGameEntry copyWith({
     String? id,
@@ -86,6 +90,8 @@ class SavedGameEntry {
     Object? activeClockSide = _sentinel,
     Object? lastMove = _sentinel,
     List<CommentaryEntry>? commentaryHistory,
+    bool? isFavorite,
+    Object? customName = _sentinel,
   }) {
     return SavedGameEntry(
       id: id ?? this.id,
@@ -102,6 +108,10 @@ class SavedGameEntry {
           : activeClockSide as String?,
       lastMove: identical(lastMove, _sentinel) ? this.lastMove : lastMove as String?,
       commentaryHistory: commentaryHistory ?? this.commentaryHistory,
+      isFavorite: isFavorite ?? this.isFavorite,
+      customName: identical(customName, _sentinel)
+          ? this.customName
+          : customName as String?,
     );
   }
 
@@ -123,6 +133,8 @@ class SavedGameEntry {
       commentaryHistory: (json['commentaryHistory'] as List<dynamic>? ?? const [])
           .map((e) => CommentaryEntry.fromJson(e as Map<String, dynamic>))
           .toList(),
+      isFavorite: json['isFavorite'] as bool? ?? false,
+      customName: json['customName'] as String?,
     );
   }
 
@@ -140,6 +152,8 @@ class SavedGameEntry {
       'activeClockSide': activeClockSide,
       'lastMove': lastMove,
       'commentaryHistory': commentaryHistory.map((e) => e.toJson()).toList(),
+      'isFavorite': isFavorite,
+      'customName': customName,
     };
   }
 }

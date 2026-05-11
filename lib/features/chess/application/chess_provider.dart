@@ -95,13 +95,23 @@ class MoveAnimationData {
   final String to;
   final String pieceCode;
   final bool isCapture;
+  
+  // Castling support: second piece (Rook)
+  final String? rookFrom;
+  final String? rookTo;
+  final String? rookPieceCode;
 
   const MoveAnimationData({
     required this.from,
     required this.to,
     required this.pieceCode,
     this.isCapture = false,
+    this.rookFrom,
+    this.rookTo,
+    this.rookPieceCode,
   });
+
+  bool get isCastle => rookFrom != null && rookTo != null;
 }
 
 class CameraMotionCue {
@@ -603,6 +613,43 @@ class ChessNotifier extends StateNotifier<ChessState> {
     }
   }
 
+  void _truncateToViewingIndex() {
+    if (state.viewingMoveIndex == null) return;
+
+    final targetLength = state.viewingMoveIndex! + 1;
+    while (state.game.history.length > targetLength) {
+      state.game.undo();
+    }
+
+    // Clear redo stack as we are branching
+    _redoStack.clear();
+
+    state = state.copyWith(
+      viewingMoveIndex: null,
+      recentMoves: state.game.moveHistoryLabels(),
+      lastMove: _lastMoveUci(),
+      threatenedSquares: const [], // Clear threats from old position
+    );
+    _syncUndoRedoFlags();
+  }
+
+  String? _lastMoveUci() {
+    final history = state.game.history;
+    if (history.isEmpty) return null;
+    try {
+      final last = history.last;
+      final move = last.move;
+      final from = chess_lib.Chess.algebraic(move.from);
+      final to = chess_lib.Chess.algebraic(move.to);
+      final promotion = move.promotion != null 
+          ? move.promotion.toString().split('.').last.toLowerCase()[0] 
+          : '';
+      return '$from$to$promotion';
+    } catch (e) {
+      return null;
+    }
+  }
+
   void stepMove(int delta) {
     final currentIndex =
         state.viewingMoveIndex ?? (state.recentMoves.length - 1);
@@ -856,6 +903,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
         isSavingGame: false,
         commentaryError: null,
       );
+      debugPrint('Game saved successfully: ${entry.id}');
       return entry;
     } catch (error, stackTrace) {
       debugPrint('Failed to save game: $error');
@@ -876,6 +924,37 @@ class ChessNotifier extends StateNotifier<ChessState> {
       debugPrint('Failed to delete save: $error');
       debugPrintStack(stackTrace: stackTrace);
       state = state.copyWith(commentaryError: 'Could not delete the save.');
+    }
+  }
+
+  Future<void> toggleFavorite(String id) async {
+    final entry = state.savedGames.firstWhere((e) => e.id == id);
+    final updated = entry.copyWith(isFavorite: !entry.isFavorite);
+    try {
+      final saves = await _savedGameRepository.update(updated);
+      state = state.copyWith(savedGames: saves);
+    } catch (e) {
+      debugPrint('Failed to toggle favorite: $e');
+    }
+  }
+
+  Future<void> renameSavedGame(String id, String newName) async {
+    final entry = state.savedGames.firstWhere((e) => e.id == id);
+    final updated = entry.copyWith(customName: newName);
+    try {
+      final saves = await _savedGameRepository.update(updated);
+      state = state.copyWith(savedGames: saves);
+    } catch (e) {
+      debugPrint('Failed to rename game: $e');
+    }
+  }
+
+  Future<void> clearAllHistory() async {
+    try {
+      await _savedGameRepository.clearAll();
+      state = state.copyWith(savedGames: const []);
+    } catch (e) {
+      debugPrint('Failed to clear history: $e');
     }
   }
 
@@ -1032,12 +1111,31 @@ class ChessNotifier extends StateNotifier<ChessState> {
         ? '$colorPrefix${piece.type.toUpperCase()}'
         : 'bP';
 
+    // Detect Castling for animation
+    String? rookFrom;
+    String? rookTo;
+    String? rookPieceCode;
+
+    if (piece?.type == chess_lib.PieceType.KING &&
+        (from.codeUnitAt(0) - to.codeUnitAt(0)).abs() == 2) {
+      final isWhite = piece?.color == chess_lib.Color.WHITE;
+      final rank = isWhite ? '1' : '8';
+      final isKingside = to[0] == 'g';
+      
+      rookFrom = isKingside ? 'h$rank' : 'a$rank';
+      rookTo = isKingside ? 'f$rank' : 'd$rank';
+      rookPieceCode = isWhite ? 'wR' : 'bR';
+    }
+
     // Trigger animation before the actual move is made in the game state
     state = state.copyWith(
       moveAnimation: MoveAnimationData(
         from: from,
         to: to,
         pieceCode: pieceCode,
+        rookFrom: rookFrom,
+        rookTo: rookTo,
+        rookPieceCode: rookPieceCode,
       ),
       engineSelectionSquare: null, // Clear selection when move starts
     );
@@ -1109,7 +1207,26 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
 
   Future<void> makeMove(String from, String to) async {
-    if (state.game.gameOver || state.isPaused) return;
+    if (state.game.gameOver) return;
+
+    // 1. Handle branching from history viewing
+    if (state.viewingMoveIndex != null) {
+      _truncateToViewingIndex();
+    }
+
+    // 2. Handle branching from Undo/Redo stack
+    if (_redoStack.isNotEmpty) {
+      _redoStack.clear();
+      _syncUndoRedoFlags();
+    }
+
+    if (state.isPaused) {
+      // Auto-resume on user move
+      state = state.copyWith(isPaused: false);
+      if (state.clockStarted) {
+        _startClockTicker();
+      }
+    }
 
     if (!_isPlayerTurn() && !state.isEngineVsEngine) {
       debugPrint('ChessNotifier: Not player turn. Ignoring move.');
@@ -1145,6 +1262,22 @@ class ChessNotifier extends StateNotifier<ChessState> {
     final targetPiece = state.game.getPiece(to);
     final isCapture = targetPiece != null;
 
+    // Detect Castling for animation
+    String? rookFrom;
+    String? rookTo;
+    String? rookPieceCode;
+
+    if (piece?.type == chess_lib.PieceType.KING &&
+        (from.codeUnitAt(0) - to.codeUnitAt(0)).abs() == 2) {
+      final isWhite = piece?.color == chess_lib.Color.WHITE;
+      final rank = isWhite ? '1' : '8';
+      final isKingside = to[0] == 'g';
+      
+      rookFrom = isKingside ? 'h$rank' : 'a$rank';
+      rookTo = isKingside ? 'f$rank' : 'd$rank';
+      rookPieceCode = isWhite ? 'wR' : 'bR';
+    }
+
     // Trigger animation
     state = state.copyWith(
       moveAnimation: MoveAnimationData(
@@ -1152,6 +1285,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
         to: to,
         pieceCode: pieceCode,
         isCapture: isCapture,
+        rookFrom: rookFrom,
+        rookTo: rookTo,
+        rookPieceCode: rookPieceCode,
       ),
     );
 
@@ -1781,6 +1917,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
           ? 'White ran out of time.'
           : 'Black ran out of time.',
     );
+    saveCurrentGame();
   }
 
   void _stopClock() {
@@ -1823,21 +1960,61 @@ class ChessNotifier extends StateNotifier<ChessState> {
     if (_undoStack.isEmpty) {
       return;
     }
+
+    // 1. Always pause when navigating history to prevent engine interference
+    if (!state.isPaused) {
+      state = state.copyWith(isPaused: true);
+      _stopClock();
+      _engineMoveTimer?.cancel();
+    }
+
+    // 2. Full-turn undo logic:
+    // If it is the player's turn, it means the engine has already responded to the player's last move.
+    // To make "Undo" meaningful for the player, we should undo both the engine move and the player move.
+    bool shouldUndoTwice = _isPlayerTurn() && 
+                          _undoStack.length >= 2 && 
+                          !state.game.gameOver && 
+                          !state.isEngineVsEngine;
+
+    // First undo (Engine's move)
     _redoStack.add(_captureCurrentSnapshot());
     final snapshot = _undoStack.removeLast();
     _restoreSnapshot(snapshot);
+
+    // Second undo (Player's move)
+    if (shouldUndoTwice && _undoStack.isNotEmpty) {
+      _redoStack.add(_captureCurrentSnapshot());
+      final snapshot2 = _undoStack.removeLast();
+      _restoreSnapshot(snapshot2);
+    }
+    
+    _syncUndoRedoFlags();
   }
 
   void redo() {
     if (_redoStack.isEmpty) {
       return;
     }
+
+    // Keep game paused during history review
+    if (!state.isPaused) {
+      state = state.copyWith(isPaused: true);
+      _stopClock();
+      _engineMoveTimer?.cancel();
+    }
+
     _undoStack.add(_captureCurrentSnapshot());
     final snapshot = _redoStack.removeLast();
     _restoreSnapshot(snapshot);
+    _syncUndoRedoFlags();
   }
 
   Future<void> reset() async {
+    // Auto-save current game before resetting if there is progress
+    if (state.recentMoves.isNotEmpty && !state.game.gameOver) {
+      await saveCurrentGame();
+    }
+
     final preservePlayerWhite = state.isPlayerWhite;
     final preserveBoardFlipped = state.isBoardFlipped;
     final preserveEvE = state.isEngineVsEngine;

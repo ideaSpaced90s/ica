@@ -47,6 +47,23 @@ class SavedGameRepository {
     return saves;
   }
 
+  Future<List<SavedGameEntry>> update(SavedGameEntry entry) async {
+    final saves = await listSaves();
+    final index = saves.indexWhere((e) => e.id == entry.id);
+    if (index != -1) {
+      saves[index] = entry;
+      await _writeAll(saves);
+    }
+    return saves;
+  }
+
+  Future<void> clearAll() async {
+    final file = await _getFile();
+    if (await file.exists()) {
+      await file.delete();
+    }
+  }
+
   Future<void> _writeAll(List<SavedGameEntry> saves) async {
     final file = await _getFile();
     await file.parent.create(recursive: true);
@@ -55,7 +72,7 @@ class SavedGameRepository {
   }
 
   Future<File> _getFile() async {
-    final supportDirectory = await getApplicationSupportDirectory();
-    return File(p.join(supportDirectory.path, _fileName));
+    final directory = await getApplicationDocumentsDirectory();
+    return File(p.join(directory.path, _fileName));
   }
 }

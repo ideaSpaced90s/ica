@@ -19,8 +19,33 @@ class MainPage extends ConsumerStatefulWidget {
   ConsumerState<MainPage> createState() => _MainPageState();
 }
 
-class _MainPageState extends ConsumerState<MainPage> {
+class _MainPageState extends ConsumerState<MainPage> with WidgetsBindingObserver {
   bool _isCommentaryExpanded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || 
+        state == AppLifecycleState.inactive || 
+        state == AppLifecycleState.detached) {
+      final chessState = ref.read(chessProvider);
+      // Auto-save only if game has started and not over
+      if (chessState.recentMoves.isNotEmpty && !chessState.game.gameOver) {
+        ref.read(chessProvider.notifier).saveCurrentGame();
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
