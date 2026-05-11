@@ -427,7 +427,7 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
     }
 
     return Positioned(
-      key: ValueKey('queen_teleport_${teleportPos.toString()}_${cycleIndex}'),
+      key: ValueKey('queen_teleport_${teleportPos}_$cycleIndex'),
       left: teleportPos.dx - _squareSize / 2,
       top: teleportPos.dy - _squareSize / 2,
       child: Opacity(

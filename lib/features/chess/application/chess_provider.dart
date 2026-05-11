@@ -111,6 +111,7 @@ class CameraMotionCue {
   final bool isCapture;
   final bool isCheck;
   final bool isCheckmate;
+  final String? capturedPiece;
 
   const CameraMotionCue({
     required this.id,
@@ -119,6 +120,7 @@ class CameraMotionCue {
     required this.isCapture,
     required this.isCheck,
     required this.isCheckmate,
+    this.capturedPiece,
   });
 }
 
@@ -1458,6 +1460,13 @@ class ChessNotifier extends StateNotifier<ChessState> {
       }
     }
 
+    final capturedType = move?.captured?.toString().toLowerCase(); // 'q', 'r', 'b', 'n', 'p'
+    final isHeavyCapture = ['q', 'r', 'b', 'n'].contains(capturedType);
+
+    // Cinematic Camera refinement: 
+    // Trigger only on checks, checkmates, or heavy unit captures.
+    final shouldTriggerCamera = state.game.inCheckmate || state.game.inCheck || isHeavyCapture;
+
     state = state.copyWith(
       game: state.game, // Maintain the same instance to preserve history
       lastMove: lastMove,
@@ -1469,14 +1478,17 @@ class ChessNotifier extends StateNotifier<ChessState> {
           ? _clockSideForTurn()
           : state.activeClockSide,
       threatenedSquares: threatened,
-      cameraMotionCue: CameraMotionCue(
-        id: ++_cameraMotionCueId,
-        from: lastMove.length >= 2 ? lastMove.substring(0, 2) : '',
-        to: lastMove.length >= 4 ? lastMove.substring(2, 4) : '',
-        isCapture: move?.captured != null,
-        isCheck: state.game.inCheck,
-        isCheckmate: state.game.inCheckmate,
-      ),
+      cameraMotionCue: shouldTriggerCamera
+          ? CameraMotionCue(
+              id: ++_cameraMotionCueId,
+              from: lastMove.length >= 2 ? lastMove.substring(0, 2) : '',
+              to: lastMove.length >= 4 ? lastMove.substring(2, 4) : '',
+              isCapture: move?.captured != null,
+              isCheck: state.game.inCheck,
+              isCheckmate: state.game.inCheckmate,
+              capturedPiece: capturedType,
+            )
+          : state.cameraMotionCue,
     );
 
     if (state.game.inCheckmate) {
