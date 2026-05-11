@@ -28,6 +28,7 @@ import 'animation/cinematic_board_camera.dart';
 import 'animation/knight_dust.dart';
 import 'animation/bishop_wind.dart';
 import 'animation/impact_shake.dart';
+import 'animation/shake_animation.dart';
 import 'themes/theme_registry.dart';
 import 'themes/chess_theme.dart';
 
@@ -400,15 +401,12 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
                                             onComplete: () => setState(() => _impactShakes.removeWhere((s) => s['square'] == squareName)),
                                             child: ShakeAnimation(
                                               isActive:
-                                                  ref.read(chessProvider.notifier).isAnimationTypeEnabled('themeEffects') &&
-                                                  (chessTheme.id == 'theme4' ||
-                                                      chessTheme.id ==
-                                                          'theme9') &&
-                                                  chessState.game.inCheck &&
-                                                  piece?.type ==
-                                                      chess_lib.PieceType.KING &&
-                                                  piece?.color ==
-                                                      chessState.game.turn,
+                                                  ref.read(chessProvider.notifier).isAnimationTypeEnabled('feedback') &&
+                                                  piece?.type == chess_lib.PieceType.KING &&
+                                                  ((chessState.game.inCheck &&
+                                                          piece?.color ==
+                                                              chessState.game.turn) ||
+                                                      isThreatened),
                                               child: Center(
                                                 child: AnimatedBuilder(
                                                   animation: _gearController,
