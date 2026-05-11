@@ -6,7 +6,7 @@ import 'package:flutter/animation.dart';
 /// All values are dimensionless modifiers consumed by the animation pipeline.
 /// Theme-agnostic — applies on top of (not replacing) any board theme.
 class PieceMotionProfile {
-  /// Total duration of the glide movement. Capped at 200ms.
+  /// Total duration of the glide movement. Capped at 800ms.
   final Duration moveDuration;
 
   /// The easing curve applied to the main glide movement.
@@ -64,7 +64,7 @@ class PieceMotionProfile {
   /// ♟ Pawn — Direct & Persistent
   /// Fast, flat, linear glide. No flourish. Slight overshoot feel from curve.
   static const PieceMotionProfile pawn = PieceMotionProfile(
-    moveDuration: Duration(milliseconds: 130),
+    moveDuration: Duration(milliseconds: 450),
     moveCurve: Curves.easeInOutCubic,
     verticalArcFactor: 0.05,    // almost flat
     midRotationDeg: 0.0,
@@ -79,7 +79,7 @@ class PieceMotionProfile {
   /// ♞ Knight — Agile & Tactical
   /// Slight arc feel, micro rotation mid-move, firm stop.
   static const PieceMotionProfile knight = PieceMotionProfile(
-    moveDuration: Duration(milliseconds: 150),
+    moveDuration: Duration(milliseconds: 500),
     moveCurve: Curves.easeInOutBack,
     verticalArcFactor: 0.3,     // noticeable arc (knight jumps)
     midRotationDeg: 2.5,        // degree tilt mid-air
@@ -94,7 +94,7 @@ class PieceMotionProfile {
   /// ♝ Bishop — Smooth & Continuous
   /// Ultra-smooth glide, ghost opacity trail, clean stop.
   static const PieceMotionProfile bishop = PieceMotionProfile(
-    moveDuration: Duration(milliseconds: 170),
+    moveDuration: Duration(milliseconds: 550),
     moveCurve: Curves.easeInOutSine,
     verticalArcFactor: 0.0,     // perfectly flat diagonal glide
     midRotationDeg: 0.0,
@@ -109,7 +109,7 @@ class PieceMotionProfile {
   /// ♜ Rook — Heavy & Grounded
   /// Slow to start (strong ease-in), heavier deceleration, micro compress on land.
   static const PieceMotionProfile rook = PieceMotionProfile(
-    moveDuration: Duration(milliseconds: 180),
+    moveDuration: Duration(milliseconds: 600),
     moveCurve: Curves.easeInOutQuart, // strong in, gradual out = heavy feel
     verticalArcFactor: 0.0,     // strictly horizontal/vertical — no drift
     midRotationDeg: 0.0,
@@ -124,7 +124,7 @@ class PieceMotionProfile {
   /// ♛ Queen — Dominant & Fluid
   /// Fastest mover, confident glide, clean minimal settle.
   static const PieceMotionProfile queen = PieceMotionProfile(
-    moveDuration: Duration(milliseconds: 140),
+    moveDuration: Duration(milliseconds: 500),
     moveCurve: Curves.easeOutCubic,
     verticalArcFactor: 0.1,     // slight arc — sense of presence
     midRotationDeg: 0.0,
@@ -139,7 +139,7 @@ class PieceMotionProfile {
   /// ♚ King — Deliberate & Fragile
   /// Slowest. Noticeable ease-in (anticipation feel via curve). Gentle settle.
   static const PieceMotionProfile king = PieceMotionProfile(
-    moveDuration: Duration(milliseconds: 200),
+    moveDuration: Duration(milliseconds: 700),
     moveCurve: Curves.easeInOutQuad,  // gentle, cautious acceleration
     verticalArcFactor: 0.05,
     midRotationDeg: 0.0,

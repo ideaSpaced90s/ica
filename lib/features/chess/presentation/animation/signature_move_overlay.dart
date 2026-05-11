@@ -93,7 +93,7 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
       return baseDuration;
     }
 
-    const mobileMinimum = Duration(milliseconds: 320);
+    const mobileMinimum = Duration(milliseconds: 500);
     if (baseDuration >= mobileMinimum) {
       return baseDuration;
     }
