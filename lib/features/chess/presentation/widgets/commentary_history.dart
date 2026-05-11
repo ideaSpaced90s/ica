@@ -106,7 +106,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
               onSubmitted: (_) => _handleSend(),
               style: GoogleFonts.inter(fontSize: 13, color: ScholarlyTheme.textPrimary),
               decoration: InputDecoration(
-                hintText: 'Ask the Council...',
+                hintText: 'Ask Kingslayer AI...',
                 hintStyle: GoogleFonts.inter(color: ScholarlyTheme.textSubtle, fontSize: 13),
                 border: InputBorder.none,
                 isDense: true,
@@ -246,8 +246,8 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
         children: [
           CircleAvatar(
             radius: 12,
-            backgroundColor: ScholarlyTheme.accentBlueSoft,
-            child: Icon(Icons.psychology, size: 14, color: ScholarlyTheme.accentBlue),
+            backgroundColor: Colors.transparent,
+            backgroundImage: const AssetImage('assets/board/profile.png'),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -255,12 +255,12 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'COUNCIL • ${_formatTime(entry.timestamp)}',
+                  'KINGSLAYER • ${_formatTime(entry.timestamp)}',
                   style: GoogleFonts.inter(
                     fontSize: 10,
-                    color: ScholarlyTheme.textSubtle,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.5,
+                    color: ScholarlyTheme.accentBlue.withValues(alpha: 0.8),
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.0,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -338,7 +338,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
               ),
             ),
             child: Text(
-              'Thinking$dots',
+              'Analyzing Position$dots',
               style: GoogleFonts.inter(
                 color: ScholarlyTheme.textMuted,
                 fontSize: 13,

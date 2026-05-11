@@ -423,8 +423,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
           game: ChessGame(),
           commentaryHistory: [
             CommentaryEntry(
-              text:
-                  "Welcome, Commander. I am the High Council. The board is set. How can I assist your strategy today?",
+              text: "How can I help you?",
               timestamp: DateTime.now(),
               isUser: false,
             ),
@@ -1573,6 +1572,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
           game: state.game,
           bestMove: bestMove,
           pvLine: pv,
+          chatHistory: state.commentaryHistory,
         );
       } catch (e) {
         debugPrint('KingSlayer: Context injection failed: $e');
@@ -1630,10 +1630,10 @@ class ChessNotifier extends StateNotifier<ChessState> {
         }
       }
     } catch (e) {
-      debugPrint('KingSlayer: Bard sequence failed: $e');
+      debugPrint('KingSlayer: AI sequence failed: $e');
       if (!_isDisposed) {
         state = state.copyWith(isCommentaryLoading: false);
-        // Fallback: Reveal robot move if bard failed
+        // Fallback: Reveal robot move if AI failed
         if (state.pendingEngineMove != null) {
           final engineMove = state.pendingEngineMove!;
           state = state.copyWith(pendingEngineMove: null);
@@ -1644,20 +1644,8 @@ class ChessNotifier extends StateNotifier<ChessState> {
       if (!_isDisposed && !isNested) {
         state = state.copyWith(isCommentaryLoading: false);
 
-        // Robot Mode Continuity: If Auto-play is on, immediately trigger the next turn's sequence
-        if (state.isEngineVsEngine &&
-            !state.game.gameOver &&
-            !state.isPaused &&
-            state.isAiOperational) {
-          final player = _playerWhoJustMoved();
-          unawaited(
-            _runCommentary(
-              player: player,
-              move: _formatMoveForPrompt(state.lastMove ?? ''),
-              evalScore: _formatEvalForPrompt(state.currentEvaluation),
-            ),
-          );
-        }
+        // Robot Mode Continuity removed. 
+        // The AI now only speaks when the user chats or requests a hint.
       }
     }
   }

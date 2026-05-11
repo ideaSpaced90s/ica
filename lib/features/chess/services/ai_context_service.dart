@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../domain/chess_game.dart';
 import '../domain/models/position_context.dart';
+import '../data/saved_game.dart';
 import 'position_context_builder.dart';
 import 'prompt_builder.dart';
 
@@ -16,6 +17,7 @@ class AiContextService {
     required ChessGame game,
     String? bestMove,
     List<String> pvLine = const [],
+    List<CommentaryEntry> chatHistory = const [],
   }) {
     _lastContext = PositionContextBuilder.build(
       move: move,
@@ -26,7 +28,16 @@ class AiContextService {
       pvLine: pvLine,
     );
 
-    return PromptBuilder.buildCommentaryPrompt(_lastContext!);
+    final basePrompt = PromptBuilder.buildCommentaryPrompt(_lastContext!);
+    
+    if (chatHistory.isEmpty) return basePrompt;
+
+    final historyStr = chatHistory.reversed.take(6).toList().reversed.map((e) {
+      final role = e.isUser ? 'User' : 'Assistant';
+      return '$role: ${e.text}';
+    }).join('\n');
+
+    return '$basePrompt\n\nRecent Conversation:\n$historyStr';
   }
 }
 

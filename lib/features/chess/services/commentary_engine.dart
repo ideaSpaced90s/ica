@@ -1,45 +1,66 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:google_generative_ai/google_generative_ai.dart';
 
 class CommentaryEngine {
   bool isInitialized = false;
   bool isInitializing = false;
   bool isGenerating = false;
   String? lastError;
-
-  // The High Council's Bridge to the Backend
-  static const String _backendUrl = 'http://127.0.0.1:8000/generate_commentary';
-  static const String _healthCheckUrl = 'http://127.0.0.1:8000/';
+  GenerativeModel? _model;
 
   Future<void> initialize() async {
     if (isInitialized || isInitializing) return;
-    
+
     isInitializing = true;
-    debugPrint('CommentaryEngine: Seeking the High Council via Local Backend...');
-    
+    debugPrint(
+      'CommentaryEngine: Initializing Kingslayer AI (Gemini Direct)...',
+    );
+
     try {
-      // Check if backend is running
-      final uri = Uri.parse(_healthCheckUrl);
-      final response = await http.get(uri).timeout(const Duration(seconds: 3));
-      
-      if (response.statusCode == 200) {
-        debugPrint('CommentaryEngine: Backend Council reached.');
-        isInitialized = true;
-      } else {
-        throw Exception('Backend returned ${response.statusCode}');
+      final apiKey = dotenv.env['GEMINI_API_KEY'];
+      final modelName = dotenv.env['GEMINI_MODEL'] ?? 'gemini-1.5-flash';
+
+      if (apiKey == null ||
+          apiKey.isEmpty ||
+          apiKey == 'REPLACE_WITH_YOUR_KEY') {
+        throw Exception('Gemini API Key missing or invalid in .env');
       }
+
+      _model = GenerativeModel(
+        model: modelName,
+        apiKey: apiKey,
+        systemInstruction: Content.system(
+          "You are Kingslayer AI, a sophisticated chess intelligence and partner. "
+          "STRICT RULES: "
+          "1. Address the user as 'Master' once at the start of the game, then transition to a professional but natural tone. "
+          "2. For non-chess chat (e.g., weather, small talk), be brief, pleasant, and human-like. Do not be a robot. "
+          "3. For chess advice, be extremely direct and tactical. Provide the ENGINE_RECOMMENDATION immediately. "
+          "4. NEVER use filler phrases like 'the board is set' or 'Commander'. "
+          "5. Focus on the user's intent. If they are just chatting, chat back briefly. If they are playing, provide intel. "
+          "Never include internal reasoning or 'think' blocks in the final output.",
+        ),
+        generationConfig: GenerationConfig(
+          temperature: 0.7,
+          topK: 40,
+          topP: 0.95,
+          maxOutputTokens: 1024,
+        ),
+      );
+
+      isInitialized = true;
+      debugPrint('CommentaryEngine: Kingslayer AI (Gemini) initialized.');
     } catch (error) {
-       lastError = 'Backend unreachable. Ensure your Python council is running.';
-       debugPrint('CommentaryEngine: Failed to reach Backend: $error');
-       isInitialized = false; 
+      lastError = 'Kingslayer AI Initialization failed: $error';
+      debugPrint('CommentaryEngine: Failed to initialize Gemini: $error');
+      isInitialized = false;
     } finally {
       isInitializing = false;
     }
   }
 
-  /// Generates commentary by consulting the local Python backend
+  /// Generates commentary using the Google Gemini API
   Stream<String> generateCommentaryStream({
     String? player,
     String? move,
@@ -51,16 +72,9 @@ class CommentaryEngine {
       await initialize();
     }
 
-    if (!isInitialized) {
-      debugPrint('CommentaryEngine: Fallback to Grandmaster Classic Voice.');
-      final classic = _generateClassicCommentary(move ?? '', player: player ?? 'Unknown');
-      final words = classic.split(' ');
-      String current = '';
-      for (var i = 0; i < words.length; i++) {
-        current += (i == 0 ? '' : ' ') + words[i];
-        yield current;
-        await Future.delayed(const Duration(milliseconds: 30));
-      }
+    if (!isInitialized || _model == null) {
+      debugPrint('CommentaryEngine: Kingslayer AI is Offline.');
+      yield 'Kingslayer AI is currently offline. Please check your Gemini API key in the .env file.';
       return;
     }
 
@@ -68,46 +82,50 @@ class CommentaryEngine {
     lastError = null;
 
     try {
-      final response = await http.post(
-        Uri.parse(_backendUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'player': player ?? 'Unknown',
-          'move': move ?? 'Unknown',
-          'eval_score': evalScore ?? '0.0',
-          'history': structuredPrompt ?? '',
-          'user_query': userQuery ?? '',
-        }),
-      ).timeout(const Duration(seconds: 15));
+      String fullPrompt;
+      final query = userQuery?.toLowerCase() ?? '';
+      final isAskingForAdvice =
+          query.contains('what') ||
+          query.contains('play') ||
+          query.contains('do') ||
+          query.contains('advice') ||
+          query.contains('should');
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final commentary = data['commentary'] as String;
-        
-        // Split into "pseudo-chunks" to maintain the typing effect in the UI
-        // We yield the FULL string so far, so the consumer should REPLACE, not APPEND.
-        final words = commentary.split(' ');
-        String current = '';
-        for (var i = 0; i < words.length; i++) {
-          current += (i == 0 ? '' : ' ') + words[i];
-          yield current;
-          await Future.delayed(const Duration(milliseconds: 50));
+      if (userQuery != null && userQuery.isNotEmpty) {
+        if (isAskingForAdvice) {
+          fullPrompt =
+              "Query: $userQuery\n\n[DATA]\n$structuredPrompt\n\nTask: Provide the ENGINE_RECOMMENDATION and a concise tactical reason. No fluff.";
+        } else {
+          fullPrompt =
+              "Query: $userQuery\n\n[CONTEXT]\n$structuredPrompt\n\nTask: Answer directly using the data.";
         }
       } else {
-        debugPrint('Backend API Error: ${response.statusCode} - ${response.body}');
-        throw Exception('Council Response Error: ${response.statusCode}');
+        fullPrompt =
+            "Update: $move (Eval: $evalScore)\n\n[DATA]\n$structuredPrompt\n\nTask: Stay silent unless this move is a major blunder or brilliant stroke. Max 1 sentence.";
+      }
+
+      final content = [Content.text(fullPrompt)];
+
+      // Use the stream functionality of the Gemini API
+      final responses = _model!.generateContentStream(content);
+
+      String accumulatedResponse = '';
+      await for (final response in responses) {
+        if (response.text != null) {
+          accumulatedResponse += response.text!;
+
+          // Yield the current accumulated response to the UI
+          yield accumulatedResponse;
+        }
+      }
+
+      if (accumulatedResponse.isEmpty) {
+        yield 'The Kingslayer AI remains silent.';
       }
     } catch (error) {
-      lastError = 'The Council remains silent.';
+      lastError = 'Gemini Request failed: $error';
       debugPrint('CommentaryEngine: Request failed: $error');
-      final classic = _generateClassicCommentary(move ?? '', player: player ?? 'Unknown');
-      final words = classic.split(' ');
-      String current = '';
-      for (var i = 0; i < words.length; i++) {
-        current += (i == 0 ? '' : ' ') + words[i];
-        yield current;
-        await Future.delayed(const Duration(milliseconds: 30));
-      }
+      yield 'Kingslayer AI is momentarily out of reach. Check your internet connection and API key.';
     } finally {
       isGenerating = false;
     }
@@ -133,53 +151,6 @@ class CommentaryEngine {
 
   Future<void> dispose() async {
     isInitialized = false;
-  }
-
-  String _generateClassicCommentary(String move, {required String player}) {
-    if (move.isEmpty) return 'The board awaits your first command.';
-    
-    final isCapture = move.contains('x');
-    final isCheck = move.contains('+');
-    final isCheckmate = move.contains('#');
-    
-    String description = '';
-    if (move.startsWith('N')) {
-      description = 'The Knight leaps';
-    } else if (move.startsWith('B')) {
-      description = 'The Bishop glides';
-    } else if (move.startsWith('R')) {
-      description = 'The Rook marches';
-    } else if (move.startsWith('Q')) {
-      description = 'The Queen enters the fray';
-    } else if (move.startsWith('K')) {
-      description = 'The King repositioned';
-    } else {
-      description = 'The Pawn advances';
-    }
-
-    if (isCheckmate) return 'Checkmate! $player has claimed final victory with a masterful move.';
-    if (isCheck) return 'Check! $player puts the King in grave danger with $move.';
-    if (isCapture) return 'A calculated strike! $player captures a piece on the field.';
-    
-    final templates = [
-      'The board trembles. $player commands $move with clinical precision.',
-      'A shadowy maneuver! $move repositioned, casting a long shadow over the center.',
-      'The metal echoes. $player $description, a play that reeks of cold ambition.',
-      '$description to ${move.substring(move.length - 2)}. The center is now a fortress of will.',
-      'Unexpected! $player strikes with $move, a move the Council did not foresee.',
-      'Classic development. $player fortifies the position, one square at a time.',
-      'The strategy deepens. By moving $move, $player invites a storm of complexity.',
-      'A silent advance. $description slips into position, waiting for the killing blow.',
-      'Masterful positioning. The move $move signals the end of the beginning.',
-      'The pieces are alive tonight! $player $description, weaving a web of steel.',
-      'Tactical brilliance! $move is a stone cast into a dark pond. Watch the ripples.',
-      'Conservative yet firm. $player holds the line, refusing to yield a single inch.',
-    ];
-    
-    // Use the move's character codes to pick a "random" but consistent template for that move
-    final seed = move.runes.fold(0, (a, b) => a + b);
-    final index = seed % templates.length;
-    return templates[index];
+    _model = null;
   }
 }
-

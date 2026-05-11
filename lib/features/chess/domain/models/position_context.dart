@@ -37,20 +37,22 @@ class PositionContext {
   /// Converts the context into a compact string format for the LLM.
   String toPromptString() {
     final buffer = StringBuffer();
-    buffer.write('Current move is $move. ');
-    buffer.write('Evaluation is ${evaluation.toStringAsFixed(1)}. ');
-    buffer.write('This move is considered $quality. ');
+    buffer.write('[BOARD INTEL]\n');
+    buffer.write('- Last Move: $move\n');
+    buffer.write('- Evaluation: ${evaluation.toStringAsFixed(1)}\n');
+    buffer.write('- Quality: $quality\n');
     if (bestMove != null) {
-      buffer.write('The engine preferred $bestMove. ');
+      buffer.write('- ENGINE_RECOMMENDATION: $bestMove\n');
     }
-    buffer.write('Game is in $gamePhase phase. ');
+    buffer.write('- Game Phase: $gamePhase\n');
     if (moveTypes.isNotEmpty) {
-      buffer.write('Move types: ${moveTypes.join(", ")}. ');
+      buffer.write('- Events: ${moveTypes.join(", ")}\n');
     }
     if (pvLine.isNotEmpty) {
-      buffer.write('Plan: ${pvLine.take(2).join(", ")}. ');
+      buffer.write('- ENGINE_PLAN (PV): ${pvLine.take(5).join(", ")}\n');
     }
-    buffer.write('Threat level is $threatLevel.');
+    buffer.write('- Threat Level: $threatLevel\n');
+    buffer.write('- Position Style: $positionStyle\n');
     return buffer.toString();
   }
 }
