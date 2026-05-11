@@ -1,6 +1,5 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../application/chess_provider.dart';
@@ -26,6 +25,9 @@ import 'animation/landing_feedback.dart';
 import 'animation/tap_ripple.dart';
 import 'animation/piece_motion_profile.dart';
 import 'animation/cinematic_board_camera.dart';
+import 'animation/knight_dust.dart';
+import 'animation/bishop_wind.dart';
+import 'animation/impact_shake.dart';
 import 'themes/theme_registry.dart';
 
 class ChessBoard extends ConsumerStatefulWidget {
@@ -59,6 +61,10 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
 
   /// Tap ripple entries: board-local top-left Offset of the tapped square
   final List<Offset> _tapRipples = [];
+  
+  final List<Map<String, dynamic>> _knightDusts = [];
+  final List<Map<String, dynamic>> _bishopWinds = [];
+  final List<Map<String, dynamic>> _impactShakes = [];
 
   late final AnimationController _gearController;
 
@@ -119,6 +125,14 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
           child: SizedBox(
             width: boardSize,
             height: boardSize,
+          child: ImpactShake(
+            trigger: _impactShakes.any((s) => s['square'] == 'BOARD'),
+            direction: _impactShakes.firstWhere(
+              (s) => s['square'] == 'BOARD',
+              orElse: () => {'dir': Offset.zero},
+            )['dir'] as Offset,
+            intensity: 8.0,
+            onComplete: () => setState(() => _impactShakes.removeWhere((s) => s['square'] == 'BOARD')),
             child: Container(
               clipBehavior: Clip.none,
               decoration: BoxDecoration(
@@ -139,7 +153,7 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
               ),
               child: CinematicBoardCamera(
                 cue: chessState.cameraMotionCue,
-                isEnabled: chessState.isAnimationsEnabled,
+                isEnabled: ref.read(chessProvider.notifier).isAnimationTypeEnabled('camera'),
                 isFlipped: chessState.isBoardFlipped,
                 child: Stack(
                   clipBehavior: Clip.none,
@@ -147,7 +161,7 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
                     // 1. Background Effects
                     chessTheme.buildBackground(
                       context,
-                      chessState.isAnimationsEnabled,
+                      ref.read(chessProvider.notifier).isAnimationTypeEnabled('themeAmbience'),
                     ),
 
                     // 2. Check Effects
@@ -206,7 +220,7 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
                                   pieceExists: piece != null,
                                 ),
                                 child: AnimatedContainer(
-                                  duration: chessState.isAnimationsEnabled
+                                  duration: ref.read(chessProvider.notifier).isAnimationTypeEnabled('feedback')
                                       ? const Duration(milliseconds: 160)
                                       : Duration.zero,
                                   curve: Curves.easeOutCubic,
@@ -305,13 +319,13 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
                                           if (chessState
                                                       .engineSelectionSquare ==
                                                   squareName &&
-                                              chessState.isAnimationsEnabled)
+                                              ref.read(chessProvider.notifier).isAnimationTypeEnabled('indicators'))
                                             const OrbitingStarAnimation(
                                               color: ScholarlyTheme.accentGold,
                                               isActive: true,
                                             ),
                                           if (isThreatened &&
-                                              chessState.isAnimationsEnabled)
+                                              ref.read(chessProvider.notifier).isAnimationTypeEnabled('indicators'))
                                             const OrbitingStarAnimation(
                                               color: Colors.redAccent,
                                               isActive: true,
@@ -329,7 +343,7 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
                                                 end: 0.0,
                                               ),
                                               duration:
-                                                  chessState.isAnimationsEnabled
+                                                  ref.read(chessProvider.notifier).isAnimationTypeEnabled('indicators')
                                                   ? const Duration(
                                                       milliseconds: 1800,
                                                     )
@@ -369,51 +383,58 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
                                                 ),
                                               ),
                                             ),
-                                          ShakeAnimation(
-                                            isActive:
-                                                chessState
-                                                    .isAnimationsEnabled &&
-                                                (chessTheme.id == 'theme4' ||
-                                                    chessTheme.id ==
-                                                        'theme9') &&
-                                                chessState.game.inCheck &&
-                                                piece?.type ==
-                                                    chess_lib.PieceType.KING &&
-                                                piece?.color ==
-                                                    chessState.game.turn,
-                                            child: Center(
-                                              child: AnimatedBuilder(
-                                                animation: _gearController,
-                                                builder: (context, child) {
-                                                  return ChessPieceWidget(
-                                                    squareName: squareName,
-                                                    highlighted: isSelected,
-                                                    rotation:
-                                                        _gearController.value,
-                                                    isMoving:
-                                                        chessState
-                                                                .moveAnimation
-                                                                ?.from ==
-                                                            squareName ||
-                                                        chessState
-                                                                .moveAnimation
-                                                                ?.to ==
-                                                            squareName,
-                                                    onTap: () =>
-                                                        _handleSquareTap(
-                                                          squareName:
+                                          ImpactShake(
+                                            trigger: _impactShakes.any((s) => s['square'] == squareName),
+                                            direction: _impactShakes.firstWhere(
+                                              (s) => s['square'] == squareName,
+                                              orElse: () => {'dir': Offset.zero},
+                                            )['dir'] as Offset,
+                                            onComplete: () => setState(() => _impactShakes.removeWhere((s) => s['square'] == squareName)),
+                                            child: ShakeAnimation(
+                                              isActive:
+                                                  ref.read(chessProvider.notifier).isAnimationTypeEnabled('themeEffects') &&
+                                                  (chessTheme.id == 'theme4' ||
+                                                      chessTheme.id ==
+                                                          'theme9') &&
+                                                  chessState.game.inCheck &&
+                                                  piece?.type ==
+                                                      chess_lib.PieceType.KING &&
+                                                  piece?.color ==
+                                                      chessState.game.turn,
+                                              child: Center(
+                                                child: AnimatedBuilder(
+                                                  animation: _gearController,
+                                                  builder: (context, child) {
+                                                    return ChessPieceWidget(
+                                                      squareName: squareName,
+                                                      highlighted: isSelected,
+                                                      rotation:
+                                                          _gearController.value,
+                                                      isMoving:
+                                                          chessState
+                                                                  .moveAnimation
+                                                                  ?.from ==
+                                                              squareName ||
+                                                          chessState
+                                                                  .moveAnimation
+                                                                  ?.to ==
                                                               squareName,
-                                                          pieceExists:
-                                                              piece != null,
-                                                        ),
-                                                    onDragStarted: () =>
-                                                        _handlePieceSelection(
-                                                          squareName,
-                                                          displayGame,
-                                                        ),
-                                                    onDragEnd: _clearSelection,
-                                                  );
-                                                },
+                                                      onTap: () =>
+                                                          _handleSquareTap(
+                                                            squareName:
+                                                                squareName,
+                                                            pieceExists:
+                                                                piece != null,
+                                                          ),
+                                                      onDragStarted: () =>
+                                                          _handlePieceSelection(
+                                                            squareName,
+                                                            displayGame,
+                                                          ),
+                                                      onDragEnd: _clearSelection,
+                                                    );
+                                                  },
+                                                ),
                                               ),
                                             ),
                                           ),
@@ -445,16 +466,16 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
                         onComplete: () {
                           ref.read(chessProvider.notifier).clearMoveAnimation();
                         },
-                        onLand: chessState.isAnimationsEnabled
-                            ? (square, profile) => _triggerLandingFeedback(
-                                square,
-                                profile,
-                                boardSize,
-                                isCritical:
-                                    chessState.cameraMotionCue?.isCheckmate ??
-                                    false,
-                              )
-                            : null,
+                        onLand: (from, to, pieceCode, profile) => _handleMoveLanding(
+                          from,
+                          to,
+                          pieceCode,
+                          profile,
+                          boardSize,
+                          isCritical:
+                              chessState.cameraMotionCue?.isCheckmate ??
+                              false,
+                        ),
                       ),
 
                     // Landing micro-settle effects
@@ -478,6 +499,23 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
                         squareSize: boardSize / 8,
                         onComplete: () =>
                             setState(() => _tapRipples.remove(pos)),
+                      ),
+
+                    for (final dust in _knightDusts)
+                      KnightDustEffect(
+                        position: dust['pos'],
+                        squareSize: boardSize / 8,
+                        onComplete: () =>
+                            setState(() => _knightDusts.remove(dust)),
+                      ),
+
+                    for (final wind in _bishopWinds)
+                      BishopWindEffect(
+                        from: wind['from'],
+                        to: wind['to'],
+                        squareSize: boardSize / 8,
+                        onComplete: () =>
+                            setState(() => _bishopWinds.remove(wind)),
                       ),
 
                     for (final pos in _leafScatters)
@@ -563,7 +601,8 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
               ),
             ),
           ),
-        );
+        ),
+      );
       },
     );
   }
@@ -572,18 +611,19 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
     required String squareName,
     required bool pieceExists,
   }) {
-    HapticFeedback.lightImpact();
+    final haptics = ref.read(chessHapticsServiceProvider);
+    haptics.selection();
     final chessState = ref.read(chessProvider);
     final displayGame = ChessGame(fen: chessState.currentBoardFen);
 
     // Tap ripple on every tap (gated by animations setting)
-    if (chessState.isAnimationsEnabled) {
+    if (ref.read(chessProvider.notifier).isAnimationTypeEnabled('feedback')) {
       _triggerTapRipple(squareName);
     }
 
     if (_selectedSquare != null && _legalTargets.contains(squareName)) {
       final isCapture = displayGame.getPiece(squareName) != null;
-      if (isCapture && chessState.isAnimationsEnabled) {
+      if (isCapture && ref.read(chessProvider.notifier).isAnimationTypeEnabled('themeEffects')) {
         final themeId = chessState.boardThemeId;
         if (themeId == 'theme2') {
           _triggerLeafScatter(squareName);
@@ -609,7 +649,7 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
         }
       }
       if (chessState.boardThemeId == 'theme5' &&
-          chessState.isAnimationsEnabled) {
+          ref.read(chessProvider.notifier).isAnimationTypeEnabled('themeEffects')) {
         _triggerGreaseTrail(_selectedSquare!, squareName);
       }
       ref.read(chessProvider.notifier).makeMove(_selectedSquare!, squareName);
@@ -642,6 +682,9 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
 
     if (!isPlayerPiece) {
       _clearSelection();
+      if (chessState.isHapticsEnabled) {
+        ref.read(chessHapticsServiceProvider).errorFeedback();
+      }
       return;
     }
 
@@ -651,6 +694,9 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
 
     if (!isCurrentTurnPiece) {
       _clearSelection();
+      if (chessState.isHapticsEnabled) {
+        ref.read(chessHapticsServiceProvider).errorFeedback();
+      }
       return;
     }
 
@@ -998,6 +1044,97 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
       final y = effectiveRow * squareSize;
       setState(() => _tapRipples.add(Offset(x, y)));
     });
+  }
+
+  /// Orchestrates all landing and kinetic impact effects.
+  void _handleMoveLanding(
+    String from,
+    String to,
+    String pieceCode,
+    PieceMotionProfile profile,
+    double boardSize, {
+    bool isCritical = false,
+  }) {
+    if (!mounted) return;
+
+    // 1. Basic Landing Feedback (Square Pressure)
+    if (ref.read(chessProvider.notifier).isAnimationTypeEnabled('feedback')) {
+      _triggerLandingFeedback(to, profile, boardSize, isCritical: isCritical);
+    }
+
+    // 2. Kinetic Impact Effects
+    if (ref.read(chessProvider.notifier).isAnimationTypeEnabled('kineticImpact')) {
+      final type = pieceCode.length > 1 ? pieceCode[1].toUpperCase() : pieceCode.toUpperCase();
+      
+      switch (type) {
+        case 'N':
+          _triggerKnightDust(to, boardSize);
+          break;
+        case 'B':
+          _triggerBishopWind(from, to, boardSize);
+          break;
+        case 'R':
+          _triggerRookImpact(from, to, boardSize);
+          break;
+      }
+    }
+  }
+
+  void _triggerKnightDust(String square, double boardSize) {
+    final pos = _getSquareCenter(square, boardSize);
+    setState(() => _knightDusts.add({'pos': pos}));
+  }
+
+  void _triggerBishopWind(String from, String to, double boardSize) {
+    final fromPos = _getSquareCenter(from, boardSize);
+    final toPos = _getSquareCenter(to, boardSize);
+    setState(() => _bishopWinds.add({'from': fromPos, 'to': toPos}));
+  }
+
+  void _triggerRookImpact(String from, String to, double boardSize) {
+    final fromCol = from.codeUnitAt(0) - 'a'.codeUnitAt(0);
+    final fromRow = 8 - int.parse(from[1]);
+    final toCol = to.codeUnitAt(0) - 'a'.codeUnitAt(0);
+    final toRow = 8 - int.parse(to[1]);
+
+    final dx = (toCol - fromCol).sign;
+    final dy = (toRow - fromRow).sign;
+
+    // Calculate "next" square
+    final nextCol = toCol + dx;
+    final nextRow = toRow + dy;
+
+    if (nextCol >= 0 && nextCol < 8 && nextRow >= 0 && nextRow < 8) {
+      final nextSquare = _getSquareName(nextRow, nextCol, ref.read(chessProvider).isBoardFlipped);
+      setState(() {
+        _impactShakes.add({
+          'square': nextSquare,
+          'dir': Offset(dx.toDouble(), dy.toDouble()),
+        });
+      });
+    } else {
+      // Board Thud (shake the whole board)
+      // We can use a special "board" square name or just a separate list
+      setState(() {
+        _impactShakes.add({
+          'square': 'BOARD',
+          'dir': Offset(dx.toDouble(), dy.toDouble()),
+        });
+      });
+    }
+  }
+
+  Offset _getSquareCenter(String square, double boardSize) {
+    final squareSize = boardSize / 8;
+    final col = square.codeUnitAt(0) - 'a'.codeUnitAt(0);
+    final row = 8 - int.parse(square[1]);
+    final isFlipped = ref.read(chessProvider).isBoardFlipped;
+    final effectiveCol = isFlipped ? 7 - col : col;
+    final effectiveRow = isFlipped ? 7 - row : row;
+    return Offset(
+      effectiveCol * squareSize + squareSize / 2,
+      effectiveRow * squareSize + squareSize / 2,
+    );
   }
 
   /// Triggers a landing micro-settle on the destination square.

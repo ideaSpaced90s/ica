@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:chess/chess.dart' as chess_lib;
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
@@ -15,6 +14,7 @@ import '../services/commentary_engine.dart';
 import '../services/chess_sound_service.dart';
 import '../services/ai_context_service.dart';
 import '../data/settings_repository.dart';
+import '../services/chess_haptics_service.dart';
 
 const _sentinel = Object();
 // Commentary default
@@ -172,6 +172,14 @@ class ChessState {
     this.promotionDestination,
     this.autoPlayDelay = const Duration(seconds: 3),
     this.isAnimationsEnabled = true,
+    this.animationSettings = const {
+      'pieceMotion': true,
+      'camera': true,
+      'feedback': true,
+      'indicators': true,
+      'themeEffects': true,
+      'themeAmbience': true,
+    },
     this.isCouncilOnline = false,
   });
 
@@ -230,6 +238,7 @@ class ChessState {
   final String? promotionDestination;
   final Duration autoPlayDelay;
   final bool isAnimationsEnabled;
+  final Map<String, bool> animationSettings;
   final bool isCouncilOnline;
 
   String get currentBoardFen {
@@ -299,6 +308,7 @@ class ChessState {
     Object? promotionDestination = _sentinel,
     Duration? autoPlayDelay,
     bool? isAnimationsEnabled,
+    Map<String, bool>? animationSettings,
     bool? isCouncilOnline,
   }) {
     return ChessState(
@@ -385,6 +395,7 @@ class ChessState {
           : promotionDestination as String?,
       autoPlayDelay: autoPlayDelay ?? this.autoPlayDelay,
       isAnimationsEnabled: isAnimationsEnabled ?? this.isAnimationsEnabled,
+      animationSettings: animationSettings ?? this.animationSettings,
       isCouncilOnline: isCouncilOnline ?? this.isCouncilOnline,
     );
   }
@@ -396,6 +407,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
     this._commentaryEngine,
     this._savedGameRepository,
     this._soundService,
+    this._hapticsService,
     this._aiContextService,
     this._settingsRepository,
   ) : super(
@@ -412,6 +424,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
         ),
       ) {
     _soundService.updateSettings(sfxEnabled: true, bgmEnabled: false);
+    _hapticsService.updateSettings(hapticsEnabled: true);
     _loadSettings();
   }
 
@@ -423,6 +436,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
         isSoundEnabled: s.isSoundEnabled,
         isMusicEnabled: s.isMusicEnabled,
         isAnimationsEnabled: s.isAnimationsEnabled,
+        animationSettings: s.animationSettings,
         isHapticsEnabled: s.isHapticsEnabled,
         autoPlayDelay: Duration(seconds: s.autoPlayDelaySeconds),
         showCoordinates: s.showCoordinates,
@@ -436,6 +450,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
         sfxEnabled: s.isSoundEnabled,
         bgmEnabled: s.isMusicEnabled,
       );
+      _hapticsService.updateSettings(hapticsEnabled: s.isHapticsEnabled);
     } catch (e) {
       debugPrint('Failed to load settings: $e');
     }
@@ -448,6 +463,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
         isSoundEnabled: state.isSoundEnabled,
         isMusicEnabled: state.isMusicEnabled,
         isAnimationsEnabled: state.isAnimationsEnabled,
+        animationSettings: state.animationSettings,
         isHapticsEnabled: state.isHapticsEnabled,
         autoPlayDelaySeconds: state.autoPlayDelay.inSeconds,
         showCoordinates: state.showCoordinates,
@@ -514,13 +530,26 @@ class ChessNotifier extends StateNotifier<ChessState> {
   }
 
   void toggleHaptics() {
-    state = state.copyWith(isHapticsEnabled: !state.isHapticsEnabled);
+    final newEnabled = !state.isHapticsEnabled;
+    state = state.copyWith(isHapticsEnabled: newEnabled);
+    _hapticsService.updateSettings(hapticsEnabled: newEnabled);
     _saveSettings();
   }
 
   void toggleAnimations() {
     state = state.copyWith(isAnimationsEnabled: !state.isAnimationsEnabled);
     _saveSettings();
+  }
+
+  void updateAnimationSetting(String key, bool value) {
+    final newSettings = Map<String, bool>.from(state.animationSettings);
+    newSettings[key] = value;
+    state = state.copyWith(animationSettings: newSettings);
+    _saveSettings();
+  }
+
+  bool isAnimationTypeEnabled(String key) {
+    return state.isAnimationsEnabled && (state.animationSettings[key] ?? true);
   }
 
   void togglePause() {
@@ -607,6 +636,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
   final CommentaryEngine _commentaryEngine;
   final SavedGameRepository _savedGameRepository;
   final ChessSoundService _soundService;
+  final ChessHapticsService _hapticsService;
   final AiContextService _aiContextService;
   final SettingsRepository _settingsRepository;
   final _uuid = const Uuid();
@@ -1110,6 +1140,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
       state = state.copyWith(
         moveAnimation: null,
       ); // Revert animation if move failed
+      if (state.isHapticsEnabled) {
+        _hapticsService.errorFeedback();
+      }
       return;
     }
 
@@ -1342,11 +1375,13 @@ class ChessNotifier extends StateNotifier<ChessState> {
     // Professional Haptics
     if (state.isHapticsEnabled) {
       if (state.game.inCheckmate) {
-        HapticFeedback.heavyImpact();
+        _hapticsService.mateBurst();
       } else if (state.game.inCheck) {
-        HapticFeedback.mediumImpact();
+        _hapticsService.checkPulse();
+      } else if (move?.captured != null) {
+        _hapticsService.heavyRook();
       } else {
-        HapticFeedback.lightImpact();
+        _hapticsService.softTap();
       }
     }
 
@@ -1644,6 +1679,11 @@ class ChessNotifier extends StateNotifier<ChessState> {
           return;
         }
         state = state.copyWith(whiteTimeLeft: next);
+
+        // Low time heartbeat
+        if (state.isHapticsEnabled && next <= const Duration(seconds: 10)) {
+          _hapticsService.heartbeat();
+        }
         return;
       }
 
@@ -1653,6 +1693,11 @@ class ChessNotifier extends StateNotifier<ChessState> {
         return;
       }
       state = state.copyWith(blackTimeLeft: next);
+
+      // Low time heartbeat
+      if (state.isHapticsEnabled && next <= const Duration(seconds: 10)) {
+        _hapticsService.heartbeat();
+      }
     });
   }
 
@@ -1823,6 +1868,7 @@ final chessSoundServiceProvider = Provider((ref) {
   ref.onDispose(() => service.dispose());
   return service;
 });
+final chessHapticsServiceProvider = Provider((ref) => ChessHapticsService());
 final commentaryEngineProvider = Provider((ref) => CommentaryEngine());
 final savedGameRepositoryProvider = Provider((ref) => SavedGameRepository());
 final settingsRepositoryProvider = Provider((ref) => SettingsRepository());
@@ -1832,6 +1878,7 @@ final chessProvider = StateNotifierProvider<ChessNotifier, ChessState>((ref) {
   final commentaryEngine = ref.watch(commentaryEngineProvider);
   final savedGameRepository = ref.watch(savedGameRepositoryProvider);
   final soundService = ref.watch(chessSoundServiceProvider);
+  final hapticsService = ref.watch(chessHapticsServiceProvider);
   final aiContextService = ref.watch(aiContextServiceProvider);
   final settingsRepository = ref.watch(settingsRepositoryProvider);
   return ChessNotifier(
@@ -1839,6 +1886,7 @@ final chessProvider = StateNotifierProvider<ChessNotifier, ChessState>((ref) {
     commentaryEngine,
     savedGameRepository,
     soundService,
+    hapticsService,
     aiContextService,
     settingsRepository,
   );

@@ -19,9 +19,14 @@ class SignatureMoveOverlay extends ConsumerStatefulWidget {
   final bool isCheckmate;
   final VoidCallback onComplete;
 
-  /// Called with the landing square when movement completes.
-  /// Used to trigger [LandingFeedback] in chess_board.dart.
-  final void Function(String square, PieceMotionProfile profile)? onLand;
+  /// Called with move details when movement completes.
+  /// Used to trigger [LandingFeedback] and kinetic effects in chess_board.dart.
+  final void Function(
+    String from,
+    String to,
+    String pieceCode,
+    PieceMotionProfile profile,
+  )? onLand;
 
   const SignatureMoveOverlay({
     super.key,
@@ -58,7 +63,12 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
           ..addStatusListener((status) {
             if (status == AnimationStatus.completed) {
               // Fire landing callback before completing
-              widget.onLand?.call(widget.data.to, _profile);
+              widget.onLand?.call(
+                widget.data.from,
+                widget.data.to,
+                widget.data.pieceCode,
+                _profile,
+              );
               widget.onComplete();
             }
           });
@@ -74,8 +84,8 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
       curve: _profileAwareCurve(boardThemeId, _profile),
     );
 
-    final animationsEnabled = ref.read(chessProvider).isAnimationsEnabled;
-    if (!animationsEnabled) {
+    final pieceMotionEnabled = ref.read(chessProvider.notifier).isAnimationTypeEnabled('pieceMotion');
+    if (!pieceMotionEnabled) {
       _controller.value = 1.0;
     } else {
       _controller.forward();
@@ -267,12 +277,12 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
           pieceScale = 0.8 + (0.4 * noise.abs());
           vibration = Offset(noise * 3, 0);
           if ((rawProgress * 20).floor() % 2 == 0) pieceScale = 0.0;
-        } else if (isToyTheme) {
+        } else if (isToyTheme && ref.read(chessProvider.notifier).isAnimationTypeEnabled('themeEffects')) {
           // Toy: high arc + squash/stretch (unchanged)
           verticalLift = -arc * 60.0;
           pieceScale = 1.0 + (arc * 0.4);
           if (rawProgress < 0.2 || rawProgress > 0.8) pieceScale = 0.8;
-        } else if (isSteampunkTheme) {
+        } else if (isSteampunkTheme && ref.read(chessProvider.notifier).isAnimationTypeEnabled('themeEffects')) {
           // Steampunk: mechanical rattle (unchanged)
           verticalLift = -arc * 10.0;
           vibration = Offset(math.sin(rawProgress * 40) * 2.0, 0);
@@ -318,7 +328,7 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
           clipBehavior: Clip.none,
           children: [
             // ── Trail painter (all non-matrix, non-electric themes) ──
-            if (!isMatrixTheme && !isElectricTheme)
+            if (!isMatrixTheme && !isElectricTheme && ref.read(chessProvider.notifier).isAnimationTypeEnabled('themeEffects'))
               CustomPaint(
                 size: Size(widget.boardSize, widget.boardSize),
                 painter: TrailPainter(
@@ -329,7 +339,7 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
               ),
 
             // ── Electric arc (theme9, unchanged) ──
-            if (isElectricTheme)
+            if (isElectricTheme && ref.read(chessProvider.notifier).isAnimationTypeEnabled('themeEffects'))
               CustomPaint(
                 size: Size(widget.boardSize, widget.boardSize),
                 painter: _LightningArcPainter(

@@ -16,6 +16,7 @@ class AppSettings {
   final bool isAiOperational;
   final int totalTimeMinutes;
   final int incrementSeconds;
+  final Map<String, bool> animationSettings;
 
   AppSettings({
     this.boardThemeId = 'classic',
@@ -29,6 +30,15 @@ class AppSettings {
     this.isAiOperational = true,
     this.totalTimeMinutes = 10,
     this.incrementSeconds = 0,
+    this.animationSettings = const {
+      'pieceMotion': true,
+      'camera': true,
+      'feedback': true,
+      'indicators': true,
+      'themeEffects': true,
+      'themeAmbience': true,
+      'kineticImpact': true,
+    },
   });
 
   Map<String, dynamic> toJson() => {
@@ -43,6 +53,7 @@ class AppSettings {
         'isAiOperational': isAiOperational,
         'totalTimeMinutes': totalTimeMinutes,
         'incrementSeconds': incrementSeconds,
+        'animationSettings': animationSettings,
       };
 
   factory AppSettings.fromJson(Map<String, dynamic> json) => AppSettings(
@@ -57,6 +68,17 @@ class AppSettings {
         isAiOperational: json['isAiOperational'] ?? true,
         totalTimeMinutes: json['totalTimeMinutes'] ?? 10,
         incrementSeconds: json['incrementSeconds'] ?? 0,
+        animationSettings: json['animationSettings'] != null
+            ? Map<String, bool>.from(json['animationSettings'])
+            : const {
+                'pieceMotion': true,
+                'camera': true,
+                'feedback': true,
+                'indicators': true,
+                'themeEffects': true,
+                'themeAmbience': true,
+                'kineticImpact': true,
+              },
       );
 }
 

@@ -147,26 +147,31 @@ class _LandingFeedbackState extends State<LandingFeedback>
         builder: (context, _) {
           return Stack(
             children: [
-              // Square flash highlight (opacity only)
-              Opacity(
-                opacity: _opacityAnim.value,
-                child: Container(color: Colors.white),
-              ),
-              // Scale compression effect centered on square
+              // Square pressure effect (tile depression)
               Center(
                 child: Transform.scale(
                   scale: _scaleAnim.value,
                   child: Container(
-                    width: widget.squareSize * 0.85,
-                    height: widget.squareSize * 0.85,
+                    width: widget.squareSize - 2, // slight margin for tile feel
+                    height: widget.squareSize - 2,
                     decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white.withValues(
-                        alpha: _opacityAnim.value * 0.6,
-                      ),
+                      color: Colors.black.withValues(alpha: _opacityAnim.value * 0.4),
+                      borderRadius: BorderRadius.circular(2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: _opacityAnim.value * 0.3),
+                          blurRadius: 2,
+                          offset: const Offset(1, 1),
+                        ),
+                      ],
                     ),
                   ),
                 ),
+              ),
+              // Optional square highlight flash
+              Opacity(
+                opacity: _opacityAnim.value * 0.5,
+                child: Container(color: Colors.white),
               ),
             ],
           );

@@ -129,7 +129,7 @@ class PieceMotionProfile {
     verticalArcFactor: 0.1,     // slight arc — sense of presence
     midRotationDeg: 0.0,
     hasGhostTrail: false,
-    landingCompression: 0.005,  // minimal compression — power with control
+    landingCompression: 0.012,  // increased from 0.005 — power with control
     hasBreathingSelection: true,
     selectionBreathScale: 0.018, // most visible breath — dominant
     breathingPeriod: Duration(milliseconds: 1000),
@@ -139,12 +139,12 @@ class PieceMotionProfile {
   /// ♚ King — Deliberate & Fragile
   /// Slowest. Noticeable ease-in (anticipation feel via curve). Gentle settle.
   static const PieceMotionProfile king = PieceMotionProfile(
-    moveDuration: Duration(milliseconds: 700),
+    moveDuration: Duration(milliseconds: 900), // increased from 700ms
     moveCurve: Curves.easeInOutQuad,  // gentle, cautious acceleration
     verticalArcFactor: 0.05,
     midRotationDeg: 0.0,
     hasGhostTrail: false,
-    landingCompression: 0.003,  // barely noticeable — fragile
+    landingCompression: 0.020,  // increased from 0.003 — heavy settle
     hasBreathingSelection: true,
     selectionBreathScale: 0.020, // most visible — signals importance
     breathingPeriod: Duration(milliseconds: 1300),

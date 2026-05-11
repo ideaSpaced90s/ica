@@ -84,7 +84,6 @@ class _ChessPieceWidgetState extends ConsumerState<ChessPieceWidget>
   Widget build(BuildContext context) {
     final chessState = ref.watch(chessProvider);
     final boardThemeId = chessState.boardThemeId;
-    final animationsEnabled = chessState.isAnimationsEnabled;
 
     var code = widget.pieceCode;
 
@@ -119,10 +118,10 @@ class _ChessPieceWidgetState extends ConsumerState<ChessPieceWidget>
     // Apply selection enlargement (108% with elastic spring) — unchanged
     pieceWidget = AnimatedScale(
       scale: widget.isMoving ? (boardThemeId == 'theme8' || boardThemeId == 'theme4' ? 1.05 : 1.08) : (widget.highlighted ? (boardThemeId == 'theme8' || boardThemeId == 'theme4' ? 1.03 : 1.15) : 1.0),
-      duration: (!animationsEnabled) ? Duration.zero : (boardThemeId == 'theme8' || boardThemeId == 'theme4' ? const Duration(milliseconds: 400) : const Duration(milliseconds: 200)),
+      duration: (!ref.read(chessProvider.notifier).isAnimationTypeEnabled('pieceMotion')) ? Duration.zero : (boardThemeId == 'theme8' || boardThemeId == 'theme4' ? const Duration(milliseconds: 400) : const Duration(milliseconds: 200)),
       curve: boardThemeId == 'theme8' || boardThemeId == 'theme4' ? Curves.easeInOut : Curves.easeOutBack,
       child: AnimatedContainer(
-        duration: (!animationsEnabled) ? Duration.zero : (boardThemeId == 'theme8' || boardThemeId == 'theme4' ? const Duration(milliseconds: 500) : const Duration(milliseconds: 300)),
+        duration: (!ref.read(chessProvider.notifier).isAnimationTypeEnabled('pieceMotion')) ? Duration.zero : (boardThemeId == 'theme8' || boardThemeId == 'theme4' ? const Duration(milliseconds: 500) : const Duration(milliseconds: 300)),
         curve: boardThemeId == 'theme9' ? Curves.bounceOut : (boardThemeId == 'theme8' || boardThemeId == 'theme4' ? Curves.linear : Curves.elasticOut),
         transform: Matrix4.diagonal3Values(
           widget.isMoving ? (boardThemeId == 'theme8' || boardThemeId == 'theme4' ? 1.0 : 0.85) : 1.0,
@@ -135,7 +134,7 @@ class _ChessPieceWidgetState extends ConsumerState<ChessPieceWidget>
     );
 
     // ── Breathing selection scale (Option B: always running, applied when highlighted) ──
-    if (animationsEnabled && widget.highlighted && profile.hasBreathingSelection) {
+    if (ref.read(chessProvider.notifier).isAnimationTypeEnabled('feedback') && widget.highlighted && profile.hasBreathingSelection) {
       pieceWidget = AnimatedBuilder(
         animation: _breathingController,
         builder: (context, child) {
@@ -151,7 +150,7 @@ class _ChessPieceWidgetState extends ConsumerState<ChessPieceWidget>
       );
     }
 
-    if (widget.highlighted && animationsEnabled) {
+    if (widget.highlighted && ref.read(chessProvider.notifier).isAnimationTypeEnabled('feedback')) {
       final glowColor = boardThemeId == 'theme10'
           ? ContrastUtility.selectionGlow
           : ScholarlyTheme.selectedGlow;
@@ -187,7 +186,7 @@ class _ChessPieceWidgetState extends ConsumerState<ChessPieceWidget>
     }
 
     // ── King check pulse: subtle scale oscillation when King is in check ──
-    if (animationsEnabled && !widget.highlighted) {
+    if (ref.read(chessProvider.notifier).isAnimationTypeEnabled('feedback') && !widget.highlighted) {
       final chessStateForCheck = ref.read(chessProvider);
       final pieceOnSquare = chessStateForCheck.game.getPiece(widget.squareName);
       final isKingPiece = pieceOnSquare?.type == chess_lib.PieceType.KING;
@@ -214,7 +213,7 @@ class _ChessPieceWidgetState extends ConsumerState<ChessPieceWidget>
 
     // Apply 30% fade during movement animation
     // Apply wiggle if selected (for Toy themes)
-    if (animationsEnabled && (boardThemeId == 'theme4' || boardThemeId == 'theme9') && widget.highlighted) {
+    if (ref.read(chessProvider.notifier).isAnimationTypeEnabled('themeEffects') && (boardThemeId == 'theme4' || boardThemeId == 'theme9') && widget.highlighted) {
       pieceWidget = WiggleAnimation(
         isActive: true,
         child: pieceWidget,
