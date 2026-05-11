@@ -41,6 +41,8 @@ class _BoardSnapshot {
     required this.hintTo,
     required this.isHintVisible,
     required this.isHintLoading,
+    required this.isHintBlinking,
+    required this.isBulbGlowing,
     required this.whiteTimeLeft,
     required this.blackTimeLeft,
     required this.clockStarted,
@@ -71,6 +73,8 @@ class _BoardSnapshot {
   final String? hintTo;
   final bool isHintVisible;
   final bool isHintLoading;
+  final bool isHintBlinking;
+  final bool isBulbGlowing;
   final Duration whiteTimeLeft;
   final Duration blackTimeLeft;
   final bool clockStarted;
@@ -140,6 +144,8 @@ class ChessState {
     this.hintTo,
     this.isHintVisible = false,
     this.isHintLoading = false,
+    this.isHintBlinking = false,
+    this.isBulbGlowing = false,
     this.servicesStarted = false,
     this.servicesStarting = false,
     this.engineReady = false,
@@ -205,6 +211,8 @@ class ChessState {
   final String? hintTo;
   final bool isHintVisible;
   final bool isHintLoading;
+  final bool isHintBlinking;
+  final bool isBulbGlowing;
   final bool servicesStarted;
   final bool servicesStarting;
   final bool engineReady;
@@ -274,6 +282,8 @@ class ChessState {
     Object? hintTo = _sentinel,
     bool? isHintVisible,
     bool? isHintLoading,
+    bool? isHintBlinking,
+    bool? isBulbGlowing,
     bool? servicesStarted,
     bool? servicesStarting,
     bool? engineReady,
@@ -342,6 +352,8 @@ class ChessState {
       hintTo: identical(hintTo, _sentinel) ? this.hintTo : hintTo as String?,
       isHintVisible: isHintVisible ?? this.isHintVisible,
       isHintLoading: isHintLoading ?? this.isHintLoading,
+      isHintBlinking: isHintBlinking ?? this.isHintBlinking,
+      isBulbGlowing: isBulbGlowing ?? this.isBulbGlowing,
       servicesStarted: servicesStarted ?? this.servicesStarted,
       servicesStarting: servicesStarting ?? this.servicesStarting,
       engineReady: engineReady ?? this.engineReady,
@@ -936,6 +948,8 @@ class ChessNotifier extends StateNotifier<ChessState> {
       hintTo: state.hintTo,
       isHintVisible: state.isHintVisible,
       isHintLoading: state.isHintLoading,
+      isHintBlinking: state.isHintBlinking,
+      isBulbGlowing: state.isBulbGlowing,
       whiteTimeLeft: state.whiteTimeLeft,
       blackTimeLeft: state.blackTimeLeft,
       clockStarted: state.clockStarted,
@@ -973,6 +987,8 @@ class ChessNotifier extends StateNotifier<ChessState> {
       hintTo: snapshot.hintTo,
       isHintVisible: snapshot.isHintVisible,
       isHintLoading: snapshot.isHintLoading,
+      isHintBlinking: snapshot.isHintBlinking,
+      isBulbGlowing: snapshot.isBulbGlowing,
       whiteTimeLeft: snapshot.whiteTimeLeft,
       blackTimeLeft: snapshot.blackTimeLeft,
       clockStarted: snapshot.clockStarted,
@@ -1086,9 +1102,6 @@ class ChessNotifier extends StateNotifier<ChessState> {
     return state.game.turn == chess_lib.Color.WHITE ? 'Black' : 'White';
   }
 
-  String _sideToMoveLabel() {
-    return state.game.turn == chess_lib.Color.WHITE ? 'White' : 'Black';
-  }
 
   Future<void> makeMove(String from, String to) async {
     if (state.game.gameOver || state.isPaused) return;
@@ -1287,6 +1300,8 @@ class ChessNotifier extends StateNotifier<ChessState> {
     state = state.copyWith(
       isHintLoading: true,
       isHintVisible: false,
+      isHintBlinking: false,
+      isBulbGlowing: true,
       hintBestMove: null,
       hintFrom: null,
       hintTo: null,
@@ -1294,7 +1309,8 @@ class ChessNotifier extends StateNotifier<ChessState> {
     );
     await ensureGameServicesStarted();
     if (state.engineReady) {
-      _engine.analyzePosition(state.game.fen, depth: 12);
+      // Analyze for a quick hint
+      _engine.analyzePosition(state.game.fen, depth: 14);
     }
   }
 
@@ -1470,8 +1486,6 @@ class ChessNotifier extends StateNotifier<ChessState> {
   }
 
   Future<void> _runHintFlow(String bestMove) async {
-    final player = _sideToMoveLabel();
-    final formattedMove = _formatMoveForPrompt(bestMove);
     final from = bestMove.length >= 2 ? bestMove.substring(0, 2) : null;
     final to = bestMove.length >= 4 ? bestMove.substring(2, 4) : null;
 
@@ -1479,17 +1493,20 @@ class ChessNotifier extends StateNotifier<ChessState> {
       hintBestMove: bestMove,
       hintFrom: from,
       hintTo: to,
-      isHintLoading: true,
-      isHintVisible: false,
+      isHintLoading: false,
+      isHintVisible: true,
+      isHintBlinking: true,
+      isBulbGlowing: true,
     );
 
-    await _runCommentary(
-      player: player,
-      move: formattedMove,
-      evalScore: _formatEvalForPrompt(state.currentEvaluation),
-      revealHintAfterTyping: true,
-    );
+    // Show blinking hint for 3 seconds
+    Timer(const Duration(milliseconds: 3000), () {
+      if (!_isDisposed) {
+        _clearHint();
+      }
+    });
   }
+
 
   Future<void> sendUserQuery(String query) async {
     if (query.trim().isEmpty) return;
@@ -1658,6 +1675,8 @@ class ChessNotifier extends StateNotifier<ChessState> {
       hintTo: null,
       isHintVisible: false,
       isHintLoading: false,
+      isHintBlinking: false,
+      isBulbGlowing: false,
     );
   }
 

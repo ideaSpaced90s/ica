@@ -383,6 +383,13 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
                                                 ),
                                               ),
                                             ),
+                                          if (chessState.isHintBlinking &&
+                                              (isSuggestedFrom ||
+                                                  isSuggestedTo))
+                                            const OrbitingStarAnimation(
+                                              color: ScholarlyTheme.accentYellow,
+                                              isActive: true,
+                                            ),
                                           ImpactShake(
                                             trigger: _impactShakes.any((s) => s['square'] == squareName),
                                             direction: _impactShakes.firstWhere(

@@ -10,12 +10,16 @@ class ActionIconButton extends StatefulWidget {
     required this.onTap,
     this.isEnabled = true,
     this.isActive = false,
+    this.activeColor,
+    this.activeIconColor,
   });
 
   final IconData icon;
   final VoidCallback? onTap;
   final bool isEnabled;
   final bool isActive;
+  final Color? activeColor;
+  final Color? activeIconColor;
 
   @override
   State<ActionIconButton> createState() => _ActionIconButtonState();
@@ -46,7 +50,7 @@ class _ActionIconButtonState extends State<ActionIconButton> {
           sunken: _isPressed || widget.isActive,
         ).copyWith(
           color: (widget.isActive || _isPressed) 
-              ? ScholarlyTheme.accentBlueSoft 
+              ? (widget.activeColor ?? ScholarlyTheme.accentBlueSoft)
               : ScholarlyTheme.panelBase,
           borderRadius: BorderRadius.circular(12),
         ),
@@ -55,7 +59,9 @@ class _ActionIconButtonState extends State<ActionIconButton> {
           child: Icon(
             widget.icon,
             color: widget.isEnabled 
-                ? (widget.isActive ? ScholarlyTheme.accentBlue : ScholarlyTheme.textPrimary)
+                ? (widget.isActive 
+                    ? (widget.activeIconColor ?? ScholarlyTheme.accentBlue) 
+                    : ScholarlyTheme.textPrimary)
                 : ScholarlyTheme.textSubtle,
             size: size,
           ),

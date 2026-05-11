@@ -364,14 +364,14 @@ class _MainPageState extends ConsumerState<MainPage> {
           ),
           const SizedBox(width: 6),
           ActionIconButton(
-            icon: state.isHintVisible
+            icon: state.isBulbGlowing
                 ? Icons.lightbulb_rounded
                 : Icons.lightbulb_outline_rounded,
-            isEnabled: true,
-            isActive: state.isHintVisible,
-            onTap: () {
-              // Placeholder: Navigation to analysis page removed
-            },
+            isEnabled: !state.isHintLoading,
+            isActive: state.isBulbGlowing,
+            activeColor: ScholarlyTheme.accentYellowSoft,
+            activeIconColor: ScholarlyTheme.accentYellow,
+            onTap: () => ref.read(chessProvider.notifier).requestHint(),
           ),
           if (_isCommentaryExpanded) ...[
             const SizedBox(width: 6),

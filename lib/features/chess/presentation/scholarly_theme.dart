@@ -12,6 +12,8 @@ class ScholarlyTheme {
   static const Color accentGold = Color(0xFF0056B3); // Professional Cobalt Blue
   static const Color accentBlue = Color(0xFF0D6EFD); // Primary Blue
   static const Color accentBlueSoft = Color(0xFFE7F1FF); // Soft Blue Background
+  static const Color accentYellow = Color(0xFFFFD700); // Gold/Yellow for hints
+  static const Color accentYellowSoft = Color(0xFFFFF9E6); // Soft Yellow Background
   
   // Kept original board colors as requested
   static const Color lightSquare = Color(0xFFC0C0C0);
