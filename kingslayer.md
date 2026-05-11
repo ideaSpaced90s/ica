@@ -7,20 +7,20 @@ KINGSLAYER is a state-of-the-art Android mobile chess application that blends a 
 ## 🚀 Core Features
 
 ### 1. Advanced Chess Gameplay
-- **True UCI Integration**: Full support for the Universal Chess Interface protocol.
+- **True UCI Integration**: Full support for the Universal Chess Interface protocol via native `libstockfish.so`.
 - **Move Validation**: Precise legal move detection including En Passant, Castling, and Pawn Promotion.
 - **Game States**: Handles Check, Checkmate, Stalemate, and Draw by Repetition/50-move rule.
-- **Undo/Redo**: Complete history tracking for move traversal.
-- **Side Switching**: Ability to flip the board and play as either White or Black.
+- **Undo/Redo**: Complete history tracking for move traversal with snapshot-based state restoration.
+- **Side Switching**: Ability to flip the board and play as either White or Black while maintaining "Down = User" ergonomics.
 
 ### 2. High Council (AI)
-- **On-Demand Grandmaster**: The High Council AI derives intelligence from the position and reveals it only when asked.
-- **Thought Stripping**: Integrated logic ensures the AI's internal thoughts (<think> blocks) are removed before delivery.
+- **On-Demand Grandmaster**: The High Council AI (powered by Sarvam/Gemini) reveals strategic insights only when explicitly requested.
+- **Thought Stripping**: Integrated logic ensures the AI's internal thoughts (<think> blocks) are removed for professional delivery.
 - **Witty Personality**: Specifically tuned to deliver short, sharp, and grandmaster-style insights.
 - **Sleek Interface**: Refined chat-focused commentary with bubble-style messaging for a premium conversational feel.
 
 ### 3. Engine-Grade Analysis & Robot Mode
-- **Stockfish ARMv8**: Integrated legendary chess engine for professional-level analysis, optimized for Android devices.
+- **Stockfish ARMv8**: Integrated legendary chess engine optimized for mobile performance.
 - **Robot Mode**: One-click "Engine vs Engine" gameplay where Stockfish plays itself.
 - **Real-time Eval**: A dynamic evaluation bar showing the current material and positional advantage.
 - **Difficulty Scaling**: Adjustable skill levels (A-E) from beginner to grandmaster.
@@ -52,23 +52,44 @@ KINGSLAYER is a state-of-the-art Android mobile chess application that blends a 
 
 ---
 
-## ✨ Chessboard & Piece Animations
+## 🎬 Cinematic Animation System
+
+### 1. Dynamic Board Camera
+- **Intelligent Drift**: The board subtly shifts based on the direction of the move, creating a sense of momentum.
+- **Dynamic Zoom**: Automatic camera zooming for captures (subtle), checks (medium), and checkmates (dramatic).
+- **Saturation Shift**: A grayscale "time-dilation" effect applied to the board during checkmate events.
+
+### 2. Signature Piece Identities
+Every piece type has a unique motion profile defined in `PieceMotionProfile`:
+- **♟ Pawns**: Fast, flat, and persistent glides.
+- **♞ Knights**: Arced "jumping" movement with a signature mid-air tilt.
+- **♝ Bishops**: Ultra-smooth diagonal transits with faint ghost trails.
+- **♜ Rooks**: Heavy, grounded movement with strong deceleration and landing compression.
+- **♛ Queens**: Fast, dominant, and fluid transits with a confident "levitation" presence.
+- **♚ Kings**: Deliberate and cautious pace with fragile, minimal settle effects.
+
+### 3. Tactile Feedback & Interaction
+- **Landing Settle**: Pieces exhibit physical weight through micro-settle compression and spring-back effects upon landing.
+- **Breathing Selection**: Selected pieces exhibit a subtle 1–2% "living" breath cycle to indicate focus.
+- **Check Pulse**: The King piece pulses with a gentle scale oscillation when in check, heightening tactical tension.
+- **Interactive Tap Ripples**: High-fidelity visual ripples propagate from squares upon selection.
+
+---
+
+## ✨ Chessboard & Piece Themes
 
 ### 1. Modular Theme Engine
 - **Decoupled Architecture**: Board and piece rendering are fully decoupled via a polymorphic `ChessTheme` system.
-- **Theme Registry**: Centralized management for all visual styles (Classic, Slate, Matrix, Walnut, Shadow, etc.).
+- **Theme Registry**: Centralized management for all 10 visual styles (Classic, Forest, Ink, Platinum, Steampunk, Matrix, Slate, Walnut, Toy, Shadow).
 - **Persistence**: User-selected themes are saved and restored across sessions.
 
 ### 2. Advanced Square Animations
 - **The "Orbiting Star"**: A High-Precision `CustomPainter` effect that orbits the perimeter of selected, engine-recommended (Gold), and threatened (Red) squares.
 - **Smooth Transitions**: `AnimatedContainer` logic for square color shifts and border highlights.
-- **Trail Movement**: Smooth linear interpolation for piece transit across the board.
 
-### 3. Piece & Interaction Animations
-- **Levitation Effect**: Selected pieces "float" with a synchronized pulsing glow.
-- **Elastic Selection Pop**: A spring-loaded scale-up effect when a piece is chosen.
-- **Interactive Drag Feedback**: Pieces automatically enlarge while being dragged to ensure visibility.
-- **Movement Ghosting**: Opacity "ghosting" applied to pieces while they are in motion.
+### 3. Accessibility & Contrast
+- **Theme Optimization**: Refined contrast for "Digital Matrix" and "Forest" themes to ensure piece visibility.
+- **High-Contrast Pieces**: Optional high-visibility piece sets for improved accessibility.
 
 ---
 
@@ -122,6 +143,13 @@ KINGSLAYER is a state-of-the-art Android mobile chess application that blends a 
 ### Phase 4: Intelligence & Refinement
 - [x] Implement "On-Demand" High Council intelligence (Hints/Chat).
 - [x] **Complete**: Implement pulsing Knight turn indicators in header.
-- [x] Finalize Save/Load persistent storage and Theme persistence.
-- [x] Implement time controls and auto-play delay settings.
+- [x] **Complete**: Finalize Save/Load persistent storage and Theme persistence.
+- [x] **Complete**: Implement time controls and auto-play delay settings.
 - [x] **Complete**: Transition Analysis Mode to placeholder for sleeker UX.
+
+### Phase 5: Cinematic Excellence (New)
+- [x] **Complete**: Implement Cinematic Board Camera with dynamic zoom and drift.
+- [x] **Complete**: Implement Signature Movement profiles for all piece types.
+- [x] **Complete**: Add Landing Feedback (micro-settle) and Tap Ripple systems.
+- [x] **Complete**: Implement Breathing Selection and King Check pulse effects.
+- [x] **Complete**: Refine theme contrast and accessibility.
