@@ -12,7 +12,7 @@ class MatrixSquarePainter extends CustomPainter {
     if (!isLight) return; // Dark squares are pure black as per request
 
     final paint = Paint()
-      ..color = const Color(0xFF00FF41).withValues(alpha: 0.05)
+      ..color = Colors.white.withValues(alpha: 0.05)
       ..style = PaintingStyle.fill;
 
     // Draw subtle vertical data lines
@@ -115,14 +115,14 @@ class MatrixMoveHintPainter extends CustomPainter {
     final opacity = (0.3 + 0.7 * sin(animationValue * pi)).clamp(0.0, 1.0);
     
     final paint = Paint()
-      ..color = const Color(0xFF00FF88).withValues(alpha: opacity)
+      ..color = Colors.white.withValues(alpha: opacity)
       ..style = PaintingStyle.fill;
 
     // Digital crosshair / point
     canvas.drawRect(Rect.fromCenter(center: center, width: 4, height: 4), paint);
     
     final linePaint = Paint()
-      ..color = const Color(0xFF00FF88).withValues(alpha: opacity * 0.5)
+      ..color = Colors.white.withValues(alpha: opacity * 0.5)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
       

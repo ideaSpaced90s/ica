@@ -16,7 +16,7 @@ class MatrixPiecePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final mainColor = isWhite ? const Color(0xFF00FF88) : const Color(0xFF00CCFF);
+    final mainColor = isWhite ? Colors.white : Colors.yellowAccent;
     
     // 1. Draw Piece Silhouette using TextPainter (to get the path/region)
     final charMap = {
@@ -40,7 +40,26 @@ class MatrixPiecePainter extends CustomPainter {
     final x = (size.width - textPainter.width) / 2;
     final y = (size.height - textPainter.height) / 2;
 
-    // Create a Layer for masking
+    // 1. For Black pieces, draw a "Dark Aura" (shadow) behind the piece
+    if (!isWhite) {
+      final shadowPainter = TextPainter(
+        text: TextSpan(
+          text: charMap[type] ?? '?',
+          style: TextStyle(
+            fontSize: size.width * 0.9,
+            fontFamily: 'Arial',
+            foreground: Paint()
+              ..color = Colors.black.withValues(alpha: 0.9)
+              ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5),
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      );
+      shadowPainter.layout();
+      shadowPainter.paint(canvas, Offset(x, y));
+    }
+
+    // 2. Create a Layer for masking
     canvas.saveLayer(Rect.fromLTWH(0, 0, size.width, size.height), Paint());
 
     // Paint the piece shape (this will act as the mask)
@@ -91,11 +110,26 @@ class MatrixPiecePainter extends CustomPainter {
 
     canvas.restore();
 
+    // 2. Draw thin crisp outline for all pieces to ensure visibility against dark/busy backgrounds
+    textPainter.text = TextSpan(
+      text: charMap[type] ?? '?',
+      style: TextStyle(
+        fontSize: size.width * 0.9,
+        fontFamily: 'Arial',
+        foreground: Paint()
+          ..color = (isWhite ? Colors.white : Colors.yellowAccent).withValues(alpha: isWhite ? 0.4 : 0.6)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 0.6,
+      ),
+    );
+    textPainter.layout();
+    textPainter.paint(canvas, Offset(x, y));
+
     // If highlighted, add a subtle digital glow
     if (isHighlighted) {
       final glowPaint = Paint()
-        ..color = mainColor.withValues(alpha: 0.2)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.outer, 8);
+        ..color = isWhite ? Colors.white.withValues(alpha: 0.3) : Colors.black.withValues(alpha: 0.8)
+        ..maskFilter = MaskFilter.blur(BlurStyle.outer, isWhite ? 8 : 4);
        canvas.drawCircle(Offset(size.width/2, size.height/2), size.width*0.4, glowPaint);
     }
   }

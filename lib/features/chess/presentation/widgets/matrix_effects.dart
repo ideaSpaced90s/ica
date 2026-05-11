@@ -89,7 +89,7 @@ class _MatrixCodePainter extends CustomPainter {
 
         // Fade tail
         final opacity = (1.0 - (i / col.chars.length)).clamp(0.0, 1.0) * 0.15;
-        final color = i == 0 ? Colors.white.withValues(alpha: 0.4) : const Color(0xFF00FF41).withValues(alpha: opacity);
+        final color = i == 0 ? Colors.white.withValues(alpha: 0.7) : Colors.white.withValues(alpha: opacity);
 
         textPainter.text = TextSpan(
           text: col.chars[i],
@@ -98,7 +98,7 @@ class _MatrixCodePainter extends CustomPainter {
             fontSize: 12,
             fontFamily: 'monospace',
             fontWeight: i == 0 ? FontWeight.bold : FontWeight.normal,
-            shadows: i == 0 ? [const Shadow(color: Color(0xFF00FF41), blurRadius: 4)] : [],
+            shadows: i == 0 ? [const Shadow(color: Colors.white, blurRadius: 4)] : [],
           ),
         );
         textPainter.layout();
@@ -210,7 +210,7 @@ class _GlitchPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final random = Random();
     final paint = Paint()
-      ..color = const Color(0xFF00FF41).withValues(alpha: (1.0 - progress))
+      ..color = Colors.white.withValues(alpha: (1.0 - progress))
       ..style = PaintingStyle.fill;
 
     // Break up into small green digital blocks
@@ -253,7 +253,7 @@ class _ScanlinePainter extends CustomPainter {
     if (Random().nextDouble() > 0.98) {
       canvas.drawRect(
         Rect.fromLTWH(0, 0, size.width, size.height),
-        Paint()..color = const Color(0xFF00FF41).withValues(alpha: 0.01),
+        Paint()..color = Colors.white.withValues(alpha: 0.01),
       );
     }
   }

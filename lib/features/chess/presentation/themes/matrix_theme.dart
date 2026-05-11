@@ -8,7 +8,7 @@ class MatrixTheme extends ChessTheme {
   const MatrixTheme() : super(id: 'theme6', name: 'Digital Matrix');
 
   @override
-  Color get lightSquare => const Color(0xFF013220);
+  Color get lightSquare => const Color(0xFF1A1A1A);
 
   @override
   Color get darkSquare => const Color(0xFF000000);
@@ -74,7 +74,7 @@ class MatrixTheme extends ChessTheme {
     return CustomPaint(
       painter: DigitalPulsePainter(
         animationValue: animationValue,
-        color: const Color(0xFF00FF88),
+        color: Colors.white,
       ),
       size: Size.infinite,
     );
@@ -84,7 +84,7 @@ class MatrixTheme extends ChessTheme {
   Widget buildLastMoveHighlight(BuildContext context, double opacity) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF00FF88).withValues(alpha: opacity),
+        color: Colors.white.withValues(alpha: opacity),
       ),
     );
   }
