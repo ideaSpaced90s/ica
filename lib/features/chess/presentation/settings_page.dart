@@ -187,7 +187,8 @@ class SettingsPage extends ConsumerWidget {
                               label: 'Animations',
                               sunken: state.isAnimationsEnabled,
                               onTap: () => notifier.toggleAnimations(),
-                              onLongPress: () => _showAnimationSettingsOverlay(context, ref),
+                              onLongPress: () =>
+                                  _showAnimationSettingsOverlay(context, ref),
                               child: Icon(
                                 state.isAnimationsEnabled
                                     ? Icons.movie_filter_rounded
@@ -314,6 +315,15 @@ class SettingsPage extends ConsumerWidget {
                               child: _buildThemePreview(
                                 const Color(0xFFF3E5F5),
                                 const Color(0xFF4A148C),
+                              ),
+                            ),
+                            _SquareSettingsButton(
+                              label: 'Royal 2.5D',
+                              sunken: state.boardThemeId == 'theme11',
+                              onTap: () => notifier.setBoardTheme('theme11'),
+                              child: _buildThemePreview(
+                                const Color(0xFFE0E0E0),
+                                const Color(0xFF1A237E),
                               ),
                             ),
                           ],
@@ -661,7 +671,9 @@ class SettingsPage extends ConsumerWidget {
             return AlertDialog(
               backgroundColor: ScholarlyTheme.backgroundStart,
               surfaceTintColor: Colors.transparent,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
               title: Text(
                 'Custom Time Control',
                 style: GoogleFonts.inter(
@@ -677,7 +689,8 @@ class SettingsPage extends ConsumerWidget {
                     value: totalMinutes.toDouble(),
                     min: 1,
                     max: 60,
-                    onChanged: (v) => setDialogState(() => totalMinutes = v.toInt()),
+                    onChanged: (v) =>
+                        setDialogState(() => totalMinutes = v.toInt()),
                   ),
                   const SizedBox(height: 24),
                   _TimeSliderRow(
@@ -685,7 +698,8 @@ class SettingsPage extends ConsumerWidget {
                     value: incrementSeconds.toDouble(),
                     min: 0,
                     max: 60,
-                    onChanged: (v) => setDialogState(() => incrementSeconds = v.toInt()),
+                    onChanged: (v) =>
+                        setDialogState(() => incrementSeconds = v.toInt()),
                   ),
                 ],
               ),
@@ -699,15 +713,19 @@ class SettingsPage extends ConsumerWidget {
                 ),
                 FilledButton(
                   onPressed: () {
-                    ref.read(chessProvider.notifier).setTimeControl(
-                      Duration(minutes: totalMinutes),
-                      Duration(seconds: incrementSeconds),
-                    );
+                    ref
+                        .read(chessProvider.notifier)
+                        .setTimeControl(
+                          Duration(minutes: totalMinutes),
+                          Duration(seconds: incrementSeconds),
+                        );
                     Navigator.of(context).pop();
                   },
                   style: FilledButton.styleFrom(
                     backgroundColor: ScholarlyTheme.accentBlue,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   child: Text(
                     'Apply',
@@ -722,7 +740,10 @@ class SettingsPage extends ConsumerWidget {
     );
   }
 
-  Future<void> _showAnimationSettingsOverlay(BuildContext context, WidgetRef ref) async {
+  Future<void> _showAnimationSettingsOverlay(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
     await showGeneralDialog(
       context: context,
       barrierDismissible: true,
@@ -737,7 +758,7 @@ class SettingsPage extends ConsumerWidget {
               builder: (context, ref, _) {
                 final state = ref.watch(chessProvider);
                 final notifier = ref.read(chessProvider.notifier);
-                
+
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: GlassPanel(
@@ -752,116 +773,156 @@ class SettingsPage extends ConsumerWidget {
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Animation Engine',
+                                  style: GoogleFonts.inter(
+                                    color: ScholarlyTheme.textPrimary,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.close,
+                                    color: ScholarlyTheme.textMuted,
+                                  ),
+                                  onPressed: () => Navigator.of(context).pop(),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
                             Text(
-                              'Animation Engine',
+                              'Fine-tune your visual experience',
                               style: GoogleFonts.inter(
-                                color: ScholarlyTheme.textPrimary,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
+                                color: ScholarlyTheme.textMuted,
+                                fontSize: 12,
                               ),
                             ),
-                            IconButton(
-                              icon: const Icon(Icons.close, color: ScholarlyTheme.textMuted),
+                            const SizedBox(height: 24),
+
+                            _AnimationToggle(
+                              icon: Icons.auto_awesome_motion_rounded,
+                              label: 'Signature Piece Motion',
+                              description:
+                                  'Custom arcs, jumps, and rotations per piece type',
+                              value:
+                                  state.animationSettings['pieceMotion'] ??
+                                  true,
+                              onChanged: (v) => notifier.updateAnimationSetting(
+                                'pieceMotion',
+                                v,
+                              ),
+                            ),
+                            _AnimationToggle(
+                              icon: Icons.videocam_rounded,
+                              label: 'Cinematic Camera',
+                              description:
+                                  'Dynamic zoom and subtle board drift effects',
+                              value: state.animationSettings['camera'] ?? true,
+                              onChanged: (v) =>
+                                  notifier.updateAnimationSetting('camera', v),
+                            ),
+                            _AnimationToggle(
+                              icon: Icons.waves_rounded,
+                              label: 'Interaction Feedback',
+                              description:
+                                  'Tap ripples and landing micro-animations',
+                              value:
+                                  state.animationSettings['feedback'] ?? true,
+                              onChanged: (v) => notifier.updateAnimationSetting(
+                                'feedback',
+                                v,
+                              ),
+                            ),
+                            _AnimationToggle(
+                              icon: Icons.stars_rounded,
+                              label: 'System Indicators',
+                              description:
+                                  'Orbiting stars for hints, threats, and focus',
+                              value:
+                                  state.animationSettings['indicators'] ?? true,
+                              onChanged: (v) => notifier.updateAnimationSetting(
+                                'indicators',
+                                v,
+                              ),
+                            ),
+                            _AnimationToggle(
+                              icon: Icons.flare_rounded,
+                              label: 'Theme Special Effects',
+                              description:
+                                  'Capture explosions and movement trails',
+                              value:
+                                  state.animationSettings['themeEffects'] ??
+                                  true,
+                              onChanged: (v) => notifier.updateAnimationSetting(
+                                'themeEffects',
+                                v,
+                              ),
+                            ),
+                            _AnimationToggle(
+                              icon: Icons.blur_on_rounded,
+                              label: 'Theme Ambience',
+                              description:
+                                  'Animated backgrounds and square textures',
+                              value:
+                                  state.animationSettings['themeAmbience'] ??
+                                  true,
+                              onChanged: (v) => notifier.updateAnimationSetting(
+                                'themeAmbience',
+                                v,
+                              ),
+                            ),
+                            _AnimationToggle(
+                              icon: Icons.speed_rounded,
+                              label: 'Tactile & Kinetic Impact',
+                              description:
+                                  'Piece thuds, dust particles, and impact shakes',
+                              value:
+                                  state.animationSettings['kineticImpact'] ??
+                                  true,
+                              onChanged: (v) => notifier.updateAnimationSetting(
+                                'kineticImpact',
+                                v,
+                              ),
+                            ),
+
+                            const SizedBox(height: 16),
+                            FilledButton(
                               onPressed: () => Navigator.of(context).pop(),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: ScholarlyTheme.accentBlue,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: Text(
+                                'Done',
+                                style: GoogleFonts.inter(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Fine-tune your visual experience',
-                          style: GoogleFonts.inter(
-                            color: ScholarlyTheme.textMuted,
-                            fontSize: 12,
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        
-                        _AnimationToggle(
-                          icon: Icons.auto_awesome_motion_rounded,
-                          label: 'Signature Piece Motion',
-                          description: 'Custom arcs, jumps, and rotations per piece type',
-                          value: state.animationSettings['pieceMotion'] ?? true,
-                          onChanged: (v) => notifier.updateAnimationSetting('pieceMotion', v),
-                        ),
-                        _AnimationToggle(
-                          icon: Icons.videocam_rounded,
-                          label: 'Cinematic Camera',
-                          description: 'Dynamic zoom and subtle board drift effects',
-                          value: state.animationSettings['camera'] ?? true,
-                          onChanged: (v) => notifier.updateAnimationSetting('camera', v),
-                        ),
-                        _AnimationToggle(
-                          icon: Icons.waves_rounded,
-                          label: 'Interaction Feedback',
-                          description: 'Tap ripples and landing micro-animations',
-                          value: state.animationSettings['feedback'] ?? true,
-                          onChanged: (v) => notifier.updateAnimationSetting('feedback', v),
-                        ),
-                        _AnimationToggle(
-                          icon: Icons.stars_rounded,
-                          label: 'System Indicators',
-                          description: 'Orbiting stars for hints, threats, and focus',
-                          value: state.animationSettings['indicators'] ?? true,
-                          onChanged: (v) => notifier.updateAnimationSetting('indicators', v),
-                        ),
-                        _AnimationToggle(
-                          icon: Icons.flare_rounded,
-                          label: 'Theme Special Effects',
-                          description: 'Capture explosions and movement trails',
-                          value: state.animationSettings['themeEffects'] ?? true,
-                          onChanged: (v) => notifier.updateAnimationSetting('themeEffects', v),
-                        ),
-                        _AnimationToggle(
-                          icon: Icons.blur_on_rounded,
-                          label: 'Theme Ambience',
-                          description: 'Animated backgrounds and square textures',
-                          value: state.animationSettings['themeAmbience'] ?? true,
-                          onChanged: (v) => notifier.updateAnimationSetting('themeAmbience', v),
-                        ),
-                        _AnimationToggle(
-                          icon: Icons.speed_rounded,
-                          label: 'Tactile & Kinetic Impact',
-                          description: 'Piece thuds, dust particles, and impact shakes',
-                          value: state.animationSettings['kineticImpact'] ?? true,
-                          onChanged: (v) => notifier.updateAnimationSetting('kineticImpact', v),
-                        ),
-                        
-                        const SizedBox(height: 16),
-                        FilledButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          style: FilledButton.styleFrom(
-                            backgroundColor: ScholarlyTheme.accentBlue,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: Text(
-                            'Done',
-                            style: GoogleFonts.inter(fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
-                ),
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  },
+                );
+              },
+            ),
+          ),
+        );
+      },
       transitionBuilder: (context, a1, a2, child) {
         return Transform.scale(
           scale: Curves.easeOutBack.transform(a1.value),
-          child: FadeTransition(
-            opacity: a1,
-            child: child,
-          ),
+          child: FadeTransition(opacity: a1, child: child),
         );
       },
     );
@@ -893,10 +954,14 @@ class _AnimationToggle extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: value ? ScholarlyTheme.accentBlue.withValues(alpha: 0.1) : Colors.transparent,
+            color: value
+                ? ScholarlyTheme.accentBlue.withValues(alpha: 0.1)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: value ? ScholarlyTheme.accentBlue.withValues(alpha: 0.3) : Colors.transparent,
+              color: value
+                  ? ScholarlyTheme.accentBlue.withValues(alpha: 0.3)
+                  : Colors.transparent,
             ),
           ),
           child: Row(
@@ -907,7 +972,13 @@ class _AnimationToggle extends StatelessWidget {
                   color: ScholarlyTheme.panelBase,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(icon, color: value ? ScholarlyTheme.accentBlue : ScholarlyTheme.textMuted, size: 20),
+                child: Icon(
+                  icon,
+                  color: value
+                      ? ScholarlyTheme.accentBlue
+                      : ScholarlyTheme.textMuted,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -936,7 +1007,9 @@ class _AnimationToggle extends StatelessWidget {
                 value: value,
                 onChanged: onChanged,
                 activeThumbColor: ScholarlyTheme.accentBlue,
-                activeTrackColor: ScholarlyTheme.accentBlue.withValues(alpha: 0.3),
+                activeTrackColor: ScholarlyTheme.accentBlue.withValues(
+                  alpha: 0.3,
+                ),
               ),
             ],
           ),
@@ -1116,12 +1189,7 @@ class _TimeSliderRow extends StatelessWidget {
             overlayColor: ScholarlyTheme.accentBlue.withValues(alpha: 0.1),
             trackHeight: 4,
           ),
-          child: Slider(
-            value: value,
-            min: min,
-            max: max,
-            onChanged: onChanged,
-          ),
+          child: Slider(value: value, min: min, max: max, onChanged: onChanged),
         ),
       ],
     );
