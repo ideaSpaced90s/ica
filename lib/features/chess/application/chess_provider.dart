@@ -201,6 +201,7 @@ class ChessState {
       'themeAmbience': true,
     },
     this.isCouncilOnline = false,
+    this.baseTimeDuration = _initialClock,
   });
 
   final ChessGame game;
@@ -261,6 +262,7 @@ class ChessState {
   final bool isAnimationsEnabled;
   final Map<String, bool> animationSettings;
   final bool isCouncilOnline;
+  final Duration baseTimeDuration;
 
   String get currentBoardFen {
     if (viewingMoveIndex == null || viewingMoveIndex! >= recentMoves.length) {
@@ -332,6 +334,7 @@ class ChessState {
     bool? isAnimationsEnabled,
     Map<String, bool>? animationSettings,
     bool? isCouncilOnline,
+    Duration? baseTimeDuration,
   }) {
     return ChessState(
       game: game ?? this.game,
@@ -420,6 +423,7 @@ class ChessState {
       isAnimationsEnabled: isAnimationsEnabled ?? this.isAnimationsEnabled,
       animationSettings: animationSettings ?? this.animationSettings,
       isCouncilOnline: isCouncilOnline ?? this.isCouncilOnline,
+      baseTimeDuration: baseTimeDuration ?? this.baseTimeDuration,
     );
   }
 }
@@ -463,6 +467,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
         showCoordinates: s.showCoordinates,
         engineLevel: s.engineLevel,
         isAiOperational: s.isAiOperational,
+        baseTimeDuration: Duration(minutes: s.totalTimeMinutes),
         whiteTimeLeft: Duration(minutes: s.totalTimeMinutes),
         blackTimeLeft: Duration(minutes: s.totalTimeMinutes),
         incrementDuration: Duration(seconds: s.incrementSeconds),
@@ -489,7 +494,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
         showCoordinates: state.showCoordinates,
         engineLevel: state.engineLevel,
         isAiOperational: state.isAiOperational,
-        totalTimeMinutes: state.whiteTimeLeft.inMinutes,
+        totalTimeMinutes: state.baseTimeDuration.inMinutes,
         incrementSeconds: state.incrementDuration.inSeconds,
       );
       await _settingsRepository.saveSettings(s);
@@ -534,6 +539,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
   void setTimeControl(Duration total, Duration increment) {
     state = state.copyWith(
+      baseTimeDuration: total,
       whiteTimeLeft: total,
       blackTimeLeft: total,
       incrementDuration: increment,
@@ -1372,6 +1378,8 @@ class ChessNotifier extends StateNotifier<ChessState> {
       engineReady: state.engineReady,
       isCommentaryEngineLoading: _commentaryEngine.isInitializing,
       commentaryError: _commentaryEngine.lastError,
+      whiteTimeLeft: state.baseTimeDuration,
+      blackTimeLeft: state.baseTimeDuration,
       savedGames: state.savedGames,
       threatenedSquares: const [],
       isPromoting: false,
@@ -2033,9 +2041,8 @@ class ChessNotifier extends StateNotifier<ChessState> {
     final preserveHaptics = state.isHapticsEnabled;
     final preserveCoordinates = state.showCoordinates;
     final preserveAiOperational = state.isAiOperational;
-    final preserveWhiteTime = state.whiteTimeLeft;
-    final preserveBlackTime = state.blackTimeLeft;
     final preserveIncrement = state.incrementDuration;
+    final baseTime = state.baseTimeDuration;
 
     state = ChessState(
       game: ChessGame(),
@@ -2050,9 +2057,10 @@ class ChessNotifier extends StateNotifier<ChessState> {
       isHapticsEnabled: preserveHaptics,
       showCoordinates: preserveCoordinates,
       isAiOperational: preserveAiOperational,
-      whiteTimeLeft: preserveWhiteTime,
-      blackTimeLeft: preserveBlackTime,
+      whiteTimeLeft: baseTime,
+      blackTimeLeft: baseTime,
       incrementDuration: preserveIncrement,
+      baseTimeDuration: baseTime,
       isEngineThinking: false,
       servicesStarted: state.servicesStarted,
       servicesStarting: false,
