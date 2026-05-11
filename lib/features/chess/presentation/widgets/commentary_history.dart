@@ -71,23 +71,20 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
     final state = widget.state;
     final history = state.commentaryHistory;
     
-    return Container(
-      decoration: ScholarlyTheme.modernDecoration(),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: SelectionArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                child: _buildContent(state, history),
-              ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          child: SelectionArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              child: _buildContent(state, history),
             ),
           ),
-          const Divider(height: 1, color: ScholarlyTheme.panelStroke),
-          _buildInput(context),
-        ],
-      ),
+        ),
+        const Divider(height: 1, color: ScholarlyTheme.panelStroke),
+        _buildInput(context),
+      ],
     );
   }
 

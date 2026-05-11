@@ -159,6 +159,8 @@ class _MainPageState extends ConsumerState<MainPage> {
     WidgetRef ref,
     ChessState state,
   ) {
+    final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -196,9 +198,12 @@ class _MainPageState extends ConsumerState<MainPage> {
         ),
         // Board Area
         if (_isCommentaryExpanded)
-          AspectRatio(
-            aspectRatio: 1.0,
-            child: BoardStage(isExpanded: true),
+          Flexible(
+            flex: isKeyboardOpen ? 1 : 0,
+            child: AspectRatio(
+              aspectRatio: 1.0,
+              child: BoardStage(isExpanded: true),
+            ),
           )
         else
           Expanded(
@@ -218,11 +223,13 @@ class _MainPageState extends ConsumerState<MainPage> {
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: _buildCollapsedCommentaryHeader(context, ref, state),
           ),
-        const SizedBox(height: 8),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
-          child: _buildActionRow(context, ref, state),
-        ),
+        if (!isKeyboardOpen) ...[
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
+            child: _buildActionRow(context, ref, state),
+          ),
+        ],
       ],
     );
   }
