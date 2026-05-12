@@ -60,6 +60,7 @@ class SavedGameEntry {
     this.commentaryHistory = const [],
     this.isFavorite = false,
     this.customName,
+    this.gameMode = 'classic',
   });
 
   final String id;
@@ -76,6 +77,7 @@ class SavedGameEntry {
   final List<CommentaryEntry> commentaryHistory;
   final bool isFavorite;
   final String? customName;
+  final String gameMode;
 
   SavedGameEntry copyWith({
     String? id,
@@ -92,6 +94,7 @@ class SavedGameEntry {
     List<CommentaryEntry>? commentaryHistory,
     bool? isFavorite,
     Object? customName = _sentinel,
+    String? gameMode,
   }) {
     return SavedGameEntry(
       id: id ?? this.id,
@@ -112,6 +115,7 @@ class SavedGameEntry {
       customName: identical(customName, _sentinel)
           ? this.customName
           : customName as String?,
+      gameMode: gameMode ?? this.gameMode,
     );
   }
 
@@ -135,6 +139,7 @@ class SavedGameEntry {
           .toList(),
       isFavorite: json['isFavorite'] as bool? ?? false,
       customName: json['customName'] as String?,
+      gameMode: json['gameMode'] as String? ?? 'classic',
     );
   }
 
@@ -154,6 +159,7 @@ class SavedGameEntry {
       'commentaryHistory': commentaryHistory.map((e) => e.toJson()).toList(),
       'isFavorite': isFavorite,
       'customName': customName,
+      'gameMode': gameMode,
     };
   }
 }

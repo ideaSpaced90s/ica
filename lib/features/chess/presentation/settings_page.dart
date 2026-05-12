@@ -48,6 +48,31 @@ class SettingsPage extends ConsumerWidget {
           // Settings Sections
           SliverList(
             delegate: SliverChildListDelegate([
+              // GAME MODE
+              _SettingsCategory(
+                title: 'GAME MODE',
+                children: [
+                  _SettingsTile(
+                    label: 'Classic Chess',
+                    description: 'Standard starting position and orthodox rules',
+                    icon: Icons.grid_on_rounded,
+                    onTap: () => notifier.setGameMode('classic'),
+                    trailing: state.gameMode == 'classic'
+                        ? const Icon(Icons.check_circle_rounded, color: ScholarlyTheme.accentBlue)
+                        : const SizedBox(),
+                  ),
+                  _SettingsTile(
+                    label: 'Chess 960 (Fischer Random)',
+                    description: 'Randomized back-rank setup for dynamic play',
+                    icon: Icons.shuffle_rounded,
+                    onTap: () => notifier.setGameMode('chess960'),
+                    trailing: state.gameMode == 'chess960'
+                        ? const Icon(Icons.check_circle_rounded, color: ScholarlyTheme.accentBlue)
+                        : const SizedBox(),
+                  ),
+                ],
+              ),
+
               // PREFERENCES
               _SettingsCategory(
                 title: 'PREFERENCES',

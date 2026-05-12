@@ -638,7 +638,9 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
     }
 
     if (_selectedSquare != null && _legalTargets.contains(squareName)) {
-      final isCapture = displayGame.getPiece(squareName) != null;
+      final targetPiece = displayGame.getPiece(squareName);
+      final sourcePiece = displayGame.getPiece(_selectedSquare!);
+      final isCapture = targetPiece != null && targetPiece.color != sourcePiece?.color;
       if (isCapture && ref.read(chessProvider.notifier).isAnimationTypeEnabled('themeEffects')) {
         final themeId = chessState.boardThemeId;
         if (themeId == 'theme2') {

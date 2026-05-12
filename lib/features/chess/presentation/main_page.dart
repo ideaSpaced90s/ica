@@ -350,6 +350,25 @@ class _MainPageState extends ConsumerState<MainPage> with WidgetsBindingObserver
                   letterSpacing: 1.5,
                 ),
               ),
+              if (state.isChess960) ...[
+                const SizedBox(width: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: ScholarlyTheme.accentBlueSoft,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.3)),
+                  ),
+                  child: Text(
+                    '960',
+                    style: GoogleFonts.jetBrainsMono(
+                      color: ScholarlyTheme.accentBlue,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
           Text(

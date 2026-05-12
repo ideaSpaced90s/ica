@@ -95,6 +95,11 @@ class StockfishController extends StateNotifier<StockfishState> {
     await _service.analyzePosition(fen, depth: depth);
   }
 
+  /// Enables or disables Chess 960 rules inside Stockfish.
+  Future<void> setChess960Mode(bool isEnabled) async {
+    await _service.setChess960Mode(isEnabled);
+  }
+
   @override
   void dispose() {
     _subscription?.cancel();

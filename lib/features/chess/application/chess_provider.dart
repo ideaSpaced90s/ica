@@ -11,6 +11,7 @@ import '../data/saved_game_repository.dart';
 import '../data/stockfish_service.dart';
 import '../data/uci_parser.dart';
 import '../domain/chess_game.dart';
+import '../domain/chess_960_generator.dart';
 import '../services/commentary_engine.dart';
 import '../services/chess_sound_service.dart';
 import '../services/ai_context_service.dart';
@@ -56,6 +57,7 @@ class _BoardSnapshot {
     required this.isAnimationsEnabled,
     required this.isPlayerWhite,
     required this.isBoardFlipped,
+    required this.gameMode,
   });
 
   final String fen;
@@ -88,6 +90,7 @@ class _BoardSnapshot {
   final bool isAnimationsEnabled;
   final bool isPlayerWhite;
   final bool isBoardFlipped;
+  final String gameMode;
 }
 
 class MoveAnimationData {
@@ -203,6 +206,7 @@ class ChessState {
     },
     this.isCouncilOnline = false,
     this.baseTimeDuration = _initialClock,
+    this.gameMode = 'classic',
   });
 
   final ChessGame game;
@@ -265,6 +269,9 @@ class ChessState {
   final Map<String, bool> animationSettings;
   final bool isCouncilOnline;
   final Duration baseTimeDuration;
+  final String gameMode;
+
+  bool get isChess960 => gameMode == 'chess960';
 
   String get currentBoardFen {
     if (viewingMoveIndex == null || viewingMoveIndex! >= recentMoves.length) {
@@ -338,6 +345,7 @@ class ChessState {
     Map<String, bool>? animationSettings,
     bool? isCouncilOnline,
     Duration? baseTimeDuration,
+    String? gameMode,
   }) {
     return ChessState(
       game: game ?? this.game,
@@ -430,6 +438,7 @@ class ChessState {
       animationSettings: animationSettings ?? this.animationSettings,
       isCouncilOnline: isCouncilOnline ?? this.isCouncilOnline,
       baseTimeDuration: baseTimeDuration ?? this.baseTimeDuration,
+      gameMode: gameMode ?? this.gameMode,
     );
   }
 }
@@ -463,7 +472,13 @@ class ChessNotifier extends StateNotifier<ChessState> {
   Future<void> _loadSettings() async {
     try {
       final s = await _settingsRepository.loadSettings();
+      final is960 = s.gameMode == 'chess960';
+      final initialGame = is960 
+          ? ChessGame(fen: Chess960Generator.generateRandomPosition().fen, isChess960: true)
+          : ChessGame(isChess960: false);
+
       state = state.copyWith(
+        game: initialGame,
         boardThemeId: s.boardThemeId,
         isSoundEnabled: s.isSoundEnabled,
         isMusicEnabled: s.isMusicEnabled,
@@ -477,7 +492,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
         whiteTimeLeft: Duration(minutes: s.totalTimeMinutes),
         blackTimeLeft: Duration(minutes: s.totalTimeMinutes),
         incrementDuration: Duration(seconds: s.incrementSeconds),
+        gameMode: s.gameMode,
       );
+      await _engine.setChess960Mode(is960);
       _soundService.updateSettings(
         sfxEnabled: s.isSoundEnabled,
         bgmEnabled: s.isMusicEnabled,
@@ -502,11 +519,20 @@ class ChessNotifier extends StateNotifier<ChessState> {
         isAiOperational: state.isAiOperational,
         totalTimeMinutes: state.baseTimeDuration.inMinutes,
         incrementSeconds: state.incrementDuration.inSeconds,
+        gameMode: state.gameMode,
       );
       await _settingsRepository.saveSettings(s);
     } catch (e) {
       debugPrint('Failed to save settings: $e');
     }
+  }
+
+  Future<void> setGameMode(String mode) async {
+    final is960 = mode == 'chess960';
+    state = state.copyWith(gameMode: mode);
+    await _engine.setChess960Mode(is960);
+    await _saveSettings();
+    await reset();
   }
 
   void toggleSound() {
@@ -935,6 +961,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
         commentaryHistory: state.commentaryHistory,
         customName: customName,
         isFavorite: isFavorite,
+        gameMode: state.gameMode,
       );
 
       final saves = isUpdate
@@ -1015,7 +1042,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
     _redoStack.clear();
     _stopClock();
 
-    final restoredGame = ChessGame(fen: entry.fen);
+    final is960 = entry.gameMode == 'chess960';
+    await _engine.setChess960Mode(is960);
+    final restoredGame = ChessGame(fen: entry.fen, isChess960: is960);
     state = ChessState(
       game: restoredGame,
       lastMove: entry.lastMove,
@@ -1050,6 +1079,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
       isAnimationsEnabled: state.isAnimationsEnabled,
       animationSettings: state.animationSettings,
       loadedSaveId: entry.id,
+      gameMode: entry.gameMode,
     );
 
     _syncUndoRedoFlags();
@@ -1111,6 +1141,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
       isAnimationsEnabled: state.isAnimationsEnabled,
       isPlayerWhite: state.isPlayerWhite,
       isBoardFlipped: state.isBoardFlipped,
+      gameMode: state.gameMode,
     );
   }
 
@@ -1118,8 +1149,11 @@ class ChessNotifier extends StateNotifier<ChessState> {
     _cancelCommentaryReveal();
     _pendingHintFen = null;
 
+    final is960 = snapshot.gameMode == 'chess960';
+    unawaited(_engine.setChess960Mode(is960));
+
     state = state.copyWith(
-      game: ChessGame(fen: snapshot.fen),
+      game: ChessGame(fen: snapshot.fen, isChess960: is960),
       lastMove: snapshot.lastMove,
       recentMoves: snapshot.recentMoves,
       previousEvaluation: snapshot.previousEvaluation,
@@ -1150,6 +1184,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
       isAiOperational: snapshot.isAiOperational,
       isPlayerWhite: snapshot.isPlayerWhite,
       isBoardFlipped: snapshot.isBoardFlipped,
+      gameMode: snapshot.gameMode,
     );
     _syncUndoRedoFlags();
     if (state.clockStarted) {
@@ -1427,8 +1462,12 @@ class ChessNotifier extends StateNotifier<ChessState> {
     _stopClock();
 
     final newIsPlayerWhite = !state.isPlayerWhite;
+    final newGame = state.isChess960 
+        ? ChessGame(fen: Chess960Generator.generateRandomPosition().fen, isChess960: true)
+        : ChessGame(isChess960: false);
+
     state = state.copyWith(
-      game: ChessGame(),
+      game: newGame,
       isPlayerWhite: newIsPlayerWhite,
       isBoardFlipped: !newIsPlayerWhite,
       isEngineThinking: !newIsPlayerWhite && state.servicesStarted,
@@ -2102,9 +2141,16 @@ class ChessNotifier extends StateNotifier<ChessState> {
     final preserveAiOperational = state.isAiOperational;
     final preserveIncrement = state.incrementDuration;
     final baseTime = state.baseTimeDuration;
+    final preserveMode = state.gameMode;
+
+    final is960 = preserveMode == 'chess960';
+    await _engine.setChess960Mode(is960);
+    final newGame = is960 
+        ? ChessGame(fen: Chess960Generator.generateRandomPosition().fen, isChess960: true)
+        : ChessGame(isChess960: false);
 
     state = ChessState(
-      game: ChessGame(),
+      game: newGame,
       isPlayerWhite: preservePlayerWhite,
       isBoardFlipped: preserveBoardFlipped,
       isEngineVsEngine: preserveEvE,
@@ -2129,6 +2175,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
       savedGames: state.savedGames,
       pendingEngineMove: null, // Clear pending move on reset
       isGameOverDismissed: false,
+      gameMode: preserveMode,
     );
 
     _syncUndoRedoFlags();

@@ -185,6 +185,10 @@ class StockfishService {
     await sendCommand('setoption name Skill Level value $level');
   }
 
+  Future<void> setChess960Mode(bool isEnabled) async {
+    await sendCommand('setoption name UCI_Chess960 value ${isEnabled ? "true" : "false"}');
+  }
+
   void dispose() {
     if (_isDisposed) return;
     _isDisposed = true;

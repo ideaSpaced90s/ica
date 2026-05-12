@@ -16,6 +16,7 @@ class AppSettings {
   final int totalTimeMinutes;
   final int incrementSeconds;
   final Map<String, bool> animationSettings;
+  final String gameMode;
 
   AppSettings({
     this.boardThemeId = 'classic',
@@ -28,6 +29,7 @@ class AppSettings {
     this.isAiOperational = true,
     this.totalTimeMinutes = 10,
     this.incrementSeconds = 0,
+    this.gameMode = 'classic',
     this.animationSettings = const {
       'pieceMotion': true,
       'camera': true,
@@ -50,6 +52,7 @@ class AppSettings {
         'isAiOperational': isAiOperational,
         'totalTimeMinutes': totalTimeMinutes,
         'incrementSeconds': incrementSeconds,
+        'gameMode': gameMode,
         'animationSettings': animationSettings,
       };
 
@@ -64,6 +67,7 @@ class AppSettings {
         isAiOperational: json['isAiOperational'] ?? true,
         totalTimeMinutes: json['totalTimeMinutes'] ?? 10,
         incrementSeconds: json['incrementSeconds'] ?? 0,
+        gameMode: json['gameMode'] ?? 'classic',
         animationSettings: json['animationSettings'] != null
             ? Map<String, bool>.from(json['animationSettings'])
             : const {
