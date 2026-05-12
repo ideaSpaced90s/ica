@@ -629,15 +629,6 @@ class SettingsPage extends ConsumerWidget {
                               ),
                             ),
                             _AnimationToggle(
-                              icon: Icons.videocam_rounded,
-                              label: 'Cinematic Camera',
-                              description:
-                                  'Dynamic zoom and subtle board drift effects',
-                              value: state.animationSettings['camera'] ?? true,
-                              onChanged: (v) =>
-                                  notifier.updateAnimationSetting('camera', v),
-                            ),
-                            _AnimationToggle(
                               icon: Icons.waves_rounded,
                               label: 'Interaction Feedback',
                               description:

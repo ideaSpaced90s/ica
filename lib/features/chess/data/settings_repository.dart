@@ -32,7 +32,6 @@ class AppSettings {
     this.gameMode = 'classic',
     this.animationSettings = const {
       'pieceMotion': true,
-      'camera': true,
       'feedback': true,
       'indicators': true,
       'themeEffects': true,
@@ -72,7 +71,6 @@ class AppSettings {
         ? Map<String, bool>.from(json['animationSettings'])
         : const {
             'pieceMotion': true,
-            'camera': true,
             'feedback': true,
             'indicators': true,
             'themeEffects': true,

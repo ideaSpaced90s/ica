@@ -118,25 +118,6 @@ class MoveAnimationData {
   bool get isCastle => rookFrom != null && rookTo != null;
 }
 
-class CameraMotionCue {
-  final int id;
-  final String from;
-  final String to;
-  final bool isCapture;
-  final bool isCheck;
-  final bool isCheckmate;
-  final String? capturedPiece;
-
-  const CameraMotionCue({
-    required this.id,
-    required this.from,
-    required this.to,
-    required this.isCapture,
-    required this.isCheck,
-    required this.isCheckmate,
-    this.capturedPiece,
-  });
-}
 
 class ChessState {
   ChessState({
@@ -181,7 +162,6 @@ class ChessState {
     this.pendingEngineMove,
     this.engineSelectionSquare,
     this.moveAnimation,
-    this.cameraMotionCue,
     this.boardThemeId = 'classic',
     this.isSoundEnabled = true,
     this.isMusicEnabled = false,
@@ -199,7 +179,6 @@ class ChessState {
     this.isAnimationsEnabled = true,
     this.animationSettings = const {
       'pieceMotion': true,
-      'camera': true,
       'feedback': true,
       'indicators': true,
       'themeEffects': true,
@@ -251,7 +230,6 @@ class ChessState {
   final String? pendingEngineMove;
   final String? engineSelectionSquare;
   final MoveAnimationData? moveAnimation;
-  final CameraMotionCue? cameraMotionCue;
   final String boardThemeId;
   final bool isSoundEnabled;
   final bool isMusicEnabled;
@@ -327,7 +305,6 @@ class ChessState {
     Object? pendingEngineMove = _sentinel,
     Object? engineSelectionSquare = _sentinel,
     Object? moveAnimation = _sentinel,
-    Object? cameraMotionCue = _sentinel,
     String? boardThemeId,
     bool? isSoundEnabled,
     bool? isMusicEnabled,
@@ -412,9 +389,6 @@ class ChessState {
       moveAnimation: identical(moveAnimation, _sentinel)
           ? this.moveAnimation
           : moveAnimation as MoveAnimationData?,
-      cameraMotionCue: identical(cameraMotionCue, _sentinel)
-          ? this.cameraMotionCue
-          : cameraMotionCue as CameraMotionCue?,
       boardThemeId: boardThemeId ?? this.boardThemeId,
       isSoundEnabled: isSoundEnabled ?? this.isSoundEnabled,
       isMusicEnabled: isMusicEnabled ?? this.isMusicEnabled,
@@ -772,7 +746,6 @@ class ChessNotifier extends StateNotifier<ChessState> {
   String? _pendingHintFen;
   Future<void>? _startupFuture;
   bool _isDisposed = false;
-  int _cameraMotionCueId = 0;
   DateTime _lastInfoUpdateTime = DateTime.fromMillisecondsSinceEpoch(0);
 
   Future<void> ensureGameServicesStarted({
@@ -1213,7 +1186,6 @@ class ChessNotifier extends StateNotifier<ChessState> {
       pendingEngineMove: snapshot.pendingEngineMove,
       engineSelectionSquare: snapshot.engineSelectionSquare,
       moveAnimation: snapshot.moveAnimation,
-      cameraMotionCue: null,
       isAiOperational: snapshot.isAiOperational,
       isPlayerWhite: snapshot.isPlayerWhite,
       isBoardFlipped: snapshot.isBoardFlipped,
@@ -1737,16 +1709,6 @@ class ChessNotifier extends StateNotifier<ChessState> {
       }
     }
 
-    final capturedType = move?.captured
-        ?.toString()
-        .toLowerCase(); // 'q', 'r', 'b', 'n', 'p'
-    final isHeavyCapture = ['q', 'r', 'b', 'n'].contains(capturedType);
-
-    // Cinematic Camera refinement:
-    // Trigger only on checks, checkmates, or heavy unit captures.
-    final shouldTriggerCamera =
-        state.game.inCheckmate || state.game.inCheck || isHeavyCapture;
-
     state = state.copyWith(
       game: state.game, // Maintain the same instance to preserve history
       lastMove: lastMove,
@@ -1759,17 +1721,6 @@ class ChessNotifier extends StateNotifier<ChessState> {
           ? _clockSideForTurn()
           : state.activeClockSide,
       threatenedSquares: threatened,
-      cameraMotionCue: shouldTriggerCamera
-          ? CameraMotionCue(
-              id: ++_cameraMotionCueId,
-              from: lastMove.length >= 2 ? lastMove.substring(0, 2) : '',
-              to: lastMove.length >= 4 ? lastMove.substring(2, 4) : '',
-              isCapture: move?.captured != null,
-              isCheck: state.game.inCheck,
-              isCheckmate: state.game.inCheckmate,
-              capturedPiece: capturedType,
-            )
-          : state.cameraMotionCue,
     );
 
     if (state.game.inCheckmate) {

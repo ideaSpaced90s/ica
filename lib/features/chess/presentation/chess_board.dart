@@ -24,7 +24,6 @@ import 'animation/signature_move_overlay.dart';
 import 'animation/landing_feedback.dart';
 import 'animation/tap_ripple.dart';
 import 'animation/piece_motion_profile.dart';
-import 'animation/cinematic_board_camera.dart';
 import 'animation/knight_dust.dart';
 import 'animation/bishop_wind.dart';
 import 'animation/impact_shake.dart';
@@ -157,15 +156,9 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
                         ]
                       : [],
                 ),
-                child: CinematicBoardCamera(
-                  cue: chessState.cameraMotionCue,
-                  isEnabled: ref
-                      .read(chessProvider.notifier)
-                      .isAnimationTypeEnabled('camera'),
-                  isFlipped: chessState.isBoardFlipped,
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
                       // 1. Background Effects
                       chessTheme.buildBackground(
                         context,
@@ -535,8 +528,7 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
                           data: chessState.moveAnimation!,
                           boardSize: boardSize,
                           isFlipped: chessState.isBoardFlipped,
-                          isCheckmate:
-                              chessState.cameraMotionCue?.isCheckmate ?? false,
+                          isCheckmate: chessState.game.inCheckmate,
                           onComplete: () {
                             ref
                                 .read(chessProvider.notifier)
@@ -549,9 +541,7 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
                                 pieceCode,
                                 profile,
                                 boardSize,
-                                isCritical:
-                                    chessState.cameraMotionCue?.isCheckmate ??
-                                    false,
+                                isCritical: chessState.game.inCheckmate,
                               ),
                           onActionTrigger: (action, position) {
                             if (action == 'dust_puff' &&
@@ -685,7 +675,6 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
                       const PromotionOverlay(),
                     ],
                   ),
-                ),
               ),
             ),
           ),
