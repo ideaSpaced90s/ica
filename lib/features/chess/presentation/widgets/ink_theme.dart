@@ -77,7 +77,7 @@ class BrushStrokePiecePainter extends CustomPainter {
       ); // Slight ink bleed
 
     final fillPaint = Paint()
-      ..color = inkColor.withValues(alpha: 0.15)
+      ..color = isWhite ? Colors.white : const Color(0xFF1A1A1A)
       ..style = PaintingStyle.fill;
 
     canvas.save();
