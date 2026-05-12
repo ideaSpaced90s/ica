@@ -35,9 +35,11 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
   @override
   void didUpdateWidget(CommentaryHistory oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.state.commentaryHistory.length != oldWidget.state.commentaryHistory.length ||
-        (widget.state.commentaryHistory.isNotEmpty && 
-         widget.state.commentaryHistory.last.text != oldWidget.state.commentaryHistory.last.text)) {
+    if (widget.state.commentaryHistory.length !=
+            oldWidget.state.commentaryHistory.length ||
+        (widget.state.commentaryHistory.isNotEmpty &&
+            widget.state.commentaryHistory.last.text !=
+                oldWidget.state.commentaryHistory.last.text)) {
       _scrollToBottom();
     }
   }
@@ -70,7 +72,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
   Widget build(BuildContext context) {
     final state = widget.state;
     final history = state.commentaryHistory;
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -104,10 +106,16 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
             child: TextField(
               controller: _textController,
               onSubmitted: (_) => _handleSend(),
-              style: GoogleFonts.inter(fontSize: 13, color: ScholarlyTheme.textPrimary),
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                color: ScholarlyTheme.textPrimary,
+              ),
               decoration: InputDecoration(
                 hintText: 'Ask Kingslayer AI...',
-                hintStyle: GoogleFonts.inter(color: ScholarlyTheme.textSubtle, fontSize: 13),
+                hintStyle: GoogleFonts.inter(
+                  color: ScholarlyTheme.textSubtle,
+                  fontSize: 13,
+                ),
                 border: InputBorder.none,
                 isDense: true,
                 contentPadding: const EdgeInsets.symmetric(vertical: 8),
@@ -116,7 +124,11 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
           ),
           IconButton(
             onPressed: _handleSend,
-            icon: Icon(Icons.send_rounded, size: 18, color: ScholarlyTheme.accentBlue),
+            icon: Icon(
+              Icons.send_rounded,
+              size: 18,
+              color: ScholarlyTheme.accentBlue,
+            ),
             tooltip: 'Send Message',
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),
@@ -129,7 +141,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
   void _handleSend() {
     final text = _textController.text.trim();
     if (text.isEmpty) return;
-    
+
     ref.read(chessProvider.notifier).sendUserQuery(text);
     _textController.clear();
     FocusScope.of(context).unfocus();
@@ -140,7 +152,11 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
       return Center(
         child: Text(
           state.startupError ?? state.commentaryError!,
-          style: GoogleFonts.inter(color: Colors.red.shade700, fontSize: 14, fontWeight: FontWeight.w500),
+          style: GoogleFonts.inter(
+            color: Colors.red.shade700,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
           textAlign: TextAlign.center,
         ),
       );
@@ -173,12 +189,14 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
       );
     }
 
-    final dots = '.' * _pulse; 
+    final dots = '.' * _pulse;
 
     return ListView.builder(
       controller: _scrollController,
       padding: EdgeInsets.zero,
-      itemCount: history.length + (state.isCommentaryLoading && !state.isCommentaryStreaming ? 1 : 0),
+      itemCount:
+          history.length +
+          (state.isCommentaryLoading && !state.isCommentaryStreaming ? 1 : 0),
       itemBuilder: (context, index) {
         if (index == history.length) {
           return _buildThinkingIndicator(dots);
@@ -187,7 +205,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
         final entry = history[index];
         final isLast = index == history.length - 1;
         final isStreaming = isLast && state.isCommentaryStreaming;
-        
+
         if (entry.isUser) {
           return _buildUserBubble(entry);
         }
@@ -222,7 +240,9 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
                 bottomLeft: Radius.circular(12),
                 bottomRight: Radius.circular(12),
               ),
-              border: Border.all(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.2)),
+              border: Border.all(
+                color: ScholarlyTheme.accentBlue.withValues(alpha: 0.2),
+              ),
             ),
             child: Text(
               entry.text,
@@ -265,7 +285,10 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
                 ),
                 const SizedBox(height: 4),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: ScholarlyTheme.backgroundStart,
                     borderRadius: const BorderRadius.only(
@@ -273,7 +296,9 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
                       bottomLeft: Radius.circular(12),
                       bottomRight: Radius.circular(12),
                     ),
-                    border: Border.all(color: ScholarlyTheme.panelStroke.withValues(alpha: 0.5)),
+                    border: Border.all(
+                      color: ScholarlyTheme.panelStroke.withValues(alpha: 0.5),
+                    ),
                   ),
                   child: Text.rich(
                     TextSpan(
@@ -287,8 +312,8 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
                           ),
                         ),
                         if (!entry.isComplete && !isStreaming)
-                           TextSpan(
-                            text: ' •••', 
+                          TextSpan(
+                            text: ' •••',
                             style: GoogleFonts.inter(
                               color: ScholarlyTheme.textMuted,
                               fontSize: 13,
@@ -296,7 +321,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
                           ),
                         if (isStreaming)
                           TextSpan(
-                            text: ' ┃', 
+                            text: ' ┃',
                             style: GoogleFonts.inter(
                               color: ScholarlyTheme.accentBlue,
                               fontSize: 13,
@@ -324,7 +349,11 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
           CircleAvatar(
             radius: 12,
             backgroundColor: ScholarlyTheme.accentBlueSoft,
-            child: Icon(Icons.psychology, size: 14, color: ScholarlyTheme.accentBlue),
+            child: Icon(
+              Icons.psychology,
+              size: 14,
+              color: ScholarlyTheme.accentBlue,
+            ),
           ),
           const SizedBox(width: 10),
           Container(
@@ -351,4 +380,3 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
     );
   }
 }
-

@@ -26,10 +26,7 @@ class MatrixTheme extends ChessTheme {
   Widget buildBackground(BuildContext context, bool animationsEnabled) {
     if (!animationsEnabled) return const SizedBox.shrink();
     return const Stack(
-      children: [
-        MatrixFallingCodeOverlay(),
-        ScanlineOverlay(),
-      ],
+      children: [MatrixFallingCodeOverlay(), ScanlineOverlay()],
     );
   }
 
@@ -89,9 +86,7 @@ class MatrixTheme extends ChessTheme {
   @override
   Widget buildLastMoveHighlight(BuildContext context, double opacity) {
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: opacity),
-      ),
+      decoration: BoxDecoration(color: Colors.white.withValues(alpha: opacity)),
     );
   }
 }

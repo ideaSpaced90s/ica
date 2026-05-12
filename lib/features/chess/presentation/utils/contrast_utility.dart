@@ -10,15 +10,17 @@ class ContrastUtility {
   // Piece Colors
   static const Color whitePieceFill = Color(0xFFFFFFFF);
   static const Color blackPieceFill = Color(0xFF121212);
-  
+
   // Interaction
   static const Color selectionGlow = Color(0xFFFFFFFF);
   static const Color validMoveDot = Color(0xCCFFFFFF); // 80% opacity
   static const Color selectionRing = Color(0xFFFFFFFF);
 
-  static Color getPieceFill(bool isWhite) => isWhite ? whitePieceFill : blackPieceFill;
-  
-  static Color getStrokeColor(bool isWhite) => isWhite ? Colors.black : Colors.white;
+  static Color getPieceFill(bool isWhite) =>
+      isWhite ? whitePieceFill : blackPieceFill;
+
+  static Color getStrokeColor(bool isWhite) =>
+      isWhite ? Colors.black : Colors.white;
 
   static List<BoxShadow> getPieceShadow() {
     return [
@@ -36,10 +38,7 @@ class ContrastUtility {
       ..shader = LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: [
-          Colors.white.withValues(alpha: 0.25),
-          Colors.transparent,
-        ],
+        colors: [Colors.white.withValues(alpha: 0.25), Colors.transparent],
         stops: const [0.0, 0.4],
       ).createShader(rect)
       ..style = PaintingStyle.fill;
@@ -51,10 +50,7 @@ class ContrastUtility {
       ..shader = RadialGradient(
         center: const Alignment(0.0, -0.3),
         radius: 0.8,
-        colors: [
-          isWhite ? Colors.white : const Color(0xFF333333),
-          baseColor,
-        ],
+        colors: [isWhite ? Colors.white : const Color(0xFF333333), baseColor],
       ).createShader(rect)
       ..style = PaintingStyle.fill;
   }

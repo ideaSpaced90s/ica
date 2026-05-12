@@ -84,10 +84,10 @@ class ForestTheme extends ChessTheme {
         height: isEnemy ? 38 : 12,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: isEnemy 
-              ? Colors.transparent 
+          color: isEnemy
+              ? Colors.transparent
               : const Color(0xFFE7F1FF).withValues(alpha: 0.75),
-          border: isEnemy 
+          border: isEnemy
               ? Border.all(color: const Color(0xFFE7F1FF), width: 2.8)
               : null,
         ),

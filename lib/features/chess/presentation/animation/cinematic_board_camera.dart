@@ -139,14 +139,14 @@ class _CinematicBoardCameraState extends State<CinematicBoardCamera>
 
   double _driftPixels(CameraMotionCue cue) {
     if (cue.isCheckmate) return 5.0;
-    
+
     // Tiered impact for heavy captures
     if (cue.isCapture) {
       if (cue.capturedPiece == 'q') return 4.8; // Queen: High impact
       if (cue.capturedPiece == 'r') return 4.5; // Rook: Heavy impact
       return 4.0; // Bishop/Knight: Standard impact
     }
-    
+
     if (cue.isCheck) return 4.0;
     return 3.0;
   }
@@ -161,7 +161,7 @@ class _CinematicBoardCameraState extends State<CinematicBoardCamera>
       if (cue.capturedPiece == 'r') return 0.020; // Rook: Strong zoom
       return 0.012; // Bishop/Knight: Subtle zoom
     }
-    
+
     return 0.006;
   }
 

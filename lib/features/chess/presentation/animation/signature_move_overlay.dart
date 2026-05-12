@@ -26,7 +26,8 @@ class SignatureMoveOverlay extends ConsumerStatefulWidget {
     String to,
     String pieceCode,
     PieceMotionProfile profile,
-  )? onLand;
+  )?
+  onLand;
 
   /// Trigger for special visual effects (e.g. 'dust_puff')
   final void Function(String action, Offset position)? onActionTrigger;
@@ -54,7 +55,7 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
   late double _squareSize;
   late Animation<double> _curvedProgress;
   late PieceMotionProfile _profile;
-  
+
   // Castling support
   late List<Offset>? _rookPath;
   late PieceMotionProfile? _rookProfile;
@@ -102,7 +103,9 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
       curve: _profileAwareCurve(boardThemeId, _profile),
     );
 
-    final pieceMotionEnabled = ref.read(chessProvider.notifier).isAnimationTypeEnabled('pieceMotion');
+    final pieceMotionEnabled = ref
+        .read(chessProvider.notifier)
+        .isAnimationTypeEnabled('pieceMotion');
     if (!pieceMotionEnabled) {
       _controller.value = 1.0;
     } else {
@@ -158,12 +161,12 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
   @override
   void didUpdateWidget(covariant SignatureMoveOverlay oldWidget) {
     super.didUpdateWidget(oldWidget);
-    
+
     // Handle new move data if it changes while the overlay is still mounted
     if (widget.data != oldWidget.data) {
       _path = _calculatePath(widget.data.from, widget.data.to);
       _profile = PieceMotionProfile.forCode(widget.data.pieceCode);
-      
+
       if (widget.data.isCastle) {
         _rookPath = _calculatePath(widget.data.rookFrom!, widget.data.rookTo!);
         _rookProfile = PieceMotionProfile.forCode(widget.data.rookPieceCode!);
@@ -171,16 +174,16 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
         _rookPath = null;
         _rookProfile = null;
       }
-      
+
       _hasTriggeredDust = false;
       _controller.duration = _effectiveMoveDuration;
-      
+
       final boardThemeId = ref.read(chessProvider).boardThemeId;
       _curvedProgress = CurvedAnimation(
         parent: _controller,
         curve: _profileAwareCurve(boardThemeId, _profile),
       );
-      
+
       _controller.reset();
       _controller.forward();
     } else if (widget.isCheckmate &&
@@ -192,9 +195,11 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
   }
 
   void _handleAnimationTick() {
-    if (widget.data.isCastle && !_hasTriggeredDust && _controller.value >= 0.5) {
+    if (widget.data.isCastle &&
+        !_hasTriggeredDust &&
+        _controller.value >= 0.5) {
       _hasTriggeredDust = true;
-      
+
       // Calculate mid-point position for dust puff
       final fromOffset = _coordsToOffset(
         widget.data.from.codeUnitAt(0) - 'a'.codeUnitAt(0),
@@ -204,7 +209,7 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
         widget.data.to.codeUnitAt(0) - 'a'.codeUnitAt(0),
         8 - int.parse(widget.data.to[1]),
       );
-      
+
       final midPos = Offset.lerp(fromOffset, toOffset, 0.5)!;
       widget.onActionTrigger?.call('dust_puff', midPos);
     }
@@ -325,12 +330,18 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
           pieceScale = 0.8 + (0.4 * noise.abs());
           vibration = Offset(noise * 3, 0);
           if ((rawProgress * 20).floor() % 2 == 0) pieceScale = 0.0;
-        } else if (isToyTheme && ref.read(chessProvider.notifier).isAnimationTypeEnabled('themeEffects')) {
+        } else if (isToyTheme &&
+            ref
+                .read(chessProvider.notifier)
+                .isAnimationTypeEnabled('themeEffects')) {
           // Toy: high arc + squash/stretch (unchanged)
           verticalLift = -arc * 60.0;
           pieceScale = 1.0 + (arc * 0.4);
           if (rawProgress < 0.2 || rawProgress > 0.8) pieceScale = 0.8;
-        } else if (isSteampunkTheme && ref.read(chessProvider.notifier).isAnimationTypeEnabled('themeEffects')) {
+        } else if (isSteampunkTheme &&
+            ref
+                .read(chessProvider.notifier)
+                .isAnimationTypeEnabled('themeEffects')) {
           // Steampunk: mechanical rattle (unchanged)
           verticalLift = -arc * 10.0;
           vibration = Offset(math.sin(rawProgress * 40) * 2.0, 0);
@@ -378,7 +389,12 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
           children: [
             // ── Trail painter (all non-matrix, non-electric themes) ──
             // Hidden for teleport moves to maintain clean jump feel
-            if (!_profile.isTeleport && !isMatrixTheme && !isElectricTheme && ref.read(chessProvider.notifier).isAnimationTypeEnabled('themeEffects'))
+            if (!_profile.isTeleport &&
+                !isMatrixTheme &&
+                !isElectricTheme &&
+                ref
+                    .read(chessProvider.notifier)
+                    .isAnimationTypeEnabled('themeEffects'))
               CustomPaint(
                 size: Size(widget.boardSize, widget.boardSize),
                 painter: TrailPainter(
@@ -389,7 +405,10 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
               ),
 
             // ── Electric arc (theme9, unchanged) ──
-            if (isElectricTheme && ref.read(chessProvider.notifier).isAnimationTypeEnabled('themeEffects'))
+            if (isElectricTheme &&
+                ref
+                    .read(chessProvider.notifier)
+                    .isAnimationTypeEnabled('themeEffects'))
               CustomPaint(
                 size: Size(widget.boardSize, widget.boardSize),
                 painter: _LightningArcPainter(
@@ -405,7 +424,7 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
                 _buildGhostPiece(progress - (i * 0.05), 0.35 / (i * 1.6)),
 
             // ── Moving pieces ────────────────────────────────────────
-            
+
             // Rook (if castling)
             if (widget.data.isCastle && _rookPath != null)
               _buildSecondaryPiece(
@@ -420,7 +439,15 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
               ),
 
             // King (primary piece)
-            _buildMovingPiece(rawProgress, piecePos, pieceScale, verticalLift, vibration, midRotation, movingPiece),
+            _buildMovingPiece(
+              rawProgress,
+              piecePos,
+              pieceScale,
+              verticalLift,
+              vibration,
+              midRotation,
+              movingPiece,
+            ),
           ],
         );
       },
@@ -446,11 +473,17 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
       scale = 0.8 + (0.4 * noise.abs());
       vib = Offset(noise * 3, 0);
       if ((rawProgress * 20).floor() % 2 == 0) scale = 0.0;
-    } else if (isToyTheme && ref.read(chessProvider.notifier).isAnimationTypeEnabled('themeEffects')) {
+    } else if (isToyTheme &&
+        ref
+            .read(chessProvider.notifier)
+            .isAnimationTypeEnabled('themeEffects')) {
       lift = -arc * 60.0;
       scale = 1.0 + (arc * 0.4);
       if (rawProgress < 0.2 || rawProgress > 0.8) scale = 0.8;
-    } else if (isSteampunkTheme && ref.read(chessProvider.notifier).isAnimationTypeEnabled('themeEffects')) {
+    } else if (isSteampunkTheme &&
+        ref
+            .read(chessProvider.notifier)
+            .isAnimationTypeEnabled('themeEffects')) {
       lift = -arc * 10.0;
       vib = Offset(math.sin(rawProgress * 40) * 2.0, 0);
     } else {
@@ -497,11 +530,11 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
     }
 
     // ── Queen Teleport (Blink) Logic ─────────────────────────────────────
-    
+
     // 1. Handle Capture Delay (wait for dust/vanish)
     double adjustedProgress = rawProgress;
     const captureDelay = 0.25; // 25% of duration spent waiting
-    
+
     if (widget.data.isCapture) {
       if (rawProgress < captureDelay) {
         return const SizedBox.shrink(); // Hidden while waiting for capture effect
@@ -512,7 +545,7 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
     // 2. Teleport Phases (To-and-Fro Airy Flickering)
     // We alternate between A and B to create a "phase-shifting" look.
     // 4 hops of 400ms each = 1.6s total (adjustedProgress).
-    
+
     Offset teleportPos;
     double blinkOpacity = 1.0;
 
@@ -520,7 +553,7 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
     // 4 cycles total (A -> B -> A -> B)
     final double cycleProgress = (adjustedProgress * 4) % 1.0;
     final int cycleIndex = (adjustedProgress * 4).floor().clamp(0, 3);
-    
+
     // Cycle 0: Point A
     // Cycle 1: Point B
     // Cycle 2: Point A
@@ -532,8 +565,9 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
     }
 
     // "Airy" fade: pulses 1.0 -> 0.3 -> 1.0 during each 400ms hop
-    blinkOpacity = 0.65 + 0.35 * math.sin(cycleProgress * math.pi * 2 + math.pi / 2);
-    
+    blinkOpacity =
+        0.65 + 0.35 * math.sin(cycleProgress * math.pi * 2 + math.pi / 2);
+
     // Final stabilization: in the last 10% of the final hop, stay at B and solid
     if (adjustedProgress > 0.95) {
       teleportPos = _path.last;
@@ -546,10 +580,7 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
       top: teleportPos.dy - _squareSize / 2,
       child: Opacity(
         opacity: blinkOpacity.clamp(0.0, 1.0),
-        child: Transform.scale(
-          scale: 1.0,
-          child: movingPiece,
-        ),
+        child: Transform.scale(scale: 1.0, child: movingPiece),
       ),
     );
   }

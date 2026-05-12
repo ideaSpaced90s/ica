@@ -5,6 +5,7 @@ import 'package:chess/chess.dart' as chess_lib;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
+import 'package:kingslayer_chess/src/rust/api/threats.dart';
 
 import '../data/saved_game.dart';
 import '../data/saved_game_repository.dart';
@@ -98,7 +99,7 @@ class MoveAnimationData {
   final String to;
   final String pieceCode;
   final bool isCapture;
-  
+
   // Castling support: second piece (Rook)
   final String? rookFrom;
   final String? rookTo;
@@ -473,8 +474,11 @@ class ChessNotifier extends StateNotifier<ChessState> {
     try {
       final s = await _settingsRepository.loadSettings();
       final is960 = s.gameMode == 'chess960';
-      final initialGame = is960 
-          ? ChessGame(fen: Chess960Generator.generateRandomPosition().fen, isChess960: true)
+      final initialGame = is960
+          ? ChessGame(
+              fen: Chess960Generator.generateRandomPosition().fen,
+              isChess960: true,
+            )
           : ChessGame(isChess960: false);
 
       state = state.copyWith(
@@ -679,8 +683,8 @@ class ChessNotifier extends StateNotifier<ChessState> {
       final move = last.move;
       final from = chess_lib.Chess.algebraic(move.from);
       final to = chess_lib.Chess.algebraic(move.to);
-      final promotion = move.promotion != null 
-          ? move.promotion.toString().split('.').last.toLowerCase()[0] 
+      final promotion = move.promotion != null
+          ? move.promotion.toString().split('.').last.toLowerCase()[0]
           : '';
       return '$from$to$promotion';
     } catch (e) {
@@ -704,22 +708,47 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
   void showThreats() {
     final fen = state.currentBoardFen;
+
+    // Side-by-side execution: benchmark and compare both engines!
+    final stopwatchDart = Stopwatch()..start();
     final game = ChessGame(fen: fen);
     final turn = game.turn;
     final opponentColor = turn == chess_lib.Color.WHITE
         ? chess_lib.Color.BLACK
         : chess_lib.Color.WHITE;
 
-    final threatened = <String>[];
+    final threatenedDart = <String>[];
     for (final square in chess_lib.Chess.SQUARES.keys) {
       if (game.isAttacked(square, opponentColor)) {
         final piece = game.getPiece(square);
         if (piece != null && piece.color == turn) {
-          threatened.add(square);
+          threatenedDart.add(square);
         }
       }
     }
-    state = state.copyWith(threatenedSquares: threatened);
+    stopwatchDart.stop();
+
+    // Run Rust Bitboard Engine
+    final stopwatchRust = Stopwatch()..start();
+    List<String> threatenedRust = [];
+    try {
+      threatenedRust = getThreatenedSquares(fen: fen);
+    } catch (e) {
+      debugPrint('Rust Threat Engine Error: $e');
+    }
+    stopwatchRust.stop();
+
+    // Log Side-by-Side comparison summary
+    debugPrint(
+      'Threat Engine Benchmark:\n'
+      '  Dart evaluation: ${stopwatchDart.elapsedMicroseconds} μs\n'
+      '  Rust evaluation: ${stopwatchRust.elapsedMicroseconds} μs\n'
+      '  Parity Check: Dart: ${threatenedDart.length} squares | Rust: ${threatenedRust.length} squares',
+    );
+
+    // Use Rust output if populated, falling back to Dart safely
+    final finalThreats = threatenedRust.isNotEmpty ? threatenedRust : threatenedDart;
+    state = state.copyWith(threatenedSquares: finalThreats);
   }
 
   final StockfishService _engine;
@@ -892,10 +921,12 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
         if (state.isAnimationsEnabled) {
           final now = DateTime.now();
-          final elapsed = now.difference(_engineStartTime ?? now).inMilliseconds;
+          final elapsed = now
+              .difference(_engineStartTime ?? now)
+              .inMilliseconds;
           // Ensure at least 2s total time (thinking + delay)
           final remainingDelay = math.max(0, 2000 - elapsed);
-          
+
           _engineMoveTimer = Timer(Duration(milliseconds: remainingDelay), () {
             if (!_isDisposed && !state.isPaused) {
               _makeEngineMove(bestMove);
@@ -939,7 +970,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
       String? customName;
       bool isFavorite = false;
       if (isUpdate) {
-        final existing = state.savedGames.where((s) => s.id == targetId).firstOrNull;
+        final existing = state.savedGames
+            .where((s) => s.id == targetId)
+            .firstOrNull;
         if (existing != null) {
           customName = existing.customName;
           isFavorite = existing.isFavorite;
@@ -1221,7 +1254,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
       final isWhite = piece?.color == chess_lib.Color.WHITE;
       final rank = isWhite ? '1' : '8';
       final isKingside = to[0] == 'g';
-      
+
       rookFrom = isKingside ? 'h$rank' : 'a$rank';
       rookTo = isKingside ? 'f$rank' : 'd$rank';
       rookPieceCode = isWhite ? 'wR' : 'bR';
@@ -1305,7 +1338,6 @@ class ChessNotifier extends StateNotifier<ChessState> {
     return state.game.turn == chess_lib.Color.WHITE ? 'Black' : 'White';
   }
 
-
   Future<void> makeMove(String from, String to) async {
     if (state.game.gameOver) return;
 
@@ -1372,7 +1404,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
       final isWhite = piece?.color == chess_lib.Color.WHITE;
       final rank = isWhite ? '1' : '8';
       final isKingside = to[0] == 'g';
-      
+
       rookFrom = isKingside ? 'h$rank' : 'a$rank';
       rookTo = isKingside ? 'f$rank' : 'd$rank';
       rookPieceCode = isWhite ? 'wR' : 'bR';
@@ -1462,8 +1494,11 @@ class ChessNotifier extends StateNotifier<ChessState> {
     _stopClock();
 
     final newIsPlayerWhite = !state.isPlayerWhite;
-    final newGame = state.isChess960 
-        ? ChessGame(fen: Chess960Generator.generateRandomPosition().fen, isChess960: true)
+    final newGame = state.isChess960
+        ? ChessGame(
+            fen: Chess960Generator.generateRandomPosition().fen,
+            isChess960: true,
+          )
         : ChessGame(isChess960: false);
 
     state = state.copyWith(
@@ -1702,19 +1737,23 @@ class ChessNotifier extends StateNotifier<ChessState> {
       }
     }
 
-    final capturedType = move?.captured?.toString().toLowerCase(); // 'q', 'r', 'b', 'n', 'p'
+    final capturedType = move?.captured
+        ?.toString()
+        .toLowerCase(); // 'q', 'r', 'b', 'n', 'p'
     final isHeavyCapture = ['q', 'r', 'b', 'n'].contains(capturedType);
 
-    // Cinematic Camera refinement: 
+    // Cinematic Camera refinement:
     // Trigger only on checks, checkmates, or heavy unit captures.
-    final shouldTriggerCamera = state.game.inCheckmate || state.game.inCheck || isHeavyCapture;
+    final shouldTriggerCamera =
+        state.game.inCheckmate || state.game.inCheck || isHeavyCapture;
 
     state = state.copyWith(
       game: state.game, // Maintain the same instance to preserve history
       lastMove: lastMove,
       recentMoves: updatedMoves,
       previousEvaluation: state.currentEvaluation,
-      isEngineThinking: _isAiTurn() && state.servicesStarted && state.engineReady,
+      isEngineThinking:
+          _isAiTurn() && state.servicesStarted && state.engineReady,
       commentaryError: null,
       activeClockSide: state.clockStarted
           ? _clockSideForTurn()
@@ -1797,7 +1836,6 @@ class ChessNotifier extends StateNotifier<ChessState> {
       }
     });
   }
-
 
   Future<void> sendUserQuery(String query) async {
     if (query.trim().isEmpty) return;
@@ -1936,7 +1974,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
       if (!_isDisposed && !isNested) {
         state = state.copyWith(isCommentaryLoading: false);
 
-        // Robot Mode Continuity removed. 
+        // Robot Mode Continuity removed.
         // The AI now only speaks when the user chats or requests a hint.
       }
     }
@@ -2077,10 +2115,11 @@ class ChessNotifier extends StateNotifier<ChessState> {
     // 2. Full-turn undo logic:
     // If it is the player's turn, it means the engine has already responded to the player's last move.
     // To make "Undo" meaningful for the player, we should undo both the engine move and the player move.
-    bool shouldUndoTwice = _isPlayerTurn() && 
-                          _undoStack.length >= 2 && 
-                          !state.game.gameOver && 
-                          !state.isEngineVsEngine;
+    bool shouldUndoTwice =
+        _isPlayerTurn() &&
+        _undoStack.length >= 2 &&
+        !state.game.gameOver &&
+        !state.isEngineVsEngine;
 
     // First undo (Engine's move)
     _redoStack.add(_captureCurrentSnapshot());
@@ -2093,7 +2132,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
       final snapshot2 = _undoStack.removeLast();
       _restoreSnapshot(snapshot2);
     }
-    
+
     _syncUndoRedoFlags();
   }
 
@@ -2145,8 +2184,11 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
     final is960 = preserveMode == 'chess960';
     await _engine.setChess960Mode(is960);
-    final newGame = is960 
-        ? ChessGame(fen: Chess960Generator.generateRandomPosition().fen, isChess960: true)
+    final newGame = is960
+        ? ChessGame(
+            fen: Chess960Generator.generateRandomPosition().fen,
+            isChess960: true,
+          )
         : ChessGame(isChess960: false);
 
     state = ChessState(

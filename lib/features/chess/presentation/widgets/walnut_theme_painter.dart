@@ -25,10 +25,10 @@ class WalnutBoardPainter extends CustomPainter {
       final path = Path();
       final startY = random.nextDouble() * size.height;
       path.moveTo(0, startY);
-      
+
       for (double x = 0; x <= size.width; x += 10) {
-          final dy = sin((x / size.width) * 2 * pi) * 2.0;
-          path.lineTo(x, startY + dy + (random.nextDouble() * 2));
+        final dy = sin((x / size.width) * 2 * pi) * 2.0;
+        path.lineTo(x, startY + dy + (random.nextDouble() * 2));
       }
       canvas.drawPath(path, grainPaint);
     }
@@ -96,7 +96,10 @@ class InsetShadowOverlay extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.black.withValues(alpha: 0.1), width: 1.5),
+          border: Border.all(
+            color: Colors.black.withValues(alpha: 0.1),
+            width: 1.5,
+          ),
         ),
       ),
     );

@@ -7,7 +7,6 @@ import 'animation/piece_motion_profile.dart';
 import 'utils/contrast_utility.dart';
 import 'themes/theme_registry.dart';
 
-
 import 'package:chess/chess.dart' as chess_lib;
 
 class ChessPieceWidget extends ConsumerStatefulWidget {
@@ -100,7 +99,7 @@ class _ChessPieceWidgetState extends ConsumerState<ChessPieceWidget>
 
     final isWhite = code.startsWith('w');
     final type = code.substring(1).toUpperCase();
-    
+
     final theme = ThemeRegistry.getTheme(boardThemeId);
 
     // Render piece based on theme
@@ -118,16 +117,52 @@ class _ChessPieceWidgetState extends ConsumerState<ChessPieceWidget>
 
     // Apply selection enlargement (108% with elastic spring) — unchanged
     pieceWidget = AnimatedScale(
-      scale: widget.isMoving ? (boardThemeId == 'theme8' || boardThemeId == 'theme4' ? 1.05 : 1.08) : (widget.highlighted ? (boardThemeId == 'theme8' || boardThemeId == 'theme4' ? 1.03 : 1.15) : 1.0),
-      duration: (!ref.read(chessProvider.notifier).isAnimationTypeEnabled('pieceMotion')) ? Duration.zero : (boardThemeId == 'theme8' || boardThemeId == 'theme4' ? const Duration(milliseconds: 400) : const Duration(milliseconds: 200)),
-      curve: boardThemeId == 'theme8' || boardThemeId == 'theme4' ? Curves.easeInOut : Curves.easeOutBack,
+      scale: widget.isMoving
+          ? (boardThemeId == 'theme8' || boardThemeId == 'theme4' ? 1.05 : 1.08)
+          : (widget.highlighted
+                ? (boardThemeId == 'theme8' || boardThemeId == 'theme4'
+                      ? 1.03
+                      : 1.15)
+                : 1.0),
+      duration:
+          (!ref
+              .read(chessProvider.notifier)
+              .isAnimationTypeEnabled('pieceMotion'))
+          ? Duration.zero
+          : (boardThemeId == 'theme8' || boardThemeId == 'theme4'
+                ? const Duration(milliseconds: 400)
+                : const Duration(milliseconds: 200)),
+      curve: boardThemeId == 'theme8' || boardThemeId == 'theme4'
+          ? Curves.easeInOut
+          : Curves.easeOutBack,
       child: AnimatedContainer(
-        duration: (!ref.read(chessProvider.notifier).isAnimationTypeEnabled('pieceMotion')) ? Duration.zero : (boardThemeId == 'theme8' || boardThemeId == 'theme4' ? const Duration(milliseconds: 500) : const Duration(milliseconds: 300)),
-        curve: boardThemeId == 'theme9' ? Curves.bounceOut : (boardThemeId == 'theme8' || boardThemeId == 'theme4' ? Curves.linear : Curves.elasticOut),
+        duration:
+            (!ref
+                .read(chessProvider.notifier)
+                .isAnimationTypeEnabled('pieceMotion'))
+            ? Duration.zero
+            : (boardThemeId == 'theme8' || boardThemeId == 'theme4'
+                  ? const Duration(milliseconds: 500)
+                  : const Duration(milliseconds: 300)),
+        curve: boardThemeId == 'theme9'
+            ? Curves.bounceOut
+            : (boardThemeId == 'theme8' || boardThemeId == 'theme4'
+                  ? Curves.linear
+                  : Curves.elasticOut),
         transform: Matrix4.diagonal3Values(
-          widget.isMoving ? (boardThemeId == 'theme8' || boardThemeId == 'theme4' ? 1.0 : 0.85) : 1.0,
-          widget.isMoving ? (boardThemeId == 'theme9' ? 1.4 : (boardThemeId == 'theme8' || boardThemeId == 'theme4' ? 1.0 : 1.25)) : 1.0,
-          1.0
+          widget.isMoving
+              ? (boardThemeId == 'theme8' || boardThemeId == 'theme4'
+                    ? 1.0
+                    : 0.85)
+              : 1.0,
+          widget.isMoving
+              ? (boardThemeId == 'theme9'
+                    ? 1.4
+                    : (boardThemeId == 'theme8' || boardThemeId == 'theme4'
+                          ? 1.0
+                          : 1.25))
+              : 1.0,
+          1.0,
         ),
         transformAlignment: Alignment.bottomCenter,
         child: pieceWidget,
@@ -135,23 +170,24 @@ class _ChessPieceWidgetState extends ConsumerState<ChessPieceWidget>
     );
 
     // ── Breathing selection scale (Option B: always running, applied when highlighted) ──
-    if (ref.read(chessProvider.notifier).isAnimationTypeEnabled('feedback') && widget.highlighted && profile.hasBreathingSelection) {
+    if (ref.read(chessProvider.notifier).isAnimationTypeEnabled('feedback') &&
+        widget.highlighted &&
+        profile.hasBreathingSelection) {
       pieceWidget = AnimatedBuilder(
         animation: _breathingController,
         builder: (context, child) {
-          final breathScale = 1.0 +
+          final breathScale =
+              1.0 +
               profile.selectionBreathScale *
                   Curves.easeInOutSine.transform(_breathingController.value);
-          return Transform.scale(
-            scale: breathScale,
-            child: child,
-          );
+          return Transform.scale(scale: breathScale, child: child);
         },
         child: pieceWidget,
       );
     }
 
-    if (widget.highlighted && ref.read(chessProvider.notifier).isAnimationTypeEnabled('feedback')) {
+    if (widget.highlighted &&
+        ref.read(chessProvider.notifier).isAnimationTypeEnabled('feedback')) {
       final glowColor = boardThemeId == 'theme10'
           ? ContrastUtility.selectionGlow
           : ScholarlyTheme.selectedGlow;
@@ -160,7 +196,8 @@ class _ChessPieceWidgetState extends ConsumerState<ChessPieceWidget>
         animation: _levitationController,
         builder: (context, child) {
           // Profile-driven levitation height — heavier pieces float less
-          final dy = -profile.levitationHeight *
+          final dy =
+              -profile.levitationHeight *
               Curves.easeInOutSine.transform(_levitationController.value);
           final glowOpacity = 0.3 + 0.3 * _levitationController.value;
           final blurRadius = 12.0 + 8.0 * _levitationController.value;
@@ -200,13 +237,11 @@ class _ChessPieceWidgetState extends ConsumerState<ChessPieceWidget>
           animation: _checkPulseController,
           builder: (context, child) {
             // Very gentle 0.97–1.0 scale — feels cautious, not aggressive
-            final pulseScale = 0.97 +
+            final pulseScale =
+                0.97 +
                 0.03 *
                     Curves.easeInOutSine.transform(_checkPulseController.value);
-            return Transform.scale(
-              scale: pulseScale,
-              child: child,
-            );
+            return Transform.scale(scale: pulseScale, child: child);
           },
           child: pieceWidget,
         );
@@ -228,11 +263,7 @@ class _ChessPieceWidgetState extends ConsumerState<ChessPieceWidget>
         offset: const Offset(2.0, 2.0),
         child: Transform.scale(
           scale: 1.15,
-          child: SizedBox(
-            width: 70,
-            height: 70,
-            child: pieceWidget,
-          ),
+          child: SizedBox(width: 70, height: 70, child: pieceWidget),
         ),
       ),
       childWhenDragging: Opacity(opacity: 0.35, child: interactivePiece),

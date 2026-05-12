@@ -16,11 +16,18 @@ class EnergyPiecePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final color = isWhite ? const Color(0xFF00BFFF) : const Color(0xFFFF4500); // Electric Blue vs Neon Red
-    
+    final color = isWhite
+        ? const Color(0xFF00BFFF)
+        : const Color(0xFFFF4500); // Electric Blue vs Neon Red
+
     // 1. Piece Silhouette (Mask)
     final charMap = {
-      'K': '\u2654', 'Q': '\u2655', 'B': '\u2657', 'N': '\u2658', 'R': '\u2656', 'P': '\u2659'
+      'K': '\u2654',
+      'Q': '\u2655',
+      'B': '\u2657',
+      'N': '\u2658',
+      'R': '\u2656',
+      'P': '\u2659',
     };
     final char = charMap[type] ?? '?';
 
@@ -36,7 +43,7 @@ class EnergyPiecePainter extends CustomPainter {
       textDirection: TextDirection.ltr,
     );
     textPainter.layout();
-    
+
     final x = (size.width - textPainter.width) / 2;
     final y = (size.height - textPainter.height) / 2;
 
@@ -64,17 +71,22 @@ class EnergyPiecePainter extends CustomPainter {
 
     final random = Random(type.codeUnitAt(0) + (isWhite ? 1 : 0));
     for (int i = 0; i < 3; i++) {
-        final startY = random.nextDouble() * size.height;
-        final endY = random.nextDouble() * size.height;
-        final path = Path()..moveTo(0, startY);
-        
-        final segments = 4;
-        for (int j = 1; j <= segments; j++) {
-            final t = j/segments;
-            final jitter = (random.nextDouble() - 0.5) * 15 * sin(animationValue * 5 * pi);
-            path.lineTo(size.width * t, Offset.lerp(Offset(0, startY), Offset(size.width, endY), t)!.dy + jitter);
-        }
-        canvas.drawPath(path, arcPaint);
+      final startY = random.nextDouble() * size.height;
+      final endY = random.nextDouble() * size.height;
+      final path = Path()..moveTo(0, startY);
+
+      final segments = 4;
+      for (int j = 1; j <= segments; j++) {
+        final t = j / segments;
+        final jitter =
+            (random.nextDouble() - 0.5) * 15 * sin(animationValue * 5 * pi);
+        path.lineTo(
+          size.width * t,
+          Offset.lerp(Offset(0, startY), Offset(size.width, endY), t)!.dy +
+              jitter,
+        );
+      }
+      canvas.drawPath(path, arcPaint);
     }
 
     // Flicker
@@ -90,7 +102,11 @@ class EnergyPiecePainter extends CustomPainter {
       final glowPaint = Paint()
         ..color = color.withValues(alpha: 0.2)
         ..maskFilter = const MaskFilter.blur(BlurStyle.outer, 12);
-      canvas.drawCircle(Offset(size.width/2, size.height/2), size.width*0.4, glowPaint);
+      canvas.drawCircle(
+        Offset(size.width / 2, size.height / 2),
+        size.width * 0.4,
+        glowPaint,
+      );
     }
   }
 

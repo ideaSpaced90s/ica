@@ -5,19 +5,19 @@ class LiquidBoardPainter extends CustomPainter {
   final double animationValue;
   final bool isLight;
 
-  LiquidBoardPainter({
-    required this.animationValue,
-    required this.isLight,
-  });
+  LiquidBoardPainter({required this.animationValue, required this.isLight});
 
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Rect.fromLTWH(0, 0, size.width, size.height);
-    
+
     // Shifting Liquid Gradient
     final gradient = LinearGradient(
       colors: isLight
-          ? [const Color(0xFF7FFFD4), const Color(0xFF40E0D0)] // Aqua to Turquoise
+          ? [
+              const Color(0xFF7FFFD4),
+              const Color(0xFF40E0D0),
+            ] // Aqua to Turquoise
           : [const Color(0xFF004D40), const Color(0xFF00251A)], // Deep Teal
       begin: Alignment(
         cos(animationValue * 2 * pi) * 0.5 - 0.5,
@@ -31,23 +31,23 @@ class LiquidBoardPainter extends CustomPainter {
 
     final paint = Paint()..shader = gradient.createShader(rect);
     canvas.drawRect(rect, paint);
-    
+
     // Subtle additive highlights for "water" feel
     final highlightPaint = Paint()
       ..color = Colors.white.withValues(alpha: isLight ? 0.05 : 0.02)
       ..style = PaintingStyle.fill;
-    
+
     for (var i = 0; i < 3; i++) {
-        final offset = Offset(
-            size.width * (0.3 + 0.4 * cos(animationValue * 2 * pi + i)),
-            size.height * (0.3 + 0.4 * sin(animationValue * 2 * pi + i))
-        );
-        canvas.drawCircle(offset, size.width * 0.4, highlightPaint);
+      final offset = Offset(
+        size.width * (0.3 + 0.4 * cos(animationValue * 2 * pi + i)),
+        size.height * (0.3 + 0.4 * sin(animationValue * 2 * pi + i)),
+      );
+      canvas.drawCircle(offset, size.width * 0.4, highlightPaint);
     }
   }
 
   @override
-  bool shouldRepaint(LiquidBoardPainter oldDelegate) => 
+  bool shouldRepaint(LiquidBoardPainter oldDelegate) =>
       oldDelegate.animationValue != animationValue;
 }
 
@@ -87,7 +87,10 @@ class _RippleMoveIndicatorState extends State<RippleMoveIndicator>
           children: [
             for (var i = 0; i < 3; i++)
               Opacity(
-                opacity: (1.0 - ((_controller.value + i / 3) % 1.0)).clamp(0.0, 1.0),
+                opacity: (1.0 - ((_controller.value + i / 3) % 1.0)).clamp(
+                  0.0,
+                  1.0,
+                ),
                 child: Container(
                   width: 30.0 * ((_controller.value + i / 3) % 1.0),
                   height: 30.0 * ((_controller.value + i / 3) % 1.0),

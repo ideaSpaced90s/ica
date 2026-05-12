@@ -11,7 +11,8 @@ class Royal25DTheme extends ChessTheme {
   Color get darkSquare => const Color(0xFF38BDF8); // Vibrant Sky Blue
 
   @override
-  Color get lightCoordinateColor => const Color(0xFF0284C7).withValues(alpha: 0.6);
+  Color get lightCoordinateColor =>
+      const Color(0xFF0284C7).withValues(alpha: 0.6);
 
   @override
   Color get darkCoordinateColor => Colors.white.withValues(alpha: 0.6);
@@ -67,13 +68,26 @@ class Royal25DTheme extends ChessTheme {
     final rowIndex = isWhite ? 0 : 1;
     int colIndex;
     switch (type.toUpperCase()) {
-      case 'K': colIndex = 0; break;
-      case 'Q': colIndex = 1; break;
-      case 'B': colIndex = 2; break;
-      case 'N': colIndex = 3; break;
-      case 'R': colIndex = 4; break;
-      case 'P': colIndex = 5; break;
-      default: colIndex = 5;
+      case 'K':
+        colIndex = 0;
+        break;
+      case 'Q':
+        colIndex = 1;
+        break;
+      case 'B':
+        colIndex = 2;
+        break;
+      case 'N':
+        colIndex = 3;
+        break;
+      case 'R':
+        colIndex = 4;
+        break;
+      case 'P':
+        colIndex = 5;
+        break;
+      default:
+        colIndex = 5;
     }
 
     final horizontalShift = switch (type.toUpperCase()) {
@@ -117,10 +131,10 @@ class Royal25DTheme extends ChessTheme {
         height: isEnemy ? 42 : 16,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: isEnemy 
-              ? Colors.transparent 
+          color: isEnemy
+              ? Colors.transparent
               : const Color(0xFFFACC15).withValues(alpha: 0.4),
-          border: isEnemy 
+          border: isEnemy
               ? Border.all(color: const Color(0xFFFACC15), width: 3)
               : null,
         ),

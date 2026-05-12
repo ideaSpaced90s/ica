@@ -55,21 +55,31 @@ class WalnutTheme extends ChessTheme {
   ) {
     chess_lib.PieceType pType;
     switch (type.toUpperCase()) {
-      case 'K': pType = chess_lib.PieceType.KING; break;
-      case 'Q': pType = chess_lib.PieceType.QUEEN; break;
-      case 'R': pType = chess_lib.PieceType.ROOK; break;
-      case 'B': pType = chess_lib.PieceType.BISHOP; break;
-      case 'N': pType = chess_lib.PieceType.KNIGHT; break;
-      case 'P': pType = chess_lib.PieceType.PAWN; break;
-      default: pType = chess_lib.PieceType.PAWN;
+      case 'K':
+        pType = chess_lib.PieceType.KING;
+        break;
+      case 'Q':
+        pType = chess_lib.PieceType.QUEEN;
+        break;
+      case 'R':
+        pType = chess_lib.PieceType.ROOK;
+        break;
+      case 'B':
+        pType = chess_lib.PieceType.BISHOP;
+        break;
+      case 'N':
+        pType = chess_lib.PieceType.KNIGHT;
+        break;
+      case 'P':
+        pType = chess_lib.PieceType.PAWN;
+        break;
+      default:
+        pType = chess_lib.PieceType.PAWN;
     }
     return AspectRatio(
       aspectRatio: 1,
       child: CustomPaint(
-        painter: WalnutPiecePainter(
-          type: pType,
-          isWhite: isWhite,
-        ),
+        painter: WalnutPiecePainter(type: pType, isWhite: isWhite),
       ),
     );
   }
@@ -82,11 +92,14 @@ class WalnutTheme extends ChessTheme {
         height: isEnemy ? 35 : 10,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: isEnemy 
-              ? Colors.transparent 
+          color: isEnemy
+              ? Colors.transparent
               : Colors.black.withValues(alpha: 0.3),
-          border: isEnemy 
-              ? Border.all(color: Colors.black.withValues(alpha: 0.3), width: 2.0)
+          border: isEnemy
+              ? Border.all(
+                  color: Colors.black.withValues(alpha: 0.3),
+                  width: 2.0,
+                )
               : null,
         ),
       ),
@@ -101,9 +114,7 @@ class WalnutTheme extends ChessTheme {
   @override
   Widget buildLastMoveHighlight(BuildContext context, double opacity) {
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: opacity),
-      ),
+      decoration: BoxDecoration(color: Colors.white.withValues(alpha: opacity)),
     );
   }
 }

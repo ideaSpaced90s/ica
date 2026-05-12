@@ -52,10 +52,10 @@ class StockfishController extends StateNotifier<StockfishState> {
   void _init() {
     _subscription = _service.outputStream.listen(_handleOutput);
     _service.init().then((_) {
-        state = state.copyWith(
-            isReady: _service.isReady,
-            isError: _service.isError,
-        );
+      state = state.copyWith(
+        isReady: _service.isReady,
+        isError: _service.isError,
+      );
     });
   }
 
@@ -110,6 +110,6 @@ class StockfishController extends StateNotifier<StockfishState> {
 /// Provider for the StockfishController.
 final stockfishControllerProvider =
     StateNotifierProvider<StockfishController, StockfishState>((ref) {
-  final service = ref.watch(stockfishServiceProvider);
-  return StockfishController(service);
-});
+      final service = ref.watch(stockfishServiceProvider);
+      return StockfishController(service);
+    });

@@ -18,8 +18,9 @@ class _StaticDischargeOverlayState extends State<StaticDischargeOverlay>
   void initState() {
     super.initState();
     _controller = AnimationController(
-        vsync: this, duration: const Duration(seconds: 5))
-      ..repeat();
+      vsync: this,
+      duration: const Duration(seconds: 5),
+    )..repeat();
   }
 
   @override
@@ -35,7 +36,7 @@ class _StaticDischargeOverlayState extends State<StaticDischargeOverlay>
         animation: _controller,
         builder: (context, child) {
           if (_random.nextDouble() > 0.96) {
-              _triggerArc();
+            _triggerArc();
           }
           return CustomPaint(
             painter: _StaticArcPainter(arcs: _arcs),
@@ -47,12 +48,20 @@ class _StaticDischargeOverlayState extends State<StaticDischargeOverlay>
   }
 
   void _triggerArc() {
-    final start = Offset(_random.nextDouble() * 400, _random.nextDouble() * 400);
-    final end = start + Offset((_random.nextDouble() - 0.5) * 100, (_random.nextDouble() - 0.5) * 100);
+    final start = Offset(
+      _random.nextDouble() * 400,
+      _random.nextDouble() * 400,
+    );
+    final end =
+        start +
+        Offset(
+          (_random.nextDouble() - 0.5) * 100,
+          (_random.nextDouble() - 0.5) * 100,
+        );
     final arc = _ArcData(start: start, end: end, startTime: DateTime.now());
     setState(() => _arcs.add(arc));
     Future.delayed(const Duration(milliseconds: 150), () {
-        if (mounted) setState(() => _arcs.remove(arc));
+      if (mounted) setState(() => _arcs.remove(arc));
     });
   }
 }
@@ -79,11 +88,14 @@ class _StaticArcPainter extends CustomPainter {
     for (final arc in arcs) {
       final path = Path()..moveTo(arc.start.dx, arc.start.dy);
       final segments = 5;
-      
+
       for (int i = 1; i <= segments; i++) {
         final t = i / segments;
         final lerped = Offset.lerp(arc.start, arc.end, t)!;
-        final jitter = Offset((random.nextDouble() - 0.5) * 15, (random.nextDouble() - 0.5) * 15);
+        final jitter = Offset(
+          (random.nextDouble() - 0.5) * 15,
+          (random.nextDouble() - 0.5) * 15,
+        );
         path.lineTo(lerped.dx + jitter.dx, lerped.dy + jitter.dy);
       }
       canvas.drawPath(path, paint);
@@ -116,8 +128,9 @@ class _ElectricBurstEffectState extends State<ElectricBurstEffect>
   void initState() {
     super.initState();
     _controller = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 400))
-      ..forward().then((_) => widget.onComplete());
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    )..forward().then((_) => widget.onComplete());
   }
 
   @override
@@ -152,7 +165,7 @@ class _ElectricBurstPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final random = Random();
     final center = Offset(size.width / 2, size.height / 2);
-    
+
     final paint = Paint()
       ..color = const Color(0xFF00BFFF).withValues(alpha: (1.0 - progress))
       ..strokeWidth = 2.0 * (1.0 - progress)
@@ -160,20 +173,26 @@ class _ElectricBurstPainter extends CustomPainter {
 
     // Expanding lightning fractal burst
     for (int i = 0; i < 8; i++) {
-        final angle = (i * pi / 4) + (random.nextDouble() * 0.2);
-        final length = 20.0 + random.nextDouble() * 30.0 * (1.0 + progress);
-        
-        final path = Path()..moveTo(center.dx, center.dy);
-        
-        final segments = 4;
-        for (int j = 1; j <= segments; j++) {
-            final t = j/segments;
-            final r = length * t;
-            final next = Offset(center.dx + cos(angle) * r, center.dy + sin(angle) * r);
-            final jitter = Offset((random.nextDouble() - 0.5) * 10, (random.nextDouble() - 0.5) * 10);
-            path.lineTo(next.dx + jitter.dx, next.dy + jitter.dy);
-        }
-        canvas.drawPath(path, paint);
+      final angle = (i * pi / 4) + (random.nextDouble() * 0.2);
+      final length = 20.0 + random.nextDouble() * 30.0 * (1.0 + progress);
+
+      final path = Path()..moveTo(center.dx, center.dy);
+
+      final segments = 4;
+      for (int j = 1; j <= segments; j++) {
+        final t = j / segments;
+        final r = length * t;
+        final next = Offset(
+          center.dx + cos(angle) * r,
+          center.dy + sin(angle) * r,
+        );
+        final jitter = Offset(
+          (random.nextDouble() - 0.5) * 10,
+          (random.nextDouble() - 0.5) * 10,
+        );
+        path.lineTo(next.dx + jitter.dx, next.dy + jitter.dy);
+      }
+      canvas.drawPath(path, paint);
     }
 
     // Central flash

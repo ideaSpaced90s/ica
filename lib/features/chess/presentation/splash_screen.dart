@@ -13,7 +13,8 @@ class SplashScreen extends ConsumerStatefulWidget {
   ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends ConsumerState<SplashScreen> with TickerProviderStateMixin {
+class _SplashScreenState extends ConsumerState<SplashScreen>
+    with TickerProviderStateMixin {
   late AnimationController _progressController;
   late Animation<double> _progressAnimation;
   double _loadingValue = 0;
@@ -22,22 +23,24 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with TickerProvider
   void initState() {
     super.initState();
     // Enforce Portrait for the Splash Screen
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-    ]);
+    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
     _progressController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 3000), // Nominal duration
     );
 
-    _progressAnimation = Tween<double>(begin: 0, end: 100).animate(
-      CurvedAnimation(parent: _progressController, curve: Curves.easeInOutCubic),
-    )..addListener(() {
-        setState(() {
-          _loadingValue = _progressAnimation.value;
+    _progressAnimation =
+        Tween<double>(begin: 0, end: 100).animate(
+          CurvedAnimation(
+            parent: _progressController,
+            curve: Curves.easeInOutCubic,
+          ),
+        )..addListener(() {
+          setState(() {
+            _loadingValue = _progressAnimation.value;
+          });
         });
-      });
 
     _initFlow();
   }
@@ -46,14 +49,14 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with TickerProvider
     final startTime = DateTime.now();
     // debugPrint('SplashScreen: Starting _initFlow...');
     final notifier = ref.read(chessProvider.notifier);
-    
+
     // 1. Start services initialization in parallel
     // debugPrint('SplashScreen: Triggering background service init...');
     final initFuture = _initServices(notifier);
 
     // 2. Start a smooth progress animation
     _progressController.forward();
-    
+
     // 3. Wait for actual services to load
     // debugPrint('SplashScreen: Waiting for background services...');
     await initFuture;
@@ -68,9 +71,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with TickerProvider
 
     // 5. Complete the progress bar quickly if not already done
     if (_progressController.value < 1.0) {
-      await _progressController.animateTo(1.0, 
-        duration: const Duration(milliseconds: 400), 
-        curve: Curves.easeOutCubic
+      await _progressController.animateTo(
+        1.0,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeOutCubic,
       );
     }
 
@@ -85,11 +89,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with TickerProvider
       ]);
 
       if (!mounted) return;
-      
+
       // debugPrint('SplashScreen: Navigating to MainPage.');
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) => const MainPage(),
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              const MainPage(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(opacity: animation, child: child);
           },
@@ -116,7 +121,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with TickerProvider
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A), // Dark Navy for immersive icon blending
+      backgroundColor: const Color(
+        0xFF0F172A,
+      ), // Dark Navy for immersive icon blending
       body: _buildStaticPhase(),
     );
   }
@@ -141,7 +148,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with TickerProvider
             ),
           ),
         ),
-        
+
         // Background Logo (Centered and maximized) moved 20% up
         Align(
           alignment: const Alignment(0, -0.4),

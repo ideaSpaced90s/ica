@@ -32,36 +32,41 @@ class _ActionIconButtonState extends State<ActionIconButton> {
   Widget build(BuildContext context) {
     final sizeInfo = MediaQuery.of(context);
     final isPortrait = sizeInfo.orientation == Orientation.portrait;
-    
+
     // Cap button size for small height screens
     final double portraitBase = sizeInfo.size.height * 0.12;
     final size = isPortrait ? portraitBase.clamp(40.0, 80.0) : 40.0;
-    
+
     return GestureDetector(
-      onTapDown: widget.isEnabled ? (_) => setState(() => _isPressed = true) : null,
-      onTapUp: widget.isEnabled ? (_) => setState(() => _isPressed = false) : null,
+      onTapDown: widget.isEnabled
+          ? (_) => setState(() => _isPressed = true)
+          : null,
+      onTapUp: widget.isEnabled
+          ? (_) => setState(() => _isPressed = false)
+          : null,
       onTapCancel: () => setState(() => _isPressed = false),
       onTap: widget.isEnabled ? widget.onTap : null,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 100),
         width: size + 16,
         height: size + 16,
-        decoration: ScholarlyTheme.modernDecoration(
-          sunken: _isPressed || widget.isActive,
-        ).copyWith(
-          color: (widget.isActive || _isPressed) 
-              ? (widget.activeColor ?? ScholarlyTheme.accentBlueSoft)
-              : ScholarlyTheme.panelBase,
-          borderRadius: BorderRadius.circular(12),
-        ),
+        decoration:
+            ScholarlyTheme.modernDecoration(
+              sunken: _isPressed || widget.isActive,
+            ).copyWith(
+              color: (widget.isActive || _isPressed)
+                  ? (widget.activeColor ?? ScholarlyTheme.accentBlueSoft)
+                  : ScholarlyTheme.panelBase,
+              borderRadius: BorderRadius.circular(12),
+            ),
         padding: const EdgeInsets.all(4),
         child: Center(
           child: Icon(
             widget.icon,
-            color: widget.isEnabled 
-                ? (widget.isActive 
-                    ? (widget.activeIconColor ?? ScholarlyTheme.accentBlue) 
-                    : ScholarlyTheme.textPrimary)
+            color: widget.isEnabled
+                ? (widget.isActive
+                      ? (widget.activeIconColor ?? ScholarlyTheme.accentBlue)
+                      : ScholarlyTheme.textPrimary)
                 : ScholarlyTheme.textSubtle,
             size: size,
           ),
@@ -94,18 +99,25 @@ class TimePresetChip extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: ScholarlyTheme.modernDecoration(sunken: isSelected).copyWith(
-          color: isSelected ? ScholarlyTheme.accentBlueSoft : ScholarlyTheme.panelBase,
-          borderRadius: BorderRadius.circular(20), // Pill shape
-          border: Border.all(
-            color: isSelected ? ScholarlyTheme.accentBlue : ScholarlyTheme.panelStroke,
-            width: 1,
-          ),
-        ),
+        decoration: ScholarlyTheme.modernDecoration(sunken: isSelected)
+            .copyWith(
+              color: isSelected
+                  ? ScholarlyTheme.accentBlueSoft
+                  : ScholarlyTheme.panelBase,
+              borderRadius: BorderRadius.circular(20), // Pill shape
+              border: Border.all(
+                color: isSelected
+                    ? ScholarlyTheme.accentBlue
+                    : ScholarlyTheme.panelStroke,
+                width: 1,
+              ),
+            ),
         child: Text(
           label,
           style: TextStyle(
-            color: isSelected ? ScholarlyTheme.accentBlue : ScholarlyTheme.textPrimary,
+            color: isSelected
+                ? ScholarlyTheme.accentBlue
+                : ScholarlyTheme.textPrimary,
             fontSize: 12,
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
           ),
@@ -114,5 +126,3 @@ class TimePresetChip extends StatelessWidget {
     );
   }
 }
-
-

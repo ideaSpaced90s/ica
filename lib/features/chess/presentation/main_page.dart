@@ -20,7 +20,8 @@ class MainPage extends ConsumerStatefulWidget {
   ConsumerState<MainPage> createState() => _MainPageState();
 }
 
-class _MainPageState extends ConsumerState<MainPage> with WidgetsBindingObserver {
+class _MainPageState extends ConsumerState<MainPage>
+    with WidgetsBindingObserver {
   bool _isCommentaryExpanded = false;
 
   @override
@@ -37,8 +38,8 @@ class _MainPageState extends ConsumerState<MainPage> with WidgetsBindingObserver
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused || 
-        state == AppLifecycleState.inactive || 
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
         state == AppLifecycleState.detached) {
       final chessState = ref.read(chessProvider);
       // Auto-save only if game has started and not over
@@ -65,18 +66,27 @@ class _MainPageState extends ConsumerState<MainPage> with WidgetsBindingObserver
             ),
             title: Text(
               'Exit Kingslayer?',
-              style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: ScholarlyTheme.textPrimary),
+              style: GoogleFonts.inter(
+                fontWeight: FontWeight.w600,
+                color: ScholarlyTheme.textPrimary,
+              ),
             ),
             content: Text(
               'Do you want to quit? Your current game progress will be saved automatically.',
-              style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 14),
+              style: GoogleFonts.inter(
+                color: ScholarlyTheme.textPrimary,
+                fontSize: 14,
+              ),
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
                 child: Text(
                   'Continue Play',
-                  style: GoogleFonts.inter(color: ScholarlyTheme.accentBlue, fontWeight: FontWeight.w600),
+                  style: GoogleFonts.inter(
+                    color: ScholarlyTheme.accentBlue,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
               FilledButton(
@@ -89,7 +99,10 @@ class _MainPageState extends ConsumerState<MainPage> with WidgetsBindingObserver
                 ),
                 child: Text(
                   'Quit',
-                  style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.white),
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ],
@@ -105,110 +118,111 @@ class _MainPageState extends ConsumerState<MainPage> with WidgetsBindingObserver
         }
       },
       child: Scaffold(
-      backgroundColor: ScholarlyTheme.backgroundStart,
-      body: Stack(
-        children: [
-          _buildPortraitLayout(context, ref, chessState),
+        backgroundColor: ScholarlyTheme.backgroundStart,
+        body: Stack(
+          children: [
+            _buildPortraitLayout(context, ref, chessState),
 
-          if (chessState.game.gameOver && !chessState.isGameOverDismissed)
-            Positioned.fill(
-              child: Container(
-                color: Colors.black54,
-                child: Center(
-                  child: Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: ScholarlyTheme.modernDecoration(),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'Game Over',
-                          style: GoogleFonts.inter(
-                            color: ScholarlyTheme.textPrimary,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 20,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Icon(
-                          chessState.game.inDraw
-                              ? Icons.handshake_rounded
-                              : (_getGameOverMessage(chessState) ==
-                                        'Congratulations'
-                                    ? Icons.emoji_events_rounded
-                                    : Icons.sentiment_dissatisfied_rounded),
-                          size: 48,
-                          color: ScholarlyTheme.accentBlue,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          chessState.game.inDraw
-                              ? 'Game Draw. New game?'
-                              : '${_getGameOverMessage(chessState)}. New game?',
-                          style: GoogleFonts.inter(
-                            color: ScholarlyTheme.textPrimary,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 24),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            FilledButton(
-                              onPressed: () {
-                                ref.read(chessProvider.notifier).reset();
-                              },
-                              style: FilledButton.styleFrom(
-                                backgroundColor: ScholarlyTheme.accentBlue,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 24,
-                                  vertical: 12,
-                                ),
-                              ),
-                              child: Text(
-                                'Yes',
-                                style: GoogleFonts.inter(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
+            if (chessState.game.gameOver && !chessState.isGameOverDismissed)
+              Positioned.fill(
+                child: Container(
+                  color: Colors.black54,
+                  child: Center(
+                    child: Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: ScholarlyTheme.modernDecoration(),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Game Over',
+                            style: GoogleFonts.inter(
+                              color: ScholarlyTheme.textPrimary,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 20,
                             ),
-                            const SizedBox(width: 16),
-                            TextButton(
-                              onPressed: () {
-                                ref
-                                    .read(chessProvider.notifier)
-                                    .dismissGameOver();
-                              },
-                              style: TextButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 24,
-                                  vertical: 12,
-                                ),
-                              ),
-                              child: Text(
-                                'No',
-                                style: GoogleFonts.inter(
-                                  color: ScholarlyTheme.textMuted,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
+                          ),
+                          const SizedBox(height: 16),
+                          Icon(
+                            chessState.game.inDraw
+                                ? Icons.handshake_rounded
+                                : (_getGameOverMessage(chessState) ==
+                                          'Congratulations'
+                                      ? Icons.emoji_events_rounded
+                                      : Icons.sentiment_dissatisfied_rounded),
+                            size: 48,
+                            color: ScholarlyTheme.accentBlue,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            chessState.game.inDraw
+                                ? 'Game Draw. New game?'
+                                : '${_getGameOverMessage(chessState)}. New game?',
+                            style: GoogleFonts.inter(
+                              color: ScholarlyTheme.textPrimary,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
                             ),
-                          ],
-                        ),
-                      ],
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 24),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              FilledButton(
+                                onPressed: () {
+                                  ref.read(chessProvider.notifier).reset();
+                                },
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: ScholarlyTheme.accentBlue,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 24,
+                                    vertical: 12,
+                                  ),
+                                ),
+                                child: Text(
+                                  'Yes',
+                                  style: GoogleFonts.inter(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              TextButton(
+                                onPressed: () {
+                                  ref
+                                      .read(chessProvider.notifier)
+                                      .dismissGameOver();
+                                },
+                                style: TextButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 24,
+                                    vertical: 12,
+                                  ),
+                                ),
+                                child: Text(
+                                  'No',
+                                  style: GoogleFonts.inter(
+                                    color: ScholarlyTheme.textMuted,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
-    ));
+    );
   }
 
   bool _isPlayerTurn(ChessState state) {
@@ -229,8 +243,6 @@ class _MainPageState extends ConsumerState<MainPage> with WidgetsBindingObserver
       return 'Congratulations';
     }
   }
-
-
 
   Widget _buildPortraitLayout(
     BuildContext context,
@@ -259,12 +271,16 @@ class _MainPageState extends ConsumerState<MainPage> with WidgetsBindingObserver
               const Spacer(),
               _KnightTimeDisplay(
                 isActive: _isPlayerTurn(state),
-                timeLeft: state.isPlayerWhite ? state.whiteTimeLeft : state.blackTimeLeft,
+                timeLeft: state.isPlayerWhite
+                    ? state.whiteTimeLeft
+                    : state.blackTimeLeft,
               ),
               const SizedBox(width: 12),
               _KnightTimeDisplay(
                 isActive: !_isPlayerTurn(state),
-                timeLeft: state.isPlayerWhite ? state.blackTimeLeft : state.whiteTimeLeft,
+                timeLeft: state.isPlayerWhite
+                    ? state.blackTimeLeft
+                    : state.whiteTimeLeft,
               ),
               const Spacer(),
               _KnightTurnIndicator(
@@ -284,9 +300,7 @@ class _MainPageState extends ConsumerState<MainPage> with WidgetsBindingObserver
             ),
           )
         else
-          Expanded(
-            child: const BoardStage(isExpanded: false),
-          ),
+          Expanded(child: const BoardStage(isExpanded: false)),
 
         // Chat Area
         if (_isCommentaryExpanded)
@@ -325,7 +339,8 @@ class _MainPageState extends ConsumerState<MainPage> with WidgetsBindingObserver
           Row(
             children: [
               GestureDetector(
-                onTap: () => ref.read(chessProvider.notifier).toggleAiOperational(),
+                onTap: () =>
+                    ref.read(chessProvider.notifier).toggleAiOperational(),
                 child: _AiProfileAnimation(
                   isOperational: state.isAiOperational,
                   child: Container(
@@ -353,11 +368,16 @@ class _MainPageState extends ConsumerState<MainPage> with WidgetsBindingObserver
               if (state.isChess960) ...[
                 const SizedBox(width: 6),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: ScholarlyTheme.accentBlueSoft,
                     borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.3)),
+                    border: Border.all(
+                      color: ScholarlyTheme.accentBlue.withValues(alpha: 0.3),
+                    ),
                   ),
                   child: Text(
                     '960',
@@ -383,8 +403,6 @@ class _MainPageState extends ConsumerState<MainPage> with WidgetsBindingObserver
       ),
     );
   }
-
-
 
   Widget _buildActionRow(
     BuildContext context,
@@ -458,15 +476,21 @@ class _MainPageState extends ConsumerState<MainPage> with WidgetsBindingObserver
           ActionIconButton(
             icon: Icons.save_rounded,
             onTap: () async {
-              final entry = await ref.read(chessProvider.notifier).saveCurrentGame();
+              final entry = await ref
+                  .read(chessProvider.notifier)
+                  .saveCurrentGame();
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(
-                      entry != null ? 'Game saved successfully.' : 'Failed to save game.',
+                      entry != null
+                          ? 'Game saved successfully.'
+                          : 'Failed to save game.',
                       style: GoogleFonts.inter(color: Colors.white),
                     ),
-                    backgroundColor: entry != null ? ScholarlyTheme.accentBlue : Colors.redAccent,
+                    backgroundColor: entry != null
+                        ? ScholarlyTheme.accentBlue
+                        : Colors.redAccent,
                     duration: const Duration(seconds: 2),
                     behavior: SnackBarBehavior.floating,
                   ),
@@ -676,7 +700,6 @@ class _MainPageState extends ConsumerState<MainPage> with WidgetsBindingObserver
     );
   }
 
-
   Future<void> _handleNewGame(BuildContext context, WidgetRef ref) async {
     final state = ref.read(chessProvider);
     final bool hasProgress = state.recentMoves.isNotEmpty;
@@ -691,11 +714,17 @@ class _MainPageState extends ConsumerState<MainPage> with WidgetsBindingObserver
           ),
           title: Text(
             'New Game?',
-            style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: ScholarlyTheme.textPrimary),
+            style: GoogleFonts.inter(
+              fontWeight: FontWeight.w600,
+              color: ScholarlyTheme.textPrimary,
+            ),
           ),
           content: Text(
             'Start a new game? Your current game progress will be saved automatically to history.',
-            style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 14),
+            style: GoogleFonts.inter(
+              color: ScholarlyTheme.textPrimary,
+              fontSize: 14,
+            ),
           ),
           actions: [
             TextButton(
@@ -853,16 +882,11 @@ class _AiProfileAnimationState extends State<_AiProfileAnimation>
   }
 }
 
-
-
 class _KnightTimeDisplay extends StatelessWidget {
   final bool isActive;
   final Duration timeLeft;
 
-  const _KnightTimeDisplay({
-    required this.isActive,
-    required this.timeLeft,
-  });
+  const _KnightTimeDisplay({required this.isActive, required this.timeLeft});
 
   @override
   Widget build(BuildContext context) {
@@ -870,18 +894,19 @@ class _KnightTimeDisplay extends StatelessWidget {
       duration: const Duration(milliseconds: 300),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: ScholarlyTheme.modernDecoration(sunken: !isActive).copyWith(
-        color: isActive ? ScholarlyTheme.panelBase : ScholarlyTheme.backgroundEnd,
+        color: isActive
+            ? ScholarlyTheme.panelBase
+            : ScholarlyTheme.backgroundEnd,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isActive ? ScholarlyTheme.accentBlue : ScholarlyTheme.panelStroke,
+          color: isActive
+              ? ScholarlyTheme.accentBlue
+              : ScholarlyTheme.panelStroke,
           width: isActive ? 1.5 : 1,
         ),
         boxShadow: isActive ? ScholarlyTheme.cardShadow : [],
       ),
-      child: ChessClock(
-        isActive: isActive,
-        timeLeft: timeLeft,
-      ),
+      child: ChessClock(isActive: isActive, timeLeft: timeLeft),
     );
   }
 }
@@ -890,10 +915,7 @@ class _KnightTurnIndicator extends StatefulWidget {
   final bool isActive;
   final bool isWhite;
 
-  const _KnightTurnIndicator({
-    required this.isActive,
-    required this.isWhite,
-  });
+  const _KnightTurnIndicator({required this.isActive, required this.isWhite});
 
   @override
   State<_KnightTurnIndicator> createState() => _KnightTurnIndicatorState();
@@ -933,8 +955,12 @@ class _KnightTurnIndicatorState extends State<_KnightTurnIndicator>
   @override
   Widget build(BuildContext context) {
     final bgColor = widget.isWhite ? Colors.black87 : Colors.white;
-    final pieceAsset = widget.isWhite ? 'assets/pieces/wN.svg' : 'assets/pieces/bN.svg';
-    final accentColor = widget.isWhite ? Colors.blueAccent : Colors.orangeAccent;
+    final pieceAsset = widget.isWhite
+        ? 'assets/pieces/wN.svg'
+        : 'assets/pieces/bN.svg';
+    final accentColor = widget.isWhite
+        ? Colors.blueAccent
+        : Colors.orangeAccent;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -962,17 +988,19 @@ class _KnightTurnIndicatorState extends State<_KnightTurnIndicator>
                           ),
                           blurRadius: 12 * _controller.value,
                           spreadRadius: 4 * _controller.value,
-                        )
+                        ),
                       ]
                     : [],
               ),
               padding: const EdgeInsets.all(6),
               child: SvgPicture.asset(
                 pieceAsset,
-                colorFilter: widget.isActive ? null : ColorFilter.mode(
-                  Colors.grey.withValues(alpha: 0.5),
-                  BlendMode.srcIn,
-                ),
+                colorFilter: widget.isActive
+                    ? null
+                    : ColorFilter.mode(
+                        Colors.grey.withValues(alpha: 0.5),
+                        BlendMode.srcIn,
+                      ),
               ),
             );
           },

@@ -63,11 +63,14 @@ class ShadowTheme extends ChessTheme {
         height: isEnemy ? 40 : 14,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: isEnemy 
-              ? Colors.transparent 
+          color: isEnemy
+              ? Colors.transparent
               : Colors.white.withValues(alpha: 0.45),
-          border: isEnemy 
-              ? Border.all(color: Colors.white.withValues(alpha: 0.8), width: 2.5)
+          border: isEnemy
+              ? Border.all(
+                  color: Colors.white.withValues(alpha: 0.8),
+                  width: 2.5,
+                )
               : null,
         ),
       ),
@@ -123,7 +126,9 @@ class _ShadowSelectionPulseState extends State<ShadowSelectionPulse>
         return Container(
           decoration: BoxDecoration(
             border: Border.all(
-              color: Colors.white.withValues(alpha: 0.2 + 0.3 * _controller.value),
+              color: Colors.white.withValues(
+                alpha: 0.2 + 0.3 * _controller.value,
+              ),
               width: 2.0 + 2.0 * _controller.value,
             ),
           ),
@@ -132,4 +137,3 @@ class _ShadowSelectionPulseState extends State<ShadowSelectionPulse>
     );
   }
 }
-

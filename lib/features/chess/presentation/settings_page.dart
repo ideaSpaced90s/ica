@@ -32,7 +32,11 @@ class SettingsPage extends ConsumerWidget {
               ),
             ),
             leading: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded, color: ScholarlyTheme.textPrimary, size: 20),
+              icon: const Icon(
+                Icons.arrow_back_ios_new_rounded,
+                color: ScholarlyTheme.textPrimary,
+                size: 20,
+              ),
               onPressed: () => Navigator.of(context).pop(),
             ),
           ),
@@ -54,11 +58,15 @@ class SettingsPage extends ConsumerWidget {
                 children: [
                   _SettingsTile(
                     label: 'Classic Chess',
-                    description: 'Standard starting position and orthodox rules',
+                    description:
+                        'Standard starting position and orthodox rules',
                     icon: Icons.grid_on_rounded,
                     onTap: () => notifier.setGameMode('classic'),
                     trailing: state.gameMode == 'classic'
-                        ? const Icon(Icons.check_circle_rounded, color: ScholarlyTheme.accentBlue)
+                        ? const Icon(
+                            Icons.check_circle_rounded,
+                            color: ScholarlyTheme.accentBlue,
+                          )
                         : const SizedBox(),
                   ),
                   _SettingsTile(
@@ -67,7 +75,10 @@ class SettingsPage extends ConsumerWidget {
                     icon: Icons.shuffle_rounded,
                     onTap: () => notifier.setGameMode('chess960'),
                     trailing: state.gameMode == 'chess960'
-                        ? const Icon(Icons.check_circle_rounded, color: ScholarlyTheme.accentBlue)
+                        ? const Icon(
+                            Icons.check_circle_rounded,
+                            color: ScholarlyTheme.accentBlue,
+                          )
                         : const SizedBox(),
                   ),
                 ],
@@ -80,21 +91,27 @@ class SettingsPage extends ConsumerWidget {
                   _SettingsSwitchTile(
                     label: 'Music',
                     description: 'Background music during gameplay',
-                    icon: state.isMusicEnabled ? Icons.music_note_rounded : Icons.music_off_rounded,
+                    icon: state.isMusicEnabled
+                        ? Icons.music_note_rounded
+                        : Icons.music_off_rounded,
                     value: state.isMusicEnabled,
                     onChanged: (v) => notifier.toggleMusic(),
                   ),
                   _SettingsSwitchTile(
                     label: 'Sound Effects',
                     description: 'Move sounds and capture alerts',
-                    icon: state.isSoundEnabled ? Icons.volume_up_rounded : Icons.volume_off_rounded,
+                    icon: state.isSoundEnabled
+                        ? Icons.volume_up_rounded
+                        : Icons.volume_off_rounded,
                     value: state.isSoundEnabled,
                     onChanged: (v) => notifier.toggleSound(),
                   ),
                   _SettingsSwitchTile(
                     label: 'Haptic Feedback',
                     description: 'Vibrations for physical impact',
-                    icon: state.isHapticsEnabled ? Icons.vibration_rounded : Icons.vibration_outlined,
+                    icon: state.isHapticsEnabled
+                        ? Icons.vibration_rounded
+                        : Icons.vibration_outlined,
                     value: state.isHapticsEnabled,
                     onChanged: (v) => notifier.toggleHaptics(),
                   ),
@@ -107,7 +124,8 @@ class SettingsPage extends ConsumerWidget {
                 children: [
                   _SettingsTile(
                     label: 'Board Theme',
-                    description: 'Current: ${ThemeRegistry.getTheme(state.boardThemeId).name}',
+                    description:
+                        'Current: ${ThemeRegistry.getTheme(state.boardThemeId).name}',
                     icon: Icons.palette_rounded,
                     onTap: () => _showThemeSelector(context, ref),
                     trailing: _ThemeMiniPreview(
@@ -119,12 +137,17 @@ class SettingsPage extends ConsumerWidget {
                     description: 'Fine-tune movement and effects',
                     icon: Icons.movie_filter_rounded,
                     onTap: () => _showAnimationSettingsOverlay(context, ref),
-                    trailing: Icon(Icons.chevron_right_rounded, color: ScholarlyTheme.textMuted),
+                    trailing: Icon(
+                      Icons.chevron_right_rounded,
+                      color: ScholarlyTheme.textMuted,
+                    ),
                   ),
                   _SettingsSwitchTile(
                     label: 'Master Animations',
                     description: 'Enable or disable all visual effects',
-                    icon: state.isAnimationsEnabled ? Icons.auto_awesome_rounded : Icons.auto_awesome_outlined,
+                    icon: state.isAnimationsEnabled
+                        ? Icons.auto_awesome_rounded
+                        : Icons.auto_awesome_outlined,
                     value: state.isAnimationsEnabled,
                     onChanged: (v) => notifier.toggleAnimations(),
                   ),
@@ -137,18 +160,27 @@ class SettingsPage extends ConsumerWidget {
                 children: [
                   _SettingsTile(
                     label: 'Time Control',
-                    description: '${state.whiteTimeLeft.inMinutes}+${state.incrementDuration.inSeconds} • Tap to change',
+                    description:
+                        '${state.whiteTimeLeft.inMinutes}+${state.incrementDuration.inSeconds} • Tap to change',
                     icon: Icons.timer_rounded,
                     onTap: () => _showTimeControlSelector(context, ref),
-                    trailing: Icon(Icons.edit_rounded, size: 18, color: ScholarlyTheme.accentBlue),
+                    trailing: Icon(
+                      Icons.edit_rounded,
+                      size: 18,
+                      color: ScholarlyTheme.accentBlue,
+                    ),
                   ),
                   _SettingsTile(
                     label: 'Engine Strength',
-                    description: 'Level ${state.engineLevel}: ${_getEngineLevelName(state.engineLevel)}',
+                    description:
+                        'Level ${state.engineLevel}: ${_getEngineLevelName(state.engineLevel)}',
                     icon: Icons.bolt_rounded,
                     onTap: () => _showStrengthOverlay(context, ref),
                     trailing: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: ScholarlyTheme.accentBlueSoft,
                         borderRadius: BorderRadius.circular(6),
@@ -176,7 +208,9 @@ class SettingsPage extends ConsumerWidget {
                     icon: Icons.history_rounded,
                     onTap: () {
                       Navigator.of(context).push(
-                        MaterialPageRoute(builder: (context) => const HistoryPage()),
+                        MaterialPageRoute(
+                          builder: (context) => const HistoryPage(),
+                        ),
                       );
                     },
                   ),
@@ -217,7 +251,9 @@ class SettingsPage extends ConsumerWidget {
 
             return GlassPanel(
               padding: const EdgeInsets.all(20),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(32),
+              ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -236,7 +272,8 @@ class SettingsPage extends ConsumerWidget {
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
                       itemCount: ThemeRegistry.allThemes.length,
-                      separatorBuilder: (context, index) => const SizedBox(width: 16),
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(width: 16),
                       itemBuilder: (context, index) {
                         final theme = ThemeRegistry.allThemes[index];
                         final isSelected = state.boardThemeId == theme.id;
@@ -250,17 +287,28 @@ class SettingsPage extends ConsumerWidget {
                                 height: 70,
                                 decoration: BoxDecoration(
                                   gradient: LinearGradient(
-                                    colors: [theme.lightSquare, theme.darkSquare],
+                                    colors: [
+                                      theme.lightSquare,
+                                      theme.darkSquare,
+                                    ],
                                     begin: Alignment.topLeft,
                                     end: Alignment.bottomRight,
                                   ),
                                   borderRadius: BorderRadius.circular(16),
                                   border: Border.all(
-                                    color: isSelected ? ScholarlyTheme.accentBlue : ScholarlyTheme.panelStroke,
+                                    color: isSelected
+                                        ? ScholarlyTheme.accentBlue
+                                        : ScholarlyTheme.panelStroke,
                                     width: isSelected ? 3 : 1,
                                   ),
                                   boxShadow: isSelected
-                                      ? [BoxShadow(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.3), blurRadius: 10)]
+                                      ? [
+                                          BoxShadow(
+                                            color: ScholarlyTheme.accentBlue
+                                                .withValues(alpha: 0.3),
+                                            blurRadius: 10,
+                                          ),
+                                        ]
                                       : [],
                                 ),
                               ),
@@ -269,8 +317,12 @@ class SettingsPage extends ConsumerWidget {
                                 theme.name,
                                 style: GoogleFonts.inter(
                                   fontSize: 12,
-                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                  color: isSelected ? ScholarlyTheme.accentBlue : ScholarlyTheme.textPrimary,
+                                  fontWeight: isSelected
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                  color: isSelected
+                                      ? ScholarlyTheme.accentBlue
+                                      : ScholarlyTheme.textPrimary,
                                 ),
                               ),
                             ],
@@ -311,7 +363,9 @@ class SettingsPage extends ConsumerWidget {
 
             return GlassPanel(
               padding: const EdgeInsets.all(24),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(32),
+              ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -329,8 +383,9 @@ class SettingsPage extends ConsumerWidget {
                     spacing: 8,
                     runSpacing: 8,
                     children: presets.map((p) {
-                      final isSelected = state.whiteTimeLeft.inMinutes == p['min'] && 
-                                       state.incrementDuration.inSeconds == p['inc'];
+                      final isSelected =
+                          state.whiteTimeLeft.inMinutes == p['min'] &&
+                          state.incrementDuration.inSeconds == p['inc'];
                       return ChoiceChip(
                         label: Text(p['label'] as String),
                         selected: isSelected,
@@ -344,8 +399,12 @@ class SettingsPage extends ConsumerWidget {
                         },
                         selectedColor: ScholarlyTheme.accentBlueSoft,
                         labelStyle: GoogleFonts.inter(
-                          color: isSelected ? ScholarlyTheme.accentBlue : ScholarlyTheme.textPrimary,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          color: isSelected
+                              ? ScholarlyTheme.accentBlue
+                              : ScholarlyTheme.textPrimary,
+                          fontWeight: isSelected
+                              ? FontWeight.bold
+                              : FontWeight.normal,
                         ),
                       );
                     }).toList(),
@@ -392,22 +451,27 @@ class SettingsPage extends ConsumerWidget {
               value: incrementSeconds.toDouble(),
               min: 0,
               max: 60,
-              onChanged: (v) => setDialogState(() => incrementSeconds = v.toInt()),
+              onChanged: (v) =>
+                  setDialogState(() => incrementSeconds = v.toInt()),
             ),
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
               child: FilledButton(
                 onPressed: () {
-                  ref.read(chessProvider.notifier).setTimeControl(
-                    Duration(minutes: totalMinutes),
-                    Duration(seconds: incrementSeconds),
-                  );
+                  ref
+                      .read(chessProvider.notifier)
+                      .setTimeControl(
+                        Duration(minutes: totalMinutes),
+                        Duration(seconds: incrementSeconds),
+                      );
                   Navigator.of(context).pop();
                 },
                 style: FilledButton.styleFrom(
                   backgroundColor: ScholarlyTheme.accentBlue,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 child: const Text('Apply Custom Time'),
               ),
@@ -464,7 +528,6 @@ class SettingsPage extends ConsumerWidget {
     await notifier.shutdown();
     SystemNavigator.pop();
   }
-
 
   Future<void> _showAnimationSettingsOverlay(
     BuildContext context,
@@ -656,12 +719,18 @@ class SettingsPage extends ConsumerWidget {
 
   String _getEngineLevelName(String level) {
     switch (level) {
-      case 'A': return 'Grandmaster';
-      case 'B': return 'Master';
-      case 'C': return 'Intermediate';
-      case 'D': return 'Casual';
-      case 'E': return 'Beginner';
-      default: return 'Master';
+      case 'A':
+        return 'Grandmaster';
+      case 'B':
+        return 'Master';
+      case 'C':
+        return 'Intermediate';
+      case 'D':
+        return 'Casual';
+      case 'E':
+        return 'Beginner';
+      default:
+        return 'Master';
     }
   }
 
@@ -777,14 +846,18 @@ class _GameStatusHeader extends StatelessWidget {
                       height: 10,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: state.game.gameOver 
-                            ? ScholarlyTheme.textMuted 
+                        color: state.game.gameOver
+                            ? ScholarlyTheme.textMuted
                             : (state.isPaused ? Colors.red : Colors.green),
                         boxShadow: [
                           BoxShadow(
-                            color: (state.game.gameOver 
-                                ? ScholarlyTheme.textMuted 
-                                : (state.isPaused ? Colors.red : Colors.green)).withValues(alpha: 0.4),
+                            color:
+                                (state.game.gameOver
+                                        ? ScholarlyTheme.textMuted
+                                        : (state.isPaused
+                                              ? Colors.red
+                                              : Colors.green))
+                                    .withValues(alpha: 0.4),
                             blurRadius: 4,
                             spreadRadius: 1,
                           ),
@@ -793,7 +866,9 @@ class _GameStatusHeader extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      state.game.gameOver ? 'GAME OVER' : (state.isPaused ? 'PAUSED' : 'LIVE'),
+                      state.game.gameOver
+                          ? 'GAME OVER'
+                          : (state.isPaused ? 'PAUSED' : 'LIVE'),
                       style: GoogleFonts.inter(
                         color: ScholarlyTheme.textPrimary,
                         fontWeight: FontWeight.w900,
@@ -862,9 +937,7 @@ class _SettingsCategory extends StatelessWidget {
             border: Border.all(color: ScholarlyTheme.panelStroke),
           ),
           clipBehavior: Clip.antiAlias,
-          child: Column(
-            children: children,
-          ),
+          child: Column(children: children),
         ),
       ],
     );
@@ -898,7 +971,11 @@ class _SettingsTile extends StatelessWidget {
           color: ScholarlyTheme.backgroundStart,
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Icon(icon, color: iconColor ?? ScholarlyTheme.textPrimary, size: 20),
+        child: Icon(
+          icon,
+          color: iconColor ?? ScholarlyTheme.textPrimary,
+          size: 20,
+        ),
       ),
       title: Text(
         label,
@@ -910,12 +987,15 @@ class _SettingsTile extends StatelessWidget {
       ),
       subtitle: Text(
         description,
-        style: GoogleFonts.inter(
-          color: ScholarlyTheme.textMuted,
-          fontSize: 11,
-        ),
+        style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 11),
       ),
-      trailing: trailing ?? Icon(Icons.chevron_right_rounded, color: ScholarlyTheme.textSubtle, size: 20),
+      trailing:
+          trailing ??
+          Icon(
+            Icons.chevron_right_rounded,
+            color: ScholarlyTheme.textSubtle,
+            size: 20,
+          ),
     );
   }
 }
@@ -943,7 +1023,9 @@ class _SettingsSwitchTile extends StatelessWidget {
       secondary: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: value ? ScholarlyTheme.accentBlueSoft : ScholarlyTheme.backgroundStart,
+          color: value
+              ? ScholarlyTheme.accentBlueSoft
+              : ScholarlyTheme.backgroundStart,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Icon(
@@ -962,10 +1044,7 @@ class _SettingsSwitchTile extends StatelessWidget {
       ),
       subtitle: Text(
         description,
-        style: GoogleFonts.inter(
-          color: ScholarlyTheme.textMuted,
-          fontSize: 11,
-        ),
+        style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 11),
       ),
       activeThumbColor: ScholarlyTheme.accentBlue,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -1023,10 +1102,14 @@ class _AnimationToggle extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: value ? ScholarlyTheme.accentBlue.withValues(alpha: 0.1) : Colors.transparent,
+            color: value
+                ? ScholarlyTheme.accentBlue.withValues(alpha: 0.1)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: value ? ScholarlyTheme.accentBlue.withValues(alpha: 0.3) : Colors.transparent,
+              color: value
+                  ? ScholarlyTheme.accentBlue.withValues(alpha: 0.3)
+                  : Colors.transparent,
             ),
           ),
           child: Row(
@@ -1039,7 +1122,9 @@ class _AnimationToggle extends StatelessWidget {
                 ),
                 child: Icon(
                   icon,
-                  color: value ? ScholarlyTheme.accentBlue : ScholarlyTheme.textMuted,
+                  color: value
+                      ? ScholarlyTheme.accentBlue
+                      : ScholarlyTheme.textMuted,
                   size: 20,
                 ),
               ),
@@ -1070,7 +1155,9 @@ class _AnimationToggle extends StatelessWidget {
                 value: value,
                 onChanged: onChanged,
                 activeThumbColor: ScholarlyTheme.accentBlue,
-                activeTrackColor: ScholarlyTheme.accentBlue.withValues(alpha: 0.3),
+                activeTrackColor: ScholarlyTheme.accentBlue.withValues(
+                  alpha: 0.3,
+                ),
               ),
             ],
           ),
@@ -1103,9 +1190,13 @@ class _StatusClock extends StatelessWidget {
       duration: const Duration(milliseconds: 200),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: ScholarlyTheme.modernDecoration().copyWith(
-        color: isActive ? ScholarlyTheme.accentBlueSoft : ScholarlyTheme.panelBase,
+        color: isActive
+            ? ScholarlyTheme.accentBlueSoft
+            : ScholarlyTheme.panelBase,
         border: Border.all(
-          color: isActive ? ScholarlyTheme.accentBlue : ScholarlyTheme.panelStroke,
+          color: isActive
+              ? ScholarlyTheme.accentBlue
+              : ScholarlyTheme.panelStroke,
         ),
         borderRadius: BorderRadius.circular(12),
       ),
@@ -1116,7 +1207,9 @@ class _StatusClock extends StatelessWidget {
             style: GoogleFonts.inter(
               fontSize: 10,
               fontWeight: FontWeight.w600,
-              color: isActive ? ScholarlyTheme.accentBlue : ScholarlyTheme.textMuted,
+              color: isActive
+                  ? ScholarlyTheme.accentBlue
+                  : ScholarlyTheme.textMuted,
             ),
           ),
           Text(
@@ -1124,7 +1217,9 @@ class _StatusClock extends StatelessWidget {
             style: GoogleFonts.jetBrainsMono(
               fontSize: 14,
               fontWeight: FontWeight.bold,
-              color: isActive ? ScholarlyTheme.accentBlue : ScholarlyTheme.textPrimary,
+              color: isActive
+                  ? ScholarlyTheme.accentBlue
+                  : ScholarlyTheme.textPrimary,
             ),
           ),
         ],

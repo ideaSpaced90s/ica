@@ -3,11 +3,7 @@ import 'package:flutter/material.dart';
 import 'scholarly_theme.dart';
 
 class ChessClock extends StatelessWidget {
-  const ChessClock({
-    super.key,
-    required this.isActive,
-    required this.timeLeft,
-  });
+  const ChessClock({super.key, required this.isActive, required this.timeLeft});
 
   final bool isActive;
   final Duration timeLeft;

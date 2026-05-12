@@ -28,17 +28,21 @@ class _PixelDisintegrationState extends State<PixelDisintegration>
   void initState() {
     super.initState();
     _controller = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 800));
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
 
     // Initialize 24-32 particles in a rough piece shape
     for (int i = 0; i < 24; i++) {
-      _particles.add(_PixelParticle(
-        x: (_random.nextDouble() - 0.5) * 40,
-        y: (_random.nextDouble() - 0.5) * 60,
-        vx: (_random.nextDouble() - 0.5) * 150,
-        vy: (_random.nextDouble() - 1.0) * 200, // Blow upwards
-        size: 3.0 + _random.nextDouble() * 4.0,
-      ));
+      _particles.add(
+        _PixelParticle(
+          x: (_random.nextDouble() - 0.5) * 40,
+          y: (_random.nextDouble() - 0.5) * 60,
+          vx: (_random.nextDouble() - 0.5) * 150,
+          vy: (_random.nextDouble() - 1.0) * 200, // Blow upwards
+          size: 3.0 + _random.nextDouble() * 4.0,
+        ),
+      );
     }
 
     _controller.forward().then((_) => widget.onComplete());
@@ -73,12 +77,13 @@ class _PixelDisintegrationState extends State<PixelDisintegration>
 
 class _PixelParticle {
   double x, y, vx, vy, size;
-  _PixelParticle(
-      {required this.x,
-      required this.y,
-      required this.vx,
-      required this.vy,
-      required this.size});
+  _PixelParticle({
+    required this.x,
+    required this.y,
+    required this.vx,
+    required this.vy,
+    required this.size,
+  });
 }
 
 class _PixelParticlePainter extends CustomPainter {
@@ -86,8 +91,11 @@ class _PixelParticlePainter extends CustomPainter {
   final double progress;
   final bool isWhite;
 
-  _PixelParticlePainter(
-      {required this.particles, required this.progress, required this.isWhite});
+  _PixelParticlePainter({
+    required this.particles,
+    required this.progress,
+    required this.isWhite,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -97,8 +105,9 @@ class _PixelParticlePainter extends CustomPainter {
 
     for (var p in particles) {
       final double x = p.x + p.vx * progress;
-      final double y = p.y + p.vy * progress + (9.8 * 20 * progress * progress); // Gravity
-      
+      final double y =
+          p.y + p.vy * progress + (9.8 * 20 * progress * progress); // Gravity
+
       // Draw as a small square (pixel)
       canvas.drawRect(Rect.fromLTWH(x, y, p.size, p.size), paint);
     }
@@ -123,8 +132,9 @@ class _PixelCheckPulseState extends State<PixelCheckPulse>
   void initState() {
     super.initState();
     _controller = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 300))
-      ..repeat(reverse: true);
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    )..repeat(reverse: true);
   }
 
   @override
@@ -141,8 +151,12 @@ class _PixelCheckPulseState extends State<PixelCheckPulse>
         return Container(
           decoration: BoxDecoration(
             border: Border.all(
-              color: Colors.redAccent.withValues(alpha: 0.6 * _controller.value),
-              width: 4 * (1.0 - _controller.value) + 1, // Flashing border thickness
+              color: Colors.redAccent.withValues(
+                alpha: 0.6 * _controller.value,
+              ),
+              width:
+                  4 * (1.0 - _controller.value) +
+                  1, // Flashing border thickness
             ),
           ),
         );

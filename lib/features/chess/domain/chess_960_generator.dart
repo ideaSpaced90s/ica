@@ -4,10 +4,7 @@ class Chess960Position {
   final String fen;
   final String castlingRights;
 
-  const Chess960Position({
-    required this.fen,
-    required this.castlingRights,
-  });
+  const Chess960Position({required this.fen, required this.castlingRights});
 }
 
 class Chess960Generator {
@@ -52,19 +49,22 @@ class Chess960Generator {
     // Find the files of the two rooks for explicit rights tracking if needed.
     final r1FileChar = String.fromCharCode('A'.codeUnitAt(0) + emptyIndices[0]);
     final r2FileChar = String.fromCharCode('A'.codeUnitAt(0) + emptyIndices[2]);
-    final castlingRights = '$r1FileChar$r2FileChar${r1FileChar.toLowerCase()}${r2FileChar.toLowerCase()}';
+    final castlingRights =
+        '$r1FileChar$r2FileChar${r1FileChar.toLowerCase()}${r2FileChar.toLowerCase()}';
 
     // Standard initial FEN string using 'KQkq' to maintain compatibility with standard FEN parsers.
     // Stockfish with UCI_Chess960=true automatically identifies actual castling files from the King/Rook layout.
-    final fen = '$blackPieces/pppppppp/8/8/8/8/PPPPPPPP/$whitePieces w KQkq - 0 1';
+    final fen =
+        '$blackPieces/pppppppp/8/8/8/8/PPPPPPPP/$whitePieces w KQkq - 0 1';
 
-    return Chess960Position(
-      fen: fen,
-      castlingRights: castlingRights,
-    );
+    return Chess960Position(fen: fen, castlingRights: castlingRights);
   }
 
-  static void _placeInEmptySlot(List<String?> array, String piece, int targetEmptySlot) {
+  static void _placeInEmptySlot(
+    List<String?> array,
+    String piece,
+    int targetEmptySlot,
+  ) {
     int emptyCount = 0;
     for (int i = 0; i < array.length; i++) {
       if (array[i] == null) {

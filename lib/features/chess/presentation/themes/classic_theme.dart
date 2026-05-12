@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'chess_theme.dart';
 
-
 class ClassicTheme extends ChessTheme {
   const ClassicTheme() : super(id: 'classic', name: 'Classic');
 
@@ -46,13 +45,26 @@ class ClassicTheme extends ChessTheme {
     final rowIndex = isWhite ? 0 : 1;
     int colIndex;
     switch (type.toUpperCase()) {
-      case 'K': colIndex = 0; break;
-      case 'Q': colIndex = 1; break;
-      case 'B': colIndex = 2; break;
-      case 'N': colIndex = 3; break;
-      case 'R': colIndex = 4; break;
-      case 'P': colIndex = 5; break;
-      default: colIndex = 5;
+      case 'K':
+        colIndex = 0;
+        break;
+      case 'Q':
+        colIndex = 1;
+        break;
+      case 'B':
+        colIndex = 2;
+        break;
+      case 'N':
+        colIndex = 3;
+        break;
+      case 'R':
+        colIndex = 4;
+        break;
+      case 'P':
+        colIndex = 5;
+        break;
+      default:
+        colIndex = 5;
     }
 
     return AspectRatio(
@@ -83,10 +95,10 @@ class ClassicTheme extends ChessTheme {
         height: isEnemy ? 38 : 12,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: isEnemy 
-              ? Colors.transparent 
+          color: isEnemy
+              ? Colors.transparent
               : const Color(0xFF0D6EFD).withValues(alpha: 0.75),
-          border: isEnemy 
+          border: isEnemy
               ? Border.all(color: const Color(0xFF0D6EFD), width: 2.8)
               : null,
         ),

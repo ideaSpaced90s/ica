@@ -155,11 +155,15 @@ class _LandingFeedbackState extends State<LandingFeedback>
                     width: widget.squareSize - 2, // slight margin for tile feel
                     height: widget.squareSize - 2,
                     decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: _opacityAnim.value * 0.4),
+                      color: Colors.black.withValues(
+                        alpha: _opacityAnim.value * 0.4,
+                      ),
                       borderRadius: BorderRadius.circular(2),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: _opacityAnim.value * 0.3),
+                          color: Colors.black.withValues(
+                            alpha: _opacityAnim.value * 0.3,
+                          ),
                           blurRadius: 2,
                           offset: const Offset(1, 1),
                         ),

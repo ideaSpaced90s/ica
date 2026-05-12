@@ -86,7 +86,7 @@ class ArrowPainter extends CustomPainter {
     path.close();
 
     canvas.drawPath(path, headPaint);
-    
+
     // Add a subtle glow
     final glowPaint = Paint()
       ..color = ScholarlyTheme.accentGold.withValues(alpha: 0.3)
@@ -94,20 +94,22 @@ class ArrowPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4.0)
       ..style = PaintingStyle.stroke;
-    
+
     canvas.drawLine(start, lineEnd, glowPaint);
   }
 
   Offset _getCenter(String square) {
     final col = square.codeUnitAt(0) - 'a'.codeUnitAt(0);
     final row = 8 - int.parse(square[1]);
-    
+
     final x = (isFlipped ? 7 - col : col) * squareSize + squareSize / 2;
     final y = (isFlipped ? 7 - row : row) * squareSize + squareSize / 2;
     return Offset(x, y);
   }
 
   @override
-  bool shouldRepaint(covariant ArrowPainter oldDelegate) => 
-      oldDelegate.from != from || oldDelegate.to != to || oldDelegate.isFlipped != isFlipped;
+  bool shouldRepaint(covariant ArrowPainter oldDelegate) =>
+      oldDelegate.from != from ||
+      oldDelegate.to != to ||
+      oldDelegate.isFlipped != isFlipped;
 }

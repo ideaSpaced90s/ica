@@ -28,7 +28,7 @@ class PuzzleSquarePainter extends CustomPainter {
       ..color = highlightColor
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5;
-    
+
     canvas.drawRRect(
       RRect.fromRectAndRadius(
         Rect.fromLTWH(2, 2, size.width - 4, size.height - 4),
@@ -42,8 +42,16 @@ class PuzzleSquarePainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5;
 
-    canvas.drawLine(Offset(0, size.height), Offset(size.width, size.height), shadowPaint);
-    canvas.drawLine(Offset(size.width, 0), Offset(size.width, size.height), shadowPaint);
+    canvas.drawLine(
+      Offset(0, size.height),
+      Offset(size.width, size.height),
+      shadowPaint,
+    );
+    canvas.drawLine(
+      Offset(size.width, 0),
+      Offset(size.width, size.height),
+      shadowPaint,
+    );
   }
 
   @override
@@ -61,7 +69,9 @@ class PuzzleMoveIndicator extends StatelessWidget {
         width: 24,
         height: 24,
         decoration: BoxDecoration(
-          color: isEnemy ? Colors.redAccent.withValues(alpha: 0.4) : Colors.greenAccent.withValues(alpha: 0.4),
+          color: isEnemy
+              ? Colors.redAccent.withValues(alpha: 0.4)
+              : Colors.greenAccent.withValues(alpha: 0.4),
           borderRadius: BorderRadius.circular(4),
           border: Border.all(
             color: isEnemy ? Colors.red : Colors.greenAccent,
@@ -69,7 +79,9 @@ class PuzzleMoveIndicator extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: (isEnemy ? Colors.red : Colors.greenAccent).withValues(alpha: 0.3),
+              color: (isEnemy ? Colors.red : Colors.greenAccent).withValues(
+                alpha: 0.3,
+              ),
               blurRadius: 8,
               spreadRadius: 1,
             ),
@@ -81,7 +93,9 @@ class PuzzleMoveIndicator extends StatelessWidget {
             width: 12,
             height: 12,
             decoration: BoxDecoration(
-              color: (isEnemy ? Colors.red : Colors.greenAccent).withValues(alpha: 0.6),
+              color: (isEnemy ? Colors.red : Colors.greenAccent).withValues(
+                alpha: 0.6,
+              ),
               shape: BoxShape.circle,
             ),
           ),
@@ -98,7 +112,10 @@ class PuzzleSelectionCradle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.white.withValues(alpha: 0.5), width: 3),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.5),
+          width: 3,
+        ),
         borderRadius: BorderRadius.circular(8),
       ),
     );

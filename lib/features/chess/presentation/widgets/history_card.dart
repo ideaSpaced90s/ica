@@ -31,11 +31,14 @@ class _HistoryCardState extends State<HistoryCard> {
   @override
   Widget build(BuildContext context) {
     final dateFormat = DateFormat('MMM dd, yyyy • HH:mm');
-    final shortId = widget.game.id.length >= 4 ? widget.game.id.substring(0, 4) : widget.game.id;
-    final title = (widget.game.customName != null && widget.game.customName!.isNotEmpty)
+    final shortId = widget.game.id.length >= 4
+        ? widget.game.id.substring(0, 4)
+        : widget.game.id;
+    final title =
+        (widget.game.customName != null && widget.game.customName!.isNotEmpty)
         ? widget.game.customName!
         : 'untitled$shortId';
-    
+
     return Container(
       decoration: ScholarlyTheme.modernDecoration(),
       clipBehavior: Clip.antiAlias,
@@ -59,7 +62,7 @@ class _HistoryCardState extends State<HistoryCard> {
                 ),
               ),
               const SizedBox(width: 16),
-              
+
               // Details
               Expanded(
                 child: Column(
@@ -82,8 +85,12 @@ class _HistoryCardState extends State<HistoryCard> {
                         GestureDetector(
                           onTap: widget.onToggleFavorite,
                           child: Icon(
-                            widget.game.isFavorite ? Icons.star_rounded : Icons.star_outline_rounded,
-                            color: widget.game.isFavorite ? ScholarlyTheme.accentYellow : ScholarlyTheme.textMuted,
+                            widget.game.isFavorite
+                                ? Icons.star_rounded
+                                : Icons.star_outline_rounded,
+                            color: widget.game.isFavorite
+                                ? ScholarlyTheme.accentYellow
+                                : ScholarlyTheme.textMuted,
                             size: 20,
                           ),
                         ),
@@ -103,16 +110,22 @@ class _HistoryCardState extends State<HistoryCard> {
                       alignment: Alignment.centerLeft,
                       child: Row(
                         children: [
-                          _buildTimeBadge('W', Duration(milliseconds: widget.game.whiteTimeLeftMs)),
+                          _buildTimeBadge(
+                            'W',
+                            Duration(milliseconds: widget.game.whiteTimeLeftMs),
+                          ),
                           const SizedBox(width: 8),
-                          _buildTimeBadge('B', Duration(milliseconds: widget.game.blackTimeLeftMs)),
+                          _buildTimeBadge(
+                            'B',
+                            Duration(milliseconds: widget.game.blackTimeLeftMs),
+                          ),
                         ],
                       ),
                     ),
                   ],
                 ),
               ),
-              
+
               // Actions
               Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -217,41 +230,54 @@ class MiniBoardPreview extends StatelessWidget {
               children: List.generate(8, (file) {
                 final isLight = (rank + file) % 2 == 0;
                 final squareIndex = (7 - rank) * 8 + file;
-                final piece = chess.get(chess_lib.Chess.SQUARES.keys.elementAt(squareIndex));
-                
+                final piece = chess.get(
+                  chess_lib.Chess.SQUARES.keys.elementAt(squareIndex),
+                );
+
                 return Container(
                   width: squareSize,
                   height: squareSize,
-                  color: isLight ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.1),
-                  child: piece == null 
-                    ? null 
-                    : Center(
-                        child: Text(
-                          _getPieceSymbol(piece),
-                          style: TextStyle(
-                            fontSize: squareSize * 0.8,
-                            color: piece.color == chess_lib.Color.WHITE ? Colors.white : Colors.black87,
+                  color: isLight
+                      ? Colors.white.withValues(alpha: 0.1)
+                      : Colors.black.withValues(alpha: 0.1),
+                  child: piece == null
+                      ? null
+                      : Center(
+                          child: Text(
+                            _getPieceSymbol(piece),
+                            style: TextStyle(
+                              fontSize: squareSize * 0.8,
+                              color: piece.color == chess_lib.Color.WHITE
+                                  ? Colors.white
+                                  : Colors.black87,
+                            ),
                           ),
                         ),
-                      ),
                 );
               }),
             );
           }),
         );
-      }
+      },
     );
   }
 
   String _getPieceSymbol(chess_lib.Piece piece) {
     switch (piece.type) {
-      case chess_lib.PieceType.PAWN: return '♟';
-      case chess_lib.PieceType.KNIGHT: return '♞';
-      case chess_lib.PieceType.BISHOP: return '♝';
-      case chess_lib.PieceType.ROOK: return '♜';
-      case chess_lib.PieceType.QUEEN: return '♛';
-      case chess_lib.PieceType.KING: return '♚';
-      default: return '';
+      case chess_lib.PieceType.PAWN:
+        return '♟';
+      case chess_lib.PieceType.KNIGHT:
+        return '♞';
+      case chess_lib.PieceType.BISHOP:
+        return '♝';
+      case chess_lib.PieceType.ROOK:
+        return '♜';
+      case chess_lib.PieceType.QUEEN:
+        return '♛';
+      case chess_lib.PieceType.KING:
+        return '♚';
+      default:
+        return '';
     }
   }
 }

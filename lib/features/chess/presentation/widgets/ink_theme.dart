@@ -20,11 +20,13 @@ class InkBoardPainter extends CustomPainter {
     final random = math.Random(isLight ? 42 : 13);
     final grainPaint = Paint();
     for (int i = 0; i < 150; i++) {
-       final x = random.nextDouble() * size.width;
-       final y = random.nextDouble() * size.height;
-       final radius = random.nextDouble() * 0.8;
-       grainPaint.color = Colors.black.withValues(alpha: random.nextDouble() * 0.03);
-       canvas.drawCircle(Offset(x, y), radius, grainPaint);
+      final x = random.nextDouble() * size.width;
+      final y = random.nextDouble() * size.height;
+      final radius = random.nextDouble() * 0.8;
+      grainPaint.color = Colors.black.withValues(
+        alpha: random.nextDouble() * 0.03,
+      );
+      canvas.drawCircle(Offset(x, y), radius, grainPaint);
     }
 
     // Add subtle ink wash edges if it's a dark square
@@ -33,10 +35,7 @@ class InkBoardPainter extends CustomPainter {
         ..shader = ui.Gradient.radial(
           Offset(size.width * 0.5, size.height * 0.5),
           size.width * 0.7,
-          [
-            Colors.black.withValues(alpha: 0.05),
-            Colors.transparent,
-          ],
+          [Colors.black.withValues(alpha: 0.05), Colors.transparent],
         );
       canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), washPaint);
     }
@@ -60,19 +59,22 @@ class BrushStrokePiecePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final inkColor = isWhite 
+    final inkColor = isWhite
         ? Colors.black.withValues(alpha: 0.85) // Soft black for white
         : const Color(0xFF1A1A1A); // Bold deep black for black pieces
 
     final strokeWidth = isWhite ? 2.2 : 3.8; // Thin for white, thick for black
-    
+
     final paint = Paint()
       ..color = inkColor
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 0.4); // Slight ink bleed
+      ..maskFilter = const MaskFilter.blur(
+        BlurStyle.normal,
+        0.4,
+      ); // Slight ink bleed
 
     final fillPaint = Paint()
       ..color = inkColor.withValues(alpha: 0.15)
@@ -83,11 +85,16 @@ class BrushStrokePiecePainter extends CustomPainter {
     final drawSize = size * 0.8;
 
     _drawPiecePath(canvas, drawSize, paint, fillPaint);
-    
+
     canvas.restore();
   }
 
-  void _drawPiecePath(Canvas canvas, Size size, Paint strokePaint, Paint fillPaint) {
+  void _drawPiecePath(
+    Canvas canvas,
+    Size size,
+    Paint strokePaint,
+    Paint fillPaint,
+  ) {
     final w = size.width;
     final h = size.height;
     final path = Path();
@@ -100,7 +107,13 @@ class BrushStrokePiecePainter extends CustomPainter {
     switch (type.toUpperCase()) {
       case 'P': // Pawn
         path.moveTo(w * 0.5, h * 0.3);
-        path.addOval(Rect.fromCenter(center: Offset(w * 0.5, h * 0.4), width: w * 0.3, height: h * 0.3));
+        path.addOval(
+          Rect.fromCenter(
+            center: Offset(w * 0.5, h * 0.4),
+            width: w * 0.3,
+            height: h * 0.3,
+          ),
+        );
         path.moveTo(w * 0.35, h * 0.55);
         path.quadraticBezierTo(w * 0.5, h * 0.8, w * 0.65, h * 0.55);
         break;
@@ -122,7 +135,12 @@ class BrushStrokePiecePainter extends CustomPainter {
         break;
       case 'N': // Knight
         path.moveTo(w * 0.3, h * 0.8);
-        path.quadraticBezierTo(w * 0.3, h * 0.3, w * 0.6, h * 0.2); // Neck to head
+        path.quadraticBezierTo(
+          w * 0.3,
+          h * 0.3,
+          w * 0.6,
+          h * 0.2,
+        ); // Neck to head
         path.quadraticBezierTo(w * 0.8, h * 0.4, w * 0.5, h * 0.5); // Nose
         path.quadraticBezierTo(w * 0.4, h * 0.7, w * 0.7, h * 0.8); // Back
         break;
@@ -162,7 +180,7 @@ class BrushStrokePiecePainter extends CustomPainter {
     // Add wobbly / irregular stroke effect by drawing with slight offsets
     canvas.drawPath(path, fillPaint);
     canvas.drawPath(path, strokePaint);
-    
+
     // Draw secondary "jitter" path for organic brush feel
     final jitterPath = Path();
     final random = math.Random(type.length + (isWhite ? 1 : 0));
@@ -186,8 +204,8 @@ class BrushStrokePiecePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant BrushStrokePiecePainter oldDelegate) => 
-    oldDelegate.isHighlighted != isHighlighted || oldDelegate.type != type;
+  bool shouldRepaint(covariant BrushStrokePiecePainter oldDelegate) =>
+      oldDelegate.isHighlighted != isHighlighted || oldDelegate.type != type;
 }
 
 /// Selection ripple animation (Ink drop spreading in water)
@@ -207,13 +225,17 @@ class _InkRipple extends StatefulWidget {
   State<_InkRipple> createState() => _InkRippleState();
 }
 
-class _InkRippleState extends State<_InkRipple> with SingleTickerProviderStateMixin {
+class _InkRippleState extends State<_InkRipple>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 800))..repeat();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    )..repeat();
   }
 
   @override
@@ -252,7 +274,7 @@ class _InkRipplePainter extends CustomPainter {
       ..strokeWidth = 2.0;
 
     canvas.drawCircle(center, radius, paint);
-    
+
     // Outer faint ring
     final outerPaint = Paint()
       ..color = Colors.black.withValues(alpha: opacity * 0.15)
@@ -280,22 +302,28 @@ class InkSplashEffect extends StatefulWidget {
   State<InkSplashEffect> createState() => _InkSplashEffectState();
 }
 
-class _InkSplashEffectState extends State<InkSplashEffect> with SingleTickerProviderStateMixin {
+class _InkSplashEffectState extends State<InkSplashEffect>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   final List<_SplashParticle> _particles = [];
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
-    
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+
     final random = math.Random();
     for (int i = 0; i < 15; i++) {
-      _particles.add(_SplashParticle(
-        angle: random.nextDouble() * 2 * math.pi,
-        speed: 2.0 + random.nextDouble() * 4.0,
-        size: 3.0 + random.nextDouble() * 8.0,
-      ));
+      _particles.add(
+        _SplashParticle(
+          angle: random.nextDouble() * 2 * math.pi,
+          speed: 2.0 + random.nextDouble() * 4.0,
+          size: 3.0 + random.nextDouble() * 8.0,
+        ),
+      );
     }
 
     _controller.forward().then((_) => widget.onComplete());
@@ -332,7 +360,11 @@ class _SplashParticle {
   final double angle;
   final double speed;
   final double size;
-  _SplashParticle({required this.angle, required this.speed, required this.size});
+  _SplashParticle({
+    required this.angle,
+    required this.speed,
+    required this.size,
+  });
 }
 
 class _InkSplashPainter extends CustomPainter {
@@ -340,7 +372,11 @@ class _InkSplashPainter extends CustomPainter {
   final List<_SplashParticle> particles;
   final double progress;
 
-  _InkSplashPainter({required this.position, required this.particles, required this.progress});
+  _InkSplashPainter({
+    required this.position,
+    required this.particles,
+    required this.progress,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -352,12 +388,16 @@ class _InkSplashPainter extends CustomPainter {
       final distance = p.speed * progress * 50.0;
       final x = position.dx + math.cos(p.angle) * distance;
       final y = position.dy + math.sin(p.angle) * distance;
-      
+
       // Irregular droplet shape
       canvas.drawCircle(Offset(x, y), p.size * (1.0 - progress * 0.5), paint);
-      
+
       if (progress < 0.3) {
-         canvas.drawCircle(position, (p.size + 10) * (1.0 - progress * 3), paint);
+        canvas.drawCircle(
+          position,
+          (p.size + 10) * (1.0 - progress * 3),
+          paint,
+        );
       }
     }
   }
@@ -379,8 +419,15 @@ class InkMoveHint extends StatelessWidget {
         height: isEnemy ? 45 : 18,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: isEnemy ? Colors.transparent : Colors.black.withValues(alpha: 0.15),
-          border: isEnemy ? Border.all(color: Colors.black.withValues(alpha: 0.4), width: 1.5) : null,
+          color: isEnemy
+              ? Colors.transparent
+              : Colors.black.withValues(alpha: 0.15),
+          border: isEnemy
+              ? Border.all(
+                  color: Colors.black.withValues(alpha: 0.4),
+                  width: 1.5,
+                )
+              : null,
         ),
       ),
     );
@@ -395,13 +442,17 @@ class InkCheckSlash extends StatefulWidget {
   State<InkCheckSlash> createState() => _InkCheckSlashState();
 }
 
-class _InkCheckSlashState extends State<InkCheckSlash> with SingleTickerProviderStateMixin {
+class _InkCheckSlashState extends State<InkCheckSlash>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000))..repeat();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    )..repeat();
   }
 
   @override

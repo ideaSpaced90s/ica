@@ -36,7 +36,7 @@ class WalnutPiecePainter extends CustomPainter {
     final Paint shadowPaint = Paint()
       ..color = Colors.black.withValues(alpha: 0.15)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
-    
+
     canvas.drawOval(
       Rect.fromCenter(
         center: Offset(size.width / 2 + 2, size.height * 0.9 + 2),
@@ -48,13 +48,13 @@ class WalnutPiecePainter extends CustomPainter {
 
     // 2. Main shape
     canvas.drawPath(path, fillPaint);
-    
+
     // 3. Highlight edge for 3D feel
     final highlightPaint = Paint()
       ..color = Colors.white.withValues(alpha: isWhite ? 0.3 : 0.05)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
-      
+
     canvas.save();
     canvas.clipPath(path);
     canvas.drawPath(path, highlightPaint);
@@ -73,7 +73,9 @@ class WalnutPiecePainter extends CustomPainter {
     switch (type) {
       case chess_lib.PieceType.PAWN:
         path.moveTo(midX, h * 0.25);
-        path.addOval(Rect.fromCircle(center: Offset(midX, h * 0.35), radius: w * 0.12));
+        path.addOval(
+          Rect.fromCircle(center: Offset(midX, h * 0.35), radius: w * 0.12),
+        );
         path.moveTo(midX - w * 0.15, h * 0.45);
         path.quadraticBezierTo(midX, h * 0.5, midX + w * 0.15, h * 0.45);
         path.lineTo(midX + w * 0.25, h * 0.85);

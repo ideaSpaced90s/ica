@@ -11,7 +11,10 @@ class ForestDustOverlay extends StatefulWidget {
 class _ForestDustOverlayState extends State<ForestDustOverlay>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  final List<_DustParticle> _particles = List.generate(25, (_) => _DustParticle());
+  final List<_DustParticle> _particles = List.generate(
+    25,
+    (_) => _DustParticle(),
+  );
 
   @override
   void initState() {
@@ -64,8 +67,12 @@ class _DustPainter extends CustomPainter {
       // Slow drifting movement
       final dx = size.width * ((p.x + animationValue * p.speed) % 1.0);
       final dy = size.height * ((p.y + animationValue * p.speed * 0.5) % 1.0);
-      
-      paint.color = Colors.white.withValues(alpha: p.opacity * (0.5 + 0.5 * math.sin(animationValue * math.pi * 2 + p.x * 10)));
+
+      paint.color = Colors.white.withValues(
+        alpha:
+            p.opacity *
+            (0.5 + 0.5 * math.sin(animationValue * math.pi * 2 + p.x * 10)),
+      );
       canvas.drawCircle(Offset(dx, dy), p.size, paint);
     }
   }
@@ -97,14 +104,15 @@ class _LeafScatterEffectState extends State<LeafScatterEffect>
   void initState() {
     super.initState();
     _leaves = List.generate(8, (_) => _LeafParticle());
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    )..addStatusListener((status) {
-        if (status == AnimationStatus.completed) {
-          widget.onComplete();
-        }
-      });
+    _controller =
+        AnimationController(
+          vsync: this,
+          duration: const Duration(milliseconds: 1200),
+        )..addStatusListener((status) {
+          if (status == AnimationStatus.completed) {
+            widget.onComplete();
+          }
+        });
     _controller.forward();
   }
 
@@ -146,7 +154,9 @@ class _LeafPainter extends CustomPainter {
     if (progress >= 1.0) return;
 
     final paint = Paint()
-      ..color = const Color(0xFF4F7942).withValues(alpha: 0.8 * (1.0 - progress))
+      ..color = const Color(
+        0xFF4F7942,
+      ).withValues(alpha: 0.8 * (1.0 - progress))
       ..style = PaintingStyle.fill;
 
     for (var leaf in leaves) {
@@ -154,11 +164,11 @@ class _LeafPainter extends CustomPainter {
       final currentDist = leaf.distance * t;
       final dx = center.dx + math.cos(leaf.angle) * currentDist;
       final dy = center.dy + math.sin(leaf.angle) * currentDist;
-      
+
       canvas.save();
       canvas.translate(dx, dy);
       canvas.rotate(leaf.rotation * progress);
-      
+
       // Simple leaf shape
       final path = Path()
         ..moveTo(0, -6)
@@ -190,8 +200,9 @@ class _SelectionGlowRingState extends State<SelectionGlowRing>
   void initState() {
     super.initState();
     _controller = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 1500))
-      ..repeat();
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat();
   }
 
   @override
@@ -203,7 +214,7 @@ class _SelectionGlowRingState extends State<SelectionGlowRing>
   @override
   Widget build(BuildContext context) {
     if (!widget.isActive) return const SizedBox.shrink();
-    
+
     return RepaintBoundary(
       child: AnimatedBuilder(
         animation: _controller,
@@ -236,7 +247,7 @@ class _RingPainter extends CustomPainter {
       ..strokeWidth = 3.0;
 
     canvas.drawCircle(center, currentRadius, paint);
-    
+
     final glowPaint = Paint()
       ..color = const Color(0xFFE6D3A3).withValues(alpha: opacity * 0.3)
       ..style = PaintingStyle.stroke
@@ -261,11 +272,11 @@ class LeafTexturePainter extends CustomPainter {
       final dx = random.nextDouble() * size.width;
       final dy = random.nextDouble() * size.height;
       final rotation = random.nextDouble() * math.pi * 2;
-      
+
       canvas.save();
       canvas.translate(dx, dy);
       canvas.rotate(rotation);
-      
+
       final path = Path()
         ..moveTo(0, -4)
         ..quadraticBezierTo(3, 0, 0, 4)

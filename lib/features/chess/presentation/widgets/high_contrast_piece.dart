@@ -42,14 +42,15 @@ class HighContrastPiecePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final center = size.center(Offset.zero);
-    final radius = size.width / 2.1; // Slightly smaller to allow for stroke & shadow
+    final radius =
+        size.width / 2.1; // Slightly smaller to allow for stroke & shadow
     final rect = Rect.fromLTWH(0, 0, size.width, size.height);
 
     // 1. Drop Shadow (Strong)
     final shadowPaint = Paint()
       ..color = Colors.black.withValues(alpha: 0.75)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6.0);
-    
+
     // Draw an oval shadow slightly offset downwards
     canvas.drawOval(
       Rect.fromCenter(
@@ -64,7 +65,7 @@ class HighContrastPiecePainter extends CustomPainter {
     final fillPaint = Paint()
       ..color = ContrastUtility.getPieceFill(isWhite)
       ..style = PaintingStyle.fill;
-    
+
     // 3. Contrasting Stroke (2px)
     final strokePaint = Paint()
       ..color = ContrastUtility.getStrokeColor(isWhite)
@@ -77,7 +78,7 @@ class HighContrastPiecePainter extends CustomPainter {
 
     // Draw Interior Gradient for volume
     final gradientPaint = ContrastUtility.getInnerGradientPaint(rect, isWhite);
-    
+
     canvas.drawPath(path, fillPaint);
     canvas.drawPath(path, gradientPaint);
     canvas.drawPath(path, strokePaint);
@@ -88,7 +89,7 @@ class HighContrastPiecePainter extends CustomPainter {
     canvas.clipPath(path);
     canvas.drawRect(rect, rimPaint);
     canvas.restore();
-    
+
     // If highlighted, add a subtle white glow
     if (isHighlighted) {
       final glowPaint = Paint()
@@ -161,8 +162,22 @@ class HighContrastPiecePainter extends CustomPainter {
       ..lineTo(c.dx - r * 0.25, c.dy + r * 0.65)
       ..close()
       ..moveTo(c.dx, c.dy - r * 0.85) // Top peak
-      ..cubicTo(c.dx + r * 0.5, c.dy - r * 0.2, c.dx + r * 0.25, c.dy + r * 0.65, c.dx, c.dy + r * 0.65)
-      ..cubicTo(c.dx - r * 0.25, c.dy + r * 0.65, c.dx - r * 0.5, c.dy - r * 0.2, c.dx, c.dy - r * 0.85)
+      ..cubicTo(
+        c.dx + r * 0.5,
+        c.dy - r * 0.2,
+        c.dx + r * 0.25,
+        c.dy + r * 0.65,
+        c.dx,
+        c.dy + r * 0.65,
+      )
+      ..cubicTo(
+        c.dx - r * 0.25,
+        c.dy + r * 0.65,
+        c.dx - r * 0.5,
+        c.dy - r * 0.2,
+        c.dx,
+        c.dy - r * 0.85,
+      )
       ..close();
   }
 
@@ -218,14 +233,28 @@ class HighContrastPiecePainter extends CustomPainter {
       ..moveTo(c.dx - r * 0.20, c.dy + r * 0.65)
       ..lineTo(c.dx + r * 0.20, c.dy + r * 0.65)
       ..lineTo(c.dx + r * 0.15, c.dy) // Neck
-      ..cubicTo(c.dx + r * 0.45, c.dy - r * 0.1, c.dx + r * 0.45, c.dy - r * 0.7, c.dx, c.dy - r * 0.7) // Head
-      ..cubicTo(c.dx - r * 0.45, c.dy - r * 0.7, c.dx - r * 0.45, c.dy - r * 0.1, c.dx - r * 0.15, c.dy)
+      ..cubicTo(
+        c.dx + r * 0.45,
+        c.dy - r * 0.1,
+        c.dx + r * 0.45,
+        c.dy - r * 0.7,
+        c.dx,
+        c.dy - r * 0.7,
+      ) // Head
+      ..cubicTo(
+        c.dx - r * 0.45,
+        c.dy - r * 0.7,
+        c.dx - r * 0.45,
+        c.dy - r * 0.1,
+        c.dx - r * 0.15,
+        c.dy,
+      )
       ..close();
   }
 
   @override
-  bool shouldRepaint(covariant HighContrastPiecePainter oldDelegate) => 
-      oldDelegate.isHighlighted != isHighlighted || 
-      oldDelegate.isWhite != isWhite || 
+  bool shouldRepaint(covariant HighContrastPiecePainter oldDelegate) =>
+      oldDelegate.isHighlighted != isHighlighted ||
+      oldDelegate.isWhite != isWhite ||
       oldDelegate.type != type;
 }

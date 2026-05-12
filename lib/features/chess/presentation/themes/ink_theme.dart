@@ -22,11 +22,7 @@ class InkTheme extends ChessTheme {
 
   @override
   Widget buildBackground(BuildContext context, bool animationsEnabled) {
-    return const Stack(
-      children: [
-        Positioned.fill(child: InkCheckSlash()),
-      ],
-    );
+    return const Stack(children: [Positioned.fill(child: InkCheckSlash())]);
   }
 
   @override

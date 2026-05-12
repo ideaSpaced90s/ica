@@ -17,12 +17,17 @@ class MatrixPiecePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final mainColor = isWhite ? Colors.white : Colors.yellowAccent;
-    
+
     // 1. Draw Piece Silhouette using TextPainter (to get the path/region)
     final charMap = {
-      'K': '\u2654', 'Q': '\u2655', 'B': '\u2657', 'N': '\u2658', 'R': '\u2656', 'P': '\u2659'
+      'K': '\u2654',
+      'Q': '\u2655',
+      'B': '\u2657',
+      'N': '\u2658',
+      'R': '\u2656',
+      'P': '\u2659',
     };
-    
+
     final textPainter = TextPainter(
       text: TextSpan(
         text: charMap[type] ?? '?',
@@ -35,7 +40,7 @@ class MatrixPiecePainter extends CustomPainter {
       textDirection: TextDirection.ltr,
     );
     textPainter.layout();
-    
+
     // Centering
     final x = (size.width - textPainter.width) / 2;
     final y = (size.height - textPainter.height) / 2;
@@ -80,19 +85,23 @@ class MatrixPiecePainter extends CustomPainter {
       final lx = i * spacing;
       final speed = 0.5 + random.nextDouble();
       final phase = (animationValue * speed) % 1.0;
-      
+
       // Draw a line segment that "streams" down
       final startY = phase * size.height;
       final length = 15.0 + random.nextDouble() * 25.0;
-      
+
       paint.color = mainColor.withValues(alpha: 0.8);
       canvas.drawLine(Offset(lx, startY), Offset(lx, startY + length), paint);
-      
+
       // Wrapped part
       if (startY + length > size.height) {
-        canvas.drawLine(Offset(lx, startY - size.height), Offset(lx, startY + length - size.height), paint);
+        canvas.drawLine(
+          Offset(lx, startY - size.height),
+          Offset(lx, startY + length - size.height),
+          paint,
+        );
       }
-      
+
       // Randomly draw full dim static lines
       if (random.nextDouble() > 0.3) {
         paint.color = mainColor.withValues(alpha: 0.15);
@@ -117,7 +126,9 @@ class MatrixPiecePainter extends CustomPainter {
         fontSize: size.width * 0.9,
         fontFamily: 'Arial',
         foreground: Paint()
-          ..color = (isWhite ? Colors.white : Colors.yellowAccent).withValues(alpha: isWhite ? 0.4 : 0.6)
+          ..color = (isWhite ? Colors.white : Colors.yellowAccent).withValues(
+            alpha: isWhite ? 0.4 : 0.6,
+          )
           ..style = PaintingStyle.stroke
           ..strokeWidth = 0.6,
       ),
@@ -128,9 +139,15 @@ class MatrixPiecePainter extends CustomPainter {
     // If highlighted, add a subtle digital glow
     if (isHighlighted) {
       final glowPaint = Paint()
-        ..color = isWhite ? Colors.white.withValues(alpha: 0.3) : Colors.black.withValues(alpha: 0.8)
+        ..color = isWhite
+            ? Colors.white.withValues(alpha: 0.3)
+            : Colors.black.withValues(alpha: 0.8)
         ..maskFilter = MaskFilter.blur(BlurStyle.outer, isWhite ? 8 : 4);
-       canvas.drawCircle(Offset(size.width/2, size.height/2), size.width*0.4, glowPaint);
+      canvas.drawCircle(
+        Offset(size.width / 2, size.height / 2),
+        size.width * 0.4,
+        glowPaint,
+      );
     }
   }
 

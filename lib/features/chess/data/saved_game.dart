@@ -109,7 +109,9 @@ class SavedGameEntry {
       activeClockSide: identical(activeClockSide, _sentinel)
           ? this.activeClockSide
           : activeClockSide as String?,
-      lastMove: identical(lastMove, _sentinel) ? this.lastMove : lastMove as String?,
+      lastMove: identical(lastMove, _sentinel)
+          ? this.lastMove
+          : lastMove as String?,
       commentaryHistory: commentaryHistory ?? this.commentaryHistory,
       isFavorite: isFavorite ?? this.isFavorite,
       customName: identical(customName, _sentinel)
@@ -134,9 +136,10 @@ class SavedGameEntry {
       clockStarted: json['clockStarted'] as bool? ?? false,
       activeClockSide: json['activeClockSide'] as String?,
       lastMove: json['lastMove'] as String?,
-      commentaryHistory: (json['commentaryHistory'] as List<dynamic>? ?? const [])
-          .map((e) => CommentaryEntry.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      commentaryHistory:
+          (json['commentaryHistory'] as List<dynamic>? ?? const [])
+              .map((e) => CommentaryEntry.fromJson(e as Map<String, dynamic>))
+              .toList(),
       isFavorite: json['isFavorite'] as bool? ?? false,
       customName: json['customName'] as String?,
       gameMode: json['gameMode'] as String? ?? 'classic',

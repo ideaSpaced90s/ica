@@ -25,7 +25,9 @@ class HoloPiecePainter extends CustomPainter {
       ..strokeWidth = 2.0;
 
     final Paint fillPaint = Paint()
-      ..color = baseColor.withValues(alpha: 0.15 + (0.05 * sin(animationValue * 4 * pi)))
+      ..color = baseColor.withValues(
+        alpha: 0.15 + (0.05 * sin(animationValue * 4 * pi)),
+      )
       ..style = PaintingStyle.fill;
 
     final Paint glowPaint = Paint()
@@ -38,19 +40,22 @@ class HoloPiecePainter extends CustomPainter {
 
     // 1. Outer Glow
     canvas.drawPath(path, glowPaint);
-    
+
     // 2. Semi-transparent Interior
     canvas.drawPath(path, fillPaint);
-    
+
     // 3. Sharp Edge lines
     canvas.drawPath(path, borderPaint);
 
     // 4. Tech detail lines inside the piece
     _drawTechDetails(canvas, path, size, baseColor);
-    
+
     // 5. Flicker Effect
     if (sin(animationValue * 10 * pi) > 0.95) {
-      canvas.drawPath(path, Paint()..color = Colors.white.withValues(alpha: 0.2));
+      canvas.drawPath(
+        path,
+        Paint()..color = Colors.white.withValues(alpha: 0.2),
+      );
     }
   }
 
@@ -59,15 +64,15 @@ class HoloPiecePainter extends CustomPainter {
       ..color = color.withValues(alpha: 0.4)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
-    
+
     // Draw 3 horizontal scanline details within the piece
     for (int i = 1; i < 4; i++) {
-        final double y = (size.height / 4) * i;
-        // Clip to the piece path
-        canvas.save();
-        canvas.clipPath(path);
-        canvas.drawLine(Offset(0, y), Offset(size.width, y), linePaint);
-        canvas.restore();
+      final double y = (size.height / 4) * i;
+      // Clip to the piece path
+      canvas.save();
+      canvas.clipPath(path);
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), linePaint);
+      canvas.restore();
     }
   }
 

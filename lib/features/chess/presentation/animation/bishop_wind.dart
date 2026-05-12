@@ -43,13 +43,15 @@ class _BishopWindEffectState extends State<BishopWindEffect>
       final sideOffset = (i - 3.5) * widget.squareSize * 0.15;
       final startT = _random.nextDouble() * 0.3;
       final speed = 0.7 + _random.nextDouble() * 0.5;
-      
-      _streaks.add(_WindStreak(
-        sideOffset: perpendicular * sideOffset,
-        startT: startT,
-        speed: speed,
-        width: 20.0 + _random.nextDouble() * 40.0,
-      ));
+
+      _streaks.add(
+        _WindStreak(
+          sideOffset: perpendicular * sideOffset,
+          startT: startT,
+          speed: speed,
+          width: 20.0 + _random.nextDouble() * 40.0,
+        ),
+      );
     }
 
     _controller.forward().then((_) => widget.onComplete());
@@ -74,11 +76,21 @@ class _BishopWindEffectState extends State<BishopWindEffect>
         return Stack(
           children: _streaks.map((s) {
             // Calculate local progress for this streak
-            final localProgress = ((globalProgress - s.startT) * s.speed).clamp(0.0, 1.0);
-            if (localProgress <= 0 || localProgress >= 1.0) return const SizedBox.shrink();
+            final localProgress = ((globalProgress - s.startT) * s.speed).clamp(
+              0.0,
+              1.0,
+            );
+            if (localProgress <= 0 || localProgress >= 1.0) {
+              return const SizedBox.shrink();
+            }
 
-            final pos = Offset.lerp(widget.from, widget.to, localProgress)! + s.sideOffset;
-            final opacity = (math.sin(localProgress * math.pi) * 0.3).clamp(0.0, 1.0);
+            final pos =
+                Offset.lerp(widget.from, widget.to, localProgress)! +
+                s.sideOffset;
+            final opacity = (math.sin(localProgress * math.pi) * 0.3).clamp(
+              0.0,
+              1.0,
+            );
 
             return Positioned(
               left: pos.dx - s.width / 2,

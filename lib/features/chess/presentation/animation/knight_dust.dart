@@ -35,11 +35,13 @@ class _KnightDustEffectState extends State<KnightDustEffect>
     for (int i = 0; i < 12; i++) {
       final angle = (i / 12) * 2 * math.pi + (_random.nextDouble() * 0.4);
       final speed = 1.5 + _random.nextDouble() * 2.5;
-      _particles.add(_Particle(
-        angle: angle,
-        speed: speed,
-        size: 3.0 + _random.nextDouble() * 4.0,
-      ));
+      _particles.add(
+        _Particle(
+          angle: angle,
+          speed: speed,
+          size: 3.0 + _random.nextDouble() * 4.0,
+        ),
+      );
     }
 
     _controller.forward().then((_) => widget.onComplete());
@@ -62,7 +64,7 @@ class _KnightDustEffectState extends State<KnightDustEffect>
             final distance = p.speed * progress * widget.squareSize * 0.6;
             final x = widget.position.dx + math.cos(p.angle) * distance;
             final y = widget.position.dy + math.sin(p.angle) * distance;
-            
+
             // Fade out and shrink
             final opacity = (1.0 - progress).clamp(0.0, 1.0);
             final scale = 1.0 + progress * 0.5;
@@ -103,9 +105,5 @@ class _Particle {
   final double speed;
   final double size;
 
-  _Particle({
-    required this.angle,
-    required this.speed,
-    required this.size,
-  });
+  _Particle({required this.angle, required this.speed, required this.size});
 }

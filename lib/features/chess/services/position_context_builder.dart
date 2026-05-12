@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:kingslayer_chess/src/rust/api/context.dart';
 import '../domain/chess_game.dart';
 import '../domain/models/position_context.dart';
 
@@ -43,21 +44,19 @@ class PositionContextBuilder {
   }
 
   static String _detectGamePhase(ChessGame game) {
-    // moveHistoryLabels() returns SAN moves, but we can also use history.length
-    final moveCount = game.history.length;
-    if (moveCount <= 20) return 'Opening'; // 10 full moves = 20 half-moves
-
-    // Count pieces
-    int pieceCount = 0;
-    for (final file in ChessGame.files) {
-      for (final rank in ChessGame.ranks) {
-        if (game.getPiece('$file$rank') != null) {
-          pieceCount++;
-        }
-      }
+    try {
+      final metrics = evaluatePositionMetrics(
+        fen: game.fen,
+        historyLength: game.history.length,
+      );
+      return metrics.gamePhase;
+    } catch (e) {
+      debugPrint('Rust Context Engine Error: $e');
     }
 
-    if (pieceCount <= 10) return 'Endgame';
+    // Safe fallback
+    final moveCount = game.history.length;
+    if (moveCount <= 20) return 'Opening';
     return 'Middlegame';
   }
 
@@ -72,11 +71,11 @@ class PositionContextBuilder {
       // Access flags safely - they should be a String in chess package
       final dynamic flagsRaw = (lastMove as dynamic).flags;
       final String flags = flagsRaw?.toString() ?? '';
-      
+
       if (flags.contains('c') || flags.contains('e')) types.add('Capture');
       if (flags.contains('k') || flags.contains('q')) types.add('Castling');
       if (flags.contains('p')) types.add('Promotion');
-      
+
       // Check if the resulting position is a check
       if (game.inCheckmate) {
         types.add('Checkmate');
@@ -94,8 +93,8 @@ class PositionContextBuilder {
     if (best == null) return false;
     // Normalize both to uci if they aren't already
     // played is usually like "e2e4", best is "e2e4"
-    return played.replaceAll('-', '').replaceAll(' ', '') == 
-           best.replaceAll('-', '').replaceAll(' ', '');
+    return played.replaceAll('-', '').replaceAll(' ', '') ==
+        best.replaceAll('-', '').replaceAll(' ', '');
   }
 
   static String _calculateThreatLevel(double evalDiff, List<String> pvLine) {
@@ -105,7 +104,11 @@ class PositionContextBuilder {
     return 'Low';
   }
 
-  static String _determinePositionStyle(String move, List<String> types, double diff) {
+  static String _determinePositionStyle(
+    String move,
+    List<String> types,
+    double diff,
+  ) {
     if (types.contains('Capture') || types.contains('Check') || diff > 0.8) {
       return 'Attacking';
     }

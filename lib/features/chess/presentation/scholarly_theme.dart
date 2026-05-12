@@ -13,15 +13,17 @@ class ScholarlyTheme {
   static const Color accentBlue = Color(0xFF0D6EFD); // Primary Blue
   static const Color accentBlueSoft = Color(0xFFE7F1FF); // Soft Blue Background
   static const Color accentYellow = Color(0xFFFFD700); // Gold/Yellow for hints
-  static const Color accentYellowSoft = Color(0xFFFFF9E6); // Soft Yellow Background
-  
+  static const Color accentYellowSoft = Color(
+    0xFFFFF9E6,
+  ); // Soft Yellow Background
+
   // Kept original board colors as requested
   static const Color lightSquare = Color(0xFFC0C0C0);
   static const Color darkSquare = Color(0xFF808080);
-  
+
   static const Color textPrimary = Color(0xFF1E293B);
   static const Color textMuted = Color(0xFF64748B);
-  
+
   // Constants
   static const Color shadowColor = Color(0xFF0F172A);
   static const double shadowOffset = 4.0;
@@ -44,9 +46,8 @@ class ScholarlyTheme {
     end: Alignment.bottomRight,
   );
 
-  static LinearGradient get glassGradient => const LinearGradient(
-    colors: [panelBase, panelBase],
-  );
+  static LinearGradient get glassGradient =>
+      const LinearGradient(colors: [panelBase, panelBase]);
 
   static List<BoxShadow> get cardShadow => [
     BoxShadow(
@@ -54,7 +55,7 @@ class ScholarlyTheme {
       blurRadius: 10,
       offset: const Offset(0, 4),
       spreadRadius: 0,
-    )
+    ),
   ];
   static List<BoxShadow> get boardShadow => [
     BoxShadow(
@@ -62,7 +63,7 @@ class ScholarlyTheme {
       blurRadius: 20,
       offset: const Offset(0, 8),
       spreadRadius: 0,
-    )
+    ),
   ];
 
   static ThemeData get themeData {
@@ -82,8 +83,16 @@ class ScholarlyTheme {
           fontSize: 16,
           fontWeight: FontWeight.w600,
         ),
-        bodyLarge: GoogleFonts.inter(color: textPrimary, fontSize: 14, height: 1.5),
-        bodyMedium: GoogleFonts.inter(color: textMuted, fontSize: 13, height: 1.5),
+        bodyLarge: GoogleFonts.inter(
+          color: textPrimary,
+          fontSize: 14,
+          height: 1.5,
+        ),
+        bodyMedium: GoogleFonts.inter(
+          color: textMuted,
+          fontSize: 13,
+          height: 1.5,
+        ),
       ),
     );
   }
@@ -105,7 +114,7 @@ class ScholarlyTheme {
         ],
       );
     }
-    
+
     return BoxDecoration(
       color: panelBase,
       border: Border.all(color: panelStroke, width: 1),
@@ -142,11 +151,11 @@ class GlassPanel extends StatelessWidget {
     return Container(
       padding: padding,
       decoration: ScholarlyTheme.modernDecoration(sunken: sunken).copyWith(
-        borderRadius: borderRadius ?? BorderRadius.circular(ScholarlyTheme.radiusMedium),
+        borderRadius:
+            borderRadius ?? BorderRadius.circular(ScholarlyTheme.radiusMedium),
         border: strokeColor != null ? Border.all(color: strokeColor!) : null,
       ),
       child: child,
     );
   }
 }
-

@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 
-
 class PixelColors {
   static const lightSquare = Color(0xFFE5D68A); // Toned down #F4E04D
-  static const darkSquare = Color(0xFF4A76A8);  // Toned down #2C6FB7
+  static const darkSquare = Color(0xFF4A76A8); // Toned down #2C6FB7
   static const whitePiece = Color(0xFFE5E7EB);
-  static const blackPiece = Color(0xFFDC2626);  // Deep Red
+  static const blackPiece = Color(0xFFDC2626); // Deep Red
   static const blackOutline = Color(0xFF1F2937);
   static const whiteOutline = Color(0xFFF9FAFB);
 }
@@ -24,20 +23,29 @@ class PixelBoardPainter extends CustomPainter {
     for (int row = 0; row < 8; row++) {
       for (int col = 0; col < 8; col++) {
         final bool isLight = (row + col) % 2 == 0;
-        final baseColor = isLight ? PixelColors.lightSquare : PixelColors.darkSquare;
-        
+        final baseColor = isLight
+            ? PixelColors.lightSquare
+            : PixelColors.darkSquare;
+
         final double x = col * squareSize;
         final double y = row * squareSize;
 
         // Draw Square Base
-        canvas.drawRect(Rect.fromLTWH(x, y, squareSize, squareSize), Paint()..color = baseColor);
+        canvas.drawRect(
+          Rect.fromLTWH(x, y, squareSize, squareSize),
+          Paint()..color = baseColor,
+        );
 
         // Draw Tiny Pixel Texture (Subdivided Pattern)
-        final texturePaint = Paint()..color = Colors.black.withValues(alpha: 0.05);
+        final texturePaint = Paint()
+          ..color = Colors.black.withValues(alpha: 0.05);
         for (int py = 0; py < pixelRatio; py++) {
           for (int px = 0; px < pixelRatio; px++) {
             if ((px + py) % 2 == 0) {
-               canvas.drawRect(Rect.fromLTWH(x + px * ps, y + py * ps, ps, ps), texturePaint);
+              canvas.drawRect(
+                Rect.fromLTWH(x + px * ps, y + py * ps, ps, ps),
+                texturePaint,
+              );
             }
           }
         }
@@ -63,13 +71,15 @@ class PixelPiecePainter extends CustomPainter {
     final double ps = drawSize / gridDim; // Physical pixel size
 
     final mainColor = isWhite ? PixelColors.whitePiece : PixelColors.blackPiece;
-    final outlineColor = isWhite ? PixelColors.blackOutline : PixelColors.whiteOutline;
+    final outlineColor = isWhite
+        ? PixelColors.blackOutline
+        : PixelColors.whiteOutline;
 
     canvas.save();
     canvas.translate(padding, padding);
 
     final List<List<int>> mask = _getMask(type);
-    
+
     // Draw Outline (1px logical shift in 4 directions)
     final outlinePaint = Paint()..color = outlineColor;
     for (int y = 0; y < gridDim; y++) {
@@ -122,7 +132,7 @@ class PixelPiecePainter extends CustomPainter {
       case 'R': // Rook (Castle)
         _fill(grid, 5, 6, 6, 10); // Body
         _fill(grid, 5, 13, 6, 2); // Base
-        _fill(grid, 5, 4, 1, 2);  // Teeth
+        _fill(grid, 5, 4, 1, 2); // Teeth
         _fill(grid, 7, 4, 2, 2);
         _fill(grid, 10, 4, 1, 2);
         break;
@@ -152,14 +162,13 @@ class PixelPiecePainter extends CustomPainter {
 
   void _fill(List<List<int>> grid, int x, int y, int w, int h) {
     for (int i = y; i < y + h; i++) {
-        for (int j = x; j < x + w; j++) {
-            if (i >= 0 && i < 16 && j >= 0 && j < 16) {
-                grid[i][j] = 1;
-            }
+      for (int j = x; j < x + w; j++) {
+        if (i >= 0 && i < 16 && j >= 0 && j < 16) {
+          grid[i][j] = 1;
         }
+      }
     }
   }
-
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
@@ -179,17 +188,32 @@ class PixelSelectionPainter extends CustomPainter {
 
     // Pixelated corners/border
     for (int i = 0; i < 4; i++) {
-        canvas.drawRect(Rect.fromLTWH(i * ps, 0, ps, ps), paint); // Top-left
-        canvas.drawRect(Rect.fromLTWH(0, i * ps, ps, ps), paint);
-        
-        canvas.drawRect(Rect.fromLTWH(size.width - (i + 1) * ps, 0, ps, ps), paint); // Top-right
-        canvas.drawRect(Rect.fromLTWH(size.width - ps, i * ps, ps, ps), paint);
+      canvas.drawRect(Rect.fromLTWH(i * ps, 0, ps, ps), paint); // Top-left
+      canvas.drawRect(Rect.fromLTWH(0, i * ps, ps, ps), paint);
 
-        canvas.drawRect(Rect.fromLTWH(i * ps, size.height - ps, ps, ps), paint); // Bottom-left
-        canvas.drawRect(Rect.fromLTWH(0, size.height - (i + 1) * ps, ps, ps), paint);
+      canvas.drawRect(
+        Rect.fromLTWH(size.width - (i + 1) * ps, 0, ps, ps),
+        paint,
+      ); // Top-right
+      canvas.drawRect(Rect.fromLTWH(size.width - ps, i * ps, ps, ps), paint);
 
-        canvas.drawRect(Rect.fromLTWH(size.width - (i + 1) * ps, size.height - ps, ps, ps), paint); // Bottom-right
-        canvas.drawRect(Rect.fromLTWH(size.width - ps, size.height - (i + 1) * ps, ps, ps), paint);
+      canvas.drawRect(
+        Rect.fromLTWH(i * ps, size.height - ps, ps, ps),
+        paint,
+      ); // Bottom-left
+      canvas.drawRect(
+        Rect.fromLTWH(0, size.height - (i + 1) * ps, ps, ps),
+        paint,
+      );
+
+      canvas.drawRect(
+        Rect.fromLTWH(size.width - (i + 1) * ps, size.height - ps, ps, ps),
+        paint,
+      ); // Bottom-right
+      canvas.drawRect(
+        Rect.fromLTWH(size.width - ps, size.height - (i + 1) * ps, ps, ps),
+        paint,
+      );
     }
   }
 
@@ -202,7 +226,7 @@ class PixelMoveHintPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final double ps = size.width / 16;
     final paint = Paint()..color = Colors.white.withValues(alpha: 0.4);
-    
+
     // 2x2 logical pixel dot in center
     canvas.drawRect(Rect.fromLTWH(7 * ps, 7 * ps, 2 * ps, 2 * ps), paint);
   }

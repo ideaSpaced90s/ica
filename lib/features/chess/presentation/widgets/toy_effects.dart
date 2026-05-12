@@ -17,8 +17,9 @@ class _FloatingBubblesOverlayState extends State<FloatingBubblesOverlay>
   void initState() {
     super.initState();
     _controller = AnimationController(
-        vsync: this, duration: const Duration(seconds: 15))
-      ..repeat();
+      vsync: this,
+      duration: const Duration(seconds: 15),
+    )..repeat();
   }
 
   @override
@@ -64,15 +65,19 @@ class _BubblePainter extends CustomPainter {
     for (var b in bubbles) {
       final dx = size.width * ((b.x + animationValue * b.drift) % 1.0);
       final dy = size.height * ((b.y - animationValue * b.speed) % 1.0);
-      
+
       paint.color = Colors.white.withValues(alpha: 0.3);
       canvas.drawCircle(Offset(dx, dy), b.size, paint);
-      
+
       // Highlight on bubble
       final highlightPaint = Paint()
         ..color = Colors.white.withValues(alpha: 0.2)
         ..style = PaintingStyle.fill;
-      canvas.drawCircle(Offset(dx - b.size * 0.3, dy - b.size * 0.3), b.size * 0.2, highlightPaint);
+      canvas.drawCircle(
+        Offset(dx - b.size * 0.3, dy - b.size * 0.3),
+        b.size * 0.2,
+        highlightPaint,
+      );
     }
   }
 
@@ -103,11 +108,13 @@ class _ToyConfettiSystemState extends State<ToyConfettiSystem>
   void initState() {
     super.initState();
     _parts = List.generate(20, (_) => _ConfettiPart());
-    _controller = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 1200))
-      ..addStatusListener((status) {
-        if (status == AnimationStatus.completed) widget.onComplete();
-      });
+    _controller =
+        AnimationController(
+          vsync: this,
+          duration: const Duration(milliseconds: 1200),
+        )..addStatusListener((status) {
+          if (status == AnimationStatus.completed) widget.onComplete();
+        });
     _controller.forward();
   }
 
@@ -132,7 +139,13 @@ class _ToyConfettiSystemState extends State<ToyConfettiSystem>
 }
 
 class _ConfettiPart {
-  Color color = [Colors.red, Colors.blue, Colors.yellow, Colors.green, Colors.orange][math.Random().nextInt(5)];
+  Color color = [
+    Colors.red,
+    Colors.blue,
+    Colors.yellow,
+    Colors.green,
+    Colors.orange,
+  ][math.Random().nextInt(5)];
   double angle = math.Random().nextDouble() * math.pi * 2;
   double distance = math.Random().nextDouble() * 100 + 50;
   double size = math.Random().nextDouble() * 8 + 4;
@@ -152,13 +165,19 @@ class _ConfettiPainter extends CustomPainter {
     for (var p in parts) {
       final t = Curves.easeOutBack.transform(progress);
       final dx = center.dx + math.cos(p.angle) * p.distance * t;
-      final dy = center.dy + math.sin(p.angle) * p.distance * t + (progress * 100); // Simulate gravity
-      
+      final dy =
+          center.dy +
+          math.sin(p.angle) * p.distance * t +
+          (progress * 100); // Simulate gravity
+
       final paint = Paint()
         ..color = p.color.withValues(alpha: 1.0 - progress)
         ..style = PaintingStyle.fill;
-      
-      canvas.drawRect(Rect.fromCenter(center: Offset(dx, dy), width: p.size, height: p.size), paint);
+
+      canvas.drawRect(
+        Rect.fromCenter(center: Offset(dx, dy), width: p.size, height: p.size),
+        paint,
+      );
     }
   }
 
@@ -169,7 +188,11 @@ class _ConfettiPainter extends CustomPainter {
 class WiggleAnimation extends StatefulWidget {
   final Widget child;
   final bool isActive;
-  const WiggleAnimation({super.key, required this.child, required this.isActive});
+  const WiggleAnimation({
+    super.key,
+    required this.child,
+    required this.isActive,
+  });
 
   @override
   State<WiggleAnimation> createState() => _WiggleAnimationState();
@@ -183,8 +206,9 @@ class _WiggleAnimationState extends State<WiggleAnimation>
   void initState() {
     super.initState();
     _controller = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 500))
-      ..repeat(reverse: true);
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    )..repeat(reverse: true);
   }
 
   @override
@@ -210,4 +234,3 @@ class _WiggleAnimationState extends State<WiggleAnimation>
     );
   }
 }
-

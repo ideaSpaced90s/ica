@@ -27,7 +27,6 @@ class TapRipple extends StatefulWidget {
 
 class _TapRippleState extends State<TapRipple>
     with SingleTickerProviderStateMixin {
-
   late AnimationController _controller;
   late Animation<double> _scaleAnim;
   late Animation<double> _opacityAnim;
@@ -35,24 +34,27 @@ class _TapRippleState extends State<TapRipple>
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 120),
-    )..addStatusListener((status) {
-        if (status == AnimationStatus.completed) {
-          widget.onComplete();
-        }
-      });
+    _controller =
+        AnimationController(
+          vsync: this,
+          duration: const Duration(milliseconds: 120),
+        )..addStatusListener((status) {
+          if (status == AnimationStatus.completed) {
+            widget.onComplete();
+          }
+        });
 
     // Scale: 0.85 → 1.35 (starts slightly compressed, expands outward)
-    _scaleAnim = Tween<double>(begin: 0.85, end: 1.35).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
-    );
+    _scaleAnim = Tween<double>(
+      begin: 0.85,
+      end: 1.35,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
 
     // Opacity: 0.28 → 0.0 (quick fade)
-    _opacityAnim = Tween<double>(begin: 0.28, end: 0.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeIn),
-    );
+    _opacityAnim = Tween<double>(
+      begin: 0.28,
+      end: 0.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeIn));
 
     _controller.forward();
   }

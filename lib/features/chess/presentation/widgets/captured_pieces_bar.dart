@@ -23,15 +23,16 @@ class CapturedPiecesBar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // We return a sized box even if empty to maintain layout stability during gameplay
     if (pieces.isEmpty) {
-      return const SizedBox(height: 48); 
+      return const SizedBox(height: 48);
     }
 
     final boardThemeId = ref.watch(chessProvider.select((s) => s.boardThemeId));
     final theme = ThemeRegistry.getTheme(boardThemeId);
 
     // Sort pieces by value
-    final sortedPieces = List<chess_lib.Piece>.from(pieces)
-      ..sort((a, b) => _getPieceValue(a.type).compareTo(_getPieceValue(b.type)));
+    final sortedPieces = List<chess_lib.Piece>.from(
+      pieces,
+    )..sort((a, b) => _getPieceValue(a.type).compareTo(_getPieceValue(b.type)));
 
     return Container(
       width: double.infinity,
@@ -59,7 +60,7 @@ class CapturedPiecesBar extends ConsumerWidget {
         children: sortedPieces.map((piece) {
           final type = piece.type.toString().toUpperCase();
           final isWhite = piece.color == chess_lib.Color.WHITE;
-          
+
           return SizedBox(
             width: 36,
             height: 36,

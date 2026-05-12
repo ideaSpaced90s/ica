@@ -5,7 +5,8 @@ class MatrixFallingCodeOverlay extends StatefulWidget {
   const MatrixFallingCodeOverlay({super.key});
 
   @override
-  State<MatrixFallingCodeOverlay> createState() => _MatrixFallingCodeOverlayState();
+  State<MatrixFallingCodeOverlay> createState() =>
+      _MatrixFallingCodeOverlayState();
 }
 
 class _MatrixFallingCodeOverlayState extends State<MatrixFallingCodeOverlay>
@@ -18,18 +19,23 @@ class _MatrixFallingCodeOverlayState extends State<MatrixFallingCodeOverlay>
   void initState() {
     super.initState();
     _controller = AnimationController(
-        vsync: this, duration: const Duration(seconds: 10))
-      ..repeat();
+      vsync: this,
+      duration: const Duration(seconds: 10),
+    )..repeat();
 
     // Initialize random columns
     for (int i = 0; i < 20; i++) {
-      _columns.add(_CodeColumn(
-        speed: 1.0 + _random.nextDouble() * 2.0,
-        x: _random.nextDouble(),
-        chars: List.generate(
-            15, (_) => String.fromCharCode(0x30A0 + _random.nextInt(96))),
-        delay: _random.nextDouble(),
-      ));
+      _columns.add(
+        _CodeColumn(
+          speed: 1.0 + _random.nextDouble() * 2.0,
+          x: _random.nextDouble(),
+          chars: List.generate(
+            15,
+            (_) => String.fromCharCode(0x30A0 + _random.nextInt(96)),
+          ),
+          delay: _random.nextDouble(),
+        ),
+      );
     }
   }
 
@@ -47,7 +53,9 @@ class _MatrixFallingCodeOverlayState extends State<MatrixFallingCodeOverlay>
         builder: (context, child) {
           return CustomPaint(
             painter: _MatrixCodePainter(
-                columns: _columns, animationValue: _controller.value),
+              columns: _columns,
+              animationValue: _controller.value,
+            ),
             size: Size.infinite,
           );
         },
@@ -62,11 +70,12 @@ class _CodeColumn {
   final double delay;
   final List<String> chars;
 
-  _CodeColumn(
-      {required this.speed,
-      required this.x,
-      required this.chars,
-      required this.delay});
+  _CodeColumn({
+    required this.speed,
+    required this.x,
+    required this.chars,
+    required this.delay,
+  });
 }
 
 class _MatrixCodePainter extends CustomPainter {
@@ -81,15 +90,18 @@ class _MatrixCodePainter extends CustomPainter {
 
     for (final col in columns) {
       final x = col.x * size.width;
-      final totalOffset = (animationValue + col.delay) * col.speed * size.height;
-      
+      final totalOffset =
+          (animationValue + col.delay) * col.speed * size.height;
+
       for (int i = 0; i < col.chars.length; i++) {
         final y = (totalOffset + i * 20) % (size.height + 300) - 150;
         if (y < -20 || y > size.height) continue;
 
         // Fade tail
         final opacity = (1.0 - (i / col.chars.length)).clamp(0.0, 1.0) * 0.15;
-        final color = i == 0 ? Colors.white.withValues(alpha: 0.7) : Colors.white.withValues(alpha: opacity);
+        final color = i == 0
+            ? Colors.white.withValues(alpha: 0.7)
+            : Colors.white.withValues(alpha: opacity);
 
         textPainter.text = TextSpan(
           text: col.chars[i],
@@ -98,7 +110,9 @@ class _MatrixCodePainter extends CustomPainter {
             fontSize: 12,
             fontFamily: 'monospace',
             fontWeight: i == 0 ? FontWeight.bold : FontWeight.normal,
-            shadows: i == 0 ? [const Shadow(color: Colors.white, blurRadius: 4)] : [],
+            shadows: i == 0
+                ? [const Shadow(color: Colors.white, blurRadius: 4)]
+                : [],
           ),
         );
         textPainter.layout();
@@ -118,7 +132,8 @@ class ScanlineOverlay extends StatefulWidget {
   State<ScanlineOverlay> createState() => _ScanlineOverlayState();
 }
 
-class _ScanlineOverlayState extends State<ScanlineOverlay> with SingleTickerProviderStateMixin {
+class _ScanlineOverlayState extends State<ScanlineOverlay>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
 
   @override
@@ -174,8 +189,9 @@ class _MatrixGlitchCaptureState extends State<MatrixGlitchCapture>
   void initState() {
     super.initState();
     _controller = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 600))
-      ..forward().then((_) => widget.onComplete());
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    )..forward().then((_) => widget.onComplete());
   }
 
   @override
@@ -219,10 +235,10 @@ class _GlitchPainter extends CustomPainter {
       final y = random.nextDouble() * size.height;
       final blockWidth = 2.0 + random.nextDouble() * 10.0;
       final blockHeight = 1.0 + random.nextDouble() * 4.0;
-      
+
       // Blow out from center
-      final dx = (x - size.width/2) * progress * 2;
-      final dy = (y - size.height/2) * progress * 2;
+      final dx = (x - size.width / 2) * progress * 2;
+      final dy = (y - size.height / 2) * progress * 2;
 
       canvas.drawRect(
         Rect.fromLTWH(x + dx, y + dy, blockWidth, blockHeight),
@@ -248,7 +264,7 @@ class _ScanlinePainter extends CustomPainter {
     // Moving horizontal scanline
     final y = progress * size.height;
     canvas.drawRect(Rect.fromLTWH(0, y, size.width, 2), paint);
-    
+
     // Very subtle flicker layer
     if (Random().nextDouble() > 0.98) {
       canvas.drawRect(
@@ -277,8 +293,9 @@ class _MatrixCheckRedPulseState extends State<MatrixCheckRedPulse>
   void initState() {
     super.initState();
     _controller = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 1000))
-      ..repeat(reverse: true);
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    )..repeat(reverse: true);
   }
 
   @override
@@ -295,15 +312,19 @@ class _MatrixCheckRedPulseState extends State<MatrixCheckRedPulse>
         return Container(
           decoration: BoxDecoration(
             border: Border.all(
-              color: Colors.redAccent.withValues(alpha: 0.3 * _controller.value),
+              color: Colors.redAccent.withValues(
+                alpha: 0.3 * _controller.value,
+              ),
               width: 4 * _controller.value,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.redAccent.withValues(alpha: 0.1 * _controller.value),
+                color: Colors.redAccent.withValues(
+                  alpha: 0.1 * _controller.value,
+                ),
                 blurRadius: 10,
                 spreadRadius: 2,
-              )
+              ),
             ],
           ),
         );

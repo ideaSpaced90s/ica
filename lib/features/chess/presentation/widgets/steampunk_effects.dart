@@ -17,8 +17,9 @@ class _SteamParticleOverlayState extends State<SteamParticleOverlay>
   void initState() {
     super.initState();
     _controller = AnimationController(
-        vsync: this, duration: const Duration(seconds: 10))
-      ..repeat();
+      vsync: this,
+      duration: const Duration(seconds: 10),
+    )..repeat();
   }
 
   @override
@@ -61,11 +62,13 @@ class _SteamPainter extends CustomPainter {
     for (var c in clouds) {
       final dx = size.width * ((c.x + animationValue * c.drift) % 1.0);
       final dy = size.height * ((c.y - animationValue * c.speed) % 1.0);
-      
+
       final paint = Paint()
-        ..color = Colors.white.withValues(alpha: c.opacity * (1.0 - (dy / size.height)))
+        ..color = Colors.white.withValues(
+          alpha: c.opacity * (1.0 - (dy / size.height)),
+        )
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 15.0);
-      
+
       canvas.drawCircle(Offset(dx, dy), c.size, paint);
     }
   }
@@ -75,91 +78,106 @@ class _SteamPainter extends CustomPainter {
 }
 
 class MetalShatterEffect extends StatefulWidget {
-    final Offset position;
-    final bool isWhite;
-    final VoidCallback onComplete;
+  final Offset position;
+  final bool isWhite;
+  final VoidCallback onComplete;
 
-    const MetalShatterEffect({
-        super.key,
-        required this.position,
-        required this.isWhite,
-        required this.onComplete,
-    });
+  const MetalShatterEffect({
+    super.key,
+    required this.position,
+    required this.isWhite,
+    required this.onComplete,
+  });
 
-    @override
-    State<MetalShatterEffect> createState() => _MetalShatterEffectState();
+  @override
+  State<MetalShatterEffect> createState() => _MetalShatterEffectState();
 }
 
 class _MetalShatterEffectState extends State<MetalShatterEffect>
     with SingleTickerProviderStateMixin {
-    late AnimationController _controller;
-    late final List<_MetalShard> _shards;
+  late AnimationController _controller;
+  late final List<_MetalShard> _shards;
 
-    @override
-    void initState() {
-        super.initState();
-        _shards = List.generate(12, (_) => _MetalShard());
-        _controller = AnimationController(
-            vsync: this, duration: const Duration(milliseconds: 1000))
-          ..addStatusListener((status) {
-            if (status == AnimationStatus.completed) widget.onComplete();
-          });
-        _controller.forward();
-    }
+  @override
+  void initState() {
+    super.initState();
+    _shards = List.generate(12, (_) => _MetalShard());
+    _controller =
+        AnimationController(
+          vsync: this,
+          duration: const Duration(milliseconds: 1000),
+        )..addStatusListener((status) {
+          if (status == AnimationStatus.completed) widget.onComplete();
+        });
+    _controller.forward();
+  }
 
-    @override
-    void dispose() {
-        _controller.dispose();
-        super.dispose();
-    }
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
-    @override
-    Widget build(BuildContext context) {
-        return AnimatedBuilder(
-            animation: _controller,
-            builder: (context, child) {
-                return CustomPaint(
-                    painter: _MetalShatterPainter(_shards, _controller.value, widget.position, widget.isWhite),
-                    size: Size.infinite,
-                );
-            },
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return CustomPaint(
+          painter: _MetalShatterPainter(
+            _shards,
+            _controller.value,
+            widget.position,
+            widget.isWhite,
+          ),
+          size: Size.infinite,
         );
-    }
+      },
+    );
+  }
 }
 
 class _MetalShard {
-    double angle = math.Random().nextDouble() * 2 * math.pi;
-    double dist = math.Random().nextDouble() * 120 + 40;
-    double size = math.Random().nextDouble() * 8 + 4;
+  double angle = math.Random().nextDouble() * 2 * math.pi;
+  double dist = math.Random().nextDouble() * 120 + 40;
+  double size = math.Random().nextDouble() * 8 + 4;
 }
 
 class _MetalShatterPainter extends CustomPainter {
-    final List<_MetalShard> shards;
-    final double progress;
-    final Offset center;
-    final bool isWhite;
+  final List<_MetalShard> shards;
+  final double progress;
+  final Offset center;
+  final bool isWhite;
 
-    _MetalShatterPainter(this.shards, this.progress, this.center, this.isWhite);
+  _MetalShatterPainter(this.shards, this.progress, this.center, this.isWhite);
 
-    @override
-    void paint(Canvas canvas, Size size) {
-        if (progress >= 1.0) return;
-        
-        final paint = Paint()
-          ..color = (isWhite ? const Color(0xFFDAA520) : const Color(0xFF424242)).withValues(alpha: 1.0 - progress)
-          ..style = PaintingStyle.fill;
-        
-        for (var shard in shards) {
-            final t = Curves.easeOutCubic.transform(progress);
-            final dx = center.dx + math.cos(shard.angle) * shard.dist * t;
-            final dy = center.dy + math.sin(shard.angle) * shard.dist * t;
-            
-            canvas.drawRect(Rect.fromCenter(center: Offset(dx, dy), width: shard.size, height: shard.size), paint);
-        }
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (progress >= 1.0) return;
+
+    final paint = Paint()
+      ..color = (isWhite ? const Color(0xFFDAA520) : const Color(0xFF424242))
+          .withValues(alpha: 1.0 - progress)
+      ..style = PaintingStyle.fill;
+
+    for (var shard in shards) {
+      final t = Curves.easeOutCubic.transform(progress);
+      final dx = center.dx + math.cos(shard.angle) * shard.dist * t;
+      final dy = center.dy + math.sin(shard.angle) * shard.dist * t;
+
+      canvas.drawRect(
+        Rect.fromCenter(
+          center: Offset(dx, dy),
+          width: shard.size,
+          height: shard.size,
+        ),
+        paint,
+      );
     }
+  }
 
-    @override
-    bool shouldRepaint(covariant _MetalShatterPainter oldDelegate) => true;
+  @override
+  bool shouldRepaint(covariant _MetalShatterPainter oldDelegate) => true;
 }
 
 class GearMoveIndicator extends StatefulWidget {
@@ -177,8 +195,9 @@ class _GearMoveIndicatorState extends State<GearMoveIndicator>
   void initState() {
     super.initState();
     _controller = AnimationController(
-        vsync: this, duration: const Duration(seconds: 4))
-      ..repeat();
+      vsync: this,
+      duration: const Duration(seconds: 4),
+    )..repeat();
   }
 
   @override
@@ -212,18 +231,18 @@ class _GearIndicatorPainter extends CustomPainter {
     final paint = Paint()
       ..color = const Color(0xFF8D6E63).withValues(alpha: 0.6)
       ..style = PaintingStyle.fill;
-    
+
     final Path gear = Path();
     final r = size.width / 2;
     const teeth = 8;
     for (int i = 0; i < teeth * 2; i++) {
-        final rad = (i % 2 == 0) ? r : r * 1.25;
-        final angle = (i / (teeth * 2)) * 2 * math.pi;
-        if (i == 0) {
-          gear.moveTo(math.cos(angle) * rad, math.sin(angle) * rad);
-        } else {
-          gear.lineTo(math.cos(angle) * rad, math.sin(angle) * rad);
-        }
+      final rad = (i % 2 == 0) ? r : r * 1.25;
+      final angle = (i / (teeth * 2)) * 2 * math.pi;
+      if (i == 0) {
+        gear.moveTo(math.cos(angle) * rad, math.sin(angle) * rad);
+      } else {
+        gear.lineTo(math.cos(angle) * rad, math.sin(angle) * rad);
+      }
     }
     gear.close();
     canvas.save();
@@ -251,11 +270,13 @@ class _SteamPuffAnimationState extends State<SteamPuffAnimation>
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 600))
-      ..addStatusListener((status) {
-        if (status == AnimationStatus.completed) widget.onComplete();
-      });
+    _controller =
+        AnimationController(
+          vsync: this,
+          duration: const Duration(milliseconds: 600),
+        )..addStatusListener((status) {
+          if (status == AnimationStatus.completed) widget.onComplete();
+        });
     _controller.forward();
   }
 
@@ -287,15 +308,27 @@ class _SteamPuffPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     if (progress >= 1.0) return;
-    
+
     final center = size.center(Offset.zero);
     final paint = Paint()
       ..color = Colors.white.withValues(alpha: (1.0 - progress) * 0.4)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10.0);
-    
-    canvas.drawCircle(center - Offset(0, progress * 40), 10 + progress * 20, paint);
-    canvas.drawCircle(center - Offset(15, progress * 30), 8 + progress * 15, paint);
-    canvas.drawCircle(center - Offset(-15, progress * 30), 8 + progress * 15, paint);
+
+    canvas.drawCircle(
+      center - Offset(0, progress * 40),
+      10 + progress * 20,
+      paint,
+    );
+    canvas.drawCircle(
+      center - Offset(15, progress * 30),
+      8 + progress * 15,
+      paint,
+    );
+    canvas.drawCircle(
+      center - Offset(-15, progress * 30),
+      8 + progress * 15,
+      paint,
+    );
   }
 
   @override
@@ -309,15 +342,19 @@ class GearSquarePainter extends CustomPainter {
       ..color = Colors.black.withValues(alpha: 0.05)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
-    
+
     final r = size.width * 0.4;
     final center = size.center(Offset.zero);
-    
+
     canvas.drawCircle(center, r, paint);
     // Draw 4 gears around corners
     for (int i = 0; i < 4; i++) {
-        final angle = (i / 4) * 2 * math.pi;
-        canvas.drawCircle(center + Offset(math.cos(angle) * r, math.sin(angle) * r), r * 0.3, paint);
+      final angle = (i / 4) * 2 * math.pi;
+      canvas.drawCircle(
+        center + Offset(math.cos(angle) * r, math.sin(angle) * r),
+        r * 0.3,
+        paint,
+      );
     }
   }
 

@@ -30,14 +30,18 @@ class ElectricGridPainter extends CustomPainter {
         ..color = mainBlue.withValues(alpha: 0.2)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.2;
-      
+
       final pulsePos = (animationValue * size.width) % size.width;
-      canvas.drawLine(Offset(pulsePos, 0), Offset(pulsePos, size.height), pulsePaint);
+      canvas.drawLine(
+        Offset(pulsePos, 0),
+        Offset(pulsePos, size.height),
+        pulsePaint,
+      );
     }
   }
 
   @override
-  bool shouldRepaint(ElectricGridPainter oldDelegate) => 
+  bool shouldRepaint(ElectricGridPainter oldDelegate) =>
       oldDelegate.animationValue != animationValue;
 }
 
@@ -51,7 +55,7 @@ class EnergySurgePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
     final random = Random(42);
-    
+
     final paint = Paint()
       ..color = color.withValues(alpha: (1.0 - animationValue).clamp(0.0, 1.0))
       ..style = PaintingStyle.stroke
@@ -59,9 +63,11 @@ class EnergySurgePainter extends CustomPainter {
 
     // Multiple expanding rings with jitter
     for (int i = 0; i < 3; i++) {
-        final radius = (size.width * 0.3) + (size.width * 0.6 * ((animationValue + i*0.2) % 1.0));
-        final jitter = (random.nextDouble() - 0.5) * 5.0;
-        canvas.drawCircle(center, radius + jitter, paint);
+      final radius =
+          (size.width * 0.3) +
+          (size.width * 0.6 * ((animationValue + i * 0.2) % 1.0));
+      final jitter = (random.nextDouble() - 0.5) * 5.0;
+      canvas.drawCircle(center, radius + jitter, paint);
     }
 
     // Energy arcs
@@ -74,17 +80,20 @@ class EnergySurgePainter extends CustomPainter {
       final angle = (animationValue * 2 * pi) + (i * pi / 2);
       final r1 = size.width * 0.3;
       final r2 = size.width * 0.45;
-      
+
       canvas.drawLine(
         Offset(center.dx + cos(angle) * r1, center.dy + sin(angle) * r1),
-        Offset(center.dx + cos(angle + 0.2) * r2, center.dy + sin(angle + 0.2) * r2),
-        arcPaint
+        Offset(
+          center.dx + cos(angle + 0.2) * r2,
+          center.dy + sin(angle + 0.2) * r2,
+        ),
+        arcPaint,
       );
     }
   }
 
   @override
-  bool shouldRepaint(EnergySurgePainter oldDelegate) => 
+  bool shouldRepaint(EnergySurgePainter oldDelegate) =>
       oldDelegate.animationValue != animationValue;
 }
 
@@ -97,27 +106,30 @@ class SparkNodeHintPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
     final random = Random();
-    
+
     final paint = Paint()
       ..color = const Color(0xFF00BFFF)
       ..style = PaintingStyle.fill;
 
     // Glowing core
     canvas.drawCircle(center, 3, paint);
-    
+
     // Spark branches
     if (random.nextDouble() > 0.4) {
       final sparkPaint = Paint()
         ..color = const Color(0xFFE0FFFF).withValues(alpha: 0.8)
         ..strokeWidth = 1.0;
-        
+
       for (int i = 0; i < 3; i++) {
         final angle = random.nextDouble() * 2 * pi;
         final length = 5.0 + random.nextDouble() * 10.0;
         canvas.drawLine(
           center,
-          Offset(center.dx + cos(angle) * length, center.dy + sin(angle) * length),
-          sparkPaint
+          Offset(
+            center.dx + cos(angle) * length,
+            center.dy + sin(angle) * length,
+          ),
+          sparkPaint,
         );
       }
     }

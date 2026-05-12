@@ -42,44 +42,44 @@ class AppSettings {
   });
 
   Map<String, dynamic> toJson() => {
-        'boardThemeId': boardThemeId,
-        'isSoundEnabled': isSoundEnabled,
-        'isMusicEnabled': isMusicEnabled,
-        'isAnimationsEnabled': isAnimationsEnabled,
-        'isHapticsEnabled': isHapticsEnabled,
-        'showCoordinates': showCoordinates,
-        'engineLevel': engineLevel,
-        'isAiOperational': isAiOperational,
-        'totalTimeMinutes': totalTimeMinutes,
-        'incrementSeconds': incrementSeconds,
-        'gameMode': gameMode,
-        'animationSettings': animationSettings,
-      };
+    'boardThemeId': boardThemeId,
+    'isSoundEnabled': isSoundEnabled,
+    'isMusicEnabled': isMusicEnabled,
+    'isAnimationsEnabled': isAnimationsEnabled,
+    'isHapticsEnabled': isHapticsEnabled,
+    'showCoordinates': showCoordinates,
+    'engineLevel': engineLevel,
+    'isAiOperational': isAiOperational,
+    'totalTimeMinutes': totalTimeMinutes,
+    'incrementSeconds': incrementSeconds,
+    'gameMode': gameMode,
+    'animationSettings': animationSettings,
+  };
 
   factory AppSettings.fromJson(Map<String, dynamic> json) => AppSettings(
-        boardThemeId: json['boardThemeId'] ?? 'classic',
-        isSoundEnabled: json['isSoundEnabled'] ?? true,
-        isMusicEnabled: json['isMusicEnabled'] ?? false,
-        isAnimationsEnabled: json['isAnimationsEnabled'] ?? true,
-        isHapticsEnabled: json['isHapticsEnabled'] ?? true,
-        showCoordinates: json['showCoordinates'] ?? true,
-        engineLevel: json['engineLevel'] ?? 'B',
-        isAiOperational: json['isAiOperational'] ?? true,
-        totalTimeMinutes: json['totalTimeMinutes'] ?? 10,
-        incrementSeconds: json['incrementSeconds'] ?? 0,
-        gameMode: json['gameMode'] ?? 'classic',
-        animationSettings: json['animationSettings'] != null
-            ? Map<String, bool>.from(json['animationSettings'])
-            : const {
-                'pieceMotion': true,
-                'camera': true,
-                'feedback': true,
-                'indicators': true,
-                'themeEffects': true,
-                'themeAmbience': true,
-                'kineticImpact': true,
-              },
-      );
+    boardThemeId: json['boardThemeId'] ?? 'classic',
+    isSoundEnabled: json['isSoundEnabled'] ?? true,
+    isMusicEnabled: json['isMusicEnabled'] ?? false,
+    isAnimationsEnabled: json['isAnimationsEnabled'] ?? true,
+    isHapticsEnabled: json['isHapticsEnabled'] ?? true,
+    showCoordinates: json['showCoordinates'] ?? true,
+    engineLevel: json['engineLevel'] ?? 'B',
+    isAiOperational: json['isAiOperational'] ?? true,
+    totalTimeMinutes: json['totalTimeMinutes'] ?? 10,
+    incrementSeconds: json['incrementSeconds'] ?? 0,
+    gameMode: json['gameMode'] ?? 'classic',
+    animationSettings: json['animationSettings'] != null
+        ? Map<String, bool>.from(json['animationSettings'])
+        : const {
+            'pieceMotion': true,
+            'camera': true,
+            'feedback': true,
+            'indicators': true,
+            'themeEffects': true,
+            'themeAmbience': true,
+            'kineticImpact': true,
+          },
+  );
 }
 
 class SettingsRepository {

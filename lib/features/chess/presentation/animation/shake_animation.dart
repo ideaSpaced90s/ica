@@ -47,12 +47,11 @@ class _ShakeAnimationState extends State<ShakeAnimation>
         // Random displacement on every build for a nervous effect
         final random = math.Random();
         final dx = (random.nextDouble() * 2 - 1) * widget.intensity;
-        final dy = (random.nextDouble() * 2 - 1) * (widget.intensity * 0.5); // Less vertical shake
-        
-        return Transform.translate(
-          offset: Offset(dx, dy),
-          child: child,
-        );
+        final dy =
+            (random.nextDouble() * 2 - 1) *
+            (widget.intensity * 0.5); // Less vertical shake
+
+        return Transform.translate(offset: Offset(dx, dy), child: child);
       },
       child: widget.child,
     );

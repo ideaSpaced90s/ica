@@ -54,13 +54,26 @@ class PlatinumTheme extends ChessTheme {
   ) {
     chess_lib.PieceType pType;
     switch (type.toUpperCase()) {
-      case 'K': pType = chess_lib.PieceType.KING; break;
-      case 'Q': pType = chess_lib.PieceType.QUEEN; break;
-      case 'R': pType = chess_lib.PieceType.ROOK; break;
-      case 'B': pType = chess_lib.PieceType.BISHOP; break;
-      case 'N': pType = chess_lib.PieceType.KNIGHT; break;
-      case 'P': pType = chess_lib.PieceType.PAWN; break;
-      default: pType = chess_lib.PieceType.PAWN;
+      case 'K':
+        pType = chess_lib.PieceType.KING;
+        break;
+      case 'Q':
+        pType = chess_lib.PieceType.QUEEN;
+        break;
+      case 'R':
+        pType = chess_lib.PieceType.ROOK;
+        break;
+      case 'B':
+        pType = chess_lib.PieceType.BISHOP;
+        break;
+      case 'N':
+        pType = chess_lib.PieceType.KNIGHT;
+        break;
+      case 'P':
+        pType = chess_lib.PieceType.PAWN;
+        break;
+      default:
+        pType = chess_lib.PieceType.PAWN;
     }
     return AspectRatio(
       aspectRatio: 1,

@@ -52,7 +52,7 @@ class SteampunkPiecePainter extends CustomPainter {
 
     // 3. Rotating Gears (Inside the pieces)
     _drawRotatingGears(canvas, center, radius);
-    
+
     // 4. Highlight & Bolts
     _drawMechanicalDetails(canvas, center, radius);
   }
@@ -75,42 +75,60 @@ class SteampunkPiecePainter extends CustomPainter {
     const int teethCount = 8;
     final gearRadius = radius * 0.3;
     final Path gearPath = Path();
-    
+
     for (int i = 0; i < teethCount * 2; i++) {
-        final r = (i % 2 == 0) ? gearRadius : gearRadius * 1.2;
-        final angle = (i / (teethCount * 2)) * 2 * math.pi;
-        if (i == 0) {
-            gearPath.moveTo(math.cos(angle) * r, math.sin(angle) * r);
-        } else {
-            gearPath.lineTo(math.cos(angle) * r, math.sin(angle) * r);
-        }
+      final r = (i % 2 == 0) ? gearRadius : gearRadius * 1.2;
+      final angle = (i / (teethCount * 2)) * 2 * math.pi;
+      if (i == 0) {
+        gearPath.moveTo(math.cos(angle) * r, math.sin(angle) * r);
+      } else {
+        gearPath.lineTo(math.cos(angle) * r, math.sin(angle) * r);
+      }
     }
     gearPath.close();
-    
+
     canvas.drawPath(gearPath, gearPaint);
     canvas.drawPath(gearPath, gearStroke);
-    
+
     // Inner center hole
-    canvas.drawCircle(Offset.zero, 3, Paint()..color = Colors.black.withValues(alpha: 0.4));
-    
+    canvas.drawCircle(
+      Offset.zero,
+      3,
+      Paint()..color = Colors.black.withValues(alpha: 0.4),
+    );
+
     canvas.restore();
   }
 
   void _drawMechanicalDetails(Canvas canvas, Offset center, double radius) {
-     final boltPaint = Paint()..color = Colors.black.withValues(alpha: 0.4);
-     // Bolts at piece corners/points
-     canvas.drawCircle(center + Offset(-radius * 0.4, radius * 0.7), 2, boltPaint);
-     canvas.drawCircle(center + Offset(radius * 0.4, radius * 0.7), 2, boltPaint);
+    final boltPaint = Paint()..color = Colors.black.withValues(alpha: 0.4);
+    // Bolts at piece corners/points
+    canvas.drawCircle(
+      center + Offset(-radius * 0.4, radius * 0.7),
+      2,
+      boltPaint,
+    );
+    canvas.drawCircle(
+      center + Offset(radius * 0.4, radius * 0.7),
+      2,
+      boltPaint,
+    );
   }
 
   Path _getSteampunkPath(String type, Offset center, double radius) {
     switch (type) {
-      case 'K': return _mechanicalKingPath(center, radius);
-      case 'Q': return _mechanicalQueenPath(center, radius);
-      case 'B': return _mechanicalBishopPath(center, radius);
-      case 'N': return _mechanicalKnightPath(center, radius);
-      case 'R': return _mechanicalRookPath(center, radius);
-      default: return _mechanicalPawnPath(center, radius);
+      case 'K':
+        return _mechanicalKingPath(center, radius);
+      case 'Q':
+        return _mechanicalQueenPath(center, radius);
+      case 'B':
+        return _mechanicalBishopPath(center, radius);
+      case 'N':
+        return _mechanicalKnightPath(center, radius);
+      case 'R':
+        return _mechanicalRookPath(center, radius);
+      default:
+        return _mechanicalPawnPath(center, radius);
     }
   }
 
@@ -172,7 +190,12 @@ class SteampunkPiecePainter extends CustomPainter {
       ..moveTo(center.dx - radius * 0.3, center.dy + radius * 0.8)
       ..lineTo(center.dx + radius * 0.3, center.dy + radius * 0.8)
       ..lineTo(center.dx + radius * 0.2, center.dy)
-      ..addOval(Rect.fromCircle(center: center + Offset(0, -radius * 0.3), radius: radius * 0.4));
+      ..addOval(
+        Rect.fromCircle(
+          center: center + Offset(0, -radius * 0.3),
+          radius: radius * 0.4,
+        ),
+      );
   }
 
   @override

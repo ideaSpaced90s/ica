@@ -30,10 +30,7 @@ class ToyTheme extends ChessTheme {
   Widget buildBackground(BuildContext context, bool animationsEnabled) {
     if (!animationsEnabled) return const SizedBox.shrink();
     return const Stack(
-      children: [
-        FloatingBubblesOverlay(),
-        StaticDischargeOverlay(),
-      ],
+      children: [FloatingBubblesOverlay(), StaticDischargeOverlay()],
     );
   }
 
@@ -94,10 +91,12 @@ class ToyTheme extends ChessTheme {
         height: isEnemy ? 38 : 12,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: isEnemy 
-              ? Colors.transparent 
-              : const Color(0xFF0D6EFD).withValues(alpha: 0.75), // Use scholarly blue for now
-          border: isEnemy 
+          color: isEnemy
+              ? Colors.transparent
+              : const Color(
+                  0xFF0D6EFD,
+                ).withValues(alpha: 0.75), // Use scholarly blue for now
+          border: isEnemy
               ? Border.all(color: const Color(0xFF0D6EFD), width: 2.8)
               : null,
         ),

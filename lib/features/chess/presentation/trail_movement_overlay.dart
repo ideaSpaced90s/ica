@@ -19,7 +19,8 @@ class TrailMovementOverlay extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<TrailMovementOverlay> createState() => _TrailMovementOverlayState();
+  ConsumerState<TrailMovementOverlay> createState() =>
+      _TrailMovementOverlayState();
 }
 
 class _TrailMovementOverlayState extends ConsumerState<TrailMovementOverlay>
@@ -36,26 +37,24 @@ class _TrailMovementOverlayState extends ConsumerState<TrailMovementOverlay>
     _squareSize = widget.boardSize / 8;
     _path = _calculatePath();
 
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 550), // Snappier movement
-    )..addStatusListener((status) {
-        if (status == AnimationStatus.completed) {
-          widget.onComplete();
-        }
-      });
+    _controller =
+        AnimationController(
+          vsync: this,
+          duration: const Duration(milliseconds: 550), // Snappier movement
+        )..addStatusListener((status) {
+          if (status == AnimationStatus.completed) {
+            widget.onComplete();
+          }
+        });
 
     final boardThemeId = ref.read(chessProvider).boardThemeId;
-    final curve = boardThemeId == 'theme2' 
-        ? Curves.easeOutBack 
+    final curve = boardThemeId == 'theme2'
+        ? Curves.easeOutBack
         : boardThemeId == 'theme3'
-            ? Curves.easeInOutCubic
-            : Curves.easeInOutSine;
+        ? Curves.easeInOutCubic
+        : Curves.easeInOutSine;
 
-    _curvedProgress = CurvedAnimation(
-      parent: _controller,
-      curve: curve,
-    );
+    _curvedProgress = CurvedAnimation(parent: _controller, curve: curve);
 
     final animationsEnabled = ref.read(chessProvider).isAnimationsEnabled;
     if (!animationsEnabled) {
@@ -101,28 +100,30 @@ class _TrailMovementOverlayState extends ConsumerState<TrailMovementOverlay>
         } else if (currCol > toCol) {
           currCol--;
         }
-        
+
         if (currRow < toRow) {
           currRow++;
         } else if (currRow > toRow) {
           currRow--;
         }
-        
+
         path.add(_coordsToOffset(currCol, currRow));
       }
     }
-    
+
     final toOffset = _coordsToOffset(toCol, toRow);
     if (path.last != toOffset) {
       path.add(toOffset);
     }
-    
+
     return path;
   }
 
   Offset _coordsToOffset(int col, int row) {
-    final x = (widget.isFlipped ? 7 - col : col) * _squareSize + _squareSize / 2;
-    final y = (widget.isFlipped ? 7 - row : row) * _squareSize + _squareSize / 2;
+    final x =
+        (widget.isFlipped ? 7 - col : col) * _squareSize + _squareSize / 2;
+    final y =
+        (widget.isFlipped ? 7 - row : row) * _squareSize + _squareSize / 2;
     return Offset(x, y);
   }
 
@@ -140,17 +141,17 @@ class _TrailMovementOverlayState extends ConsumerState<TrailMovementOverlay>
       builder: (context, child) {
         final progress = _curvedProgress.value;
         final rawProgress = _controller.value;
-        
+
         // Piece and trail follow the curved progress
         final piecePos = _getPositionOnPath(_path, progress);
 
         // Calculate arc and squash/stretch for Toy theme
         final arc = math.sin(rawProgress * math.pi);
-        
+
         double pieceScale = 1.0;
         double verticalLift = 0.0;
         Offset vibration = Offset.zero;
-        
+
         if (isIceTheme) {
           pieceScale = 1.0;
           verticalLift = 0.0;
@@ -159,12 +160,15 @@ class _TrailMovementOverlayState extends ConsumerState<TrailMovementOverlay>
           verticalLift = -arc * 60.0; // High hop!
           pieceScale = 1.0 + (arc * 0.4); // Stretch in mid-air
           if (rawProgress < 0.2 || rawProgress > 0.8) {
-             pieceScale = 0.8; // Squash on landing/takeoff
+            pieceScale = 0.8; // Squash on landing/takeoff
           }
         } else if (isSteampunkTheme) {
           // Mechanical slide: subtle vibration
           verticalLift = -arc * 10.0;
-          vibration = Offset(math.sin(rawProgress * 40) * 2.0, 0); // Mechanical rattle
+          vibration = Offset(
+            math.sin(rawProgress * 40) * 2.0,
+            0,
+          ); // Mechanical rattle
         } else if (isMatrixTheme) {
           // Teleport dissolve
           final noise = math.sin(rawProgress * 80);
@@ -203,7 +207,7 @@ class _TrailMovementOverlayState extends ConsumerState<TrailMovementOverlay>
                   squareSize: _squareSize,
                 ),
               ),
-            
+
             Positioned(
               left: piecePos.dx - _squareSize / 2 + vibration.dx,
               top: piecePos.dy - _squareSize / 2 + verticalLift + vibration.dy,
@@ -225,7 +229,6 @@ class _TrailMovementOverlayState extends ConsumerState<TrailMovementOverlay>
       },
     );
   }
-
 
   Offset _getPositionOnPath(List<Offset> path, double t) {
     if (path.isEmpty) return Offset.zero;
@@ -257,7 +260,7 @@ class TrailPainter extends CustomPainter {
 
     // Fade out trail towards the end of the animation
     final trailOpacity = (1.0 - progress).clamp(0.0, 1.0);
-    
+
     final paint = Paint()
       ..color = Colors.greenAccent.withValues(alpha: 0.6 * trailOpacity)
       ..strokeWidth = 3.0
@@ -296,4 +299,3 @@ class TrailPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant TrailPainter oldDelegate) => true;
 }
-

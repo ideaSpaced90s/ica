@@ -107,13 +107,13 @@ class LiquidPiecePainter extends CustomPainter {
     }
 
     canvas.drawPath(path, fillPaint);
-    
+
     // Draw tiny shimmering bubbles inside "White" (Water) pieces
     if (isWhite) {
       for (var i = 0; i < 4; i++) {
         final bubbleOffset = Offset(
           center.dx + radius * 0.3 * cos(animationValue * 2 * pi + i),
-          center.dy + radius * 0.3 * sin(animationValue * 2 * pi + i + pi / 4)
+          center.dy + radius * 0.3 * sin(animationValue * 2 * pi + i + pi / 4),
         );
         canvas.drawCircle(bubbleOffset, 3, shimmerPaint);
       }
@@ -122,12 +122,17 @@ class LiquidPiecePainter extends CustomPainter {
       final inkHighlightPath = Path()
         ..moveTo(center.dx - radius * 0.2, center.dy - radius * 0.4)
         ..quadraticBezierTo(
-          center.dx + radius * 0.4, 
-          center.dy - radius * 0.5, 
-          center.dx + radius * 0.3, 
-          center.dy + radius * 0.2
+          center.dx + radius * 0.4,
+          center.dy - radius * 0.5,
+          center.dx + radius * 0.3,
+          center.dy + radius * 0.2,
         );
-      canvas.drawPath(inkHighlightPath, shimmerPaint..strokeWidth = 4.0..style = PaintingStyle.stroke);
+      canvas.drawPath(
+        inkHighlightPath,
+        shimmerPaint
+          ..strokeWidth = 4.0
+          ..style = PaintingStyle.stroke,
+      );
     }
   }
 
@@ -149,17 +154,23 @@ class LiquidPiecePainter extends CustomPainter {
   }
 
   // Organic blob generator that retains basic chess silhouette proportions
-  Path _drawBlobby(Offset c, double r, int vertexCount, double anim, {bool asymmetrical = false}) {
+  Path _drawBlobby(
+    Offset c,
+    double r,
+    int vertexCount,
+    double anim, {
+    bool asymmetrical = false,
+  }) {
     final path = Path();
     final points = <Offset>[];
-    
+
     for (var i = 0; i < vertexCount; i++) {
       final angle = i * 2 * pi / vertexCount;
       final morph = 0.05 * sin(anim * 2 * pi + i);
       final dist = asymmetrical && i % 2 == 0 ? r * 0.8 : r;
       final offset = Offset(
         c.dx + (dist + morph * r) * cos(angle),
-        c.dy + (dist + morph * r) * sin(angle)
+        c.dy + (dist + morph * r) * sin(angle),
       );
       points.add(offset);
     }
@@ -169,13 +180,13 @@ class LiquidPiecePainter extends CustomPainter {
       final p1 = points[i];
       final p2 = points[(i + 1) % vertexCount];
       final cp = Offset((p1.dx + p2.dx) / 2, (p1.dy + p2.dy) / 2);
-      
+
       // Add more "fluidity" by pulling control points
       final cpFluid = Offset(
         cp.dx + (asin(anim) * 5),
-        cp.dy + (acos(anim) * 5)
+        cp.dy + (acos(anim) * 5),
       );
-      
+
       path.quadraticBezierTo(p1.dx, p1.dy, cpFluid.dx, cpFluid.dy);
     }
     path.close();

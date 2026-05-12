@@ -9,10 +9,10 @@ abstract class ChessTheme {
 
   Color get lightSquare;
   Color get darkSquare;
-  
+
   Color get lightCoordinateColor;
   Color get darkCoordinateColor;
-  
+
   // Frame/Border color for the whole board
   Color get frameColor => Colors.transparent;
 
@@ -24,7 +24,7 @@ abstract class ChessTheme {
 
   // Individual square decoration/painter
   CustomPainter? getSquarePainter(bool isLight, double animationValue);
-  
+
   // Piece rendering
   Widget buildPiece(
     BuildContext context,

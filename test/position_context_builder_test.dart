@@ -6,7 +6,7 @@ void main() {
   group('PositionContextBuilder Tests', () {
     test('Classification of move quality', () {
       final game = ChessGame();
-      
+
       final contextPos = PositionContextBuilder.build(
         move: 'e2e4',
         currentEval: 1.2,

@@ -70,30 +70,27 @@ class _OrbitingStarPainter extends CustomPainter {
   final double progress;
   final Color color;
 
-  _OrbitingStarPainter({
-    required this.progress,
-    required this.color,
-  });
+  _OrbitingStarPainter({required this.progress, required this.color});
 
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
     // Slightly inset the path to stay within square bounds
     final pathRect = rect.deflate(2.0);
-    
+
     // Calculate position along the square perimeter
     // Perimeter length is 4 * side
     final totalLength = pathRect.width * 4;
     final currentPos = progress * totalLength;
-    
+
     Offset getPos(double distance) {
       // Normalize distance to [0, totalLength)
       double d = distance % totalLength;
       if (d < 0) d += totalLength;
-      
+
       final w = pathRect.width;
       final h = pathRect.height;
-      
+
       if (d < w) {
         // Top edge (left to right)
         return Offset(pathRect.left + d, pathRect.top);
@@ -110,39 +107,42 @@ class _OrbitingStarPainter extends CustomPainter {
     }
 
     // Calculate a pulsating factor based on progress
-    final pulse = (math.sin(progress * math.pi * 16) + 1) / 2; // 0.0 to 1.0, 8 pulses per orbit
+    final pulse =
+        (math.sin(progress * math.pi * 16) + 1) /
+        2; // 0.0 to 1.0, 8 pulses per orbit
     final headRadius = 2.5 + (pulse * 2.0); // 2.5 to 4.5
     final glowRadius = 5.0 + (pulse * 3.0); // 5.0 to 8.0
 
     // Draw the tail (gradient/particles along the path)
     const trailPoints = 25; // More particles for smoother tail
     const trailLength = 45.0; // Slightly longer tail
-    
+
     for (int i = 0; i < trailPoints; i++) {
-        final double pointAlpha = (1.0 - (i / trailPoints)).clamp(0.0, 1.0);
-        final double offset = (i / trailPoints) * trailLength;
-        
-        // Add slight random-looking jitter to the tail for "magic dust" effect
-        // varying slightly by offset to keep it stable per position
-        final jitterX = math.sin(currentPos - offset) * 1.5 * (i / trailPoints);
-        final jitterY = math.cos(currentPos - offset) * 1.5 * (i / trailPoints);
-        final basePos = getPos(currentPos - offset);
-        final position = Offset(basePos.dx + jitterX, basePos.dy + jitterY);
-        
-        final paint = Paint()
-          ..color = color.withValues(alpha: pointAlpha * 0.9) // slightly brighter
-          ..maskFilter = MaskFilter.blur(BlurStyle.normal, (1.0 + i * 0.4));
-        
-        canvas.drawCircle(position, (3.5 - (i / trailPoints) * 2.5), paint);
+      final double pointAlpha = (1.0 - (i / trailPoints)).clamp(0.0, 1.0);
+      final double offset = (i / trailPoints) * trailLength;
+
+      // Add slight random-looking jitter to the tail for "magic dust" effect
+      // varying slightly by offset to keep it stable per position
+      final jitterX = math.sin(currentPos - offset) * 1.5 * (i / trailPoints);
+      final jitterY = math.cos(currentPos - offset) * 1.5 * (i / trailPoints);
+      final basePos = getPos(currentPos - offset);
+      final position = Offset(basePos.dx + jitterX, basePos.dy + jitterY);
+
+      final paint = Paint()
+        ..color = color
+            .withValues(alpha: pointAlpha * 0.9) // slightly brighter
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, (1.0 + i * 0.4));
+
+      canvas.drawCircle(position, (3.5 - (i / trailPoints) * 2.5), paint);
     }
-    
+
     // Draw the head (brightest point)
     final headPos = getPos(currentPos);
     final headPaint = Paint()
       ..color = Colors.white
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.5);
     canvas.drawCircle(headPos, headRadius, headPaint);
-    
+
     final glowPaint = Paint()
       ..color = color
       ..maskFilter = MaskFilter.blur(BlurStyle.normal, glowRadius);

@@ -25,10 +25,11 @@ class PromotionOverlay extends ConsumerWidget {
           child: GestureDetector(
             onTap: () {}, // Prevent taps from passing through
             child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 0.5, sigmaY: 0.5), // Subtle blur for Win98
-              child: Container(
-                color: Colors.black.withValues(alpha: 0.15),
-              ),
+              filter: ImageFilter.blur(
+                sigmaX: 0.5,
+                sigmaY: 0.5,
+              ), // Subtle blur for Win98
+              child: Container(color: Colors.black.withValues(alpha: 0.15)),
             ),
           ),
         ),
@@ -43,7 +44,10 @@ class PromotionOverlay extends ConsumerWidget {
               children: [
                 // Title Bar
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: ScholarlyTheme.backgroundStart,
                     borderRadius: BorderRadius.circular(8),
@@ -112,10 +116,7 @@ class _PromotionOption extends StatefulWidget {
   final String pieceCode;
   final VoidCallback onSelected;
 
-  const _PromotionOption({
-    required this.pieceCode,
-    required this.onSelected,
-  });
+  const _PromotionOption({required this.pieceCode, required this.onSelected});
 
   @override
   State<_PromotionOption> createState() => _PromotionOptionState();
@@ -136,15 +137,19 @@ class _PromotionOptionState extends State<_PromotionOption> {
           width: 54,
           height: 54,
           decoration: ScholarlyTheme.modernDecoration().copyWith(
-            color: _isHovered ? ScholarlyTheme.accentBlueSoft : ScholarlyTheme.panelBase,
+            color: _isHovered
+                ? ScholarlyTheme.accentBlueSoft
+                : ScholarlyTheme.panelBase,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: _isHovered ? ScholarlyTheme.accentBlue : ScholarlyTheme.panelStroke,
+              color: _isHovered
+                  ? ScholarlyTheme.accentBlue
+                  : ScholarlyTheme.panelStroke,
             ),
           ),
           padding: const EdgeInsets.all(8),
           child: ChessPieceWidget(
-            squareName: 'none', 
+            squareName: 'none',
             pieceCode: widget.pieceCode,
           ),
         ),

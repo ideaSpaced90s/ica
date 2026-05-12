@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../scholarly_theme.dart';
 
-
 class MetricMiniChip extends StatelessWidget {
   const MetricMiniChip({super.key, required this.label, required this.value});
 
@@ -21,7 +20,10 @@ class MetricMiniChip extends StatelessWidget {
         children: [
           Text(
             label,
-            style: const TextStyle(color: ScholarlyTheme.textSubtle, fontSize: 7),
+            style: const TextStyle(
+              color: ScholarlyTheme.textSubtle,
+              fontSize: 7,
+            ),
           ),
           const SizedBox(width: 4),
           Text(
@@ -37,5 +39,3 @@ class MetricMiniChip extends StatelessWidget {
     );
   }
 }
-
-

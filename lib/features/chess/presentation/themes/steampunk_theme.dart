@@ -52,7 +52,8 @@ class SteampunkTheme extends ChessTheme {
         painter: IndustrialPiecePainter(
           type: type.toUpperCase(),
           isWhite: isWhite,
-          rotation: animationValue, // Re-using animationValue for rotation if needed
+          rotation:
+              animationValue, // Re-using animationValue for rotation if needed
         ),
       ),
     );

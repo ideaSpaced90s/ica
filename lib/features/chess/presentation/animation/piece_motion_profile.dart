@@ -70,11 +70,11 @@ class PieceMotionProfile {
   static const PieceMotionProfile pawn = PieceMotionProfile(
     moveDuration: Duration(milliseconds: 450),
     moveCurve: Curves.easeInOutCubic,
-    verticalArcFactor: 0.05,    // almost flat
+    verticalArcFactor: 0.05, // almost flat
     midRotationDeg: 0.0,
     hasGhostTrail: false,
     isTeleport: false,
-    landingCompression: 0.010,  // tiny 1% compress for a quick thud
+    landingCompression: 0.010, // tiny 1% compress for a quick thud
     hasBreathingSelection: true,
     selectionBreathScale: 0.012,
     breathingPeriod: Duration(milliseconds: 1200),
@@ -86,11 +86,11 @@ class PieceMotionProfile {
   static const PieceMotionProfile knight = PieceMotionProfile(
     moveDuration: Duration(milliseconds: 500),
     moveCurve: Curves.easeInOutBack,
-    verticalArcFactor: 0.3,     // noticeable arc (knight jumps)
-    midRotationDeg: 2.5,        // degree tilt mid-air
+    verticalArcFactor: 0.3, // noticeable arc (knight jumps)
+    midRotationDeg: 2.5, // degree tilt mid-air
     hasGhostTrail: false,
     isTeleport: false,
-    landingCompression: 0.0,    // firm, no compress
+    landingCompression: 0.0, // firm, no compress
     hasBreathingSelection: true,
     selectionBreathScale: 0.015,
     breathingPeriod: Duration(milliseconds: 1100),
@@ -102,15 +102,15 @@ class PieceMotionProfile {
   static const PieceMotionProfile bishop = PieceMotionProfile(
     moveDuration: Duration(milliseconds: 550),
     moveCurve: Curves.easeInOutSine,
-    verticalArcFactor: 0.0,     // perfectly flat diagonal glide
+    verticalArcFactor: 0.0, // perfectly flat diagonal glide
     midRotationDeg: 0.0,
-    hasGhostTrail: true,        // ← Bishop signature
+    hasGhostTrail: true, // ← Bishop signature
     isTeleport: false,
-    landingCompression: 0.0,    // absolutely clean stop
+    landingCompression: 0.0, // absolutely clean stop
     hasBreathingSelection: true,
     selectionBreathScale: 0.010,
     breathingPeriod: Duration(milliseconds: 1500),
-    levitationHeight: 4.5,      // floats highest — effortless
+    levitationHeight: 4.5, // floats highest — effortless
   );
 
   /// ♜ Rook — Heavy & Grounded
@@ -118,27 +118,29 @@ class PieceMotionProfile {
   static const PieceMotionProfile rook = PieceMotionProfile(
     moveDuration: Duration(milliseconds: 600),
     moveCurve: Curves.easeInOutQuart, // strong in, gradual out = heavy feel
-    verticalArcFactor: 0.0,     // strictly horizontal/vertical — no drift
+    verticalArcFactor: 0.0, // strictly horizontal/vertical — no drift
     midRotationDeg: 0.0,
     hasGhostTrail: false,
     isTeleport: false,
-    landingCompression: 0.015,  // 1.5% compress — feels heavy landing
+    landingCompression: 0.015, // 1.5% compress — feels heavy landing
     hasBreathingSelection: true,
     selectionBreathScale: 0.008, // barely breathes — stable presence
     breathingPeriod: Duration(milliseconds: 1400),
-    levitationHeight: 2.5,      // barely lifts — heavy
+    levitationHeight: 2.5, // barely lifts — heavy
   );
 
   /// ♛ Queen — Dominant & Fluid
   /// fastest mover, confident glide, clean minimal settle.
   /// Now features a unique "Teleport" blink signature.
   static const PieceMotionProfile queen = PieceMotionProfile(
-    moveDuration: Duration(milliseconds: 1600), // 400ms per hop (A -> B -> A -> B)
+    moveDuration: Duration(
+      milliseconds: 1600,
+    ), // 400ms per hop (A -> B -> A -> B)
     moveCurve: Curves.linear,
     verticalArcFactor: 0.0,
     midRotationDeg: 0.0,
     hasGhostTrail: false,
-    isTeleport: true,           // ← Queen signature
+    isTeleport: true, // ← Queen signature
     landingCompression: 0.0,
     hasBreathingSelection: true,
     selectionBreathScale: 0.018, // most visible breath — dominant
@@ -150,16 +152,16 @@ class PieceMotionProfile {
   /// Slowest. Noticeable ease-in (anticipation feel via curve). Gentle settle.
   static const PieceMotionProfile king = PieceMotionProfile(
     moveDuration: Duration(milliseconds: 900), // increased from 700ms
-    moveCurve: Curves.easeInOutQuad,  // gentle, cautious acceleration
+    moveCurve: Curves.easeInOutQuad, // gentle, cautious acceleration
     verticalArcFactor: 0.05,
     midRotationDeg: 0.0,
     hasGhostTrail: false,
     isTeleport: false,
-    landingCompression: 0.020,  // increased from 0.003 — heavy settle
+    landingCompression: 0.020, // increased from 0.003 — heavy settle
     hasBreathingSelection: true,
     selectionBreathScale: 0.020, // most visible — signals importance
     breathingPeriod: Duration(milliseconds: 1300),
-    levitationHeight: 2.0,      // lowest float — cautious
+    levitationHeight: 2.0, // lowest float — cautious
   );
 
   // ────────────────────────────────────────────────────────────────────────
@@ -171,15 +173,24 @@ class PieceMotionProfile {
   /// Accepts both raw type letter ('K', 'N') and prefixed codes ('wK', 'bR').
   static PieceMotionProfile forCode(String code) {
     // Strip color prefix if present
-    final type = code.length > 1 ? code.substring(1).toUpperCase() : code.toUpperCase();
+    final type = code.length > 1
+        ? code.substring(1).toUpperCase()
+        : code.toUpperCase();
     switch (type) {
-      case 'K': return king;
-      case 'Q': return queen;
-      case 'R': return rook;
-      case 'B': return bishop;
-      case 'N': return knight;
-      case 'P': return pawn;
-      default:  return pawn; // safe fallback
+      case 'K':
+        return king;
+      case 'Q':
+        return queen;
+      case 'R':
+        return rook;
+      case 'B':
+        return bishop;
+      case 'N':
+        return knight;
+      case 'P':
+        return pawn;
+      default:
+        return pawn; // safe fallback
     }
   }
 }

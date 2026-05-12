@@ -29,13 +29,18 @@ class AiContextService {
     );
 
     final basePrompt = PromptBuilder.buildCommentaryPrompt(_lastContext!);
-    
+
     if (chatHistory.isEmpty) return basePrompt;
 
-    final historyStr = chatHistory.reversed.take(6).toList().reversed.map((e) {
-      final role = e.isUser ? 'User' : 'Assistant';
-      return '$role: ${e.text}';
-    }).join('\n');
+    final historyStr = chatHistory.reversed
+        .take(6)
+        .toList()
+        .reversed
+        .map((e) {
+          final role = e.isUser ? 'User' : 'Assistant';
+          return '$role: ${e.text}';
+        })
+        .join('\n');
 
     return '$basePrompt\n\nRecent Conversation:\n$historyStr';
   }

@@ -5,10 +5,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'features/chess/presentation/scholarly_theme.dart';
 import 'features/chess/presentation/splash_screen.dart';
+import 'src/rust/frb_generated.dart';
 
 void main() {
   runZonedGuarded(() async {
     WidgetsFlutterBinding.ensureInitialized();
+    try {
+      await RustLib.init();
+    } catch (e) {
+      debugPrint('RUST LIB INIT ERROR: $e');
+    }
     try {
       await dotenv.load(fileName: ".env");
       debugPrint('SARVAM AI ENVIORNMENT LOADED');

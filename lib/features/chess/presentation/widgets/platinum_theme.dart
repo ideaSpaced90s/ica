@@ -4,26 +4,26 @@ import 'package:chess/chess.dart' as chess_lib;
 
 /// UI Utilities for Platinum Metallic Theme
 class BrushedTextureUtility {
-  static void drawBrushedMetal(Canvas canvas, Rect rect, {double grainDensity = 0.5}) {
+  static void drawBrushedMetal(
+    Canvas canvas,
+    Rect rect, {
+    double grainDensity = 0.5,
+  }) {
     final Paint grainPaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 0.5;
 
     final Random random = Random(42); // Seed for consistent grain
     final double step = 1.5;
-    
+
     for (double y = rect.top; y < rect.bottom; y += step) {
       if (random.nextDouble() > grainDensity) continue;
-      
+
       final double opacity = 0.03 + (random.nextDouble() * 0.05);
       grainPaint.color = Colors.white.withValues(alpha: opacity);
-      
+
       // Horizontal grain across the entire board
-      canvas.drawLine(
-        Offset(rect.left, y),
-        Offset(rect.right, y),
-        grainPaint,
-      );
+      canvas.drawLine(Offset(rect.left, y), Offset(rect.right, y), grainPaint);
     }
   }
 }
@@ -32,25 +32,22 @@ class PlatinumBoardPainter extends CustomPainter {
   final bool isLight;
   final double animationValue;
 
-  PlatinumBoardPainter({
-    required this.isLight,
-    required this.animationValue,
-  });
+  PlatinumBoardPainter({required this.isLight, required this.animationValue});
 
   @override
   void paint(Canvas canvas, Size size) {
     final Rect rect = Offset.zero & size;
-    
+
     // 1. Base Gradient for Depth
     final Paint basePaint = Paint()
       ..shader = LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: isLight 
-          ? [const Color(0xFFD1D5DB), const Color(0xFF9CA3AF)] 
-          : [const Color(0xFF4B5563), const Color(0xFF374151)],
+        colors: isLight
+            ? [const Color(0xFFD1D5DB), const Color(0xFF9CA3AF)]
+            : [const Color(0xFF4B5563), const Color(0xFF374151)],
       ).createShader(rect);
-    
+
     canvas.drawRect(rect, basePaint);
 
     // 2. Brushed Metal Effect
@@ -67,8 +64,9 @@ class PlatinumBoardPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(PlatinumBoardPainter oldDelegate) => 
-      oldDelegate.isLight != isLight || oldDelegate.animationValue != animationValue;
+  bool shouldRepaint(PlatinumBoardPainter oldDelegate) =>
+      oldDelegate.isLight != isLight ||
+      oldDelegate.animationValue != animationValue;
 }
 
 class MetalPiece extends StatelessWidget {
@@ -118,7 +116,7 @@ class MetalPiecePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final Path path = _getMachinedPiecePath(type, size);
     final Rect bounds = path.getBounds();
-    
+
     // 1. Strong Soft Drop Shadow
     final Paint shadowPaint = Paint()
       ..color = Colors.black.withValues(alpha: 0.4)
@@ -140,9 +138,15 @@ class MetalPiecePainter extends CustomPainter {
     canvas.restore();
 
     // 3. Layered Gradient Base (Material Realism)
-    final Color topHighlight = isWhite ? const Color(0xFFF9FAFB) : const Color(0xFF1F2937);
-    final Color midBody = isWhite ? const Color(0xFFE5E7EB) : const Color(0xFF111827);
-    final Color bottomFalloff = isWhite ? const Color(0xFF9CA3AF) : const Color(0xFF020617);
+    final Color topHighlight = isWhite
+        ? const Color(0xFFF9FAFB)
+        : const Color(0xFF1F2937);
+    final Color midBody = isWhite
+        ? const Color(0xFFE5E7EB)
+        : const Color(0xFF111827);
+    final Color bottomFalloff = isWhite
+        ? const Color(0xFF9CA3AF)
+        : const Color(0xFF020617);
 
     final Paint bodyPaint = Paint()
       ..shader = LinearGradient(
@@ -151,7 +155,7 @@ class MetalPiecePainter extends CustomPainter {
         colors: [topHighlight, midBody, bottomFalloff],
         stops: const [0.0, 0.5, 1.0],
       ).createShader(bounds);
-    
+
     canvas.drawPath(path, bodyPaint);
 
     // 4. Sharp Static Specular Highlight Line
@@ -169,7 +173,7 @@ class MetalPiecePainter extends CustomPainter {
         ],
         stops: const [0.0, 0.4, 1.0],
       ).createShader(bounds);
-    
+
     canvas.drawPath(path, specularPaint);
 
     // 5. Removed Selection Highlight Sweep for static aesthetic
@@ -188,7 +192,10 @@ class MetalPiecePainter extends CustomPainter {
         path.lineTo(midX + w * 0.15, h * 0.85);
         path.lineTo(midX + w * 0.1, h * 0.75);
         path.lineTo(midX + w * 0.1, h * 0.45);
-        path.arcToPoint(Offset(midX - w * 0.1, h * 0.45), radius: Radius.circular(w * 0.1));
+        path.arcToPoint(
+          Offset(midX - w * 0.1, h * 0.45),
+          radius: Radius.circular(w * 0.1),
+        );
         path.lineTo(midX - w * 0.1, h * 0.75);
         path.close();
         break;
@@ -311,12 +318,15 @@ class PlatinumMoveHintPainter extends CustomPainter {
     } else {
       discPaint.style = PaintingStyle.fill;
       canvas.drawCircle(center, radius, discPaint);
-      
+
       // Depth shadow
       canvas.drawCircle(
-        center, 
-        radius, 
-        Paint()..color = Colors.black.withValues(alpha: 0.2)..style = PaintingStyle.stroke..strokeWidth = 1.0
+        center,
+        radius,
+        Paint()
+          ..color = Colors.black.withValues(alpha: 0.2)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.0,
       );
     }
   }
@@ -354,11 +364,17 @@ class _PlatinumCaptureEffectState extends State<PlatinumCaptureEffect>
     );
 
     _opacity = Tween<double>(begin: 1.0, end: 0.0).animate(
-      CurvedAnimation(parent: _controller, curve: const Interval(0.0, 0.8, curve: Curves.easeIn)),
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.8, curve: Curves.easeIn),
+      ),
     );
 
     _sink = Tween<double>(begin: 0.0, end: 15.0).animate(
-      CurvedAnimation(parent: _controller, curve: const Interval(0.2, 1.0, curve: Curves.easeInQuad)),
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.2, 1.0, curve: Curves.easeInQuad),
+      ),
     );
 
     _controller.forward().then((_) => widget.onComplete());

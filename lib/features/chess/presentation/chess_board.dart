@@ -63,7 +63,7 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
 
   /// Tap ripple entries: board-local top-left Offset of the tapped square
   final List<Offset> _tapRipples = [];
-  
+
   final List<Map<String, dynamic>> _knightDusts = [];
   final List<Map<String, dynamic>> _bishopWinds = [];
   final List<Map<String, dynamic>> _impactShakes = [];
@@ -127,251 +127,279 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
           child: SizedBox(
             width: boardSize,
             height: boardSize,
-          child: ImpactShake(
-            trigger: _impactShakes.any((s) => s['square'] == 'BOARD'),
-            direction: _impactShakes.firstWhere(
-              (s) => s['square'] == 'BOARD',
-              orElse: () => {'dir': Offset.zero},
-            )['dir'] as Offset,
-            intensity: 8.0,
-            onComplete: () => setState(() => _impactShakes.removeWhere((s) => s['square'] == 'BOARD')),
-            child: Container(
-              clipBehavior: Clip.none,
-              decoration: BoxDecoration(
-                borderRadius:
-                    chessTheme.id == 'theme2' || chessTheme.id == 'theme7'
-                    ? BorderRadius.circular(12)
-                    : null,
-                boxShadow:
-                    chessTheme.id == 'theme2' || chessTheme.id == 'theme7'
-                    ? [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.18),
-                          blurRadius: 18,
-                          spreadRadius: 2,
-                        ),
-                      ]
-                    : [],
+            child: ImpactShake(
+              trigger: _impactShakes.any((s) => s['square'] == 'BOARD'),
+              direction:
+                  _impactShakes.firstWhere(
+                        (s) => s['square'] == 'BOARD',
+                        orElse: () => {'dir': Offset.zero},
+                      )['dir']
+                      as Offset,
+              intensity: 8.0,
+              onComplete: () => setState(
+                () => _impactShakes.removeWhere((s) => s['square'] == 'BOARD'),
               ),
-              child: CinematicBoardCamera(
-                cue: chessState.cameraMotionCue,
-                isEnabled: ref.read(chessProvider.notifier).isAnimationTypeEnabled('camera'),
-                isFlipped: chessState.isBoardFlipped,
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    // 1. Background Effects
-                    chessTheme.buildBackground(
-                      context,
-                      ref.read(chessProvider.notifier).isAnimationTypeEnabled('themeAmbience'),
-                    ),
-
-                    // 2. Check Effects
-                    if (chessState.game.inCheck)
-                      chessTheme.buildCheckEffect(context),
-                    GridView.builder(
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 8,
+              child: Container(
+                clipBehavior: Clip.none,
+                decoration: BoxDecoration(
+                  borderRadius:
+                      chessTheme.id == 'theme2' || chessTheme.id == 'theme7'
+                      ? BorderRadius.circular(12)
+                      : null,
+                  boxShadow:
+                      chessTheme.id == 'theme2' || chessTheme.id == 'theme7'
+                      ? [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.18),
+                            blurRadius: 18,
+                            spreadRadius: 2,
                           ),
-                      padding: EdgeInsets.zero,
-                      itemCount: 64,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemBuilder: (context, index) {
-                        final row = index ~/ 8;
-                        final col = index % 8;
-                        final isLight = (row + col) % 2 == 0;
-                        final squareName = _getSquareName(
-                          row,
-                          col,
-                          chessState.isBoardFlipped,
-                        );
+                        ]
+                      : [],
+                ),
+                child: CinematicBoardCamera(
+                  cue: chessState.cameraMotionCue,
+                  isEnabled: ref
+                      .read(chessProvider.notifier)
+                      .isAnimationTypeEnabled('camera'),
+                  isFlipped: chessState.isBoardFlipped,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      // 1. Background Effects
+                      chessTheme.buildBackground(
+                        context,
+                        ref
+                            .read(chessProvider.notifier)
+                            .isAnimationTypeEnabled('themeAmbience'),
+                      ),
 
-                        final isSelected = _selectedSquare == squareName;
-                        final isHint = _legalTargets.contains(squareName);
-                        final isLastMove =
-                            chessState.lastMove?.contains(squareName) ?? false;
-                        final isSuggestedFrom =
-                            chessState.isHintVisible &&
-                            chessState.hintFrom == squareName;
-                        final isSuggestedTo =
-                            chessState.isHintVisible &&
-                            chessState.hintTo == squareName;
-                        final isThreatened = chessState.threatenedSquares
-                            .contains(squareName);
-                        final piece = displayGame.getPiece(squareName);
+                      // 2. Check Effects
+                      if (chessState.game.inCheck)
+                        chessTheme.buildCheckEffect(context),
+                      GridView.builder(
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 8,
+                            ),
+                        padding: EdgeInsets.zero,
+                        itemCount: 64,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemBuilder: (context, index) {
+                          final row = index ~/ 8;
+                          final col = index % 8;
+                          final isLight = (row + col) % 2 == 0;
+                          final squareName = _getSquareName(
+                            row,
+                            col,
+                            chessState.isBoardFlipped,
+                          );
 
-                        return DragTarget<String>(
-                          onWillAcceptWithDetails: (details) =>
-                              _legalTargets.contains(squareName),
-                          onAcceptWithDetails: (details) {
-                            ref
-                                .read(chessProvider.notifier)
-                                .makeMove(details.data, squareName);
-                            _clearSelection();
-                          },
-                          builder: (context, candidateData, rejectedData) {
-                            final isDragHover = candidateData.isNotEmpty;
-                            return AnimatedOpacity(
-                              duration: const Duration(milliseconds: 120),
-                              opacity: 1.0,
-                              child: GestureDetector(
-                                behavior: HitTestBehavior.opaque,
-                                onTap: () => _handleSquareTap(
-                                  squareName: squareName,
-                                  pieceExists: piece != null,
-                                ),
-                                child: AnimatedContainer(
-                                  duration: ref.read(chessProvider.notifier).isAnimationTypeEnabled('feedback')
-                                      ? const Duration(milliseconds: 160)
-                                      : Duration.zero,
-                                  curve: Curves.easeOutCubic,
-                                  decoration: BoxDecoration(
-                                    color: isLight
-                                        ? chessTheme.lightSquare
-                                        : chessTheme.darkSquare,
-                                    borderRadius:
-                                        chessTheme.id == 'theme2' ||
-                                            chessTheme.id == 'theme4' ||
-                                            chessTheme.id == 'theme8' ||
-                                            chessTheme.id == 'theme9'
-                                        ? BorderRadius.circular(10)
-                                        : null,
-                                    border: chessTheme.id == 'theme10'
-                                        ? Border.all(
-                                            color: const Color(0xFF2A2A2A),
-                                            width: 1.0,
-                                          )
-                                        : Border.all(
-                                            color: isSelected
-                                                ? (chessTheme.id == 'theme2'
-                                                      ? Colors.transparent
-                                                      : ScholarlyTheme
-                                                            .accentGold)
-                                                : isDragHover
-                                                ? ScholarlyTheme.accentBlueSoft
-                                                : Colors.transparent,
-                                            width: isSelected || isDragHover
-                                                ? 3.0
-                                                : 0.0,
-                                          ),
+                          final isSelected = _selectedSquare == squareName;
+                          final isHint = _legalTargets.contains(squareName);
+                          final isLastMove =
+                              chessState.lastMove?.contains(squareName) ??
+                              false;
+                          final isSuggestedFrom =
+                              chessState.isHintVisible &&
+                              chessState.hintFrom == squareName;
+                          final isSuggestedTo =
+                              chessState.isHintVisible &&
+                              chessState.hintTo == squareName;
+                          final isThreatened = chessState.threatenedSquares
+                              .contains(squareName);
+                          final piece = displayGame.getPiece(squareName);
+
+                          return DragTarget<String>(
+                            onWillAcceptWithDetails: (details) =>
+                                _legalTargets.contains(squareName),
+                            onAcceptWithDetails: (details) {
+                              ref
+                                  .read(chessProvider.notifier)
+                                  .makeMove(details.data, squareName);
+                              _clearSelection();
+                            },
+                            builder: (context, candidateData, rejectedData) {
+                              final isDragHover = candidateData.isNotEmpty;
+                              return AnimatedOpacity(
+                                duration: const Duration(milliseconds: 120),
+                                opacity: 1.0,
+                                child: GestureDetector(
+                                  behavior: HitTestBehavior.opaque,
+                                  onTap: () => _handleSquareTap(
+                                    squareName: squareName,
+                                    pieceExists: piece != null,
                                   ),
-                                  child: Material(
-                                    color: Colors.transparent,
-                                    child: InkWell(
-                                      onTap: () => _handleSquareTap(
-                                        squareName: squareName,
-                                        pieceExists: piece != null,
-                                      ),
-                                      child: Stack(
-                                        children: [
-                                          // 3. Square Texture/Painter
-                                          if (chessTheme.getSquarePainter(
-                                                isLight,
-                                                0,
-                                              ) !=
-                                              null)
-                                            CustomPaint(
-                                              painter: chessTheme
-                                                  .getSquarePainter(
-                                                    isLight,
-                                                    _matrixEffectController
-                                                        .value, // Matrix specific
-                                                  ),
-                                              size: Size.infinite,
+                                  child: AnimatedContainer(
+                                    duration:
+                                        ref
+                                            .read(chessProvider.notifier)
+                                            .isAnimationTypeEnabled('feedback')
+                                        ? const Duration(milliseconds: 160)
+                                        : Duration.zero,
+                                    curve: Curves.easeOutCubic,
+                                    decoration: BoxDecoration(
+                                      color: isLight
+                                          ? chessTheme.lightSquare
+                                          : chessTheme.darkSquare,
+                                      borderRadius:
+                                          chessTheme.id == 'theme2' ||
+                                              chessTheme.id == 'theme4' ||
+                                              chessTheme.id == 'theme8' ||
+                                              chessTheme.id == 'theme9'
+                                          ? BorderRadius.circular(10)
+                                          : null,
+                                      border: chessTheme.id == 'theme10'
+                                          ? Border.all(
+                                              color: const Color(0xFF2A2A2A),
+                                              width: 1.0,
+                                            )
+                                          : Border.all(
+                                              color: isSelected
+                                                  ? (chessTheme.id == 'theme2'
+                                                        ? Colors.transparent
+                                                        : ScholarlyTheme
+                                                              .accentGold)
+                                                  : isDragHover
+                                                  ? ScholarlyTheme
+                                                        .accentBlueSoft
+                                                  : Colors.transparent,
+                                              width: isSelected || isDragHover
+                                                  ? 3.0
+                                                  : 0.0,
                                             ),
-                                          // 4. Selection Effects
-                                          if (isSelected)
-                                            chessTheme
-                                                        .buildSelectionEffect(
-                                                          context,
-                                                          _gearController.value,
-                                                        )
-                                                        .runtimeType ==
-                                                    SizedBox
-                                                ? const OrbitingStarAnimation(
-                                                    color: ScholarlyTheme
-                                                        .accentBlueSoft,
-                                                    isActive: true,
-                                                  )
-                                                : chessTheme.buildSelectionEffect(
-                                                    context,
-                                                    chessTheme.id == 'theme4'
-                                                        ? _hologramEffectController
-                                                              .value
-                                                        : chessTheme.id ==
-                                                              'theme5'
-                                                        ? _gearController.value
-                                                        : chessTheme.id ==
-                                                              'theme6'
-                                                        ? _matrixEffectController
-                                                              .value
-                                                        : chessTheme.id ==
-                                                              'theme9'
-                                                        ? _electricEffectController
-                                                              .value
-                                                        : _gearController.value,
-                                                  ),
-                                          // 5. Move Hints
-                                          if (isHint)
-                                            chessTheme.buildMoveHint(
-                                              context,
-                                              piece != null,
-                                            ),
-                                          if (chessState
-                                                      .engineSelectionSquare ==
-                                                  squareName &&
-                                              ref.read(chessProvider.notifier).isAnimationTypeEnabled('indicators'))
-                                            const OrbitingStarAnimation(
-                                              color: ScholarlyTheme.accentGold,
-                                              isActive: true,
-                                            ),
-                                          if (isThreatened &&
-                                              ref.read(chessProvider.notifier).isAnimationTypeEnabled('indicators'))
-                                            const OrbitingStarAnimation(
-                                              color: Colors.redAccent,
-                                              isActive: true,
-                                            ),
-                                          // 6. Last Move Highlight
-                                          if (isLastMove)
-                                            TweenAnimationBuilder<double>(
-                                              key: ValueKey(
-                                                'lm_${chessState.lastMove}',
+                                    ),
+                                    child: Material(
+                                      color: Colors.transparent,
+                                      child: InkWell(
+                                        onTap: () => _handleSquareTap(
+                                          squareName: squareName,
+                                          pieceExists: piece != null,
+                                        ),
+                                        child: Stack(
+                                          children: [
+                                            // 3. Square Texture/Painter
+                                            if (chessTheme.getSquarePainter(
+                                                  isLight,
+                                                  0,
+                                                ) !=
+                                                null)
+                                              CustomPaint(
+                                                painter: chessTheme
+                                                    .getSquarePainter(
+                                                      isLight,
+                                                      _matrixEffectController
+                                                          .value, // Matrix specific
+                                                    ),
+                                                size: Size.infinite,
                                               ),
-                                              tween: Tween(
-                                                begin: chessTheme.id == 'theme8'
-                                                    ? 0.10
-                                                    : 0.18,
-                                                end: 0.0,
-                                              ),
-                                              duration:
-                                                  ref.read(chessProvider.notifier).isAnimationTypeEnabled('indicators')
-                                                  ? const Duration(
-                                                      milliseconds: 1800,
+                                            // 4. Selection Effects
+                                            if (isSelected)
+                                              chessTheme
+                                                          .buildSelectionEffect(
+                                                            context,
+                                                            _gearController
+                                                                .value,
+                                                          )
+                                                          .runtimeType ==
+                                                      SizedBox
+                                                  ? const OrbitingStarAnimation(
+                                                      color: ScholarlyTheme
+                                                          .accentBlueSoft,
+                                                      isActive: true,
                                                     )
-                                                  : Duration.zero,
-                                              curve: Curves.easeIn,
-                                              builder: (context, opacity, _) {
-                                                return chessTheme
-                                                    .buildLastMoveHighlight(
+                                                  : chessTheme.buildSelectionEffect(
                                                       context,
-                                                      opacity,
-                                                    );
-                                              },
-                                            ),
-                                          if (isSuggestedFrom || isSuggestedTo)
-                                            Container(
-                                              decoration: BoxDecoration(
+                                                      chessTheme.id == 'theme4'
+                                                          ? _hologramEffectController
+                                                                .value
+                                                          : chessTheme.id ==
+                                                                'theme5'
+                                                          ? _gearController
+                                                                .value
+                                                          : chessTheme.id ==
+                                                                'theme6'
+                                                          ? _matrixEffectController
+                                                                .value
+                                                          : chessTheme.id ==
+                                                                'theme9'
+                                                          ? _electricEffectController
+                                                                .value
+                                                          : _gearController
+                                                                .value,
+                                                    ),
+                                            // 5. Move Hints
+                                            if (isHint)
+                                              chessTheme.buildMoveHint(
+                                                context,
+                                                piece != null,
+                                              ),
+                                            if (chessState
+                                                        .engineSelectionSquare ==
+                                                    squareName &&
+                                                ref
+                                                    .read(
+                                                      chessProvider.notifier,
+                                                    )
+                                                    .isAnimationTypeEnabled(
+                                                      'indicators',
+                                                    ))
+                                              const OrbitingStarAnimation(
                                                 color:
-                                                    (isSuggestedTo
-                                                            ? ScholarlyTheme
-                                                                  .accentBlueSoft
-                                                            : ScholarlyTheme
-                                                                  .accentGold)
-                                                        .withValues(
-                                                          alpha: 0.16,
-                                                        ),
-                                                border: Border.all(
+                                                    ScholarlyTheme.accentGold,
+                                                isActive: true,
+                                              ),
+                                            if (isThreatened &&
+                                                ref
+                                                    .read(
+                                                      chessProvider.notifier,
+                                                    )
+                                                    .isAnimationTypeEnabled(
+                                                      'indicators',
+                                                    ))
+                                              const OrbitingStarAnimation(
+                                                color: Colors.redAccent,
+                                                isActive: true,
+                                              ),
+                                            // 6. Last Move Highlight
+                                            if (isLastMove)
+                                              TweenAnimationBuilder<double>(
+                                                key: ValueKey(
+                                                  'lm_${chessState.lastMove}',
+                                                ),
+                                                tween: Tween(
+                                                  begin:
+                                                      chessTheme.id == 'theme8'
+                                                      ? 0.10
+                                                      : 0.18,
+                                                  end: 0.0,
+                                                ),
+                                                duration:
+                                                    ref
+                                                        .read(
+                                                          chessProvider
+                                                              .notifier,
+                                                        )
+                                                        .isAnimationTypeEnabled(
+                                                          'indicators',
+                                                        )
+                                                    ? const Duration(
+                                                        milliseconds: 1800,
+                                                      )
+                                                    : Duration.zero,
+                                                curve: Curves.easeIn,
+                                                builder: (context, opacity, _) {
+                                                  return chessTheme
+                                                      .buildLastMoveHighlight(
+                                                        context,
+                                                        opacity,
+                                                      );
+                                                },
+                                              ),
+                                            if (isSuggestedFrom ||
+                                                isSuggestedTo)
+                                              Container(
+                                                decoration: BoxDecoration(
                                                   color:
                                                       (isSuggestedTo
                                                               ? ScholarlyTheme
@@ -379,246 +407,289 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
                                                               : ScholarlyTheme
                                                                     .accentGold)
                                                           .withValues(
-                                                            alpha: 0.72,
+                                                            alpha: 0.16,
                                                           ),
-                                                  width: 2,
+                                                  border: Border.all(
+                                                    color:
+                                                        (isSuggestedTo
+                                                                ? ScholarlyTheme
+                                                                      .accentBlueSoft
+                                                                : ScholarlyTheme
+                                                                      .accentGold)
+                                                            .withValues(
+                                                              alpha: 0.72,
+                                                            ),
+                                                    width: 2,
+                                                  ),
                                                 ),
                                               ),
-                                            ),
-                                          if (chessState.isHintBlinking &&
-                                              (isSuggestedFrom ||
-                                                  isSuggestedTo))
-                                            const OrbitingStarAnimation(
-                                              color: ScholarlyTheme.accentYellow,
-                                              isActive: true,
-                                            ),
-                                          ImpactShake(
-                                            trigger: _impactShakes.any((s) => s['square'] == squareName),
-                                            direction: _impactShakes.firstWhere(
-                                              (s) => s['square'] == squareName,
-                                              orElse: () => {'dir': Offset.zero},
-                                            )['dir'] as Offset,
-                                            onComplete: () => setState(() => _impactShakes.removeWhere((s) => s['square'] == squareName)),
-                                            child: ShakeAnimation(
-                                              isActive:
-                                                  ref.read(chessProvider.notifier).isAnimationTypeEnabled('feedback') &&
-                                                  piece?.type == chess_lib.PieceType.KING &&
-                                                  ((chessState.game.inCheck &&
-                                                          piece?.color ==
-                                                              chessState.game.turn) ||
-                                                      isThreatened),
-                                              child: Center(
-                                                child: AnimatedBuilder(
-                                                  animation: _gearController,
-                                                  builder: (context, child) {
-                                                    return ChessPieceWidget(
-                                                      squareName: squareName,
-                                                      highlighted: isSelected,
-                                                      rotation:
-                                                          _gearController.value,
-                                                      isMoving:
-                                                          chessState
-                                                                  .moveAnimation
-                                                                  ?.from ==
-                                                              squareName ||
-                                                          chessState
-                                                                  .moveAnimation
-                                                                  ?.to ==
-                                                              squareName,
-                                                      onTap: () =>
-                                                          _handleSquareTap(
-                                                            squareName:
-                                                                squareName,
-                                                            pieceExists:
-                                                                piece != null,
-                                                          ),
-                                                      onDragStarted: () =>
-                                                          _handlePieceSelection(
+                                            if (chessState.isHintBlinking &&
+                                                (isSuggestedFrom ||
+                                                    isSuggestedTo))
+                                              const OrbitingStarAnimation(
+                                                color:
+                                                    ScholarlyTheme.accentYellow,
+                                                isActive: true,
+                                              ),
+                                            ImpactShake(
+                                              trigger: _impactShakes.any(
+                                                (s) =>
+                                                    s['square'] == squareName,
+                                              ),
+                                              direction:
+                                                  _impactShakes.firstWhere(
+                                                        (s) =>
+                                                            s['square'] ==
                                                             squareName,
-                                                            displayGame,
-                                                          ),
-                                                      onDragEnd: _clearSelection,
-                                                    );
-                                                  },
+                                                        orElse: () => {
+                                                          'dir': Offset.zero,
+                                                        },
+                                                      )['dir']
+                                                      as Offset,
+                                              onComplete: () => setState(
+                                                () => _impactShakes.removeWhere(
+                                                  (s) =>
+                                                      s['square'] == squareName,
+                                                ),
+                                              ),
+                                              child: ShakeAnimation(
+                                                isActive:
+                                                    ref
+                                                        .read(
+                                                          chessProvider
+                                                              .notifier,
+                                                        )
+                                                        .isAnimationTypeEnabled(
+                                                          'feedback',
+                                                        ) &&
+                                                    piece?.type ==
+                                                        chess_lib
+                                                            .PieceType
+                                                            .KING &&
+                                                    ((chessState.game.inCheck &&
+                                                            piece?.color ==
+                                                                chessState
+                                                                    .game
+                                                                    .turn) ||
+                                                        isThreatened),
+                                                child: Center(
+                                                  child: AnimatedBuilder(
+                                                    animation: _gearController,
+                                                    builder: (context, child) {
+                                                      return ChessPieceWidget(
+                                                        squareName: squareName,
+                                                        highlighted: isSelected,
+                                                        rotation:
+                                                            _gearController
+                                                                .value,
+                                                        isMoving:
+                                                            chessState
+                                                                    .moveAnimation
+                                                                    ?.from ==
+                                                                squareName ||
+                                                            chessState
+                                                                    .moveAnimation
+                                                                    ?.to ==
+                                                                squareName,
+                                                        onTap: () =>
+                                                            _handleSquareTap(
+                                                              squareName:
+                                                                  squareName,
+                                                              pieceExists:
+                                                                  piece != null,
+                                                            ),
+                                                        onDragStarted: () =>
+                                                            _handlePieceSelection(
+                                                              squareName,
+                                                              displayGame,
+                                                            ),
+                                                        onDragEnd:
+                                                            _clearSelection,
+                                                      );
+                                                    },
+                                                  ),
                                                 ),
                                               ),
                                             ),
-                                          ),
-                                          if (chessState.showCoordinates)
-                                            _buildCoordinates(
-                                              row,
-                                              col,
-                                              (row + col) % 2 == 0,
-                                              chessState.isBoardFlipped,
-                                              chessTheme,
-                                            ),
-                                        ],
+                                            if (chessState.showCoordinates)
+                                              _buildCoordinates(
+                                                row,
+                                                col,
+                                                (row + col) % 2 == 0,
+                                                chessState.isBoardFlipped,
+                                                chessTheme,
+                                              ),
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
-                              ),
-                            );
+                              );
+                            },
+                          );
+                        },
+                      ),
+                      if (chessState.moveAnimation != null)
+                        SignatureMoveOverlay(
+                          data: chessState.moveAnimation!,
+                          boardSize: boardSize,
+                          isFlipped: chessState.isBoardFlipped,
+                          isCheckmate:
+                              chessState.cameraMotionCue?.isCheckmate ?? false,
+                          onComplete: () {
+                            ref
+                                .read(chessProvider.notifier)
+                                .clearMoveAnimation();
                           },
-                        );
-                      },
-                    ),
-                    if (chessState.moveAnimation != null)
-                      SignatureMoveOverlay(
-                        data: chessState.moveAnimation!,
-                        boardSize: boardSize,
-                        isFlipped: chessState.isBoardFlipped,
-                        isCheckmate:
-                            chessState.cameraMotionCue?.isCheckmate ?? false,
-                        onComplete: () {
-                          ref.read(chessProvider.notifier).clearMoveAnimation();
-                        },
-                        onLand: (from, to, pieceCode, profile) => _handleMoveLanding(
-                          from,
-                          to,
-                          pieceCode,
-                          profile,
-                          boardSize,
-                          isCritical:
-                              chessState.cameraMotionCue?.isCheckmate ??
-                              false,
-                        ),
-                        onActionTrigger: (action, position) {
-                          if (action == 'dust_puff' && ref.read(chessProvider.notifier).isAnimationTypeEnabled('themeEffects')) {
-                            setState(() {
-                              _knightDusts.add({
-                                'pos': position,
+                          onLand: (from, to, pieceCode, profile) =>
+                              _handleMoveLanding(
+                                from,
+                                to,
+                                pieceCode,
+                                profile,
+                                boardSize,
+                                isCritical:
+                                    chessState.cameraMotionCue?.isCheckmate ??
+                                    false,
+                              ),
+                          onActionTrigger: (action, position) {
+                            if (action == 'dust_puff' &&
+                                ref
+                                    .read(chessProvider.notifier)
+                                    .isAnimationTypeEnabled('themeEffects')) {
+                              setState(() {
+                                _knightDusts.add({'pos': position});
                               });
-                            });
-                          }
-                        },
-                      ),
+                            }
+                          },
+                        ),
 
-                    // Landing micro-settle effects
-                    for (final fb in _landingFeedbacks)
-                      LandingFeedback(
-                        squareName: fb['square'] as String,
-                        profile: fb['profile'] as PieceMotionProfile,
-                        squareSize: boardSize / 8,
-                        squareRow: fb['row'] as int,
-                        squareCol: fb['col'] as int,
-                        isFlipped: chessState.isBoardFlipped,
-                        isCritical: fb['critical'] as bool? ?? false,
-                        onComplete: () =>
-                            setState(() => _landingFeedbacks.remove(fb)),
-                      ),
+                      // Landing micro-settle effects
+                      for (final fb in _landingFeedbacks)
+                        LandingFeedback(
+                          squareName: fb['square'] as String,
+                          profile: fb['profile'] as PieceMotionProfile,
+                          squareSize: boardSize / 8,
+                          squareRow: fb['row'] as int,
+                          squareCol: fb['col'] as int,
+                          isFlipped: chessState.isBoardFlipped,
+                          isCritical: fb['critical'] as bool? ?? false,
+                          onComplete: () =>
+                              setState(() => _landingFeedbacks.remove(fb)),
+                        ),
 
-                    // Tap ripple effects
-                    for (final pos in _tapRipples)
-                      TapRipple(
-                        position: pos,
-                        squareSize: boardSize / 8,
-                        onComplete: () =>
-                            setState(() => _tapRipples.remove(pos)),
-                      ),
+                      // Tap ripple effects
+                      for (final pos in _tapRipples)
+                        TapRipple(
+                          position: pos,
+                          squareSize: boardSize / 8,
+                          onComplete: () =>
+                              setState(() => _tapRipples.remove(pos)),
+                        ),
 
-                    for (final dust in _knightDusts)
-                      KnightDustEffect(
-                        position: dust['pos'],
-                        squareSize: boardSize / 8,
-                        onComplete: () =>
-                            setState(() => _knightDusts.remove(dust)),
-                      ),
+                      for (final dust in _knightDusts)
+                        KnightDustEffect(
+                          position: dust['pos'],
+                          squareSize: boardSize / 8,
+                          onComplete: () =>
+                              setState(() => _knightDusts.remove(dust)),
+                        ),
 
-                    for (final wind in _bishopWinds)
-                      BishopWindEffect(
-                        from: wind['from'],
-                        to: wind['to'],
-                        squareSize: boardSize / 8,
-                        onComplete: () =>
-                            setState(() => _bishopWinds.remove(wind)),
-                      ),
+                      for (final wind in _bishopWinds)
+                        BishopWindEffect(
+                          from: wind['from'],
+                          to: wind['to'],
+                          squareSize: boardSize / 8,
+                          onComplete: () =>
+                              setState(() => _bishopWinds.remove(wind)),
+                        ),
 
-                    for (final pos in _leafScatters)
-                      LeafScatterEffect(
-                        position: pos,
-                        onComplete: () =>
-                            setState(() => _leafScatters.remove(pos)),
-                      ),
-                    for (final pos in _toyConfetti)
-                      ToyConfettiSystem(
-                        position: pos,
-                        onComplete: () =>
-                            setState(() => _toyConfetti.remove(pos)),
-                      ),
-                    for (final shatter in _metalShatters)
-                      MetalShatterEffect(
-                        position: shatter['pos'],
-                        isWhite: shatter['isWhite'],
-                        onComplete: () =>
-                            setState(() => _metalShatters.remove(shatter)),
-                      ),
-                    for (final pos in _matrixGlitches)
-                      MatrixGlitchCapture(
-                        position: pos,
-                        onComplete: () =>
-                            setState(() => _matrixGlitches.remove(pos)),
-                      ),
-                    for (final capture in _shadowCaptures)
-                      ShadowCaptureEffect(
-                        position: capture['pos'],
-                        piece: capture['piece'],
-                        onComplete: () =>
-                            setState(() => _shadowCaptures.remove(capture)),
-                      ),
-                    for (final pos in _slateCaptures)
-                      SlateCaptureEffect(
-                        position: pos,
-                        onComplete: () =>
-                            setState(() => _slateCaptures.remove(pos)),
-                      ),
+                      for (final pos in _leafScatters)
+                        LeafScatterEffect(
+                          position: pos,
+                          onComplete: () =>
+                              setState(() => _leafScatters.remove(pos)),
+                        ),
+                      for (final pos in _toyConfetti)
+                        ToyConfettiSystem(
+                          position: pos,
+                          onComplete: () =>
+                              setState(() => _toyConfetti.remove(pos)),
+                        ),
+                      for (final shatter in _metalShatters)
+                        MetalShatterEffect(
+                          position: shatter['pos'],
+                          isWhite: shatter['isWhite'],
+                          onComplete: () =>
+                              setState(() => _metalShatters.remove(shatter)),
+                        ),
+                      for (final pos in _matrixGlitches)
+                        MatrixGlitchCapture(
+                          position: pos,
+                          onComplete: () =>
+                              setState(() => _matrixGlitches.remove(pos)),
+                        ),
+                      for (final capture in _shadowCaptures)
+                        ShadowCaptureEffect(
+                          position: capture['pos'],
+                          piece: capture['piece'],
+                          onComplete: () =>
+                              setState(() => _shadowCaptures.remove(capture)),
+                        ),
+                      for (final pos in _slateCaptures)
+                        SlateCaptureEffect(
+                          position: pos,
+                          onComplete: () =>
+                              setState(() => _slateCaptures.remove(pos)),
+                        ),
 
-                    for (final pos in _liquidSplashes)
-                      LiquidSplashEffect(
-                        position: pos,
-                        onComplete: () =>
-                            setState(() => _liquidSplashes.remove(pos)),
-                      ),
-                    for (final pos in _electricBursts)
-                      ElectricBurstEffect(
-                        position: pos,
-                        onComplete: () =>
-                            setState(() => _electricBursts.remove(pos)),
-                      ),
-                    for (final pos in _inkSplashes)
-                      InkSplashEffect(
-                        position: pos,
-                        onComplete: () =>
-                            setState(() => _inkSplashes.remove(pos)),
-                      ),
-                    for (final pos in _platinumCaptures)
-                      PlatinumCaptureEffect(
-                        position: pos,
-                        onComplete: () =>
-                            setState(() => _platinumCaptures.remove(pos)),
-                      ),
-                    for (final pos in _oilSplashes)
-                      OilSplashEffect(
-                        position: pos,
-                        onComplete: () =>
-                            setState(() => _oilSplashes.remove(pos)),
-                      ),
-                    for (final trail in _greaseTrails)
-                      GreaseTrailOverlay(
-                        from: trail['from'],
-                        to: trail['to'],
-                        onComplete: () =>
-                            setState(() => _greaseTrails.remove(trail)),
-                      ),
+                      for (final pos in _liquidSplashes)
+                        LiquidSplashEffect(
+                          position: pos,
+                          onComplete: () =>
+                              setState(() => _liquidSplashes.remove(pos)),
+                        ),
+                      for (final pos in _electricBursts)
+                        ElectricBurstEffect(
+                          position: pos,
+                          onComplete: () =>
+                              setState(() => _electricBursts.remove(pos)),
+                        ),
+                      for (final pos in _inkSplashes)
+                        InkSplashEffect(
+                          position: pos,
+                          onComplete: () =>
+                              setState(() => _inkSplashes.remove(pos)),
+                        ),
+                      for (final pos in _platinumCaptures)
+                        PlatinumCaptureEffect(
+                          position: pos,
+                          onComplete: () =>
+                              setState(() => _platinumCaptures.remove(pos)),
+                        ),
+                      for (final pos in _oilSplashes)
+                        OilSplashEffect(
+                          position: pos,
+                          onComplete: () =>
+                              setState(() => _oilSplashes.remove(pos)),
+                        ),
+                      for (final trail in _greaseTrails)
+                        GreaseTrailOverlay(
+                          from: trail['from'],
+                          to: trail['to'],
+                          onComplete: () =>
+                              setState(() => _greaseTrails.remove(trail)),
+                        ),
 
-                    const PromotionOverlay(),
-                  ],
+                      const PromotionOverlay(),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-      );
+        );
       },
     );
   }
@@ -640,8 +711,12 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
     if (_selectedSquare != null && _legalTargets.contains(squareName)) {
       final targetPiece = displayGame.getPiece(squareName);
       final sourcePiece = displayGame.getPiece(_selectedSquare!);
-      final isCapture = targetPiece != null && targetPiece.color != sourcePiece?.color;
-      if (isCapture && ref.read(chessProvider.notifier).isAnimationTypeEnabled('themeEffects')) {
+      final isCapture =
+          targetPiece != null && targetPiece.color != sourcePiece?.color;
+      if (isCapture &&
+          ref
+              .read(chessProvider.notifier)
+              .isAnimationTypeEnabled('themeEffects')) {
         final themeId = chessState.boardThemeId;
         if (themeId == 'theme2') {
           _triggerLeafScatter(squareName);
@@ -667,7 +742,9 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
         }
       }
       if (chessState.boardThemeId == 'theme5' &&
-          ref.read(chessProvider.notifier).isAnimationTypeEnabled('themeEffects')) {
+          ref
+              .read(chessProvider.notifier)
+              .isAnimationTypeEnabled('themeEffects')) {
         _triggerGreaseTrail(_selectedSquare!, squareName);
       }
       ref.read(chessProvider.notifier).makeMove(_selectedSquare!, squareName);
@@ -742,7 +819,13 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
     return '${files[fileIndex]}${ranks[rankIndex]}';
   }
 
-  Widget _buildCoordinates(int row, int col, bool isLight, bool isFlipped, ChessTheme chessTheme) {
+  Widget _buildCoordinates(
+    int row,
+    int col,
+    bool isLight,
+    bool isFlipped,
+    ChessTheme chessTheme,
+  ) {
     const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
     const ranks = ['8', '7', '6', '5', '4', '3', '2', '1'];
 
@@ -1077,9 +1160,13 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
     }
 
     // 2. Kinetic Impact Effects
-    if (ref.read(chessProvider.notifier).isAnimationTypeEnabled('kineticImpact')) {
-      final type = pieceCode.length > 1 ? pieceCode[1].toUpperCase() : pieceCode.toUpperCase();
-      
+    if (ref
+        .read(chessProvider.notifier)
+        .isAnimationTypeEnabled('kineticImpact')) {
+      final type = pieceCode.length > 1
+          ? pieceCode[1].toUpperCase()
+          : pieceCode.toUpperCase();
+
       switch (type) {
         case 'N':
           _triggerKnightDust(to, boardSize);
@@ -1119,7 +1206,11 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
     final nextRow = toRow + dy;
 
     if (nextCol >= 0 && nextCol < 8 && nextRow >= 0 && nextRow < 8) {
-      final nextSquare = _getSquareName(nextRow, nextCol, ref.read(chessProvider).isBoardFlipped);
+      final nextSquare = _getSquareName(
+        nextRow,
+        nextCol,
+        ref.read(chessProvider).isBoardFlipped,
+      );
       setState(() {
         _impactShakes.add({
           'square': nextSquare,

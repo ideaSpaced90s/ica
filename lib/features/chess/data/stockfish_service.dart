@@ -11,13 +11,14 @@ import 'package:path/path.dart' as p;
 /// for GPL compliance and uses a platform channel to find the executable path on Android.
 class StockfishService {
   static const _channel = MethodChannel('com.dsamok.kingslayer/native_path');
-  
+
   bool _isReady = false;
   bool _isDisposed = false;
   bool _isError = false;
   Completer<void>? _readyCompleter;
   Process? _process;
-  final StreamController<String> _outputController = StreamController<String>.broadcast();
+  final StreamController<String> _outputController =
+      StreamController<String>.broadcast();
   StreamSubscription? _stdoutSubscription;
   StreamSubscription? _stderrSubscription;
 
@@ -28,13 +29,13 @@ class StockfishService {
   Future<void> init() async {
     // debugPrint('StockfishService: [Unified] init() called.');
     if (_isDisposed) _isDisposed = false;
-    
+
     if (kIsWeb) {
       debugPrint('StockfishService: Web platform detected, disabling engine.');
       _isError = true;
       return;
     }
-    
+
     if (_process != null) {
       // debugPrint('StockfishService: Process already running. PID: ${_process?.pid}');
       return;
@@ -45,12 +46,14 @@ class StockfishService {
       _isReady = false;
       _isError = false;
       _readyCompleter = Completer<void>();
-      
+
       String? enginePath;
-      
+
       if (Platform.isAndroid) {
         // debugPrint('StockfishService: Android detected. Using Native Library hunting logic...');
-        final String libDir = await _channel.invokeMethod('getNativeLibraryDir');
+        final String libDir = await _channel.invokeMethod(
+          'getNativeLibraryDir',
+        );
         enginePath = p.join(libDir, 'libstockfish.so');
       } else if (Platform.isWindows) {
         // debugPrint('StockfishService: Windows detected. Using Asset mapping logic...');
@@ -85,53 +88,66 @@ class StockfishService {
       // debugPrint('StockfishService: Launching engine -> $enginePath');
       _process = await Process.start(enginePath, []);
       // debugPrint('StockfishService: Process up. PID: ${_process?.pid}');
-      
+
       _stdoutSubscription = _process!.stdout
           .transform(utf8.decoder)
           .transform(const LineSplitter())
-          .listen((line) {
-            final trimmed = line.trim();
-            if (trimmed.isNotEmpty) {
-              // debugPrint('Stockfish >>> $trimmed');
-              _outputController.add(trimmed);
-              
-              if (trimmed == 'uciok') {
-                sendCommand('isready');
-              }
-              if (trimmed == 'readyok') {
-                // debugPrint('StockfishService: Engine STATUS -> READY');
-                _isReady = true;
-                if (_readyCompleter != null && !_readyCompleter!.isCompleted) {
-                  _readyCompleter!.complete();
+          .listen(
+            (line) {
+              final trimmed = line.trim();
+              if (trimmed.isNotEmpty) {
+                // debugPrint('Stockfish >>> $trimmed');
+                _outputController.add(trimmed);
+
+                if (trimmed == 'uciok') {
+                  sendCommand('isready');
+                }
+                if (trimmed == 'readyok') {
+                  // debugPrint('StockfishService: Engine STATUS -> READY');
+                  _isReady = true;
+                  if (_readyCompleter != null &&
+                      !_readyCompleter!.isCompleted) {
+                    _readyCompleter!.complete();
+                  }
                 }
               }
-            }
-          }, onError: (err) {
-            debugPrint('StockfishService: [STDOUT ERROR] $err');
-          }, onDone: () {
-            // debugPrint('StockfishService: [STDOUT] Stream closed.');
-            _isReady = false;
-          });
+            },
+            onError: (err) {
+              debugPrint('StockfishService: [STDOUT ERROR] $err');
+            },
+            onDone: () {
+              // debugPrint('StockfishService: [STDOUT] Stream closed.');
+              _isReady = false;
+            },
+          );
 
       _stderrSubscription = _process!.stderr
           .transform(utf8.decoder)
           .transform(const LineSplitter())
-          .listen((line) => debugPrint('Stockfish [STDERR] -> $line'),
-          onDone: () { /* debugPrint('StockfishService: [STDERR] Stream closed.'); */ });
+          .listen(
+            (line) => debugPrint('Stockfish [STDERR] -> $line'),
+            onDone: () {
+              /* debugPrint('StockfishService: [STDERR] Stream closed.'); */
+            },
+          );
 
       // Monitor process exit
       _process!.exitCode.then((code) {
-        if (code != 0) debugPrint('StockfishService: Process exited abnormally with code $code');
+        if (code != 0) {
+          debugPrint(
+            'StockfishService: Process exited abnormally with code $code',
+          );
+        }
         _isReady = false;
         _process = null;
       });
 
       // Wait a tiny bit for the process to be fully ready for input
       await Future.delayed(const Duration(milliseconds: 500));
-      
+
       // debugPrint('StockfishService: Handshaking with engine (uci)...');
       sendCommand('uci');
-      
+
       // Standardized 20s timeout for all platforms
       await _readyCompleter?.future.timeout(
         const Duration(seconds: 20),
@@ -143,7 +159,7 @@ class StockfishService {
           }
         },
       );
-      
+
       // debugPrint('StockfishService: Handshake complete. Ready: $_isReady');
     } catch (e) {
       debugPrint('StockfishService: FAILED to start engine: $e');
@@ -156,7 +172,9 @@ class StockfishService {
 
   Future<void> sendCommand(String command) async {
     if (_process == null) {
-      debugPrint('StockfishService: Cannot send command "$command", process is NULL.');
+      debugPrint(
+        'StockfishService: Cannot send command "$command", process is NULL.',
+      );
       return;
     }
     try {
@@ -186,7 +204,9 @@ class StockfishService {
   }
 
   Future<void> setChess960Mode(bool isEnabled) async {
-    await sendCommand('setoption name UCI_Chess960 value ${isEnabled ? "true" : "false"}');
+    await sendCommand(
+      'setoption name UCI_Chess960 value ${isEnabled ? "true" : "false"}',
+    );
   }
 
   void dispose() {

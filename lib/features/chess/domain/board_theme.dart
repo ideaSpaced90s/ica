@@ -46,8 +46,8 @@ class BoardTheme {
       id: 'theme4',
       name: 'Platinum Metallic',
       lightSquare: Color(0xFFD1D5DB), // Brushed Steel
-      darkSquare: Color(0xFF374151),  // Gunmetal
-      frameColor: Color(0xFF1F2933),  // Cool Dark Grey
+      darkSquare: Color(0xFF374151), // Gunmetal
+      frameColor: Color(0xFF1F2933), // Cool Dark Grey
       pieceSetAsset: 'assets/board/Chess_Pieces_Sprite.png',
     ),
     BoardTheme(
@@ -70,7 +70,7 @@ class BoardTheme {
       id: 'theme7',
       name: 'Slate Minimal',
       lightSquare: Color(0xFFE5E7EB), // Soft neutral grey
-      darkSquare: Color(0xFF374151),  // Slate grey
+      darkSquare: Color(0xFF374151), // Slate grey
       frameColor: Color(0xFF1F2937),
       pieceSetAsset: 'assets/board/Chess_Pieces_Sprite.png',
     ),
@@ -78,7 +78,7 @@ class BoardTheme {
       id: 'theme8',
       name: 'Walnut Wood',
       lightSquare: Color(0xFFE6C9A8), // Light Maple
-      darkSquare: Color(0xFF6B4F3A),  // Walnut Brown
+      darkSquare: Color(0xFF6B4F3A), // Walnut Brown
       frameColor: Color(0xFF4A3728),
       pieceSetAsset: 'assets/board/Chess_Pieces_Sprite.png',
     ),
@@ -101,6 +101,9 @@ class BoardTheme {
   ];
 
   factory BoardTheme.fromId(String id) {
-    return allThemes.firstWhere((t) => t.id == id, orElse: () => allThemes.first);
+    return allThemes.firstWhere(
+      (t) => t.id == id,
+      orElse: () => allThemes.first,
+    );
   }
 }

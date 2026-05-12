@@ -53,18 +53,28 @@ class WoodenPiecePainter extends CustomPainter {
       default:
         _drawPawn(canvas, center, radius, paint, strokePaint);
     }
-    
+
     // Add subtle shadow under the piece base
     final shadowPaint = Paint()
       ..color = Colors.black.withValues(alpha: 0.25)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.0);
     canvas.drawOval(
-      Rect.fromCenter(center: center + Offset(0, size.height * 0.42), width: size.width * 0.7, height: size.height * 0.1),
+      Rect.fromCenter(
+        center: center + Offset(0, size.height * 0.42),
+        width: size.width * 0.7,
+        height: size.height * 0.1,
+      ),
       shadowPaint,
     );
   }
 
-  void _drawKing(Canvas canvas, Offset center, double radius, Paint fill, Paint stroke) {
+  void _drawKing(
+    Canvas canvas,
+    Offset center,
+    double radius,
+    Paint fill,
+    Paint stroke,
+  ) {
     final path = Path()
       ..moveTo(center.dx - radius * 0.4, center.dy + radius * 0.8)
       ..lineTo(center.dx + radius * 0.4, center.dy + radius * 0.8)
@@ -83,7 +93,13 @@ class WoodenPiecePainter extends CustomPainter {
     canvas.drawPath(path, stroke);
   }
 
-  void _drawQueen(Canvas canvas, Offset center, double radius, Paint fill, Paint stroke) {
+  void _drawQueen(
+    Canvas canvas,
+    Offset center,
+    double radius,
+    Paint fill,
+    Paint stroke,
+  ) {
     final path = Path()
       ..moveTo(center.dx - radius * 0.4, center.dy + radius * 0.8)
       ..lineTo(center.dx + radius * 0.4, center.dy + radius * 0.8)
@@ -97,25 +113,55 @@ class WoodenPiecePainter extends CustomPainter {
     canvas.drawPath(path, stroke);
   }
 
-  void _drawBishop(Canvas canvas, Offset center, double radius, Paint fill, Paint stroke) {
+  void _drawBishop(
+    Canvas canvas,
+    Offset center,
+    double radius,
+    Paint fill,
+    Paint stroke,
+  ) {
     final path = Path()
       ..moveTo(center.dx - radius * 0.3, center.dy + radius * 0.8)
       ..lineTo(center.dx + radius * 0.3, center.dy + radius * 0.8)
-      ..cubicTo(center.dx + radius * 0.5, center.dy, center.dx, center.dy - radius * 0.9, center.dx, center.dy - radius * 0.9)
-      ..cubicTo(center.dx, center.dy - radius * 0.9, center.dx - radius * 0.5, center.dy, center.dx - radius * 0.3, center.dy + radius * 0.8)
+      ..cubicTo(
+        center.dx + radius * 0.5,
+        center.dy,
+        center.dx,
+        center.dy - radius * 0.9,
+        center.dx,
+        center.dy - radius * 0.9,
+      )
+      ..cubicTo(
+        center.dx,
+        center.dy - radius * 0.9,
+        center.dx - radius * 0.5,
+        center.dy,
+        center.dx - radius * 0.3,
+        center.dy + radius * 0.8,
+      )
       ..close();
     canvas.drawPath(path, fill);
     canvas.drawPath(path, stroke);
-    
+
     // Mitre cut
     final cutPaint = Paint()
       ..color = Colors.black.withValues(alpha: 0.2)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0;
-    canvas.drawLine(center + Offset(0, -radius * 0.4), center + Offset(radius * 0.3, -radius * 0.7), cutPaint);
+    canvas.drawLine(
+      center + Offset(0, -radius * 0.4),
+      center + Offset(radius * 0.3, -radius * 0.7),
+      cutPaint,
+    );
   }
 
-  void _drawKnight(Canvas canvas, Offset center, double radius, Paint fill, Paint stroke) {
+  void _drawKnight(
+    Canvas canvas,
+    Offset center,
+    double radius,
+    Paint fill,
+    Paint stroke,
+  ) {
     final path = Path()
       ..moveTo(center.dx - radius * 0.3, center.dy + radius * 0.8)
       ..lineTo(center.dx + radius * 0.3, center.dy + radius * 0.8)
@@ -130,7 +176,13 @@ class WoodenPiecePainter extends CustomPainter {
     canvas.drawPath(path, stroke);
   }
 
-  void _drawRook(Canvas canvas, Offset center, double radius, Paint fill, Paint stroke) {
+  void _drawRook(
+    Canvas canvas,
+    Offset center,
+    double radius,
+    Paint fill,
+    Paint stroke,
+  ) {
     final path = Path()
       ..moveTo(center.dx - radius * 0.4, center.dy + radius * 0.8)
       ..lineTo(center.dx + radius * 0.4, center.dy + radius * 0.8)
@@ -149,12 +201,23 @@ class WoodenPiecePainter extends CustomPainter {
     canvas.drawPath(path, stroke);
   }
 
-  void _drawPawn(Canvas canvas, Offset center, double radius, Paint fill, Paint stroke) {
+  void _drawPawn(
+    Canvas canvas,
+    Offset center,
+    double radius,
+    Paint fill,
+    Paint stroke,
+  ) {
     final path = Path()
       ..moveTo(center.dx - radius * 0.3, center.dy + radius * 0.8)
       ..lineTo(center.dx + radius * 0.3, center.dy + radius * 0.8)
       ..lineTo(center.dx + radius * 0.2, center.dy)
-      ..addOval(Rect.fromCircle(center: center + Offset(0, -radius * 0.3), radius: radius * 0.35));
+      ..addOval(
+        Rect.fromCircle(
+          center: center + Offset(0, -radius * 0.3),
+          radius: radius * 0.35,
+        ),
+      );
     canvas.drawPath(path, fill);
     canvas.drawPath(path, stroke);
   }

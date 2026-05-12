@@ -20,7 +20,7 @@ class BoardStage extends ConsumerWidget {
     // Logic: Bottom player captures go to the bottom bar.
     // If not flipped: White is bottom. Bottom bar shows pieces captured BY White (Black pieces).
     // If flipped: Black is bottom. Bottom bar shows pieces captured BY Black (White pieces).
-    
+
     final topPieces = isFlipped ? capturedByWhite : capturedByBlack;
     final bottomPieces = isFlipped ? capturedByBlack : capturedByWhite;
 
@@ -28,11 +28,7 @@ class BoardStage extends ConsumerWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         if (!isExpanded) CapturedPiecesBar(pieces: topPieces),
-        const Expanded(
-          child: Center(
-            child: ChessBoard(),
-          ),
-        ),
+        const Expanded(child: Center(child: ChessBoard())),
         if (!isExpanded) CapturedPiecesBar(pieces: bottomPieces),
       ],
     );
