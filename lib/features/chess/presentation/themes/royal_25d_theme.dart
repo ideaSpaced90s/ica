@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:chess/chess.dart' as chess_lib;
 import 'chess_theme.dart';
+import '../widgets/royal_piece_painter.dart';
 
 class Royal25DTheme extends ChessTheme {
   const Royal25DTheme() : super(id: 'theme11', name: 'Royal');
@@ -65,61 +67,35 @@ class Royal25DTheme extends ChessTheme {
     bool isHighlighted,
     double animationValue,
   ) {
-    final rowIndex = isWhite ? 0 : 1;
-    int colIndex;
+    chess_lib.PieceType pType;
     switch (type.toUpperCase()) {
       case 'K':
-        colIndex = 0;
+        pType = chess_lib.PieceType.KING;
         break;
       case 'Q':
-        colIndex = 1;
-        break;
-      case 'B':
-        colIndex = 2;
-        break;
-      case 'N':
-        colIndex = 3;
+        pType = chess_lib.PieceType.QUEEN;
         break;
       case 'R':
-        colIndex = 4;
+        pType = chess_lib.PieceType.ROOK;
+        break;
+      case 'B':
+        pType = chess_lib.PieceType.BISHOP;
+        break;
+      case 'N':
+        pType = chess_lib.PieceType.KNIGHT;
         break;
       case 'P':
-        colIndex = 5;
+        pType = chess_lib.PieceType.PAWN;
         break;
       default:
-        colIndex = 5;
+        pType = chess_lib.PieceType.PAWN;
     }
 
-    final horizontalShift = switch (type.toUpperCase()) {
-      'Q' => -7.5,
-      'B' => -5.0,
-      'P' => 0.0, // Shifted right relative to other pieces
-      _ => -2.5,
-    };
-
-    return AspectRatio(
-      aspectRatio: 1,
-      child: Transform.translate(
-        offset: Offset(horizontalShift, -2.0), // Shift slightly left and up
-        child: Transform.scale(
-          scale: 0.95, // Reduced size by "one notch"
-          child: ClipRect(
-            child: FractionallySizedBox(
-              widthFactor: 6.0,
-              heightFactor: 2.0,
-              alignment: Alignment(
-                (colIndex * 2.0 / 5.0) - 1.0,
-                (rowIndex * 2.0 / 1.0) - 1.0,
-              ),
-              child: Image.asset(
-                'assets/board/pieces_25d.png',
-                fit: BoxFit.fill,
-                filterQuality: FilterQuality.high,
-              ),
-            ),
-          ),
-        ),
-      ),
+    return RoyalVectorPiece(
+      type: pType,
+      isWhite: isWhite,
+      isHighlighted: isHighlighted,
+      animationValue: animationValue,
     );
   }
 
@@ -144,7 +120,10 @@ class Royal25DTheme extends ChessTheme {
 
   @override
   Widget buildSelectionEffect(BuildContext context, double animationValue) {
-    return const SizedBox.shrink(); // Use default OrbitingStar
+    return CustomPaint(
+      painter: RoyalSelectionPainter(animationValue: animationValue),
+      size: Size.infinite,
+    );
   }
 
   @override
