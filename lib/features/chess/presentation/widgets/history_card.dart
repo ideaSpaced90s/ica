@@ -100,12 +100,16 @@ class _HistoryCardState extends State<HistoryCard> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        _buildTimeBadge('W', Duration(milliseconds: widget.game.whiteTimeLeftMs)),
-                        const SizedBox(width: 8),
-                        _buildTimeBadge('B', Duration(milliseconds: widget.game.blackTimeLeftMs)),
-                      ],
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Row(
+                        children: [
+                          _buildTimeBadge('W', Duration(milliseconds: widget.game.whiteTimeLeftMs)),
+                          const SizedBox(width: 8),
+                          _buildTimeBadge('B', Duration(milliseconds: widget.game.blackTimeLeftMs)),
+                        ],
+                      ),
                     ),
                   ],
                 ),

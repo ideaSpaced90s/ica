@@ -117,6 +117,27 @@ class SettingsPage extends ConsumerWidget {
                     onTap: () => _showTimeControlSelector(context, ref),
                     trailing: Icon(Icons.edit_rounded, size: 18, color: ScholarlyTheme.accentBlue),
                   ),
+                  _SettingsTile(
+                    label: 'Engine Strength',
+                    description: 'Level ${state.engineLevel}: ${_getEngineLevelName(state.engineLevel)}',
+                    icon: Icons.bolt_rounded,
+                    onTap: () => _showStrengthOverlay(context, ref),
+                    trailing: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: ScholarlyTheme.accentBlueSoft,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        state.engineLevel,
+                        style: GoogleFonts.inter(
+                          color: ScholarlyTheme.accentBlue,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
 
@@ -132,26 +153,6 @@ class SettingsPage extends ConsumerWidget {
                       Navigator.of(context).push(
                         MaterialPageRoute(builder: (context) => const HistoryPage()),
                       );
-                    },
-                  ),
-                  _SettingsTile(
-                    label: 'Save Current Game',
-                    description: 'Sync progress to local storage',
-                    icon: Icons.save_rounded,
-                    onTap: () async {
-                      final entry = await notifier.saveCurrentGame();
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(entry != null 
-                              ? 'Game saved successfully' 
-                              : 'Failed to save game'),
-                            backgroundColor: entry != null 
-                              ? ScholarlyTheme.accentBlue 
-                              : Colors.redAccent,
-                          ),
-                        );
-                      }
                     },
                   ),
                 ],
@@ -623,6 +624,104 @@ class SettingsPage extends ConsumerWidget {
         return Transform.scale(
           scale: Curves.easeOutBack.transform(a1.value),
           child: FadeTransition(opacity: a1, child: child),
+        );
+      },
+    );
+  }
+
+  String _getEngineLevelName(String level) {
+    switch (level) {
+      case 'A': return 'Grandmaster';
+      case 'B': return 'Master';
+      case 'C': return 'Intermediate';
+      case 'D': return 'Casual';
+      case 'E': return 'Beginner';
+      default: return 'Master';
+    }
+  }
+
+  void _showStrengthOverlay(BuildContext context, WidgetRef ref) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Consumer(
+          builder: (context, ref, _) {
+            final currentLevel = ref.watch(chessProvider).engineLevel;
+            return Padding(
+              padding: const EdgeInsets.all(16),
+              child: GlassPanel(
+                padding: const EdgeInsets.all(18),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Engine Strength',
+                        style: GoogleFonts.inter(
+                          color: ScholarlyTheme.textPrimary,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: ['A', 'B', 'C', 'D', 'E'].map((level) {
+                          final isSelected = currentLevel == level;
+                          return InkWell(
+                            onTap: () {
+                              ref
+                                  .read(chessProvider.notifier)
+                                  .setEngineLevel(level);
+                              Navigator.of(context).pop();
+                            },
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? ScholarlyTheme.accentBlue
+                                    : ScholarlyTheme.panelBase,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: isSelected
+                                      ? ScholarlyTheme.accentBlue
+                                      : ScholarlyTheme.panelStroke,
+                                ),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  level,
+                                  style: GoogleFonts.inter(
+                                    color: isSelected
+                                        ? Colors.white
+                                        : ScholarlyTheme.textPrimary,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'A: Grandmaster (Strongest)  |  E: Beginner (Weakest)',
+                        style: GoogleFonts.inter(
+                          color: ScholarlyTheme.textMuted,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
         );
       },
     );

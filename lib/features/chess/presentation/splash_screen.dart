@@ -44,20 +44,20 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with TickerProvider
 
   Future<void> _initFlow() async {
     final startTime = DateTime.now();
-    debugPrint('SplashScreen: Starting _initFlow...');
+    // debugPrint('SplashScreen: Starting _initFlow...');
     final notifier = ref.read(chessProvider.notifier);
     
     // 1. Start services initialization in parallel
-    debugPrint('SplashScreen: Triggering background service init...');
+    // debugPrint('SplashScreen: Triggering background service init...');
     final initFuture = _initServices(notifier);
 
     // 2. Start a smooth progress animation
     _progressController.forward();
     
     // 3. Wait for actual services to load
-    debugPrint('SplashScreen: Waiting for background services...');
+    // debugPrint('SplashScreen: Waiting for background services...');
     await initFuture;
-    debugPrint('SplashScreen: Background services completed.');
+    // debugPrint('SplashScreen: Background services completed.');
 
     // 4. Enforce a small minimum time (e.g. 1.2s) for branding
     final elapsed = DateTime.now().difference(startTime);
@@ -75,7 +75,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with TickerProvider
     }
 
     if (mounted) {
-      debugPrint('SplashScreen: Reverting to landscape orientation.');
+      // debugPrint('SplashScreen: Reverting to landscape orientation.');
       // Revert to Landscape mode for the Main App
       await SystemChrome.setPreferredOrientations([
         DeviceOrientation.landscapeLeft,
@@ -86,7 +86,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with TickerProvider
 
       if (!mounted) return;
       
-      debugPrint('SplashScreen: Navigating to MainPage.');
+      // debugPrint('SplashScreen: Navigating to MainPage.');
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
           pageBuilder: (context, animation, secondaryAnimation) => const MainPage(),

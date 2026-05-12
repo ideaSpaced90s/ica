@@ -187,7 +187,10 @@ class _ChessPieceWidgetState extends ConsumerState<ChessPieceWidget>
     }
 
     // ── King check pulse: subtle scale oscillation when King is in check ──
-    if (ref.read(chessProvider.notifier).isAnimationTypeEnabled('feedback') && !widget.highlighted) {
+    if (widget.pieceCode == null &&
+        widget.squareName != 'none' &&
+        ref.read(chessProvider.notifier).isAnimationTypeEnabled('feedback') &&
+        !widget.highlighted) {
       final chessStateForCheck = ref.read(chessProvider);
       final pieceOnSquare = chessStateForCheck.game.getPiece(widget.squareName);
       final isKingPiece = pieceOnSquare?.type == chess_lib.PieceType.KING;

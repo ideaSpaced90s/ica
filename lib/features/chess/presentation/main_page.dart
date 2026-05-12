@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -51,7 +52,59 @@ class _MainPageState extends ConsumerState<MainPage> with WidgetsBindingObserver
   Widget build(BuildContext context) {
     final chessState = ref.watch(chessProvider);
 
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (bool didPop, Object? result) async {
+        if (didPop) return;
+        final bool? confirm = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            backgroundColor: ScholarlyTheme.panelBase,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: Text(
+              'Exit Kingslayer?',
+              style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: ScholarlyTheme.textPrimary),
+            ),
+            content: Text(
+              'Do you want to quit? Your current game progress will be saved automatically.',
+              style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 14),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text(
+                  'Continue Play',
+                  style: GoogleFonts.inter(color: ScholarlyTheme.accentBlue, fontWeight: FontWeight.w600),
+                ),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.redAccent,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: Text(
+                  'Quit',
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+        );
+
+        if (confirm == true) {
+          final chessState = ref.read(chessProvider);
+          if (chessState.recentMoves.isNotEmpty) {
+            await ref.read(chessProvider.notifier).saveCurrentGame();
+          }
+          SystemNavigator.pop();
+        }
+      },
+      child: Scaffold(
       backgroundColor: ScholarlyTheme.backgroundStart,
       body: Stack(
         children: [
@@ -155,7 +208,7 @@ class _MainPageState extends ConsumerState<MainPage> with WidgetsBindingObserver
             ),
         ],
       ),
-    );
+    ));
   }
 
   bool _isPlayerTurn(ChessState state) {
@@ -384,8 +437,23 @@ class _MainPageState extends ConsumerState<MainPage> with WidgetsBindingObserver
             width: 12,
           ), // Reduced spacing slightly instead of Spacer
           ActionIconButton(
-            icon: Icons.bolt_rounded,
-            onTap: () => _showStrengthOverlay(context, ref),
+            icon: Icons.save_rounded,
+            onTap: () async {
+              final entry = await ref.read(chessProvider.notifier).saveCurrentGame();
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      entry != null ? 'Game saved successfully.' : 'Failed to save game.',
+                      style: GoogleFonts.inter(color: Colors.white),
+                    ),
+                    backgroundColor: entry != null ? ScholarlyTheme.accentBlue : Colors.redAccent,
+                    duration: const Duration(seconds: 2),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            },
           ),
           const SizedBox(width: 6),
           ActionIconButton(
@@ -604,17 +672,17 @@ class _MainPageState extends ConsumerState<MainPage> with WidgetsBindingObserver
           ),
           title: Text(
             'New Game?',
-            style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+            style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: ScholarlyTheme.textPrimary),
           ),
           content: Text(
-            'All progress in current game will be lost if not saved.',
-            style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary),
+            'Start a new game? Your current game progress will be saved automatically to history.',
+            style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 14),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
               child: Text(
-                'No',
+                'Cancel',
                 style: GoogleFonts.inter(color: ScholarlyTheme.textMuted),
               ),
             ),
@@ -627,7 +695,7 @@ class _MainPageState extends ConsumerState<MainPage> with WidgetsBindingObserver
                 ),
               ),
               child: Text(
-                'Yes',
+                'New Game',
                 style: GoogleFonts.inter(fontWeight: FontWeight.w600),
               ),
             ),
@@ -636,98 +704,24 @@ class _MainPageState extends ConsumerState<MainPage> with WidgetsBindingObserver
       );
 
       if (confirm != true) return;
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Game saved to history.',
+              style: GoogleFonts.inter(color: Colors.white),
+            ),
+            backgroundColor: ScholarlyTheme.accentBlue,
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
 
     await ref.read(chessProvider.notifier).reset();
   }
-
-  void _showStrengthOverlay(BuildContext context, WidgetRef ref) {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return Consumer(
-          builder: (context, ref, _) {
-            final currentLevel = ref.watch(chessProvider).engineLevel;
-            return Padding(
-              padding: const EdgeInsets.all(16),
-              child: GlassPanel(
-                padding: const EdgeInsets.all(18),
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Engine Strength',
-                        style: GoogleFonts.inter(
-                          color: ScholarlyTheme.textPrimary,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: ['A', 'B', 'C', 'D', 'E'].map((level) {
-                          final isSelected = currentLevel == level;
-                          return InkWell(
-                            onTap: () {
-                              ref
-                                  .read(chessProvider.notifier)
-                                  .setEngineLevel(level);
-                              Navigator.of(context).pop();
-                            },
-                            borderRadius: BorderRadius.circular(8),
-                            child: Container(
-                              width: 44,
-                              height: 44,
-                              decoration: BoxDecoration(
-                                color: isSelected
-                                    ? ScholarlyTheme.accentBlue
-                                    : ScholarlyTheme.panelBase,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: isSelected
-                                      ? ScholarlyTheme.accentBlue
-                                      : ScholarlyTheme.panelStroke,
-                                ),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  level,
-                                  style: GoogleFonts.inter(
-                                    color: isSelected
-                                        ? Colors.white
-                                        : ScholarlyTheme.textPrimary,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'A: Grandmaster (Strongest)  |  E: Beginner (Weakest)',
-                        style: GoogleFonts.inter(
-                          color: ScholarlyTheme.textMuted,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
 }
 
 class _AiProfileAnimation extends StatefulWidget {

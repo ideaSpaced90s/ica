@@ -173,6 +173,7 @@ class ChessState {
     this.isSavedGamesLoading = false,
     this.isSavingGame = false,
     this.threatenedSquares = const [],
+    this.loadedSaveId,
     this.pendingEngineMove,
     this.engineSelectionSquare,
     this.moveAnimation,
@@ -241,6 +242,7 @@ class ChessState {
   final bool isSavedGamesLoading;
   final bool isSavingGame;
   final List<String> threatenedSquares;
+  final String? loadedSaveId;
   final String? pendingEngineMove;
   final String? engineSelectionSquare;
   final MoveAnimationData? moveAnimation;
@@ -313,6 +315,7 @@ class ChessState {
     bool? isSavedGamesLoading,
     bool? isSavingGame,
     List<String>? threatenedSquares,
+    Object? loadedSaveId = _sentinel,
     Object? pendingEngineMove = _sentinel,
     Object? engineSelectionSquare = _sentinel,
     Object? moveAnimation = _sentinel,
@@ -388,6 +391,9 @@ class ChessState {
       isSavedGamesLoading: isSavedGamesLoading ?? this.isSavedGamesLoading,
       isSavingGame: isSavingGame ?? this.isSavingGame,
       threatenedSquares: threatenedSquares ?? this.threatenedSquares,
+      loadedSaveId: identical(loadedSaveId, _sentinel)
+          ? this.loadedSaveId
+          : loadedSaveId as String?,
       pendingEngineMove: identical(pendingEngineMove, _sentinel)
           ? this.pendingEngineMove
           : pendingEngineMove as String?,
@@ -712,6 +718,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
   Future<void>? _startupFuture;
   bool _isDisposed = false;
   int _cameraMotionCueId = 0;
+  DateTime _lastInfoUpdateTime = DateTime.fromMillisecondsSinceEpoch(0);
 
   Future<void> ensureGameServicesStarted({
     bool analyzeCurrentPosition = false,
@@ -804,27 +811,35 @@ class ChessNotifier extends StateNotifier<ChessState> {
           : score / 100.0;
     }
 
+    if (parsed['type'] == 'info') {
+      final now = DateTime.now();
+      if (now.difference(_lastInfoUpdateTime).inMilliseconds < 250) {
+        return;
+      }
+      _lastInfoUpdateTime = now;
+    }
+
     state = state.copyWith(
       analysis: {...state.analysis, ...parsed},
       currentEvaluation: newEval ?? state.currentEvaluation,
       engineReady: true,
     );
 
-    debugPrint(
-      'ChessNotifier: Parsed engine output. type: ${parsed['type']}, isAiTurn: ${_isAiTurn()}, isEngineThinking: ${state.isEngineThinking}',
-    );
+    // debugPrint(
+    //   'ChessNotifier: Parsed engine output. type: ${parsed['type']}, isAiTurn: ${_isAiTurn()}, isEngineThinking: ${state.isEngineThinking}',
+    // );
     if (newEval != null) {
       // Just record the evaluation, don't trigger commentary here anymore.
       // The orchestration is handled in makeMove and _runCommentary.
-      debugPrint('ChessNotifier: Score updated: $newEval');
+      // debugPrint('ChessNotifier: Score updated: $newEval');
     }
 
     if (parsed.containsKey('bestMove')) {
       final bestMove = parsed['bestMove'] as String?;
       final aiTurn = _isAiTurn();
-      debugPrint(
-        'ChessNotifier: [SCOUT] bestMove=$bestMove, isAiTurn=$aiTurn, isPaused=${state.isPaused}, gameOver=${state.game.gameOver}',
-      );
+      // debugPrint(
+      //   'ChessNotifier: [SCOUT] bestMove=$bestMove, isAiTurn=$aiTurn, isPaused=${state.isPaused}, gameOver=${state.game.gameOver}',
+      // );
 
       if (bestMove != null &&
           _pendingHintFen != null &&
@@ -837,9 +852,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
           aiTurn &&
           !state.game.gameOver &&
           !state.isPaused) {
-        debugPrint(
-          'ChessNotifier: [SCOUT] Engine move found: $bestMove. isAnimationsEnabled: ${state.isAnimationsEnabled}',
-        );
+        // debugPrint(
+        //   'ChessNotifier: [SCOUT] Engine move found: $bestMove. isAnimationsEnabled: ${state.isAnimationsEnabled}',
+        // );
         _maxThinkingTimer?.cancel();
         _maxThinkingTimer = null;
 
@@ -849,18 +864,18 @@ class ChessNotifier extends StateNotifier<ChessState> {
           // Ensure at least 2s total time (thinking + delay)
           final remainingDelay = math.max(0, 2000 - elapsed);
           
-          debugPrint('ChessNotifier: [SCOUT] Delaying engine move for ${remainingDelay}ms (elapsed: ${elapsed}ms)...');
+          // debugPrint('ChessNotifier: [SCOUT] Delaying engine move for ${remainingDelay}ms (elapsed: ${elapsed}ms)...');
           _engineMoveTimer = Timer(Duration(milliseconds: remainingDelay), () {
             if (!_isDisposed && !state.isPaused) {
               _makeEngineMove(bestMove);
             }
           });
         } else {
-          debugPrint('ChessNotifier: [SCOUT] Executing engine move immediately (animations off).');
+          // debugPrint('ChessNotifier: [SCOUT] Executing engine move immediately (animations off).');
           _makeEngineMove(bestMove);
         }
       } else if (bestMove != null) {
-        debugPrint('ChessNotifier: [SCOUT] Move ignored. Turn match: $aiTurn');
+        // debugPrint('ChessNotifier: [SCOUT] Move ignored. Turn match: $aiTurn');
       }
     }
   }
@@ -889,8 +904,22 @@ class ChessNotifier extends StateNotifier<ChessState> {
   Future<SavedGameEntry?> saveCurrentGame() async {
     state = state.copyWith(isSavingGame: true);
     try {
+      final isUpdate = state.loadedSaveId != null;
+      final targetId = state.loadedSaveId ?? _uuid.v4();
+
+      // Preserve custom name and favorite flags if updating an existing game
+      String? customName;
+      bool isFavorite = false;
+      if (isUpdate) {
+        final existing = state.savedGames.where((s) => s.id == targetId).firstOrNull;
+        if (existing != null) {
+          customName = existing.customName;
+          isFavorite = existing.isFavorite;
+        }
+      }
+
       final entry = SavedGameEntry(
-        id: _uuid.v4(),
+        id: targetId,
         savedAt: DateTime.now(),
         fen: state.game.fen,
         recentMoves: List<String>.from(state.recentMoves),
@@ -902,10 +931,22 @@ class ChessNotifier extends StateNotifier<ChessState> {
         activeClockSide: state.activeClockSide,
         lastMove: state.lastMove,
         commentaryHistory: state.commentaryHistory,
+        customName: customName,
+        isFavorite: isFavorite,
       );
-      final saves = await _savedGameRepository.save(entry);
+
+      final saves = isUpdate
+          ? await _savedGameRepository.update(entry)
+          : await _savedGameRepository.save(entry);
+
+      // If update returned without modifying because save was deleted/missing, fallback to saving brand new
+      List<SavedGameEntry> finalSaves = saves;
+      if (isUpdate && !saves.any((s) => s.id == targetId)) {
+        finalSaves = await _savedGameRepository.save(entry);
+      }
+
       state = state.copyWith(
-        savedGames: saves,
+        savedGames: finalSaves,
         isSavingGame: false,
         commentaryError: null,
       );
@@ -993,7 +1034,20 @@ class ChessNotifier extends StateNotifier<ChessState> {
           : null,
       savedGames: state.savedGames,
       threatenedSquares: const [],
+      // Preserve existing user interface & environment preferences
+      boardThemeId: state.boardThemeId,
+      isSoundEnabled: state.isSoundEnabled,
+      isMusicEnabled: state.isMusicEnabled,
+      isHapticsEnabled: state.isHapticsEnabled,
+      showCoordinates: state.showCoordinates,
+      isAiOperational: state.isAiOperational,
+      incrementDuration: state.incrementDuration,
+      baseTimeDuration: state.baseTimeDuration,
+      engineLevel: state.engineLevel,
+      isEngineVsEngine: state.isEngineVsEngine,
       isAnimationsEnabled: state.isAnimationsEnabled,
+      animationSettings: state.animationSettings,
+      loadedSaveId: entry.id,
     );
 
     _syncUndoRedoFlags();
@@ -1323,13 +1377,13 @@ class ChessNotifier extends StateNotifier<ChessState> {
     _startClockTicker();
 
     // The Scout (Stockfish) starts its calculation
-    debugPrint(
-      'ChessNotifier: Player move completed. Starting engine analysis...',
-    );
+    // debugPrint(
+    //   'ChessNotifier: Player move completed. Starting engine analysis...',
+    // );
     await ensureGameServicesStarted(analyzeCurrentPosition: true);
-    debugPrint(
-      'ChessNotifier: Engine analysis requested for FEN: ${state.game.fen}',
-    );
+    // debugPrint(
+    //   'ChessNotifier: Engine analysis requested for FEN: ${state.game.fen}',
+    // );
 
     state = state.copyWith(isEngineThinking: state.engineReady);
   }
@@ -1346,9 +1400,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
     // Only force move (10s timeout) if it's the AI's turn to respond
     if (_isAiTurn()) {
-      debugPrint('ChessNotifier: [SCOUT] Starting AI analysis with 10s timeout floor...');
+      // debugPrint('ChessNotifier: [SCOUT] Starting AI analysis with 10s timeout floor...');
       _maxThinkingTimer = Timer(const Duration(seconds: 10), () {
-        debugPrint('ChessNotifier: [SCOUT] Max thinking time reached (10s). Forcing engine stop...');
+        // debugPrint('ChessNotifier: [SCOUT] Max thinking time reached (10s). Forcing engine stop...');
         _engine.sendCommand('stop');
       });
     }
@@ -1397,9 +1451,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
     final newIsPlayerWhite =
         !state.isPlayerWhite; // Always toggle to maintain "Down = User"
 
-    debugPrint(
-      'ChessNotifier: Rotation triggered. Switching player to ${newIsPlayerWhite ? 'White' : 'Black'} to maintain Down=User.',
-    );
+    // debugPrint(
+    //   'ChessNotifier: Rotation triggered. Switching player to ${newIsPlayerWhite ? 'White' : 'Black'} to maintain Down=User.',
+    // );
 
     state = state.copyWith(
       isBoardFlipped: newFlipped,
@@ -1409,7 +1463,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
     // Auto-move on rotation if it's now the engine's turn
     if (_isAiTurn() && !state.game.gameOver) {
-      debugPrint('ChessNotifier: Rotation triggered engine analysis.');
+      // debugPrint('ChessNotifier: Rotation triggered engine analysis.');
       unawaited(ensureGameServicesStarted(analyzeCurrentPosition: true));
     }
   }
@@ -2019,7 +2073,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
   Future<void> reset() async {
     // Auto-save current game before resetting if there is progress
-    if (state.recentMoves.isNotEmpty && !state.game.gameOver) {
+    if (state.recentMoves.isNotEmpty) {
       await saveCurrentGame();
     }
 

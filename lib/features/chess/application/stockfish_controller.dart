@@ -43,6 +43,7 @@ class StockfishState {
 class StockfishController extends StateNotifier<StockfishState> {
   final StockfishService _service;
   StreamSubscription? _subscription;
+  DateTime _lastUpdateTime = DateTime.fromMillisecondsSinceEpoch(0);
 
   StockfishController(this._service) : super(StockfishState()) {
     _init();
@@ -59,6 +60,14 @@ class StockfishController extends StateNotifier<StockfishState> {
   }
 
   void _handleOutput(String line) {
+    if (line.startsWith('info')) {
+      final now = DateTime.now();
+      if (now.difference(_lastUpdateTime).inMilliseconds < 250) {
+        return;
+      }
+      _lastUpdateTime = now;
+    }
+
     state = state.copyWith(lastOutput: line);
 
     if (line == 'readyok') {

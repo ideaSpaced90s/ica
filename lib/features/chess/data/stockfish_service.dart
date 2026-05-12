@@ -26,7 +26,7 @@ class StockfishService {
   Stream<String> get outputStream => _outputController.stream;
 
   Future<void> init() async {
-    debugPrint('StockfishService: [Unified] init() called.');
+    // debugPrint('StockfishService: [Unified] init() called.');
     if (_isDisposed) _isDisposed = false;
     
     if (kIsWeb) {
@@ -36,12 +36,12 @@ class StockfishService {
     }
     
     if (_process != null) {
-      debugPrint('StockfishService: Process already running. PID: ${_process?.pid}');
+      // debugPrint('StockfishService: Process already running. PID: ${_process?.pid}');
       return;
     }
 
     try {
-      debugPrint('StockfishService: Starting unified initialization sequence...');
+      // debugPrint('StockfishService: Starting unified initialization sequence...');
       _isReady = false;
       _isError = false;
       _readyCompleter = Completer<void>();
@@ -49,11 +49,11 @@ class StockfishService {
       String? enginePath;
       
       if (Platform.isAndroid) {
-        debugPrint('StockfishService: Android detected. Using Native Library hunting logic...');
+        // debugPrint('StockfishService: Android detected. Using Native Library hunting logic...');
         final String libDir = await _channel.invokeMethod('getNativeLibraryDir');
         enginePath = p.join(libDir, 'libstockfish.so');
       } else if (Platform.isWindows) {
-        debugPrint('StockfishService: Windows detected. Using Asset mapping logic...');
+        // debugPrint('StockfishService: Windows detected. Using Asset mapping logic...');
         final exePath = Platform.resolvedExecutable;
         final exeDir = p.dirname(exePath);
         const relPath = 'assets/engine/stockfish.exe';
@@ -65,10 +65,10 @@ class StockfishService {
           'C:\\Stockfish\\stockfish.exe', // Fallback for some users
         ];
 
-        debugPrint('StockfishService: Searching for engine in potential locations:');
+        // debugPrint('StockfishService: Searching for engine in potential locations:');
         for (final path in potentialPaths) {
           final exists = await File(path).exists();
-          debugPrint('  - Checking: $path [Exists: $exists]');
+          // debugPrint('  - Checking: $path [Exists: $exists]');
           if (exists) {
             enginePath = path;
             break;
@@ -82,9 +82,9 @@ class StockfishService {
         throw Exception(errorMsg);
       }
 
-      debugPrint('StockfishService: Launching engine -> $enginePath');
+      // debugPrint('StockfishService: Launching engine -> $enginePath');
       _process = await Process.start(enginePath, []);
-      debugPrint('StockfishService: Process up. PID: ${_process?.pid}');
+      // debugPrint('StockfishService: Process up. PID: ${_process?.pid}');
       
       _stdoutSubscription = _process!.stdout
           .transform(utf8.decoder)
@@ -92,14 +92,14 @@ class StockfishService {
           .listen((line) {
             final trimmed = line.trim();
             if (trimmed.isNotEmpty) {
-              debugPrint('Stockfish >>> $trimmed');
+              // debugPrint('Stockfish >>> $trimmed');
               _outputController.add(trimmed);
               
               if (trimmed == 'uciok') {
                 sendCommand('isready');
               }
               if (trimmed == 'readyok') {
-                debugPrint('StockfishService: Engine STATUS -> READY');
+                // debugPrint('StockfishService: Engine STATUS -> READY');
                 _isReady = true;
                 if (_readyCompleter != null && !_readyCompleter!.isCompleted) {
                   _readyCompleter!.complete();
@@ -109,7 +109,7 @@ class StockfishService {
           }, onError: (err) {
             debugPrint('StockfishService: [STDOUT ERROR] $err');
           }, onDone: () {
-            debugPrint('StockfishService: [STDOUT] Stream closed.');
+            // debugPrint('StockfishService: [STDOUT] Stream closed.');
             _isReady = false;
           });
 
@@ -117,11 +117,11 @@ class StockfishService {
           .transform(utf8.decoder)
           .transform(const LineSplitter())
           .listen((line) => debugPrint('Stockfish [STDERR] -> $line'),
-          onDone: () => debugPrint('StockfishService: [STDERR] Stream closed.'));
+          onDone: () { /* debugPrint('StockfishService: [STDERR] Stream closed.'); */ });
 
       // Monitor process exit
       _process!.exitCode.then((code) {
-        debugPrint('StockfishService: Process exited with code $code');
+        if (code != 0) debugPrint('StockfishService: Process exited abnormally with code $code');
         _isReady = false;
         _process = null;
       });
@@ -129,7 +129,7 @@ class StockfishService {
       // Wait a tiny bit for the process to be fully ready for input
       await Future.delayed(const Duration(milliseconds: 500));
       
-      debugPrint('StockfishService: Handshaking with engine (uci)...');
+      // debugPrint('StockfishService: Handshaking with engine (uci)...');
       sendCommand('uci');
       
       // Standardized 20s timeout for all platforms
@@ -144,7 +144,7 @@ class StockfishService {
         },
       );
       
-      debugPrint('StockfishService: Handshake complete. Ready: $_isReady');
+      // debugPrint('StockfishService: Handshake complete. Ready: $_isReady');
     } catch (e) {
       debugPrint('StockfishService: FAILED to start engine: $e');
       _isError = true;

@@ -155,7 +155,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
                         game: game,
                         onTap: () {
                           notifier.loadSavedGame(game);
-                          Navigator.of(context).pop(); // Back to main
+                          Navigator.of(context).popUntil((route) => route.isFirst); // Pop both History and Settings pages to return to main dashboard
                         },
                         onDelete: () => notifier.deleteSavedGame(game.id),
                         onToggleFavorite: () => notifier.toggleFavorite(game.id),

@@ -10,27 +10,36 @@ class SavedGameRepository {
   static const _fileName = 'saved_games.json';
 
   Future<List<SavedGameEntry>> listSaves() async {
-    final file = await _getFile();
-    if (!await file.exists()) {
-      return const [];
-    }
+    try {
+      final file = await _getFile();
+      if (!await file.exists()) {
+        return [];
+      }
 
-    final raw = await file.readAsString();
-    if (raw.trim().isEmpty) {
-      return const [];
-    }
+      final raw = await file.readAsString();
+      if (raw.trim().isEmpty) {
+        return [];
+      }
 
-    final decoded = jsonDecode(raw);
-    if (decoded is! List<dynamic>) {
-      return const [];
-    }
+      final decoded = jsonDecode(raw);
+      if (decoded is! List<dynamic>) {
+        return [];
+      }
 
-    final saves = decoded
-        .whereType<Map>()
-        .map((item) => SavedGameEntry.fromJson(Map<String, dynamic>.from(item)))
-        .toList();
-    saves.sort((a, b) => b.savedAt.compareTo(a.savedAt));
-    return saves;
+      final List<SavedGameEntry> saves = [];
+      for (final item in decoded.whereType<Map>()) {
+        try {
+          saves.add(SavedGameEntry.fromJson(Map<String, dynamic>.from(item)));
+        } catch (_) {
+          // Skip malformed/outdated entry gracefully
+        }
+      }
+      saves.sort((a, b) => b.savedAt.compareTo(a.savedAt));
+      return saves;
+    } catch (_) {
+      // If file is completely unreadable/corrupted, return empty list safely
+      return [];
+    }
   }
 
   Future<List<SavedGameEntry>> save(SavedGameEntry entry) async {
