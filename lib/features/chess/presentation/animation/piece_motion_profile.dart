@@ -47,6 +47,9 @@ class PieceMotionProfile {
   /// Range: 2.0 (heavy/King) to 4.5 (light/Bishop).
   final double levitationHeight;
 
+  /// Identifies if the piece moves as grounded foot soldiers (Pawn signature).
+  final bool isInfantry;
+
   const PieceMotionProfile({
     required this.moveDuration,
     required this.moveCurve,
@@ -59,26 +62,28 @@ class PieceMotionProfile {
     required this.selectionBreathScale,
     required this.breathingPeriod,
     required this.levitationHeight,
+    required this.isInfantry,
   });
 
   // ────────────────────────────────────────────────────────────────────────
   // Piece Identities
   // ────────────────────────────────────────────────────────────────────────
 
-  /// ♟ Pawn — Direct & Persistent
-  /// Fast, flat, linear glide. No flourish. Slight overshoot feel from curve.
+  /// ♟ Pawn — The Infantry March
+  /// Snappy, flat stride. Persistent forward lean during transit. No stretch.
   static const PieceMotionProfile pawn = PieceMotionProfile(
-    moveDuration: Duration(milliseconds: 450),
-    moveCurve: Curves.easeInOutCubic,
-    verticalArcFactor: 0.05, // almost flat
-    midRotationDeg: 0.0,
+    moveDuration: Duration(milliseconds: 320),
+    moveCurve: Curves.easeOutQuad,
+    verticalArcFactor: 0.0, // perfectly flat diagonal/forward march
+    midRotationDeg: 0.0, // dynamic forward tilt is driven by overlay
     hasGhostTrail: false,
     isTeleport: false,
-    landingCompression: 0.010, // tiny 1% compress for a quick thud
+    landingCompression: 0.015, // crisp settle thud
     hasBreathingSelection: true,
     selectionBreathScale: 0.012,
     breathingPeriod: Duration(milliseconds: 1200),
     levitationHeight: 3.0,
+    isInfantry: true,
   );
 
   /// ♞ Knight — Agile & Tactical
@@ -95,6 +100,7 @@ class PieceMotionProfile {
     selectionBreathScale: 0.015,
     breathingPeriod: Duration(milliseconds: 1100),
     levitationHeight: 4.0,
+    isInfantry: false,
   );
 
   /// ♝ Bishop — Smooth & Continuous
@@ -111,6 +117,7 @@ class PieceMotionProfile {
     selectionBreathScale: 0.010,
     breathingPeriod: Duration(milliseconds: 1500),
     levitationHeight: 4.5, // floats highest — effortless
+    isInfantry: false,
   );
 
   /// ♜ Rook — Heavy & Grounded
@@ -127,6 +134,7 @@ class PieceMotionProfile {
     selectionBreathScale: 0.008, // barely breathes — stable presence
     breathingPeriod: Duration(milliseconds: 1400),
     levitationHeight: 2.5, // barely lifts — heavy
+    isInfantry: false,
   );
 
   /// ♛ Queen — Dominant & Fluid
@@ -146,6 +154,7 @@ class PieceMotionProfile {
     selectionBreathScale: 0.018, // most visible breath — dominant
     breathingPeriod: Duration(milliseconds: 1000),
     levitationHeight: 4.0,
+    isInfantry: false,
   );
 
   /// ♚ King — Deliberate & Fragile
@@ -162,6 +171,7 @@ class PieceMotionProfile {
     selectionBreathScale: 0.020, // most visible — signals importance
     breathingPeriod: Duration(milliseconds: 1300),
     levitationHeight: 2.0, // lowest float — cautious
+    isInfantry: false,
   );
 
   // ────────────────────────────────────────────────────────────────────────

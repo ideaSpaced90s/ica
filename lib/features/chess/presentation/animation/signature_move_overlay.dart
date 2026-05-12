@@ -195,7 +195,7 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
   }
 
   void _handleAnimationTick() {
-    if (widget.data.isCastle &&
+    if ((widget.data.isCastle || _profile.isInfantry) &&
         !_hasTriggeredDust &&
         _controller.value >= 0.5) {
       _hasTriggeredDust = true;
@@ -338,6 +338,21 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
           verticalLift = -arc * 60.0;
           pieceScale = 1.0 + (arc * 0.4);
           if (rawProgress < 0.2 || rawProgress > 0.8) pieceScale = 0.8;
+        } else if (_profile.isInfantry) {
+          // ── Infantry March Signature (Pawn) ────────────────────────────
+          // Keeps the pawn firmly grounded and solid.
+          verticalLift = 0.0;
+          pieceScale = 1.0;
+
+          // Persistent forward lean/tilt during transit (~5 degrees = 0.087 radians)
+          final tiltAngle = 0.087;
+          final tiltEnvelope = math.sin(rawProgress * math.pi);
+
+          final int fromRow = 8 - int.parse(widget.data.from[1]);
+          final int toRow = 8 - int.parse(widget.data.to[1]);
+          final isMovingUp = toRow < fromRow;
+          final visualDirection = (isMovingUp ^ widget.isFlipped) ? 1.0 : -1.0;
+          midRotation = tiltAngle * visualDirection * tiltEnvelope;
         } else if (isSteampunkTheme &&
             ref
                 .read(chessProvider.notifier)
