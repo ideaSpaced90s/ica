@@ -6,6 +6,7 @@ import '../application/chess_provider.dart';
 import 'scholarly_theme.dart';
 import 'history_page.dart';
 import 'package:kingslayer_chess/features/chess/presentation/themes/theme_registry.dart';
+import 'package:kingslayer_chess/features/chess/presentation/themes/chess_theme.dart';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
@@ -20,17 +21,11 @@ class SettingsPage extends ConsumerWidget {
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
-          // Modern Large App Bar
-          SliverAppBar.large(
+          // Modern App Bar
+          SliverAppBar(
+            pinned: true,
             backgroundColor: ScholarlyTheme.backgroundStart,
             surfaceTintColor: ScholarlyTheme.backgroundStart,
-            title: Text(
-              'Settings',
-              style: GoogleFonts.inter(
-                color: ScholarlyTheme.textPrimary,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
             leading: IconButton(
               icon: const Icon(
                 Icons.arrow_back_ios_new_rounded,
@@ -39,6 +34,21 @@ class SettingsPage extends ConsumerWidget {
               ),
               onPressed: () => Navigator.of(context).pop(),
             ),
+            actions: [
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 20),
+                  child: Text(
+                    'Settings',
+                    style: GoogleFonts.inter(
+                      color: ScholarlyTheme.textPrimary,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
 
           // Game Status Card
@@ -310,6 +320,19 @@ class SettingsPage extends ConsumerWidget {
                                           ),
                                         ]
                                       : [],
+                                ),
+                                child: Center(
+                                  child: SizedBox(
+                                    width: 44,
+                                    height: 44,
+                                    child: theme.buildPiece(
+                                      context,
+                                      'N',
+                                      true,
+                                      false,
+                                      0.0,
+                                    ),
+                                  ),
                                 ),
                               ),
                               const SizedBox(height: 8),
@@ -1053,7 +1076,7 @@ class _SettingsSwitchTile extends StatelessWidget {
 }
 
 class _ThemeMiniPreview extends StatelessWidget {
-  final dynamic theme;
+  final ChessTheme theme;
 
   const _ThemeMiniPreview({required this.theme});
 
@@ -1070,6 +1093,13 @@ class _ThemeMiniPreview extends StatelessWidget {
         ),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: ScholarlyTheme.panelStroke),
+      ),
+      child: Center(
+        child: SizedBox(
+          width: 22,
+          height: 22,
+          child: theme.buildPiece(context, 'N', true, false, 0.0),
+        ),
       ),
     );
   }

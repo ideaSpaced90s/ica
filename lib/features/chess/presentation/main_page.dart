@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../application/chess_provider.dart';
-import 'evaluation_bar.dart';
 import 'chess_clock.dart';
 import 'scholarly_theme.dart';
 import 'widgets/commentary_history.dart';
@@ -254,19 +253,26 @@ class _MainPageState extends ConsumerState<MainPage>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _buildPortraitHeader(context, ref, state),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(8, 2, 8, 2),
-          child: EvaluationBar(evaluation: state.currentEvaluation),
-        ),
+        const SizedBox(height: 16),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _KnightTurnIndicator(
-                isActive: _isPlayerTurn(state),
-                isWhite: state.isPlayerWhite,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _KnightTurnIndicator(
+                    isActive: _isPlayerTurn(state),
+                    isWhite: state.isPlayerWhite,
+                  ),
+                  const SizedBox(width: 8),
+                  _VerticalEvaluationBar(
+                    fillFraction: ((
+                      (state.isPlayerWhite ? state.currentEvaluation : -state.currentEvaluation)
+                      .clamp(-5.0, 5.0) + 5.0) / 10.0),
+                  ),
+                ],
               ),
               const Spacer(),
               _KnightTimeDisplay(
@@ -283,9 +289,20 @@ class _MainPageState extends ConsumerState<MainPage>
                     : state.whiteTimeLeft,
               ),
               const Spacer(),
-              _KnightTurnIndicator(
-                isActive: !_isPlayerTurn(state),
-                isWhite: !state.isPlayerWhite,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _VerticalEvaluationBar(
+                    fillFraction: ((
+                      (state.isPlayerWhite ? -state.currentEvaluation : state.currentEvaluation)
+                      .clamp(-5.0, 5.0) + 5.0) / 10.0),
+                  ),
+                  const SizedBox(width: 8),
+                  _KnightTurnIndicator(
+                    isActive: !_isPlayerTurn(state),
+                    isWhite: !state.isPlayerWhite,
+                  ),
+                ],
               ),
             ],
           ),
@@ -326,83 +343,7 @@ class _MainPageState extends ConsumerState<MainPage>
     );
   }
 
-  Widget _buildPortraitHeader(
-    BuildContext context,
-    WidgetRef ref,
-    ChessState state,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              GestureDetector(
-                onTap: () =>
-                    ref.read(chessProvider.notifier).toggleAiOperational(),
-                child: _AiProfileAnimation(
-                  isOperational: state.isAiOperational,
-                  child: Container(
-                    width: 32,
-                    height: 32,
-                    decoration: const BoxDecoration(
-                      image: DecorationImage(
-                        image: AssetImage('assets/board/profile.png'),
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Text(
-                'KINGSLAYER',
-                style: GoogleFonts.inter(
-                  color: ScholarlyTheme.textPrimary,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1.5,
-                ),
-              ),
-              if (state.isChess960) ...[
-                const SizedBox(width: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: ScholarlyTheme.accentBlueSoft,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(
-                      color: ScholarlyTheme.accentBlue.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  child: Text(
-                    '960',
-                    style: GoogleFonts.jetBrainsMono(
-                      color: ScholarlyTheme.accentBlue,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-          Text(
-            'powered by ideaspace',
-            style: GoogleFonts.inter(
-              color: ScholarlyTheme.textMuted,
-              fontSize: 10,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   Widget _buildActionRow(
     BuildContext context,
@@ -772,115 +713,7 @@ class _MainPageState extends ConsumerState<MainPage>
   }
 }
 
-class _AiProfileAnimation extends StatefulWidget {
-  final bool isOperational;
-  final Widget child;
 
-  const _AiProfileAnimation({required this.isOperational, required this.child});
-
-  @override
-  State<_AiProfileAnimation> createState() => _AiProfileAnimationState();
-}
-
-class _AiProfileAnimationState extends State<_AiProfileAnimation>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _glowAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    );
-    _glowAnimation = Tween<double>(
-      begin: 1.0,
-      end: 4.0,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
-
-    if (widget.isOperational) {
-      _controller.repeat(reverse: true);
-    }
-  }
-
-  @override
-  void didUpdateWidget(_AiProfileAnimation oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.isOperational != oldWidget.isOperational) {
-      if (widget.isOperational) {
-        _controller.repeat(reverse: true);
-      } else {
-        _controller.stop();
-        _controller.value = 0.0;
-      }
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    Widget content = widget.child;
-
-    if (!widget.isOperational) {
-      // Grayscale Matrix
-      content = ColorFiltered(
-        colorFilter: const ColorFilter.matrix([
-          0.2126,
-          0.7152,
-          0.0722,
-          0,
-          0,
-          0.2126,
-          0.7152,
-          0.0722,
-          0,
-          0,
-          0.2126,
-          0.7152,
-          0.0722,
-          0,
-          0,
-          0,
-          0,
-          0,
-          1,
-          0,
-        ]),
-        child: content,
-      );
-    }
-
-    return AnimatedBuilder(
-      animation: _glowAnimation,
-      builder: (context, child) {
-        return Container(
-          decoration: BoxDecoration(
-            shape: BoxShape.rectangle,
-            boxShadow: widget.isOperational
-                ? [
-                    BoxShadow(
-                      color: ScholarlyTheme.accentBlue.withValues(
-                        alpha: 0.3 * (1.0 - _controller.value),
-                      ),
-                      blurRadius: _glowAnimation.value * 2,
-                      spreadRadius: _glowAnimation.value / 2,
-                    ),
-                  ]
-                : null,
-          ),
-          child: child,
-        );
-      },
-      child: content,
-    );
-  }
-}
 
 class _KnightTimeDisplay extends StatelessWidget {
   final bool isActive;
@@ -1006,6 +839,66 @@ class _KnightTurnIndicatorState extends State<_KnightTurnIndicator>
           },
         ),
       ],
+    );
+  }
+}
+
+class _VerticalEvaluationBar extends StatelessWidget {
+  final double fillFraction; // 0.0 to 1.0
+
+  const _VerticalEvaluationBar({required this.fillFraction});
+
+  @override
+  Widget build(BuildContext context) {
+    List<Color> gradientColors;
+    Color glowColor;
+
+    if (fillFraction > 0.55) {
+      gradientColors = [const Color(0xFF00C853), const Color(0xFF69F0AE)];
+      glowColor = const Color(0xFF00C853);
+    } else if (fillFraction < 0.45) {
+      gradientColors = [const Color(0xFFD50000), const Color(0xFFFF5252)];
+      glowColor = const Color(0xFFD50000);
+    } else {
+      gradientColors = [const Color(0xFFFFD600), const Color(0xFFFFE57F)];
+      glowColor = const Color(0xFFFFD600);
+    }
+
+    final targetHeight = 40.0 * fillFraction.clamp(0.08, 1.0);
+
+    return Container(
+      width: 8,
+      height: 42,
+      decoration: BoxDecoration(
+        color: Colors.black45,
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(
+          color: ScholarlyTheme.panelStroke.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
+      alignment: Alignment.bottomCenter,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeOutCubic,
+        width: 8,
+        height: targetHeight,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: gradientColors,
+            begin: Alignment.bottomCenter,
+            end: Alignment.topCenter,
+          ),
+          borderRadius: BorderRadius.circular(3),
+          boxShadow: [
+            BoxShadow(
+              color: glowColor.withValues(alpha: 0.4),
+              blurRadius: 4,
+              spreadRadius: 0.5,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
