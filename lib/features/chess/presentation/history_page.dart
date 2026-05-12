@@ -1,8 +1,10 @@
-import 'dart:ui' as ui;
 import 'dart:io';
-import 'package:flutter/rendering.dart';
+
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
+import '../data/saved_game.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../application/chess_provider.dart';
@@ -43,7 +45,10 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
     if (_searchController.text.isNotEmpty) {
       final query = _searchController.text.toLowerCase();
       filteredSaves = filteredSaves.where((s) {
-        final name = s.customName?.toLowerCase() ?? '';
+        final shortId = s.id.length >= 4 ? s.id.substring(0, 4) : s.id;
+        final name = (s.customName != null && s.customName!.isNotEmpty)
+            ? s.customName!.toLowerCase()
+            : 'untitled$shortId';
         final date = s.savedAt.toString().toLowerCase();
         return name.contains(query) || date.contains(query);
       }).toList();
@@ -160,7 +165,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
                         onDelete: () => notifier.deleteSavedGame(game.id),
                         onToggleFavorite: () => notifier.toggleFavorite(game.id),
                         onRename: (newName) => notifier.renameSavedGame(game.id, newName),
-                        onExport: (key) => _exportToPng(context, key, game.id),
+                        onExport: () => _showExportOptions(context, game),
                       ),
                     );
                   },
@@ -219,25 +224,47 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
     }
   }
 
-  Future<void> _exportToPng(BuildContext context, GlobalKey key, String id) async {
+  String _generatePgn(SavedGameEntry game) {
+    final buffer = StringBuffer();
+    final dateStr = DateFormat('yyyy.MM.dd').format(game.savedAt);
+    final shortId = game.id.length >= 4 ? game.id.substring(0, 4) : game.id;
+    final title = game.customName?.isNotEmpty == true ? game.customName! : 'untitled$shortId';
+
+    buffer.writeln('[Event "$title"]');
+    buffer.writeln('[Site "Kingslayer Chess App"]');
+    buffer.writeln('[Date "$dateStr"]');
+    buffer.writeln('[Round "1"]');
+    buffer.writeln('[White "${game.isPlayerWhite ? "Player" : "Stockfish"}"]');
+    buffer.writeln('[Black "${game.isPlayerWhite ? "Stockfish" : "Player"}"]');
+    buffer.writeln('[Result "*"]');
+    if (game.gameMode == 'chess960') {
+      buffer.writeln('[Variant "Chess960"]');
+      buffer.writeln('[FEN "${game.fen}"]');
+      buffer.writeln('[SetUp "1"]');
+    }
+    buffer.writeln();
+
+    for (int i = 0; i < game.recentMoves.length; i++) {
+      if (i % 2 == 0) {
+        buffer.write('${(i ~/ 2) + 1}. ');
+      }
+      buffer.write('${game.recentMoves[i]} ');
+    }
+    buffer.write('*');
+    return buffer.toString();
+  }
+
+  Future<void> _exportToPgnFile(BuildContext context, SavedGameEntry game, String pgnText) async {
     try {
-      final boundary = key.currentContext?.findRenderObject() as RenderRepaintBoundary?;
-      if (boundary == null) return;
-
-      final image = await boundary.toImage(pixelRatio: 3.0);
-      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-      if (byteData == null) return;
-
-      final bytes = byteData.buffer.asUint8List();
       final directory = await getApplicationDocumentsDirectory();
-      final path = '${directory.path}/kingslayer_game_$id.png';
+      final path = '${directory.path}/kingslayer_game_${game.id}.pgn';
       final file = File(path);
-      await file.writeAsBytes(bytes);
+      await file.writeAsString(pgnText);
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Board exported to: $path'),
+            content: Text('PGN saved to: $path'),
             backgroundColor: ScholarlyTheme.accentBlue,
             action: SnackBarAction(
               label: 'OK',
@@ -248,12 +275,142 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
         );
       }
     } catch (e) {
-      debugPrint('Export failed: $e');
+      debugPrint('PGN Export failed: $e');
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Export failed: $e'), backgroundColor: Colors.redAccent),
+          SnackBar(content: Text('PGN Export failed: $e'), backgroundColor: Colors.redAccent),
         );
       }
     }
+  }
+
+  Future<void> _sharePgnFile(BuildContext context, SavedGameEntry game, String pgnText) async {
+    try {
+      final directory = await getTemporaryDirectory();
+      final path = '${directory.path}/kingslayer_game_${game.id}.pgn';
+      final file = File(path);
+      await file.writeAsString(pgnText);
+
+      await Share.shareXFiles(
+        [XFile(path)],
+        text: 'Here is my chess game notation from Kingslayer!',
+        subject: 'Kingslayer Chess Game',
+      );
+    } catch (e) {
+      debugPrint('PGN Share failed: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('PGN Share failed: $e'), backgroundColor: Colors.redAccent),
+        );
+      }
+    }
+  }
+
+  void _showExportOptions(BuildContext context, SavedGameEntry game) {
+    final pgnText = _generatePgn(game);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: ScholarlyTheme.panelBase,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Padding(
+        padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).padding.bottom + 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.import_export_rounded, color: ScholarlyTheme.accentBlue, size: 24),
+                const SizedBox(width: 12),
+                Text(
+                  'Export / Share Game',
+                  style: GoogleFonts.inter(
+                    color: ScholarlyTheme.textPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.close_rounded, color: ScholarlyTheme.textMuted, size: 20),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Portable Game Notation (PGN)',
+              style: GoogleFonts.inter(
+                color: ScholarlyTheme.textMuted,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              constraints: const BoxConstraints(maxHeight: 180),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: ScholarlyTheme.backgroundStart,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: ScholarlyTheme.panelStroke),
+              ),
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: SelectableText(
+                  pgnText,
+                  style: GoogleFonts.jetBrainsMono(
+                    color: ScholarlyTheme.textPrimary,
+                    fontSize: 11,
+                    height: 1.4,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: ScholarlyTheme.accentBlueSoft,
+                      foregroundColor: ScholarlyTheme.accentBlue,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    icon: const Icon(Icons.save_alt_rounded, size: 18),
+                    label: const Text('Save .PGN'),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _exportToPgnFile(context, game, pgnText);
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: ScholarlyTheme.accentBlue,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    icon: const Icon(Icons.share_rounded, size: 18),
+                    label: const Text('Share .PGN'),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _sharePgnFile(context, game, pgnText);
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

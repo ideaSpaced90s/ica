@@ -11,7 +11,7 @@ class HistoryCard extends StatefulWidget {
   final VoidCallback onDelete;
   final VoidCallback onToggleFavorite;
   final Function(String) onRename;
-  final Function(GlobalKey) onExport;
+  final VoidCallback onExport;
 
   const HistoryCard({
     super.key,
@@ -28,12 +28,13 @@ class HistoryCard extends StatefulWidget {
 }
 
 class _HistoryCardState extends State<HistoryCard> {
-  final GlobalKey _boardKey = GlobalKey();
-
   @override
   Widget build(BuildContext context) {
     final dateFormat = DateFormat('MMM dd, yyyy • HH:mm');
-    final title = widget.game.customName ?? 'Untitled Game';
+    final shortId = widget.game.id.length >= 4 ? widget.game.id.substring(0, 4) : widget.game.id;
+    final title = (widget.game.customName != null && widget.game.customName!.isNotEmpty)
+        ? widget.game.customName!
+        : 'untitled$shortId';
     
     return Container(
       decoration: ScholarlyTheme.modernDecoration(),
@@ -45,19 +46,16 @@ class _HistoryCardState extends State<HistoryCard> {
           child: Row(
             children: [
               // Mini Board Preview
-              RepaintBoundary(
-                key: _boardKey,
-                child: Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: ScholarlyTheme.panelStroke),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(7),
-                    child: MiniBoardPreview(fen: widget.game.fen),
-                  ),
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: ScholarlyTheme.panelStroke),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(7),
+                  child: MiniBoardPreview(fen: widget.game.fen),
                 ),
               ),
               const SizedBox(width: 16),
@@ -125,13 +123,13 @@ class _HistoryCardState extends State<HistoryCard> {
                       IconButton(
                         icon: const Icon(Icons.share_rounded, size: 18),
                         color: ScholarlyTheme.accentBlue,
-                        onPressed: () => widget.onExport(_boardKey),
-                        tooltip: 'Export as PNG',
+                        onPressed: widget.onExport,
+                        tooltip: 'Export / Share',
                       ),
                       IconButton(
                         icon: const Icon(Icons.edit_rounded, size: 18),
                         color: ScholarlyTheme.accentBlue,
-                        onPressed: () => _showRenameDialog(context),
+                        onPressed: () => _showRenameDialog(context, title),
                         tooltip: 'Rename',
                       ),
                     ],
@@ -172,8 +170,8 @@ class _HistoryCardState extends State<HistoryCard> {
     );
   }
 
-  void _showRenameDialog(BuildContext context) {
-    final controller = TextEditingController(text: widget.game.customName);
+  void _showRenameDialog(BuildContext context, String currentTitle) {
+    final controller = TextEditingController(text: currentTitle);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
