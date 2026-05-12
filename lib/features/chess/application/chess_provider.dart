@@ -837,9 +837,16 @@ class ChessNotifier extends StateNotifier<ChessState> {
     if (parsed.containsKey('bestMove')) {
       final bestMove = parsed['bestMove'] as String?;
       final aiTurn = _isAiTurn();
-      // debugPrint(
-      //   'ChessNotifier: [SCOUT] bestMove=$bestMove, isAiTurn=$aiTurn, isPaused=${state.isPaused}, gameOver=${state.game.gameOver}',
-      // );
+
+      // Ensure the move is actually intended for the current turn's side
+      bool isMoveValidForCurrentTurn = false;
+      if (bestMove != null && bestMove.length >= 4) {
+        final fromSquare = bestMove.substring(0, 2);
+        final piece = state.game.getPiece(fromSquare);
+        if (piece != null && piece.color == state.game.turn) {
+          isMoveValidForCurrentTurn = true;
+        }
+      }
 
       if (bestMove != null &&
           _pendingHintFen != null &&
@@ -850,13 +857,12 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
       if (bestMove != null &&
           aiTurn &&
+          isMoveValidForCurrentTurn &&
           !state.game.gameOver &&
           !state.isPaused) {
-        // debugPrint(
-        //   'ChessNotifier: [SCOUT] Engine move found: $bestMove. isAnimationsEnabled: ${state.isAnimationsEnabled}',
-        // );
         _maxThinkingTimer?.cancel();
         _maxThinkingTimer = null;
+        _engineMoveTimer?.cancel();
 
         if (state.isAnimationsEnabled) {
           final now = DateTime.now();
@@ -864,18 +870,14 @@ class ChessNotifier extends StateNotifier<ChessState> {
           // Ensure at least 2s total time (thinking + delay)
           final remainingDelay = math.max(0, 2000 - elapsed);
           
-          // debugPrint('ChessNotifier: [SCOUT] Delaying engine move for ${remainingDelay}ms (elapsed: ${elapsed}ms)...');
           _engineMoveTimer = Timer(Duration(milliseconds: remainingDelay), () {
             if (!_isDisposed && !state.isPaused) {
               _makeEngineMove(bestMove);
             }
           });
         } else {
-          // debugPrint('ChessNotifier: [SCOUT] Executing engine move immediately (animations off).');
           _makeEngineMove(bestMove);
         }
-      } else if (bestMove != null) {
-        // debugPrint('ChessNotifier: [SCOUT] Move ignored. Turn match: $aiTurn');
       }
     }
   }
@@ -1056,8 +1058,11 @@ class ChessNotifier extends StateNotifier<ChessState> {
       _startClockTicker();
     }
 
-    if (state.clockStarted && _isAiTurn() && !state.game.gameOver) {
+    if (_isAiTurn() && !state.game.gameOver) {
       await ensureGameServicesStarted(analyzeCurrentPosition: true);
+      state = state.copyWith(isEngineThinking: state.engineReady);
+    } else if (!state.game.gameOver) {
+      unawaited(ensureGameServicesStarted(analyzeCurrentPosition: true));
     }
   }
 
