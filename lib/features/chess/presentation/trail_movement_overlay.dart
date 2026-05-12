@@ -133,7 +133,6 @@ class _TrailMovementOverlayState extends ConsumerState<TrailMovementOverlay>
     final isIceTheme = boardThemeId == 'theme3';
     final isToyTheme = boardThemeId == 'theme4';
     final isSteampunkTheme = boardThemeId == 'theme5';
-    final isMatrixTheme = boardThemeId == 'theme6';
     final isElectricTheme = boardThemeId == 'theme9';
 
     return AnimatedBuilder(
@@ -169,15 +168,6 @@ class _TrailMovementOverlayState extends ConsumerState<TrailMovementOverlay>
             math.sin(rawProgress * 40) * 2.0,
             0,
           ); // Mechanical rattle
-        } else if (isMatrixTheme) {
-          // Teleport dissolve
-          final noise = math.sin(rawProgress * 80);
-          pieceScale = 0.8 + (0.4 * noise.abs());
-          vibration = Offset(noise * 3, 0);
-          // Sudden jump in opacity/visibility
-          if ((rawProgress * 20).floor() % 2 == 0) {
-            pieceScale = 0.0; // Digital flicker out
-          }
         } else {
           pieceScale = 1.0 + (arc * 0.35);
           verticalLift = -arc * 25.0;
@@ -198,7 +188,7 @@ class _TrailMovementOverlayState extends ConsumerState<TrailMovementOverlay>
 
         return Stack(
           children: [
-            if (!isIceTheme && !isMatrixTheme && !isElectricTheme)
+            if (!isIceTheme && !isElectricTheme)
               CustomPaint(
                 size: Size(widget.boardSize, widget.boardSize),
                 painter: TrailPainter(

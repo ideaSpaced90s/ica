@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:chess/chess.dart' as chess_lib;
 import 'chess_theme.dart';
 import '../widgets/platinum_theme.dart';
 import '../widgets/toy_effects.dart';
-import 'package:chess/chess.dart' as chess_lib;
 
 class PlatinumTheme extends ChessTheme {
   const PlatinumTheme() : super(id: 'theme4', name: 'Platinum');
@@ -75,14 +75,14 @@ class PlatinumTheme extends ChessTheme {
       default:
         pType = chess_lib.PieceType.PAWN;
     }
+
     return AspectRatio(
       aspectRatio: 1,
       child: CustomPaint(
-        painter: MetalPiecePainter(
+        painter: PlatinumSpritePiecePainter(
           type: pType,
           isWhite: isWhite,
           isHighlighted: isHighlighted,
-          animationValue: animationValue,
         ),
       ),
     );

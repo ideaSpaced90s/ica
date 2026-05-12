@@ -11,7 +11,6 @@ import 'widgets/promotion_overlay.dart';
 import 'widgets/forest_effects.dart';
 import 'widgets/toy_effects.dart';
 import 'widgets/steampunk_effects.dart';
-import 'widgets/matrix_effects.dart';
 import 'widgets/electric_effects.dart';
 import 'package:chess/chess.dart' as chess_lib;
 import 'widgets/high_contrast_piece.dart';
@@ -45,7 +44,6 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
   final List<Offset> _leafScatters = [];
   final List<Offset> _toyConfetti = [];
   final List<Map<String, dynamic>> _metalShatters = [];
-  final List<Offset> _matrixGlitches = [];
   final List<Map<String, dynamic>> _shadowCaptures = [];
   final List<Offset> _slateCaptures = [];
 
@@ -69,7 +67,6 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
 
   late final AnimationController _gearController;
 
-  late final AnimationController _matrixEffectController;
   late final AnimationController _electricEffectController;
   late final AnimationController _liquidEffectController;
   late final AnimationController _hologramEffectController;
@@ -80,10 +77,6 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
     _gearController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 4),
-    )..repeat();
-    _matrixEffectController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 3),
     )..repeat();
     _electricEffectController = AnimationController(
       vsync: this,
@@ -102,7 +95,6 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
   @override
   void dispose() {
     _gearController.dispose();
-    _matrixEffectController.dispose();
     _electricEffectController.dispose();
     _liquidEffectController.dispose();
     _hologramEffectController.dispose();
@@ -281,8 +273,7 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
                                                 painter: chessTheme
                                                     .getSquarePainter(
                                                       isLight,
-                                                      _matrixEffectController
-                                                          .value, // Matrix specific
+                                                      0.0,
                                                     ),
                                                 size: Size.infinite,
                                               ),
@@ -309,10 +300,6 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
                                                           : chessTheme.id ==
                                                                 'theme5'
                                                           ? _gearController
-                                                                .value
-                                                          : chessTheme.id ==
-                                                                'theme6'
-                                                          ? _matrixEffectController
                                                                 .value
                                                           : chessTheme.id ==
                                                                 'theme9'
@@ -614,12 +601,6 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
                           onComplete: () =>
                               setState(() => _metalShatters.remove(shatter)),
                         ),
-                      for (final pos in _matrixGlitches)
-                        MatrixGlitchCapture(
-                          position: pos,
-                          onComplete: () =>
-                              setState(() => _matrixGlitches.remove(pos)),
-                        ),
                       for (final capture in _shadowCaptures)
                         ShadowCaptureEffect(
                           position: capture['pos'],
@@ -715,8 +696,6 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
           _triggerPlatinumCapture(squareName);
         } else if (themeId == 'theme5') {
           _triggerOilSplash(squareName);
-        } else if (themeId == 'theme6') {
-          _triggerMatrixGlitch(squareName);
         } else if (themeId == 'theme8') {
           _triggerLiquidSplash(squareName);
         } else if (themeId == 'theme10') {
@@ -1011,30 +990,6 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
 
       setState(() {
         _platinumCaptures.add(Offset(x, y));
-      });
-    });
-  }
-
-  void _triggerMatrixGlitch(String squareName) {
-    final col = squareName.codeUnitAt(0) - 'a'.codeUnitAt(0);
-    final row = 8 - int.parse(squareName[1]);
-    final isFlipped = ref.read(chessProvider).isBoardFlipped;
-
-    final effectiveCol = isFlipped ? 7 - col : col;
-    final effectiveRow = isFlipped ? 7 - row : row;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final box = context.findRenderObject() as RenderBox?;
-      if (box == null) return;
-
-      final boardSize = box.size.width;
-      final squareSize = boardSize / 8;
-      final x = effectiveCol * squareSize + squareSize / 2;
-      final y = effectiveRow * squareSize + squareSize / 2;
-
-      setState(() {
-        _matrixGlitches.add(Offset(x, y));
       });
     });
   }

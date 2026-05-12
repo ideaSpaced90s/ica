@@ -135,7 +135,7 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
   /// theme-specific special modes (matrix, toy).
   Curve _profileAwareCurve(String themeId, PieceMotionProfile profile) {
     // Special themes keep their own curve logic (handled in build())
-    if (themeId == 'theme6' || themeId == 'theme9') {
+    if (themeId == 'theme9') {
       return _themeBaseCurve(themeId);
     }
     return profile.moveCurve;
@@ -303,7 +303,6 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
     final boardThemeId = ref.watch(chessProvider.select((s) => s.boardThemeId));
 
     // ── Theme-specific special modes (preserved from original overlay) ──
-    final isMatrixTheme = boardThemeId == 'theme6';
     final isElectricTheme = boardThemeId == 'theme9';
     final isToyTheme = boardThemeId == 'theme4';
     final isSteampunkTheme = boardThemeId == 'theme5';
@@ -324,13 +323,7 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
         Offset vibration = Offset.zero;
         double midRotation = 0.0; // radians
 
-        if (isMatrixTheme) {
-          // Matrix: teleport dissolve (unchanged)
-          final noise = math.sin(rawProgress * 80);
-          pieceScale = 0.8 + (0.4 * noise.abs());
-          vibration = Offset(noise * 3, 0);
-          if ((rawProgress * 20).floor() % 2 == 0) pieceScale = 0.0;
-        } else if (isToyTheme &&
+        if (isToyTheme &&
             ref
                 .read(chessProvider.notifier)
                 .isAnimationTypeEnabled('themeEffects')) {
@@ -405,7 +398,6 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
             // ── Trail painter (all non-matrix, non-electric themes) ──
             // Hidden for teleport moves to maintain clean jump feel
             if (!_profile.isTeleport &&
-                !isMatrixTheme &&
                 !isElectricTheme &&
                 ref
                     .read(chessProvider.notifier)
@@ -434,7 +426,7 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
               ),
 
             // ── Bishop ghost trail ──────────────────────────────────
-            if (_profile.hasGhostTrail && !isMatrixTheme)
+            if (_profile.hasGhostTrail)
               for (int i = 1; i <= 4; i++)
                 _buildGhostPiece(progress - (i * 0.05), 0.35 / (i * 1.6)),
 
@@ -448,7 +440,6 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
                 widget.data.rookPieceCode!,
                 _rookProfile!,
                 arc,
-                isMatrixTheme,
                 isToyTheme,
                 isSteampunkTheme,
               ),
@@ -475,7 +466,6 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
     String pieceCode,
     PieceMotionProfile profile,
     double arc,
-    bool isMatrixTheme,
     bool isToyTheme,
     bool isSteampunkTheme,
   ) {
@@ -483,12 +473,7 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
     double lift = 0.0;
     Offset vib = Offset.zero;
 
-    if (isMatrixTheme) {
-      final noise = math.sin(rawProgress * 80);
-      scale = 0.8 + (0.4 * noise.abs());
-      vib = Offset(noise * 3, 0);
-      if ((rawProgress * 20).floor() % 2 == 0) scale = 0.0;
-    } else if (isToyTheme &&
+    if (isToyTheme &&
         ref
             .read(chessProvider.notifier)
             .isAnimationTypeEnabled('themeEffects')) {

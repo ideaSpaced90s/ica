@@ -59,14 +59,6 @@ class BoardTheme {
       pieceSetAsset: 'assets/board/Chess_Pieces_Sprite.png',
     ),
     BoardTheme(
-      id: 'theme6',
-      name: 'Digital Matrix',
-      lightSquare: Color(0xFF013220),
-      darkSquare: Color(0xFF000000),
-      frameColor: Color(0xFF000000),
-      pieceSetAsset: 'assets/board/Chess_Pieces_Sprite.png',
-    ),
-    BoardTheme(
       id: 'theme7',
       name: 'Slate Minimal',
       lightSquare: Color(0xFFE5E7EB), // Soft neutral grey

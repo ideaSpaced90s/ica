@@ -4,7 +4,6 @@ import 'forest_theme.dart';
 import 'ink_theme.dart';
 import 'platinum_theme.dart';
 import 'steampunk_theme.dart';
-import 'matrix_theme.dart';
 import 'slate_theme.dart';
 import 'walnut_theme.dart';
 import 'toy_theme.dart';
@@ -18,7 +17,6 @@ class ThemeRegistry {
     'theme3': const InkTheme(),
     'theme4': const PlatinumTheme(),
     'theme5': const SteampunkTheme(),
-    'theme6': const MatrixTheme(),
     'theme7': const SlateTheme(),
     'theme8': const WalnutTheme(),
     'theme9': const ToyTheme(),

@@ -419,3 +419,218 @@ class _PlatinumCaptureEffectState extends State<PlatinumCaptureEffect>
     );
   }
 }
+
+class PlatinumSpritePiecePainter extends CustomPainter {
+  final chess_lib.PieceType type;
+  final bool isWhite;
+  final bool isHighlighted;
+
+  PlatinumSpritePiecePainter({
+    required this.type,
+    required this.isWhite,
+    this.isHighlighted = false,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Path path = _getPiecePath(type, size);
+
+    if (isWhite) {
+      // White pieces: line-art with pure glowing white interior
+      // 1. Glowing base fill
+      final Paint glowFill = Paint()
+        ..style = PaintingStyle.fill
+        ..color = Colors.white
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8.0);
+      canvas.drawPath(path, glowFill);
+
+      final Paint solidFill = Paint()
+        ..style = PaintingStyle.fill
+        ..color = Colors.white;
+      canvas.drawPath(path, solidFill);
+
+      // 2. Premium dark outline stroke
+      final Paint strokePaint = Paint()
+        ..style = PaintingStyle.stroke
+        ..color = const Color(0xFF1F2937)
+        ..strokeWidth = size.width * 0.05
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round;
+      canvas.drawPath(path, strokePaint);
+    } else {
+      // Black pieces: solid filled silhouette with a subtle cool edge aura
+      // 1. Soft distinct cyan-blue or cool-grey aura to keep solid shapes perfectly legible
+      final Paint auraPaint = Paint()
+        ..style = PaintingStyle.fill
+        ..color = const Color(0xFF38BDF8).withValues(alpha: 0.5)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10.0);
+      canvas.save();
+      canvas.translate(0, 2);
+      canvas.drawPath(path, auraPaint);
+      canvas.restore();
+
+      // 2. Primary solid black body
+      final Paint fillPaint = Paint()
+        ..style = PaintingStyle.fill
+        ..color = const Color(0xFF0F172A);
+      canvas.drawPath(path, fillPaint);
+
+      // Subtle inner rim line for exceptional material feel
+      final Paint innerRim = Paint()
+        ..style = PaintingStyle.stroke
+        ..color = Colors.white.withValues(alpha: 0.15)
+        ..strokeWidth = size.width * 0.015;
+      canvas.drawPath(path, innerRim);
+    }
+  }
+
+  Path _getPiecePath(chess_lib.PieceType type, Size size) {
+    final Path path = Path();
+    final double w = size.width;
+    final double h = size.height;
+    final double midX = w / 2;
+
+    switch (type) {
+      case chess_lib.PieceType.PAWN:
+        // Base
+        path.moveTo(midX - w * 0.25, h * 0.85);
+        path.lineTo(midX + w * 0.25, h * 0.85);
+        path.lineTo(midX + w * 0.2, h * 0.75);
+        path.lineTo(midX - w * 0.2, h * 0.75);
+        path.close();
+        // Stem
+        path.moveTo(midX - w * 0.15, h * 0.75);
+        path.lineTo(midX + w * 0.15, h * 0.75);
+        path.lineTo(midX + w * 0.08, h * 0.45);
+        path.lineTo(midX - w * 0.08, h * 0.45);
+        path.close();
+        // Head sphere
+        path.addOval(Rect.fromCircle(center: Offset(midX, h * 0.32), radius: w * 0.16));
+        break;
+
+      case chess_lib.PieceType.ROOK:
+        // Base
+        path.moveTo(midX - w * 0.3, h * 0.85);
+        path.lineTo(midX + w * 0.3, h * 0.85);
+        path.lineTo(midX + w * 0.25, h * 0.75);
+        path.lineTo(midX - w * 0.25, h * 0.75);
+        path.close();
+        // Body column
+        path.moveTo(midX - w * 0.2, h * 0.75);
+        path.lineTo(midX + w * 0.2, h * 0.75);
+        path.lineTo(midX + w * 0.2, h * 0.4);
+        path.lineTo(midX - w * 0.2, h * 0.4);
+        path.close();
+        // Crenellations (Castle Top)
+        path.moveTo(midX - w * 0.25, h * 0.4);
+        path.lineTo(midX + w * 0.25, h * 0.4);
+        path.lineTo(midX + w * 0.25, h * 0.22);
+        path.lineTo(midX + w * 0.12, h * 0.22);
+        path.lineTo(midX + w * 0.12, h * 0.3);
+        path.lineTo(midX + w * 0.05, h * 0.3);
+        path.lineTo(midX + w * 0.05, h * 0.22);
+        path.lineTo(midX - w * 0.05, h * 0.22);
+        path.lineTo(midX - w * 0.05, h * 0.3);
+        path.lineTo(midX - w * 0.12, h * 0.3);
+        path.lineTo(midX - w * 0.12, h * 0.22);
+        path.lineTo(midX - w * 0.25, h * 0.22);
+        path.close();
+        break;
+
+      case chess_lib.PieceType.KNIGHT:
+        // Base
+        path.moveTo(midX - w * 0.3, h * 0.85);
+        path.lineTo(midX + w * 0.3, h * 0.85);
+        path.lineTo(midX + w * 0.25, h * 0.75);
+        path.lineTo(midX - w * 0.25, h * 0.75);
+        path.close();
+        // Horse profile
+        path.moveTo(midX - w * 0.22, h * 0.75);
+        path.lineTo(midX + w * 0.22, h * 0.75);
+        path.lineTo(midX + w * 0.15, h * 0.55);
+        path.lineTo(midX + w * 0.32, h * 0.42);
+        path.lineTo(midX + w * 0.25, h * 0.22);
+        path.lineTo(midX + w * 0.05, h * 0.18);
+        path.lineTo(midX - w * 0.15, h * 0.32);
+        path.lineTo(midX - w * 0.25, h * 0.32);
+        path.lineTo(midX - w * 0.15, h * 0.52);
+        path.lineTo(midX - w * 0.22, h * 0.75);
+        path.close();
+        // Eye slit
+        path.addOval(Rect.fromCircle(center: Offset(midX + w * 0.08, h * 0.3), radius: w * 0.025));
+        break;
+
+      case chess_lib.PieceType.BISHOP:
+        // Base
+        path.moveTo(midX - w * 0.28, h * 0.85);
+        path.lineTo(midX + w * 0.28, h * 0.85);
+        path.lineTo(midX + w * 0.22, h * 0.75);
+        path.lineTo(midX - w * 0.22, h * 0.75);
+        path.close();
+        // Mitre Oval body
+        path.moveTo(midX - w * 0.2, h * 0.75);
+        path.quadraticBezierTo(midX - w * 0.28, h * 0.45, midX, h * 0.25);
+        path.quadraticBezierTo(midX + w * 0.28, h * 0.45, midX + w * 0.2, h * 0.75);
+        path.close();
+        // Top pearl
+        path.addOval(Rect.fromCircle(center: Offset(midX, h * 0.2), radius: w * 0.04));
+        break;
+
+      case chess_lib.PieceType.QUEEN:
+        // Base
+        path.moveTo(midX - w * 0.32, h * 0.85);
+        path.lineTo(midX + w * 0.32, h * 0.85);
+        path.lineTo(midX + w * 0.25, h * 0.75);
+        path.lineTo(midX - w * 0.25, h * 0.75);
+        path.close();
+        // Crown body flaring to 5 points
+        path.moveTo(midX - w * 0.2, h * 0.75);
+        path.lineTo(midX - w * 0.35, h * 0.32); // Leftmost peak
+        path.lineTo(midX - w * 0.15, h * 0.5);  // Inner dip
+        path.lineTo(midX - w * 0.12, h * 0.25); // Mid-left peak
+        path.lineTo(midX, h * 0.45);            // Center dip
+        path.lineTo(midX + w * 0.12, h * 0.25); // Mid-right peak
+        path.lineTo(midX + w * 0.15, h * 0.5);  // Inner dip
+        path.lineTo(midX + w * 0.35, h * 0.32); // Rightmost peak
+        path.lineTo(midX + w * 0.2, h * 0.75);
+        path.close();
+        // Floating center peak pearl
+        path.addOval(Rect.fromCircle(center: Offset(midX, h * 0.18), radius: w * 0.045));
+        break;
+
+      case chess_lib.PieceType.KING:
+        // Base
+        path.moveTo(midX - w * 0.32, h * 0.85);
+        path.lineTo(midX + w * 0.32, h * 0.85);
+        path.lineTo(midX + w * 0.25, h * 0.75);
+        path.lineTo(midX - w * 0.25, h * 0.75);
+        path.close();
+        // Crown base body
+        path.moveTo(midX - w * 0.22, h * 0.75);
+        path.lineTo(midX - w * 0.28, h * 0.4);
+        path.lineTo(midX - w * 0.1, h * 0.52);
+        path.lineTo(midX, h * 0.35);
+        path.lineTo(midX + w * 0.1, h * 0.52);
+        path.lineTo(midX + w * 0.28, h * 0.4);
+        path.lineTo(midX + w * 0.22, h * 0.75);
+        path.close();
+        // Center top cross
+        final double cx = midX;
+        final double cy = h * 0.22;
+        final double cw = w * 0.04;
+        final double ch = h * 0.12;
+        // Vertical cross bar
+        path.addRect(Rect.fromCenter(center: Offset(cx, cy), width: cw, height: ch));
+        // Horizontal cross bar
+        path.addRect(Rect.fromCenter(center: Offset(cx, cy - h * 0.01), width: ch * 0.8, height: cw));
+        break;
+    }
+    return path;
+  }
+
+  @override
+  bool shouldRepaint(PlatinumSpritePiecePainter oldDelegate) =>
+      oldDelegate.type != type ||
+      oldDelegate.isWhite != isWhite ||
+      oldDelegate.isHighlighted != isHighlighted;
+}
