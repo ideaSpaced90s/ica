@@ -95,6 +95,151 @@ class SettingsPage extends ConsumerWidget {
                 ],
               ),
 
+              // MATCH TYPE & COMPETITIVE SYSTEM
+              _SettingsCategory(
+                title: 'MATCH TYPE',
+                children: [
+                  _SettingsTile(
+                    label: 'Casual / Unrated',
+                    description: 'Relaxed practice. Rating unaffected, visual animations unrestricted.',
+                    icon: Icons.spa_rounded,
+                    iconColor: !state.isRatedMode ? ScholarlyTheme.accentBlue : null,
+                    onTap: () => notifier.setRatedMode(false),
+                    trailing: !state.isRatedMode
+                        ? const Icon(
+                            Icons.check_circle_rounded,
+                            color: ScholarlyTheme.accentBlue,
+                          )
+                        : const SizedBox(),
+                  ),
+                  _SettingsTile(
+                    label: 'Rated Competitive',
+                    description: 'Simulated FIDE Elo tracked. Enforces snappy boards and minimal ambient noise.',
+                    icon: Icons.emoji_events_rounded,
+                    iconColor: state.isRatedMode ? Colors.amber : null,
+                    onTap: () => notifier.setRatedMode(true),
+                    trailing: state.isRatedMode
+                        ? const Icon(
+                            Icons.check_circle_rounded,
+                            color: ScholarlyTheme.accentBlue,
+                          )
+                        : const SizedBox(),
+                  ),
+                  // Rating Overview Premium Card
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            ScholarlyTheme.panelBase.withValues(alpha: 0.6),
+                            ScholarlyTheme.panelBase,
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: state.isRatedMode
+                              ? Colors.amber.withValues(alpha: 0.3)
+                              : ScholarlyTheme.panelStroke,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: state.ratedGamesCount < 10
+                                      ? ScholarlyTheme.accentBlueSoft
+                                      : Colors.amber.withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  state.ratedGamesCount < 10 ? 'PROVISIONAL' : 'OFFICIAL ELO',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: state.ratedGamesCount < 10
+                                        ? ScholarlyTheme.accentBlue
+                                        : Colors.amber.shade300,
+                                  ),
+                                ),
+                              ),
+                              const Spacer(),
+                              if (state.currentWinningStreak > 0)
+                                Row(
+                                  children: [
+                                    const Icon(Icons.local_fire_department_rounded, color: Colors.deepOrangeAccent, size: 16),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      '${state.currentWinningStreak} Streak',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.deepOrangeAccent,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.baseline,
+                            textBaseline: TextBaseline.alphabetic,
+                            children: [
+                              Text(
+                                '${state.userFideRating}',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.bold,
+                                  color: ScholarlyTheme.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'ELO',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: ScholarlyTheme.textMuted,
+                                ),
+                              ),
+                              const Spacer(),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    '${state.ratedGamesCount}',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: ScholarlyTheme.textPrimary,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Games Played',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 10,
+                                      color: ScholarlyTheme.textSubtle,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
               // PREFERENCES
               _SettingsCategory(
                 title: 'PREFERENCES',
@@ -161,6 +306,7 @@ class SettingsPage extends ConsumerWidget {
                         : Icons.auto_awesome_outlined,
                     value: state.isAnimationsEnabled,
                     onChanged: (v) => notifier.toggleAnimations(),
+                    enabled: !state.isRatedMode,
                   ),
                 ],
               ),
@@ -636,6 +782,7 @@ class SettingsPage extends ConsumerWidget {
                                 'pieceMotion',
                                 v,
                               ),
+                              enabled: !state.isRatedMode,
                             ),
                             _AnimationToggle(
                               icon: Icons.waves_rounded,
@@ -648,6 +795,7 @@ class SettingsPage extends ConsumerWidget {
                                 'feedback',
                                 v,
                               ),
+                              enabled: !state.isRatedMode,
                             ),
                             _AnimationToggle(
                               icon: Icons.stars_rounded,
@@ -660,6 +808,7 @@ class SettingsPage extends ConsumerWidget {
                                 'indicators',
                                 v,
                               ),
+                              enabled: !state.isRatedMode,
                             ),
                             _AnimationToggle(
                               icon: Icons.flare_rounded,
@@ -673,6 +822,7 @@ class SettingsPage extends ConsumerWidget {
                                 'themeEffects',
                                 v,
                               ),
+                              enabled: !state.isRatedMode,
                             ),
                             _AnimationToggle(
                               icon: Icons.blur_on_rounded,
@@ -686,6 +836,7 @@ class SettingsPage extends ConsumerWidget {
                                 'themeAmbience',
                                 v,
                               ),
+                              enabled: !state.isRatedMode,
                             ),
                             _AnimationToggle(
                               icon: Icons.speed_rounded,
@@ -699,6 +850,7 @@ class SettingsPage extends ConsumerWidget {
                                 'kineticImpact',
                                 v,
                               ),
+                              enabled: !state.isRatedMode,
                             ),
 
                             const SizedBox(height: 16),
@@ -1117,6 +1269,7 @@ class _SettingsSwitchTile extends StatelessWidget {
   final IconData icon;
   final bool value;
   final ValueChanged<bool> onChanged;
+  final bool enabled;
 
   const _SettingsSwitchTile({
     required this.label,
@@ -1124,41 +1277,56 @@ class _SettingsSwitchTile extends StatelessWidget {
     required this.icon,
     required this.value,
     required this.onChanged,
+    this.enabled = true,
   });
 
   @override
   Widget build(BuildContext context) {
-    return SwitchListTile(
-      value: value,
-      onChanged: onChanged,
-      secondary: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: value
-              ? ScholarlyTheme.accentBlueSoft
-              : ScholarlyTheme.backgroundStart,
-          borderRadius: BorderRadius.circular(12),
+    return Opacity(
+      opacity: enabled ? 1.0 : 0.4,
+      child: SwitchListTile(
+        value: value,
+        onChanged: (v) {
+          if (!enabled) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Animations are locked to minimal during Rated play for maximum board responsiveness.'),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+            return;
+          }
+          onChanged(v);
+        },
+        secondary: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: value
+                ? ScholarlyTheme.accentBlueSoft
+                : ScholarlyTheme.backgroundStart,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(
+            icon,
+            color: value ? ScholarlyTheme.accentBlue : ScholarlyTheme.textPrimary,
+            size: 20,
+          ),
         ),
-        child: Icon(
-          icon,
-          color: value ? ScholarlyTheme.accentBlue : ScholarlyTheme.textPrimary,
-          size: 20,
+        title: Text(
+          label,
+          style: GoogleFonts.inter(
+            color: ScholarlyTheme.textPrimary,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
         ),
-      ),
-      title: Text(
-        label,
-        style: GoogleFonts.inter(
-          color: ScholarlyTheme.textPrimary,
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
+        subtitle: Text(
+          description,
+          style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 11),
         ),
+        activeThumbColor: ScholarlyTheme.accentBlue,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       ),
-      subtitle: Text(
-        description,
-        style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 11),
-      ),
-      activeThumbColor: ScholarlyTheme.accentBlue,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
     );
   }
 }
@@ -1201,6 +1369,7 @@ class _AnimationToggle extends StatelessWidget {
   final String description;
   final bool value;
   final ValueChanged<bool> onChanged;
+  final bool enabled;
 
   const _AnimationToggle({
     required this.icon,
@@ -1208,76 +1377,102 @@ class _AnimationToggle extends StatelessWidget {
     required this.description,
     required this.value,
     required this.onChanged,
+    this.enabled = true,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        onTap: () => onChanged(!value),
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: value
-                ? ScholarlyTheme.accentBlue.withValues(alpha: 0.1)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
+    return Opacity(
+      opacity: enabled ? 1.0 : 0.4,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: InkWell(
+          onTap: () {
+            if (!enabled) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Animations are locked to minimal during Rated play for maximum board responsiveness.'),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+              return;
+            }
+            onChanged(!value);
+          },
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
               color: value
-                  ? ScholarlyTheme.accentBlue.withValues(alpha: 0.3)
+                  ? ScholarlyTheme.accentBlue.withValues(alpha: 0.1)
                   : Colors.transparent,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: value
+                    ? ScholarlyTheme.accentBlue.withValues(alpha: 0.3)
+                    : Colors.transparent,
+              ),
             ),
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: ScholarlyTheme.panelBase,
-                  borderRadius: BorderRadius.circular(8),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: ScholarlyTheme.panelBase,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: value
+                        ? ScholarlyTheme.accentBlue
+                        : ScholarlyTheme.textMuted,
+                    size: 20,
+                  ),
                 ),
-                child: Icon(
-                  icon,
-                  color: value
-                      ? ScholarlyTheme.accentBlue
-                      : ScholarlyTheme.textMuted,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
-                      style: GoogleFonts.inter(
-                        color: ScholarlyTheme.textPrimary,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        label,
+                        style: GoogleFonts.inter(
+                          color: ScholarlyTheme.textPrimary,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                    Text(
-                      description,
-                      style: GoogleFonts.inter(
-                        color: ScholarlyTheme.textMuted,
-                        fontSize: 10,
+                      Text(
+                        description,
+                        style: GoogleFonts.inter(
+                          color: ScholarlyTheme.textMuted,
+                          fontSize: 10,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              Switch(
-                value: value,
-                onChanged: onChanged,
-                activeThumbColor: ScholarlyTheme.accentBlue,
-                activeTrackColor: ScholarlyTheme.accentBlue.withValues(
-                  alpha: 0.3,
+                Switch(
+                  value: value,
+                  onChanged: (v) {
+                    if (!enabled) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Animations are locked to minimal during Rated play for maximum board responsiveness.'),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                      return;
+                    }
+                    onChanged(v);
+                  },
+                  activeThumbColor: ScholarlyTheme.accentBlue,
+                  activeTrackColor: ScholarlyTheme.accentBlue.withValues(
+                    alpha: 0.3,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

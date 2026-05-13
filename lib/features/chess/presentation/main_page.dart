@@ -372,12 +372,14 @@ class _MainPageState extends ConsumerState<MainPage>
                 ),
               ),
               // Bottom-Right: Switchable User/Bot indicator
-              state.isEngineVsEngine
-                  ? OpponentAvatarIndicator(
-                      avatar: AiAvatar.getAvatar(state.bottomAvatarId),
-                      onTap: () => showAvatarSelectionSheet(context, ref, isBottomSlot: true),
-                    )
-                  : const _UserAvatarIndicator(),
+              Flexible(
+                child: state.isEngineVsEngine
+                    ? OpponentAvatarIndicator(
+                        avatar: AiAvatar.getAvatar(state.bottomAvatarId),
+                        onTap: () => showAvatarSelectionSheet(context, ref, isBottomSlot: true),
+                      )
+                    : const _UserAvatarIndicator(),
+              ),
             ],
           ),
         ),
@@ -874,14 +876,14 @@ class _VerticalEvaluationBar extends StatelessWidget {
   }
 }
 
-class _UserAvatarIndicator extends StatefulWidget {
+class _UserAvatarIndicator extends ConsumerStatefulWidget {
   const _UserAvatarIndicator();
 
   @override
-  State<_UserAvatarIndicator> createState() => _UserAvatarIndicatorState();
+  ConsumerState<_UserAvatarIndicator> createState() => _UserAvatarIndicatorState();
 }
 
-class _UserAvatarIndicatorState extends State<_UserAvatarIndicator> {
+class _UserAvatarIndicatorState extends ConsumerState<_UserAvatarIndicator> {
   bool _isExpanded = false;
   Timer? _collapseTimer;
 
@@ -909,6 +911,11 @@ class _UserAvatarIndicatorState extends State<_UserAvatarIndicator> {
 
   @override
   Widget build(BuildContext context) {
+    final state = ref.watch(chessProvider);
+    final isRated = state.isRatedMode;
+    final primaryColor = isRated ? Colors.amber : ScholarlyTheme.textMuted;
+    final bgColor = isRated ? Colors.amber.withValues(alpha: 0.15) : ScholarlyTheme.panelStroke;
+
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: _handleTap,
@@ -916,113 +923,122 @@ class _UserAvatarIndicatorState extends State<_UserAvatarIndicator> {
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOutCubic,
         padding: EdgeInsets.symmetric(
-          horizontal: _isExpanded ? 12 : 6,
-          vertical: _isExpanded ? 8 : 6,
+          horizontal: _isExpanded ? 12 : 8,
+          vertical: 6,
         ),
         decoration: ScholarlyTheme.modernDecoration().copyWith(
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: ScholarlyTheme.accentBlue.withValues(alpha: _isExpanded ? 0.5 : 0.8),
+            color: primaryColor.withValues(alpha: _isExpanded ? 0.8 : 0.4),
             width: 1.5,
           ),
           boxShadow: [
-            BoxShadow(
-              color: ScholarlyTheme.accentBlue.withValues(alpha: 0.1),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
+            if (isRated)
+              BoxShadow(
+                color: Colors.amber.withValues(alpha: 0.1),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
           ],
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Styled Avatar Icon ring
-            Container(
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
-                color: ScholarlyTheme.accentBlue.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: ScholarlyTheme.accentBlue,
-                  width: 1.5,
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          physics: const NeverScrollableScrollPhysics(),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Styled Avatar Icon ring
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: bgColor,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: primaryColor,
+                    width: 1.5,
+                  ),
+                ),
+                child: Icon(
+                  isRated ? Icons.emoji_events_rounded : Icons.person_outline_rounded,
+                  color: primaryColor,
+                  size: 16,
                 ),
               ),
-              child: const Icon(
-                Icons.person_rounded,
-                color: ScholarlyTheme.accentBlue,
-                size: 18,
+              const SizedBox(width: 8),
+              // Always visible tiny rating/status pill
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: primaryColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                    color: primaryColor.withValues(alpha: 0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Text(
+                  isRated ? '${state.userFideRating} ELO' : 'UNRATED',
+                  style: GoogleFonts.jetBrainsMono(
+                    color: primaryColor,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
-            ),
-            // Expanding Contents
-            AnimatedSize(
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeInOutCubic,
-              child: _isExpanded
-                  ? Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const SizedBox(width: 10),
-                        // Name & Subtitle
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  'Player',
-                                  style: GoogleFonts.inter(
-                                    color: ScholarlyTheme.textPrimary,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
+              // Expanding Contents
+              AnimatedSize(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOutCubic,
+                child: _isExpanded
+                    ? Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const SizedBox(width: 8),
+                          // Name & Subtitle
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    isRated ? 'Competitor' : 'Casual Player',
+                                    style: GoogleFonts.inter(
+                                      color: ScholarlyTheme.textPrimary,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 4),
-                                const Icon(
-                                  Icons.star_rounded,
-                                  color: ScholarlyTheme.accentYellow,
-                                  size: 12,
-                                ),
-                              ],
-                            ),
-                            Text(
-                              'Human Challenger',
-                              style: GoogleFonts.inter(
-                                color: ScholarlyTheme.textMuted,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w500,
+                                  if (state.currentWinningStreak > 0 && isRated) ...[
+                                    const SizedBox(width: 4),
+                                    const Icon(
+                                      Icons.local_fire_department_rounded,
+                                      color: Colors.deepOrangeAccent,
+                                      size: 12,
+                                    ),
+                                  ],
+                                ],
                               ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(width: 12),
-                        // FIDE Rating Badge Placeholder
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: ScholarlyTheme.textPrimary.withValues(alpha: 0.05),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(
-                              color: ScholarlyTheme.panelStroke,
-                              width: 1,
-                            ),
+                              Text(
+                                isRated
+                                    ? 'Games: ${state.ratedGamesCount}'
+                                    : 'Stats Disabled',
+                                style: GoogleFonts.inter(
+                                  color: ScholarlyTheme.textMuted,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
                           ),
-                          child: Text(
-                            'FIDE ~1500',
-                            style: GoogleFonts.jetBrainsMono(
-                              color: ScholarlyTheme.accentYellow,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ],
-                    )
-                  : const SizedBox.shrink(),
-            ),
-          ],
+                        ],
+                      )
+                    : const SizedBox.shrink(),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -18,6 +18,10 @@ class AppSettings {
   final int incrementSeconds;
   final Map<String, bool> animationSettings;
   final String gameMode;
+  final bool isRatedMode;
+  final int userFideRating;
+  final int ratedGamesCount;
+  final int currentWinningStreak;
 
   AppSettings({
     this.boardThemeId = 'classic',
@@ -32,6 +36,10 @@ class AppSettings {
     this.totalTimeMinutes = 10,
     this.incrementSeconds = 0,
     this.gameMode = 'classic',
+    this.isRatedMode = true,
+    this.userFideRating = 1200,
+    this.ratedGamesCount = 0,
+    this.currentWinningStreak = 0,
     this.animationSettings = const {
       'pieceMotion': true,
       'feedback': true,
@@ -55,6 +63,10 @@ class AppSettings {
     'totalTimeMinutes': totalTimeMinutes,
     'incrementSeconds': incrementSeconds,
     'gameMode': gameMode,
+    'isRatedMode': isRatedMode,
+    'userFideRating': userFideRating,
+    'ratedGamesCount': ratedGamesCount,
+    'currentWinningStreak': currentWinningStreak,
     'animationSettings': animationSettings,
   };
 
@@ -98,6 +110,10 @@ class AppSettings {
       totalTimeMinutes: json['totalTimeMinutes'] ?? 10,
       incrementSeconds: json['incrementSeconds'] ?? 0,
       gameMode: json['gameMode'] ?? 'classic',
+      isRatedMode: json['isRatedMode'] ?? true,
+      userFideRating: json['userFideRating'] ?? 1200,
+      ratedGamesCount: json['ratedGamesCount'] ?? 0,
+      currentWinningStreak: json['currentWinningStreak'] ?? 0,
       animationSettings: json['animationSettings'] != null
           ? Map<String, bool>.from(json['animationSettings'])
           : const {

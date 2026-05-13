@@ -60,6 +60,10 @@ class _BoardSnapshot {
     required this.isPlayerWhite,
     required this.isBoardFlipped,
     required this.gameMode,
+    required this.isRatedMode,
+    required this.userFideRating,
+    required this.ratedGamesCount,
+    required this.currentWinningStreak,
   });
 
   final String fen;
@@ -93,6 +97,10 @@ class _BoardSnapshot {
   final bool isPlayerWhite;
   final bool isBoardFlipped;
   final String gameMode;
+  final bool isRatedMode;
+  final int userFideRating;
+  final int ratedGamesCount;
+  final int currentWinningStreak;
 }
 
 class MoveAnimationData {
@@ -189,6 +197,10 @@ class ChessState {
     this.isCouncilOnline = false,
     this.baseTimeDuration = _initialClock,
     this.gameMode = 'classic',
+    this.isRatedMode = true,
+    this.userFideRating = 1200,
+    this.ratedGamesCount = 0,
+    this.currentWinningStreak = 0,
   });
 
   final ChessGame game;
@@ -252,6 +264,10 @@ class ChessState {
   final bool isCouncilOnline;
   final Duration baseTimeDuration;
   final String gameMode;
+  final bool isRatedMode;
+  final int userFideRating;
+  final int ratedGamesCount;
+  final int currentWinningStreak;
 
   bool get isChess960 => gameMode == 'chess960';
 
@@ -328,6 +344,10 @@ class ChessState {
     bool? isCouncilOnline,
     Duration? baseTimeDuration,
     String? gameMode,
+    bool? isRatedMode,
+    int? userFideRating,
+    int? ratedGamesCount,
+    int? currentWinningStreak,
   }) {
     return ChessState(
       game: game ?? this.game,
@@ -419,6 +439,10 @@ class ChessState {
       isCouncilOnline: isCouncilOnline ?? this.isCouncilOnline,
       baseTimeDuration: baseTimeDuration ?? this.baseTimeDuration,
       gameMode: gameMode ?? this.gameMode,
+      isRatedMode: isRatedMode ?? this.isRatedMode,
+      userFideRating: userFideRating ?? this.userFideRating,
+      ratedGamesCount: ratedGamesCount ?? this.ratedGamesCount,
+      currentWinningStreak: currentWinningStreak ?? this.currentWinningStreak,
     );
   }
 }
@@ -477,6 +501,10 @@ class ChessNotifier extends StateNotifier<ChessState> {
         blackTimeLeft: Duration(minutes: s.totalTimeMinutes),
         incrementDuration: Duration(seconds: s.incrementSeconds),
         gameMode: s.gameMode,
+        isRatedMode: s.isRatedMode,
+        userFideRating: s.userFideRating,
+        ratedGamesCount: s.ratedGamesCount,
+        currentWinningStreak: s.currentWinningStreak,
       );
       await _engine.setChess960Mode(is960);
       final avatar = AiAvatar.getAvatar(s.engineLevel);
@@ -507,6 +535,10 @@ class ChessNotifier extends StateNotifier<ChessState> {
         totalTimeMinutes: state.baseTimeDuration.inMinutes,
         incrementSeconds: state.incrementDuration.inSeconds,
         gameMode: state.gameMode,
+        isRatedMode: state.isRatedMode,
+        userFideRating: state.userFideRating,
+        ratedGamesCount: state.ratedGamesCount,
+        currentWinningStreak: state.currentWinningStreak,
       );
       await _settingsRepository.saveSettings(s);
     } catch (e) {
@@ -518,6 +550,16 @@ class ChessNotifier extends StateNotifier<ChessState> {
     final is960 = mode == 'chess960';
     state = state.copyWith(gameMode: mode);
     await _engine.setChess960Mode(is960);
+    await _saveSettings();
+    await reset();
+  }
+
+  Future<void> setRatedMode(bool isRated) async {
+    if (state.isRatedMode == isRated) return;
+    if (state.recentMoves.isNotEmpty) {
+      await saveCurrentGame();
+    }
+    state = state.copyWith(isRatedMode: isRated);
     await _saveSettings();
     await reset();
   }
@@ -589,6 +631,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
   }
 
   bool isAnimationTypeEnabled(String key) {
+    if (state.isRatedMode) {
+      return key == 'pieceMotion';
+    }
     return state.isAnimationsEnabled && (state.animationSettings[key] ?? true);
   }
 
@@ -904,7 +949,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
         _maxThinkingTimer = null;
         _engineMoveTimer?.cancel();
 
-        if (state.isAnimationsEnabled) {
+        if (state.isAnimationsEnabled && !state.isRatedMode) {
           final now = DateTime.now();
           final elapsed = now
               .difference(_engineStartTime ?? now)
@@ -980,6 +1025,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
         customName: customName,
         isFavorite: isFavorite,
         gameMode: state.gameMode,
+        isRatedMode: state.isRatedMode,
       );
 
       final saves = isUpdate
@@ -1098,6 +1144,10 @@ class ChessNotifier extends StateNotifier<ChessState> {
       animationSettings: state.animationSettings,
       loadedSaveId: entry.id,
       gameMode: entry.gameMode,
+      isRatedMode: entry.isRatedMode,
+      userFideRating: state.userFideRating,
+      ratedGamesCount: state.ratedGamesCount,
+      currentWinningStreak: state.currentWinningStreak,
     );
 
     _syncUndoRedoFlags();
@@ -1160,6 +1210,10 @@ class ChessNotifier extends StateNotifier<ChessState> {
       isPlayerWhite: state.isPlayerWhite,
       isBoardFlipped: state.isBoardFlipped,
       gameMode: state.gameMode,
+      isRatedMode: state.isRatedMode,
+      userFideRating: state.userFideRating,
+      ratedGamesCount: state.ratedGamesCount,
+      currentWinningStreak: state.currentWinningStreak,
     );
   }
 
@@ -1202,6 +1256,10 @@ class ChessNotifier extends StateNotifier<ChessState> {
       isPlayerWhite: snapshot.isPlayerWhite,
       isBoardFlipped: snapshot.isBoardFlipped,
       gameMode: snapshot.gameMode,
+      isRatedMode: snapshot.isRatedMode,
+      userFideRating: snapshot.userFideRating,
+      ratedGamesCount: snapshot.ratedGamesCount,
+      currentWinningStreak: snapshot.currentWinningStreak,
     );
     _syncUndoRedoFlags();
     if (state.clockStarted) {
@@ -1746,6 +1804,45 @@ class ChessNotifier extends StateNotifier<ChessState> {
       unawaited(_soundService.duckBgmTemporarily());
     }
     _playMoveSound();
+
+    // Perform Elo rating adjustments if match concluded in Rated Mode
+    if (state.isRatedMode && !state.isEngineVsEngine && state.game.gameOver) {
+      double actualScore = 0.5; // Draw
+      if (state.game.inCheckmate) {
+        final winnerIsWhite = player == 'White';
+        final humanWon = winnerIsWhite == state.isPlayerWhite;
+        actualScore = humanWon ? 1.0 : 0.0;
+      }
+
+      final avatar = AiAvatar.getAvatar(state.engineLevel);
+      final ratingA = state.userFideRating;
+      final ratingB = avatar.rating;
+
+      final expectedScoreA = 1.0 / (1.0 + math.pow(10.0, (ratingB - ratingA) / 400.0));
+      final kFactor = state.ratedGamesCount < 10 ? 40 : 20;
+
+      int streak = state.currentWinningStreak;
+      int streakBonus = 0;
+      if (actualScore == 1.0) {
+        streak += 1;
+        if (streak >= 3) {
+          streakBonus = 5;
+        }
+      } else {
+        streak = 0;
+      }
+
+      final newRatingRaw = ratingA + (kFactor * (actualScore - expectedScoreA)).round() + streakBonus;
+      final newRating = math.max(400, newRatingRaw);
+      final newCount = state.ratedGamesCount + 1;
+
+      state = state.copyWith(
+        userFideRating: newRating,
+        ratedGamesCount: newCount,
+        currentWinningStreak: streak,
+      );
+      _saveSettings();
+    }
   }
 
   chess_lib.Move? _lastMoveFromHistory() {
@@ -2152,6 +2249,10 @@ class ChessNotifier extends StateNotifier<ChessState> {
     final preserveIncrement = state.incrementDuration;
     final baseTime = state.baseTimeDuration;
     final preserveMode = state.gameMode;
+    final preserveRated = state.isRatedMode;
+    final preserveRating = state.userFideRating;
+    final preserveCount = state.ratedGamesCount;
+    final preserveStreak = state.currentWinningStreak;
 
     final is960 = preserveMode == 'chess960';
     await _engine.setChess960Mode(is960);
@@ -2190,6 +2291,10 @@ class ChessNotifier extends StateNotifier<ChessState> {
       pendingEngineMove: null, // Clear pending move on reset
       isGameOverDismissed: false,
       gameMode: preserveMode,
+      isRatedMode: preserveRated,
+      userFideRating: preserveRating,
+      ratedGamesCount: preserveCount,
+      currentWinningStreak: preserveStreak,
     );
 
     _syncUndoRedoFlags();

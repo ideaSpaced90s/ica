@@ -23,6 +23,16 @@ class AiAvatar {
     required this.color,
   });
 
+  int get rating {
+    final cleanRange = fideRatingRange.replaceAll('+', '').split('-');
+    if (cleanRange.isNotEmpty) {
+      final low = int.tryParse(cleanRange[0].trim()) ?? 1500;
+      final high = cleanRange.length > 1 ? int.tryParse(cleanRange[1].trim()) ?? low : low;
+      return ((low + high) / 2).round();
+    }
+    return 1500;
+  }
+
   static const List<AiAvatar> avatars = [
     AiAvatar(
       id: 'avatar_0',

@@ -119,6 +119,8 @@ class _HistoryCardState extends State<HistoryCard> {
                             'B',
                             Duration(milliseconds: widget.game.blackTimeLeftMs),
                           ),
+                          const SizedBox(width: 8),
+                          _buildModeBadge(widget.game.isRatedMode),
                         ],
                       ),
                     ),
@@ -179,6 +181,38 @@ class _HistoryCardState extends State<HistoryCard> {
           fontSize: 9,
           fontWeight: FontWeight.bold,
         ),
+      ),
+    );
+  }
+
+  Widget _buildModeBadge(bool isRated) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: isRated ? Colors.amber.withValues(alpha: 0.15) : ScholarlyTheme.panelBase,
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(
+          color: isRated ? Colors.amber : ScholarlyTheme.panelStroke,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isRated ? Icons.emoji_events_rounded : Icons.spa_rounded,
+            size: 10,
+            color: isRated ? Colors.amber : ScholarlyTheme.textSubtle,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            isRated ? 'RATED' : 'CASUAL',
+            style: GoogleFonts.jetBrainsMono(
+              color: isRated ? Colors.amber : ScholarlyTheme.textSubtle,
+              fontSize: 9,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
       ),
     );
   }
