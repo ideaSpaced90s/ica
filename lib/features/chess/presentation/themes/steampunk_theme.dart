@@ -3,6 +3,7 @@ import 'chess_theme.dart';
 
 import '../widgets/grease_theme.dart';
 import '../widgets/grease_effects.dart';
+import '../widgets/steampunk_theme_painter.dart';
 
 class SteampunkTheme extends ChessTheme {
   const SteampunkTheme() : super(id: 'theme5', name: 'Steampunk');
@@ -49,11 +50,11 @@ class SteampunkTheme extends ChessTheme {
     return AspectRatio(
       aspectRatio: 1,
       child: CustomPaint(
-        painter: IndustrialPiecePainter(
+        painter: SteampunkPiecePainter(
           type: type.toUpperCase(),
           isWhite: isWhite,
-          rotation:
-              animationValue, // Re-using animationValue for rotation if needed
+          isHighlighted: isHighlighted,
+          rotation: animationValue,
         ),
       ),
     );
