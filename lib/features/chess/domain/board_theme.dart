@@ -85,7 +85,7 @@ class BoardTheme {
     BoardTheme(
       id: 'theme10',
       name: 'Shadow High-Contrast',
-      lightSquare: Color(0xFF1C1C1C),
+      lightSquare: Color(0xFF3C3C3C),
       darkSquare: Color(0xFF000000),
       frameColor: Color(0xFF000000),
       pieceSetAsset: 'assets/board/Chess_Pieces_Sprite.png',

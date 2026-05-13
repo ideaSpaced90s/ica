@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class ContrastUtility {
   // Board Colors
   static const Color pureDarkBase = Color(0xFF000000);
-  static const Color lightSquare = Color(0xFF1C1C1C);
+  static const Color lightSquare = Color(0xFF3C3C3C);
   static const Color darkSquare = Color(0xFF000000);
   static const Color gridLine = Color(0xFF2A2A2A);
 

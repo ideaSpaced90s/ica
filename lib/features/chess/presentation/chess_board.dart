@@ -234,25 +234,24 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
                                               chessTheme.id == 'theme9'
                                           ? BorderRadius.circular(10)
                                           : null,
-                                      border: chessTheme.id == 'theme10'
-                                          ? Border.all(
-                                              color: const Color(0xFF2A2A2A),
-                                              width: 1.0,
-                                            )
-                                          : Border.all(
-                                              color: isSelected
-                                                  ? (chessTheme.id == 'theme2'
-                                                        ? Colors.transparent
-                                                        : ScholarlyTheme
-                                                              .accentGold)
-                                                  : isDragHover
-                                                  ? ScholarlyTheme
-                                                        .accentBlueSoft
-                                                  : Colors.transparent,
-                                              width: isSelected || isDragHover
-                                                  ? 3.0
-                                                  : 0.0,
-                                            ),
+                                      border: chessTheme.getSquareBorder(
+                                            isSelected,
+                                            isDragHover,
+                                          ) ??
+                                          Border.all(
+                                            color: isSelected
+                                                ? (chessTheme.id == 'theme2'
+                                                      ? Colors.transparent
+                                                      : ScholarlyTheme
+                                                            .accentGold)
+                                                : isDragHover
+                                                ? ScholarlyTheme
+                                                      .accentBlueSoft
+                                                : Colors.transparent,
+                                            width: isSelected || isDragHover
+                                                ? 3.0
+                                                : 0.0,
+                                          ),
                                     ),
                                     child: Material(
                                       color: Colors.transparent,

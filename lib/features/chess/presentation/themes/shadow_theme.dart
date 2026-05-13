@@ -6,7 +6,7 @@ class ShadowTheme extends ChessTheme {
   const ShadowTheme() : super(id: 'theme10', name: 'Shadow');
 
   @override
-  Color get lightSquare => const Color(0xFF1C1C1C);
+  Color get lightSquare => const Color(0xFF3C3C3C);
 
   @override
   Color get darkSquare => const Color(0xFF000000);
@@ -37,7 +37,7 @@ class ShadowTheme extends ChessTheme {
 
   @override
   Border? getSquareBorder(bool isSelected, bool isDragHover) {
-    return Border.all(color: const Color(0xFF2A2A2A), width: 1.0);
+    return null;
   }
 
   @override
