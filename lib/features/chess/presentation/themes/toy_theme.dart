@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'chess_theme.dart';
 import '../widgets/toy_effects.dart';
-import '../widgets/electric_effects.dart';
-import '../widgets/electric_theme_painter.dart';
 import '../widgets/cartoon_toy_painter.dart';
 
 class ToyTheme extends ChessTheme {
@@ -29,9 +27,7 @@ class ToyTheme extends ChessTheme {
   @override
   Widget buildBackground(BuildContext context, bool animationsEnabled) {
     if (!animationsEnabled) return const SizedBox.shrink();
-    return const Stack(
-      children: [FloatingBubblesOverlay(), StaticDischargeOverlay()],
-    );
+    return const FloatingBubblesOverlay();
   }
 
   @override
@@ -57,10 +53,7 @@ class ToyTheme extends ChessTheme {
 
   @override
   CustomPainter? getSquarePainter(bool isLight, double animationValue) {
-    return ElectricGridPainter(
-      isLight: isLight,
-      animationValue: animationValue,
-    );
+    return null;
   }
 
   @override
@@ -106,13 +99,7 @@ class ToyTheme extends ChessTheme {
 
   @override
   Widget buildSelectionEffect(BuildContext context, double animationValue) {
-    return CustomPaint(
-      painter: EnergySurgePainter(
-        animationValue: animationValue,
-        color: const Color(0xFF00BFFF),
-      ),
-      size: Size.infinite,
-    );
+    return const SizedBox.shrink();
   }
 
   @override

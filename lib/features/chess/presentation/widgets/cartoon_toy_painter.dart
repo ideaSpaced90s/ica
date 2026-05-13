@@ -153,12 +153,13 @@ class CartoonToyPiecePainter extends CustomPainter {
 
   Path _queenPath(Offset center, double radius) {
     final path = Path();
+    // Double-tiered elegant foundation
     path.addRRect(
       RRect.fromRectAndRadius(
         Rect.fromCenter(
-          center: center + Offset(0, radius * 0.7),
-          width: radius * 1.3,
-          height: radius * 0.4,
+          center: center + Offset(0, radius * 0.75),
+          width: radius * 1.25,
+          height: radius * 0.3,
         ),
         const Radius.circular(8),
       ),
@@ -166,22 +167,71 @@ class CartoonToyPiecePainter extends CustomPainter {
     path.addRRect(
       RRect.fromRectAndRadius(
         Rect.fromCenter(
+          center: center + Offset(0, radius * 0.55),
+          width: radius * 0.95,
+          height: radius * 0.25,
+        ),
+        const Radius.circular(6),
+      ),
+    );
+    // Smooth slender core
+    path.addRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(
           center: center + Offset(0, radius * 0.1),
-          width: radius * 0.75,
-          height: radius * 1.1,
+          width: radius * 0.55,
+          height: radius * 0.85,
         ),
         const Radius.circular(15),
       ),
     );
-    // Spiky Crown (Rounded)
-    for (int i = -2; i <= 2; i++) {
-      path.addOval(
-        Rect.fromCircle(
-          center: center + Offset(i * radius * 0.2, -radius * 0.55),
-          radius: radius * 0.15,
-        ),
-      );
-    }
+    // Small connecting band
+    path.addOval(
+      Rect.fromCenter(
+        center: center - Offset(0, radius * 0.32),
+        width: radius * 0.75,
+        height: radius * 0.2,
+      ),
+    );
+    // Magnificent 5-lobed majestic fan/coronet fanning upward and outward
+    // Outer lobes
+    path.addOval(
+      Rect.fromCenter(
+        center: center - Offset(radius * 0.42, radius * 0.48),
+        width: radius * 0.25,
+        height: radius * 0.4,
+      ),
+    );
+    path.addOval(
+      Rect.fromCenter(
+        center: center - Offset(-radius * 0.42, radius * 0.48),
+        width: radius * 0.25,
+        height: radius * 0.4,
+      ),
+    );
+    // Mid lobes
+    path.addOval(
+      Rect.fromCenter(
+        center: center - Offset(radius * 0.22, radius * 0.58),
+        width: radius * 0.28,
+        height: radius * 0.48,
+      ),
+    );
+    path.addOval(
+      Rect.fromCenter(
+        center: center - Offset(-radius * 0.22, radius * 0.58),
+        width: radius * 0.28,
+        height: radius * 0.48,
+      ),
+    );
+    // Center tallest plume/lobe
+    path.addOval(
+      Rect.fromCenter(
+        center: center - Offset(0, radius * 0.7),
+        width: radius * 0.32,
+        height: radius * 0.58,
+      ),
+    );
     return path;
   }
 
@@ -261,35 +311,73 @@ class CartoonToyPiecePainter extends CustomPainter {
 
   Path _rookPath(Offset center, double radius) {
     final path = Path();
+    // Solid Foundation Base
     path.addRRect(
       RRect.fromRectAndRadius(
         Rect.fromCenter(
           center: center + Offset(0, radius * 0.7),
-          width: radius * 1.2,
-          height: radius * 0.4,
+          width: radius * 1.3,
+          height: radius * 0.35,
+        ),
+        const Radius.circular(6),
+      ),
+    );
+    // Straight Column Body
+    path.addRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: center + Offset(0, radius * 0.15),
+          width: radius * 0.95,
+          height: radius * 0.9,
+        ),
+        const Radius.circular(8),
+      ),
+    );
+    // Main Battlement Ledge
+    path.addRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: center - Offset(0, radius * 0.35),
+          width: radius * 1.25,
+          height: radius * 0.25,
         ),
         const Radius.circular(4),
       ),
     );
+    // Three Distinct Merlons (Crenellations)
+    final toothWidth = radius * 0.28;
+    final toothHeight = radius * 0.25;
+    // Left tooth
     path.addRRect(
       RRect.fromRectAndRadius(
         Rect.fromCenter(
-          center: center + Offset(0, radius * 0.05),
-          width: radius * 1.0,
-          height: radius * 1.0,
+          center: center - Offset(radius * 0.45, radius * 0.55),
+          width: toothWidth,
+          height: toothHeight,
         ),
-        const Radius.circular(12),
+        const Radius.circular(2),
       ),
     );
-    // Battlement
+    // Center tooth
     path.addRRect(
       RRect.fromRectAndRadius(
         Rect.fromCenter(
           center: center - Offset(0, radius * 0.55),
-          width: radius * 1.2,
-          height: radius * 0.35,
+          width: toothWidth,
+          height: toothHeight,
         ),
-        const Radius.circular(6),
+        const Radius.circular(2),
+      ),
+    );
+    // Right tooth
+    path.addRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: center - Offset(-radius * 0.45, radius * 0.55),
+          width: toothWidth,
+          height: toothHeight,
+        ),
+        const Radius.circular(2),
       ),
     );
     return path;
