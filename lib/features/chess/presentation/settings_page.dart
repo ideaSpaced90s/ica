@@ -289,7 +289,10 @@ class SettingsPage extends ConsumerWidget {
                         final isSelected = state.boardThemeId == theme.id;
 
                         return GestureDetector(
-                          onTap: () => notifier.setBoardTheme(theme.id),
+                          onTap: () {
+                            notifier.setBoardTheme(theme.id);
+                            Navigator.of(context).popUntil((route) => route.isFirst);
+                          },
                           child: Column(
                             children: [
                               Container(

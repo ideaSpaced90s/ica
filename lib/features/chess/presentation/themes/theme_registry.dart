@@ -8,7 +8,6 @@ import 'slate_theme.dart';
 import 'walnut_theme.dart';
 import 'toy_theme.dart';
 import 'shadow_theme.dart';
-import 'royal_25d_theme.dart';
 
 class ThemeRegistry {
   static final Map<String, ChessTheme> _themes = {
@@ -21,7 +20,6 @@ class ThemeRegistry {
     'theme8': const WalnutTheme(),
     'theme9': const ToyTheme(),
     'theme10': const ShadowTheme(),
-    'theme11': const Royal25DTheme(),
   };
 
   static ChessTheme getTheme(String id) {
