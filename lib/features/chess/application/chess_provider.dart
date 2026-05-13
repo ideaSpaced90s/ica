@@ -18,6 +18,7 @@ import '../services/chess_sound_service.dart';
 import '../services/ai_context_service.dart';
 import '../data/settings_repository.dart';
 import '../services/chess_haptics_service.dart';
+import '../domain/models/ai_avatar.dart';
 
 const _sentinel = Object();
 // Commentary default
@@ -131,7 +132,8 @@ class ChessState {
     this.isPlayerWhite = true,
     this.isBoardFlipped = false,
     this.isEngineVsEngine = false,
-    this.engineLevel = 'B',
+    this.engineLevel = 'avatar_6',
+    this.bottomAvatarId = 'avatar_6',
     this.canUndo = false,
     this.canRedo = false,
     this.commentaryHistory = const [],
@@ -200,6 +202,7 @@ class ChessState {
   final bool isBoardFlipped;
   final bool isEngineVsEngine;
   final String engineLevel;
+  final String bottomAvatarId;
   final bool canUndo;
   final bool canRedo;
   final List<CommentaryEntry> commentaryHistory;
@@ -275,6 +278,7 @@ class ChessState {
     bool? isBoardFlipped,
     bool? isEngineVsEngine,
     String? engineLevel,
+    String? bottomAvatarId,
     bool? canUndo,
     bool? canRedo,
     List<CommentaryEntry>? commentaryHistory,
@@ -339,6 +343,7 @@ class ChessState {
       isBoardFlipped: isBoardFlipped ?? this.isBoardFlipped,
       isEngineVsEngine: isEngineVsEngine ?? this.isEngineVsEngine,
       engineLevel: engineLevel ?? this.engineLevel,
+      bottomAvatarId: bottomAvatarId ?? this.bottomAvatarId,
       canUndo: canUndo ?? this.canUndo,
       canRedo: canRedo ?? this.canRedo,
       commentaryHistory: commentaryHistory ?? this.commentaryHistory,
@@ -465,6 +470,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
         isHapticsEnabled: s.isHapticsEnabled,
         showCoordinates: s.showCoordinates,
         engineLevel: s.engineLevel,
+        bottomAvatarId: s.bottomAvatarId,
         isAiOperational: s.isAiOperational,
         baseTimeDuration: Duration(minutes: s.totalTimeMinutes),
         whiteTimeLeft: Duration(minutes: s.totalTimeMinutes),
@@ -473,6 +479,8 @@ class ChessNotifier extends StateNotifier<ChessState> {
         gameMode: s.gameMode,
       );
       await _engine.setChess960Mode(is960);
+      final avatar = AiAvatar.getAvatar(s.engineLevel);
+      await _engine.setSkillLevel(avatar.skillLevel);
       _soundService.updateSettings(
         sfxEnabled: s.isSoundEnabled,
         bgmEnabled: s.isMusicEnabled,
@@ -494,6 +502,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
         isHapticsEnabled: state.isHapticsEnabled,
         showCoordinates: state.showCoordinates,
         engineLevel: state.engineLevel,
+        bottomAvatarId: state.bottomAvatarId,
         isAiOperational: state.isAiOperational,
         totalTimeMinutes: state.baseTimeDuration.inMinutes,
         incrementSeconds: state.incrementDuration.inSeconds,
@@ -750,7 +759,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
   Future<void> ensureGameServicesStarted({
     bool analyzeCurrentPosition = false,
-    int depth = 15,
+    int? depth,
   }) async {
     if (_isDisposed) {
       return;
@@ -786,7 +795,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
   }
 
   Future<void> _startServices({
-    required int depth,
+    required int? depth,
     required bool analyzeCurrentPosition,
   }) async {
     try {
@@ -796,6 +805,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
       );
 
       await _engine.init();
+
+      final avatar = AiAvatar.getAvatar(state.engineLevel);
+      await _engine.setSkillLevel(avatar.skillLevel);
 
       state = state.copyWith(
         servicesStarted: true,
@@ -1432,8 +1444,25 @@ class ChessNotifier extends StateNotifier<ChessState> {
     state = state.copyWith(isEngineThinking: state.engineReady);
   }
 
-  void _startAnalysis({int depth = 15}) {
+  void _startAnalysis({int? depth}) {
     if (_isDisposed) return;
+
+    bool isBottomTurn = false;
+    final fenParts = state.game.fen.split(' ');
+    if (fenParts.length > 1) {
+      final turnWhite = fenParts[1] == 'w';
+      isBottomTurn = (state.isPlayerWhite == turnWhite);
+    }
+
+    final activeAvatarId = (state.isEngineVsEngine && isBottomTurn)
+        ? state.bottomAvatarId
+        : state.engineLevel;
+
+    final avatar = AiAvatar.getAvatar(activeAvatarId);
+    final targetDepth = depth ?? avatar.depth;
+
+    // Dynamically apply current moving engine's skill level constraints
+    _engine.setSkillLevel(avatar.skillLevel);
 
     // Record start time for the 2s minimum delay logic
     _engineStartTime = DateTime.now();
@@ -1444,15 +1473,13 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
     // Only force move (10s timeout) if it's the AI's turn to respond
     if (_isAiTurn()) {
-      // debugPrint('ChessNotifier: [SCOUT] Starting AI analysis with 10s timeout floor...');
       _maxThinkingTimer = Timer(const Duration(seconds: 10), () {
-        // debugPrint('ChessNotifier: [SCOUT] Max thinking time reached (10s). Forcing engine stop...');
         _engine.sendCommand('stop');
       });
     }
 
     try {
-      _engine.analyzePosition(state.game.fen, depth: depth);
+      _engine.analyzePosition(state.game.fen, depth: targetDepth);
     } catch (e) {
       debugPrint('ChessNotifier: Failed to trigger engine analysis: $e');
     }
@@ -1536,41 +1563,33 @@ class ChessNotifier extends StateNotifier<ChessState> {
   }
 
   Future<void> setEngineLevel(String level) async {
+    final avatar = AiAvatar.getAvatar(level);
     state = state.copyWith(engineLevel: level);
 
-    int skillLevel;
-    int depth;
-
-    switch (level) {
-      case 'A':
-        skillLevel = 20;
-        depth = 20;
-        break;
-      case 'B':
-        skillLevel = 15;
-        depth = 15;
-        break;
-      case 'C':
-        skillLevel = 10;
-        depth = 10;
-        break;
-      case 'D':
-        skillLevel = 5;
-        depth = 5;
-        break;
-      case 'E':
-        skillLevel = 0;
-        depth = 2;
-        break;
-      default:
-        skillLevel = 15;
-        depth = 15;
-    }
-
-    await _engine.setSkillLevel(skillLevel);
+    await _engine.setSkillLevel(avatar.skillLevel);
     _saveSettings();
     if (state.servicesStarted && _isAiTurn()) {
-      _engine.analyzePosition(state.game.fen, depth: depth);
+      _engine.analyzePosition(state.game.fen, depth: avatar.depth);
+    }
+  }
+
+  Future<void> setBottomAvatarId(String level) async {
+    final avatar = AiAvatar.getAvatar(level);
+    state = state.copyWith(bottomAvatarId: level);
+
+    _saveSettings();
+    // If auto-play is ongoing and it's the bottom engine's turn, update immediately
+    if (state.servicesStarted && state.isEngineVsEngine) {
+      bool isBottomTurn = false;
+      final fenParts = state.game.fen.split(' ');
+      if (fenParts.length > 1) {
+        final turnWhite = fenParts[1] == 'w';
+        isBottomTurn = (state.isPlayerWhite == turnWhite);
+      }
+      if (isBottomTurn) {
+        await _engine.setSkillLevel(avatar.skillLevel);
+        _engine.analyzePosition(state.game.fen, depth: avatar.depth);
+      }
     }
   }
 
@@ -2115,6 +2134,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
     final preserveBoardFlipped = state.isBoardFlipped;
     final preserveEvE = state.isEngineVsEngine;
     final preserveLevel = state.engineLevel;
+    final preserveBottomLevel = state.bottomAvatarId;
 
     _undoStack.clear();
     _redoStack.clear();
@@ -2148,6 +2168,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
       isBoardFlipped: preserveBoardFlipped,
       isEngineVsEngine: preserveEvE,
       engineLevel: preserveLevel,
+      bottomAvatarId: preserveBottomLevel,
       boardThemeId: preserveTheme,
       isSoundEnabled: preserveSound,
       isMusicEnabled: preserveMusic,

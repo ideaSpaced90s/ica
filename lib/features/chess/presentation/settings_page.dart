@@ -7,6 +7,7 @@ import 'scholarly_theme.dart';
 import 'history_page.dart';
 import 'package:kingslayer_chess/features/chess/presentation/themes/theme_registry.dart';
 import 'package:kingslayer_chess/features/chess/presentation/themes/chess_theme.dart';
+import '../domain/models/ai_avatar.dart';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
@@ -180,30 +181,35 @@ class SettingsPage extends ConsumerWidget {
                       color: ScholarlyTheme.accentBlue,
                     ),
                   ),
-                  _SettingsTile(
-                    label: 'Engine Strength',
-                    description:
-                        'Level ${state.engineLevel}: ${_getEngineLevelName(state.engineLevel)}',
-                    icon: Icons.bolt_rounded,
-                    onTap: () => _showStrengthOverlay(context, ref),
-                    trailing: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: ScholarlyTheme.accentBlueSoft,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        state.engineLevel,
-                        style: GoogleFonts.inter(
-                          color: ScholarlyTheme.accentBlue,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
+                  Builder(
+                    builder: (context) {
+                      final currentAvatar = AiAvatar.getAvatar(state.engineLevel);
+                      return _SettingsTile(
+                        label: 'Opponent Avatar',
+                        description: '${currentAvatar.name} • ${currentAvatar.title}',
+                        icon: currentAvatar.icon,
+                        onTap: () => _showStrengthOverlay(context, ref),
+                        trailing: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: currentAvatar.color.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: currentAvatar.color),
+                          ),
+                          child: Text(
+                            'FIDE ${currentAvatar.fideRatingRange}',
+                            style: GoogleFonts.jetBrainsMono(
+                              color: currentAvatar.color.computeLuminance() > 0.6 ? Colors.black87 : currentAvatar.color,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11,
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -734,109 +740,197 @@ class SettingsPage extends ConsumerWidget {
     );
   }
 
-  String _getEngineLevelName(String level) {
-    switch (level) {
-      case 'A':
-        return 'Grandmaster';
-      case 'B':
-        return 'Master';
-      case 'C':
-        return 'Intermediate';
-      case 'D':
-        return 'Casual';
-      case 'E':
-        return 'Beginner';
-      default:
-        return 'Master';
-    }
-  }
-
   void _showStrengthOverlay(BuildContext context, WidgetRef ref) {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return Consumer(
-          builder: (context, ref, _) {
-            final currentLevel = ref.watch(chessProvider).engineLevel;
-            return Padding(
-              padding: const EdgeInsets.all(16),
-              child: GlassPanel(
-                padding: const EdgeInsets.all(18),
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Engine Strength',
-                        style: GoogleFonts.inter(
-                          color: ScholarlyTheme.textPrimary,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: ['A', 'B', 'C', 'D', 'E'].map((level) {
-                          final isSelected = currentLevel == level;
-                          return InkWell(
-                            onTap: () {
-                              ref
-                                  .read(chessProvider.notifier)
-                                  .setEngineLevel(level);
-                              Navigator.of(context).pop();
-                            },
-                            borderRadius: BorderRadius.circular(8),
-                            child: Container(
-                              width: 44,
-                              height: 44,
-                              decoration: BoxDecoration(
-                                color: isSelected
-                                    ? ScholarlyTheme.accentBlue
-                                    : ScholarlyTheme.panelBase,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: isSelected
-                                      ? ScholarlyTheme.accentBlue
-                                      : ScholarlyTheme.panelStroke,
-                                ),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  level,
-                                  style: GoogleFonts.inter(
-                                    color: isSelected
-                                        ? Colors.white
-                                        : ScholarlyTheme.textPrimary,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'A: Grandmaster (Strongest)  |  E: Beginner (Weakest)',
-                        style: GoogleFonts.inter(
-                          color: ScholarlyTheme.textMuted,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
+    showAvatarSelectionSheet(context, ref, isBottomSlot: false);
+  }
+}
+
+void showAvatarSelectionSheet(BuildContext context, WidgetRef ref, {bool isBottomSlot = false}) {
+  showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: Colors.transparent,
+    isScrollControlled: true,
+    builder: (context) {
+      return Consumer(
+        builder: (context, ref, _) {
+          final state = ref.watch(chessProvider);
+          final currentLevel = isBottomSlot ? state.bottomAvatarId : state.engineLevel;
+          return Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.8,
+            ),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            decoration: BoxDecoration(
+              color: ScholarlyTheme.backgroundStart,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              boxShadow: ScholarlyTheme.boardShadow,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Pill Tab Indicator
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: ScholarlyTheme.panelStroke,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
                 ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
+                // Title
+                Text(
+                  isBottomSlot ? 'Select Bottom Avatar' : 'Select Opponent Avatar',
+                  style: GoogleFonts.inter(
+                    color: ScholarlyTheme.textPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Each avatar features a custom simulated playing style and FIDE scale',
+                  style: GoogleFonts.inter(
+                    color: ScholarlyTheme.textMuted,
+                    fontSize: 12,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                // Scrollable Avatars List
+                Expanded(
+                  child: ListView.separated(
+                    physics: const BouncingScrollPhysics(),
+                    itemCount: AiAvatar.avatars.length,
+                    separatorBuilder: (context, index) => const SizedBox(height: 10),
+                    itemBuilder: (context, index) {
+                      final avatar = AiAvatar.avatars[index];
+                      final isSelected = currentLevel == avatar.id;
+                      final isLightColor = avatar.color.computeLuminance() > 0.6;
+                      final iconColor = isLightColor ? Colors.black87 : avatar.color;
+
+                      return InkWell(
+                        onTap: () {
+                          if (isBottomSlot) {
+                            ref.read(chessProvider.notifier).setBottomAvatarId(avatar.id);
+                          } else {
+                            ref.read(chessProvider.notifier).setEngineLevel(avatar.id);
+                          }
+                          Navigator.of(context).pop();
+                        },
+                        borderRadius: BorderRadius.circular(16),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: isSelected 
+                                ? avatar.color.withValues(alpha: 0.12) 
+                                : ScholarlyTheme.panelBase,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: isSelected 
+                                  ? avatar.color 
+                                  : ScholarlyTheme.panelStroke.withValues(alpha: 0.6),
+                              width: isSelected ? 2.0 : 1.0,
+                            ),
+                            boxShadow: isSelected ? [] : ScholarlyTheme.cardShadow,
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Icon Badge
+                              Container(
+                                width: 40,
+                                height: 40,
+                                margin: const EdgeInsets.only(right: 12),
+                                decoration: BoxDecoration(
+                                  color: avatar.color.withValues(alpha: 0.15),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: avatar.color, width: 1.5),
+                                ),
+                                child: Icon(avatar.icon, color: iconColor, size: 20),
+                              ),
+                              // Details Column
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Text(
+                                          avatar.name,
+                                          style: GoogleFonts.inter(
+                                            color: ScholarlyTheme.textPrimary,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        if (avatar.id == 'avatar_10')
+                                          const Icon(
+                                            Icons.verified_rounded,
+                                            color: ScholarlyTheme.accentBlue,
+                                            size: 14,
+                                          ),
+                                        const Spacer(),
+                                        // FIDE Badge
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: avatar.color.withValues(alpha: 0.15),
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: Text(
+                                            'FIDE ${avatar.fideRatingRange}',
+                                            style: GoogleFonts.jetBrainsMono(
+                                              color: isLightColor ? Colors.black87 : avatar.color,
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      avatar.title,
+                                      style: GoogleFonts.inter(
+                                        color: ScholarlyTheme.accentBlue,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      avatar.playingStyle,
+                                      style: GoogleFonts.inter(
+                                        color: ScholarlyTheme.textMuted,
+                                        fontSize: 11,
+                                        fontStyle: FontStyle.italic,
+                                        height: 1.3,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    },
+  );
 }
 
 // --- NEW HELPER WIDGETS ---

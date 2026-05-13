@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,6 +12,8 @@ import 'widgets/commentary_history.dart';
 import 'widgets/game_controls.dart';
 import 'widgets/board_stage.dart';
 import 'settings_page.dart';
+import '../domain/models/ai_avatar.dart';
+import 'widgets/opponent_avatar_indicator.dart';
 
 class MainPage extends ConsumerStatefulWidget {
   const MainPage({super.key});
@@ -254,6 +257,7 @@ class _MainPageState extends ConsumerState<MainPage>
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const SizedBox(height: 16),
+        // Original Master Top Row: Both Players' Turn Indicators, Eval Bars, and Clocks
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
           child: Row(
@@ -307,6 +311,18 @@ class _MainPageState extends ConsumerState<MainPage>
             ],
           ),
         ),
+        // Top-Left aligned Opponent Avatar Indicator Row
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: OpponentAvatarIndicator(
+              avatar: AiAvatar.getAvatar(state.engineLevel),
+              onTap: () => showAvatarSelectionSheet(context, ref, isBottomSlot: false),
+            ),
+          ),
+        ),
+
         // Board Area
         if (_isCommentaryExpanded)
           Flexible(
@@ -319,19 +335,62 @@ class _MainPageState extends ConsumerState<MainPage>
         else
           Expanded(child: const BoardStage(isExpanded: false)),
 
-        // Chat Area
+        // Bottom Side Footer Row
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Bottom-Left: Circular AI Chat toggle icon
+              GestureDetector(
+                onTap: () {
+                  setState(() => _isCommentaryExpanded = !_isCommentaryExpanded);
+                },
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: _isCommentaryExpanded 
+                        ? ScholarlyTheme.accentBlueSoft 
+                        : ScholarlyTheme.panelBase,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: _isCommentaryExpanded 
+                          ? ScholarlyTheme.accentBlue 
+                          : ScholarlyTheme.panelStroke,
+                      width: 1.5,
+                    ),
+                    boxShadow: ScholarlyTheme.cardShadow,
+                  ),
+                  child: Icon(
+                    Icons.auto_awesome_rounded,
+                    color: _isCommentaryExpanded 
+                        ? ScholarlyTheme.accentBlue 
+                        : ScholarlyTheme.accentBlue.withValues(alpha: 0.8),
+                    size: 20,
+                  ),
+                ),
+              ),
+              // Bottom-Right: Switchable User/Bot indicator
+              state.isEngineVsEngine
+                  ? OpponentAvatarIndicator(
+                      avatar: AiAvatar.getAvatar(state.bottomAvatarId),
+                      onTap: () => showAvatarSelectionSheet(context, ref, isBottomSlot: true),
+                    )
+                  : const _UserAvatarIndicator(),
+            ],
+          ),
+        ),
+
+        // Chat Area (Expanded view)
         if (_isCommentaryExpanded)
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),
               child: _buildCommentaryPanel(context, ref, state),
             ),
-          )
-        else
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: _buildCollapsedCommentaryHeader(context, ref, state),
           ),
+
         if (!isKeyboardOpen) ...[
           const SizedBox(height: 8),
           Padding(
@@ -482,94 +541,6 @@ class _MainPageState extends ConsumerState<MainPage>
       child: state.showLog
           ? _buildMoveLog(context, state)
           : CommentaryHistory(state: state),
-    );
-  }
-
-  Widget _buildCollapsedCommentaryHeader(
-    BuildContext context,
-    WidgetRef ref,
-    ChessState state,
-  ) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () {
-        setState(() => _isCommentaryExpanded = true);
-        if (!state.isPaused) {
-          ref.read(chessProvider.notifier).togglePause();
-        }
-      },
-      child: GlassPanel(
-        padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-        child: _buildCommentaryHeader(context, ref, state, isExpanded: false),
-      ),
-    );
-  }
-
-  Widget _buildCommentaryHeader(
-    BuildContext context,
-    WidgetRef ref,
-    ChessState state, {
-    required bool isExpanded,
-  }) {
-    return Row(
-      children: [
-        const Spacer(),
-        _buildHeaderIconButton(
-          icon: state.showLog
-              ? Icons.chat_bubble_outline_rounded
-              : Icons.history_edu_rounded,
-          onTap: () => ref.read(chessProvider.notifier).toggleLog(),
-          isActive: state.showLog,
-        ),
-        const SizedBox(width: 6),
-        _buildHeaderIconButton(
-          icon: isExpanded
-              ? Icons.close_rounded
-              : Icons.keyboard_arrow_up_rounded,
-          onTap: () {
-            setState(() {
-              _isCommentaryExpanded = !isExpanded;
-              if (_isCommentaryExpanded && !state.isPaused) {
-                ref.read(chessProvider.notifier).togglePause();
-              }
-            });
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildHeaderIconButton({
-    required IconData icon,
-    required VoidCallback onTap,
-    bool isActive = false,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        width: 34,
-        height: 34,
-        decoration: ScholarlyTheme.modernDecoration().copyWith(
-          color: isActive
-              ? ScholarlyTheme.accentBlueSoft
-              : ScholarlyTheme.panelBase,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: isActive
-                ? ScholarlyTheme.accentBlue
-                : ScholarlyTheme.panelStroke,
-          ),
-        ),
-        padding: const EdgeInsets.all(4),
-        child: Icon(
-          icon,
-          color: isActive
-              ? ScholarlyTheme.accentBlue
-              : ScholarlyTheme.textPrimary,
-          size: 20,
-        ),
-      ),
     );
   }
 
@@ -895,6 +866,161 @@ class _VerticalEvaluationBar extends StatelessWidget {
               color: glowColor.withValues(alpha: 0.4),
               blurRadius: 4,
               spreadRadius: 0.5,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _UserAvatarIndicator extends StatefulWidget {
+  const _UserAvatarIndicator();
+
+  @override
+  State<_UserAvatarIndicator> createState() => _UserAvatarIndicatorState();
+}
+
+class _UserAvatarIndicatorState extends State<_UserAvatarIndicator> {
+  bool _isExpanded = false;
+  Timer? _collapseTimer;
+
+  @override
+  void dispose() {
+    _collapseTimer?.cancel();
+    super.dispose();
+  }
+
+  void _handleTap() {
+    if (!_isExpanded) {
+      setState(() {
+        _isExpanded = true;
+      });
+      _collapseTimer?.cancel();
+      _collapseTimer = Timer(const Duration(seconds: 4), () {
+        if (mounted) {
+          setState(() {
+            _isExpanded = false;
+          });
+        }
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: _handleTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOutCubic,
+        padding: EdgeInsets.symmetric(
+          horizontal: _isExpanded ? 12 : 6,
+          vertical: _isExpanded ? 8 : 6,
+        ),
+        decoration: ScholarlyTheme.modernDecoration().copyWith(
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: ScholarlyTheme.accentBlue.withValues(alpha: _isExpanded ? 0.5 : 0.8),
+            width: 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: ScholarlyTheme.accentBlue.withValues(alpha: 0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Styled Avatar Icon ring
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: ScholarlyTheme.accentBlue.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: ScholarlyTheme.accentBlue,
+                  width: 1.5,
+                ),
+              ),
+              child: const Icon(
+                Icons.person_rounded,
+                color: ScholarlyTheme.accentBlue,
+                size: 18,
+              ),
+            ),
+            // Expanding Contents
+            AnimatedSize(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOutCubic,
+              child: _isExpanded
+                  ? Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const SizedBox(width: 10),
+                        // Name & Subtitle
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'Player',
+                                  style: GoogleFonts.inter(
+                                    color: ScholarlyTheme.textPrimary,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                const Icon(
+                                  Icons.star_rounded,
+                                  color: ScholarlyTheme.accentYellow,
+                                  size: 12,
+                                ),
+                              ],
+                            ),
+                            Text(
+                              'Human Challenger',
+                              style: GoogleFonts.inter(
+                                color: ScholarlyTheme.textMuted,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(width: 12),
+                        // FIDE Rating Badge Placeholder
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: ScholarlyTheme.textPrimary.withValues(alpha: 0.05),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: ScholarlyTheme.panelStroke,
+                              width: 1,
+                            ),
+                          ),
+                          child: Text(
+                            'FIDE ~1500',
+                            style: GoogleFonts.jetBrainsMono(
+                              color: ScholarlyTheme.accentYellow,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  : const SizedBox.shrink(),
             ),
           ],
         ),
