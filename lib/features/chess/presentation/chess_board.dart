@@ -29,6 +29,7 @@ import 'animation/impact_shake.dart';
 import 'animation/shake_animation.dart';
 import 'themes/theme_registry.dart';
 import 'themes/chess_theme.dart';
+import 'themes/shadow_theme.dart';
 
 class ChessBoard extends ConsumerStatefulWidget {
   const ChessBoard({super.key});
@@ -53,6 +54,7 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
   final List<Offset> _platinumCaptures = [];
   final List<Offset> _oilSplashes = [];
   final List<Map<String, dynamic>> _greaseTrails = [];
+  final List<Map<String, dynamic>> _thunderTrails = [];
 
   // ── Signature Animation System ───────────────────────────────────────────
   /// Landing micro-settle entries: {square, profile, row, col}
@@ -651,6 +653,13 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
                           onComplete: () =>
                               setState(() => _greaseTrails.remove(trail)),
                         ),
+                      for (final trail in _thunderTrails)
+                        ThunderTrailOverlay(
+                          from: trail['from'],
+                          to: trail['to'],
+                          onComplete: () =>
+                              setState(() => _thunderTrails.remove(trail)),
+                        ),
 
                       const PromotionOverlay(),
                     ],
@@ -713,6 +722,13 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
               .read(chessProvider.notifier)
               .isAnimationTypeEnabled('themeEffects')) {
         _triggerGreaseTrail(_selectedSquare!, squareName);
+      }
+      if (chessState.boardThemeId == 'theme10' &&
+          sourcePiece?.type != chess_lib.PieceType.PAWN &&
+          ref
+              .read(chessProvider.notifier)
+              .isAnimationTypeEnabled('themeEffects')) {
+        _triggerThunderTrail(_selectedSquare!, squareName);
       }
       ref.read(chessProvider.notifier).makeMove(_selectedSquare!, squareName);
       _clearSelection();
@@ -941,6 +957,33 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
 
       setState(() {
         _greaseTrails.add({'from': getOffset(from), 'to': getOffset(to)});
+      });
+    });
+  }
+
+  void _triggerThunderTrail(String from, String to) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final box = context.findRenderObject() as RenderBox?;
+      if (box == null) return;
+
+      final boardSize = box.size.width;
+      final squareSize = boardSize / 8;
+      final isFlipped = ref.read(chessProvider).isBoardFlipped;
+
+      Offset getOffset(String square) {
+        final col = square.codeUnitAt(0) - 'a'.codeUnitAt(0);
+        final row = 8 - int.parse(square[1]);
+        final effectiveCol = isFlipped ? 7 - col : col;
+        final effectiveRow = isFlipped ? 7 - row : row;
+        return Offset(
+          effectiveCol * squareSize + squareSize / 2,
+          effectiveRow * squareSize + squareSize / 2,
+        );
+      }
+
+      setState(() {
+        _thunderTrails.add({'from': getOffset(from), 'to': getOffset(to)});
       });
     });
   }
