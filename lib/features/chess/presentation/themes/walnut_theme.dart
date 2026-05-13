@@ -79,7 +79,11 @@ class WalnutTheme extends ChessTheme {
     return AspectRatio(
       aspectRatio: 1,
       child: CustomPaint(
-        painter: WalnutPiecePainter(type: pType, isWhite: isWhite),
+        painter: WalnutPiecePainter(
+          type: pType,
+          isWhite: isWhite,
+          isHighlighted: isHighlighted,
+        ),
       ),
     );
   }
