@@ -79,11 +79,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     }
 
     if (mounted) {
-      // debugPrint('SplashScreen: Reverting to landscape orientation.');
-      // Revert to Landscape mode for the Main App
+      // Keep Main App portrait locked
       await SystemChrome.setPreferredOrientations([
-        DeviceOrientation.landscapeLeft,
-        DeviceOrientation.landscapeRight,
         DeviceOrientation.portraitUp,
         DeviceOrientation.portraitDown,
       ]);

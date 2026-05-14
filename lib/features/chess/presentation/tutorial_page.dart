@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -21,24 +20,6 @@ class TutorialPage extends ConsumerStatefulWidget {
 class _TutorialPageState extends ConsumerState<TutorialPage> {
   bool _isChapterSelectionVisible = true;
   bool _hasCheckedResumePrompt = false;
-
-  @override
-  void initState() {
-    super.initState();
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
-    ]);
-  }
-
-  @override
-  void dispose() {
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
-    ]);
-    super.dispose();
-  }
 
   void _handleChapterSelected(int chapterId) {
     ref.read(tutorialProvider.notifier).loadChapter(chapterId);
