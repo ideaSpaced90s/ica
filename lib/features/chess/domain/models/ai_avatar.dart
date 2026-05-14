@@ -10,6 +10,7 @@ class AiAvatar {
   final int depth;
   final IconData icon;
   final Color color;
+  final String imagePath;
 
   const AiAvatar({
     required this.id,
@@ -21,6 +22,7 @@ class AiAvatar {
     required this.depth,
     required this.icon,
     required this.color,
+    required this.imagePath,
   });
 
   int get rating {
@@ -44,6 +46,7 @@ class AiAvatar {
       depth: 1,
       icon: Icons.child_care_rounded,
       color: Color(0xFFA1887F), // Soft Earth
+      imagePath: 'assets/persona/sparky.png',
     ),
     AiAvatar(
       id: 'avatar_1',
@@ -55,6 +58,7 @@ class AiAvatar {
       depth: 2,
       icon: Icons.cruelty_free_rounded,
       color: Color(0xFF81C784), // Soft green
+      imagePath: 'assets/persona/pawnzy.png',
     ),
     AiAvatar(
       id: 'avatar_2',
@@ -66,6 +70,7 @@ class AiAvatar {
       depth: 3,
       icon: Icons.castle_rounded,
       color: Color(0xFF64B5F6), // Soft blue
+      imagePath: 'assets/persona/rook-ie.png',
     ),
     AiAvatar(
       id: 'avatar_3',
@@ -77,6 +82,7 @@ class AiAvatar {
       depth: 4,
       icon: Icons.shield_rounded,
       color: Color(0xFF90A4AE), // Muted blue-grey
+      imagePath: 'assets/persona/stonewall.png',
     ),
     AiAvatar(
       id: 'avatar_4',
@@ -88,6 +94,7 @@ class AiAvatar {
       depth: 5,
       icon: Icons.bolt_rounded,
       color: Color(0xFFFFB74D), // Soft orange
+      imagePath: 'assets/persona/blitzer.png',
     ),
     AiAvatar(
       id: 'avatar_5',
@@ -99,6 +106,7 @@ class AiAvatar {
       depth: 7,
       icon: Icons.auto_awesome_rounded,
       color: Color(0xFFBA68C8), // Muted purple
+      imagePath: 'assets/persona/gambit.png',
     ),
     AiAvatar(
       id: 'avatar_6',
@@ -110,6 +118,7 @@ class AiAvatar {
       depth: 10,
       icon: Icons.track_changes_rounded,
       color: Color(0xFF4DB6AC), // Teal
+      imagePath: 'assets/persona/vanguard.png',
     ),
     AiAvatar(
       id: 'avatar_7',
@@ -121,6 +130,7 @@ class AiAvatar {
       depth: 12,
       icon: Icons.gpp_good_rounded,
       color: Color(0xFF7986CB), // Indigo
+      imagePath: 'assets/persona/sentinel.png',
     ),
     AiAvatar(
       id: 'avatar_8',
@@ -132,6 +142,7 @@ class AiAvatar {
       depth: 15,
       icon: Icons.local_fire_department_rounded,
       color: Color(0xFFE57373), // Red soft
+      imagePath: 'assets/persona/gm_morphy.png',
     ),
     AiAvatar(
       id: 'avatar_9',
@@ -143,6 +154,7 @@ class AiAvatar {
       depth: 18,
       icon: Icons.psychology_rounded,
       color: Color(0xFFFFD54F), // Amber
+      imagePath: 'assets/persona/gm_titan.png',
     ),
     AiAvatar(
       id: 'avatar_10',
@@ -154,6 +166,7 @@ class AiAvatar {
       depth: 22,
       icon: Icons.diamond_rounded,
       color: Color(0xFFE0E0E0), // Platinum / White
+      imagePath: 'assets/persona/gm_kingslayer.png',
     ),
   ];
 

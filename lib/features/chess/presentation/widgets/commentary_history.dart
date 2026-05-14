@@ -111,7 +111,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
                 color: ScholarlyTheme.textPrimary,
               ),
               decoration: InputDecoration(
-                hintText: 'Ask Kingslayer AI...',
+                hintText: 'Ask Mr. Bard...',
                 hintStyle: GoogleFonts.inter(
                   color: ScholarlyTheme.textSubtle,
                   fontSize: 13,
@@ -177,7 +177,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
             ),
             const SizedBox(height: 12),
             Text(
-              'Initializing Kingslayer AI...',
+              'Initializing Mr. Bard...',
               style: GoogleFonts.inter(
                 color: ScholarlyTheme.textMuted,
                 fontSize: 14,
@@ -267,7 +267,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
           CircleAvatar(
             radius: 12,
             backgroundColor: Colors.transparent,
-            backgroundImage: const AssetImage('assets/board/profile.png'),
+            backgroundImage: const AssetImage('assets/persona/gm_bard.png'),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -275,7 +275,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'KINGSLAYER • ${_formatTime(entry.timestamp)}',
+                  'MR. BARD • ${_formatTime(entry.timestamp)}',
                   style: GoogleFonts.inter(
                     fontSize: 10,
                     color: ScholarlyTheme.accentBlue.withValues(alpha: 0.8),

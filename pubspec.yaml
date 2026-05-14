@@ -71,6 +71,7 @@ flutter:
   assets:
     - assets/pieces/
     - assets/board/
+    - assets/persona/
     - assets/sfx/
     - assets/bgm/
     - assets/splash/

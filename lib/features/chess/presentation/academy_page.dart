@@ -404,15 +404,6 @@ class _AcademyPageState extends ConsumerState<AcademyPage> {
                                 ),
                                 const SizedBox(height: 6),
                                 _CompactActionIcon(
-                                  icon: state.isPaused
-                                      ? Icons.play_arrow_rounded
-                                      : Icons.pause_rounded,
-                                  tooltip: state.isPaused ? 'Resume' : 'Pause',
-                                  isActive: state.isPaused,
-                                  onTap: () => notifier.togglePause(),
-                                ),
-                                const SizedBox(height: 6),
-                                _CompactActionIcon(
                                   icon: state.isBulbGlowing
                                       ? Icons.lightbulb_rounded
                                       : Icons.lightbulb_outline_rounded,

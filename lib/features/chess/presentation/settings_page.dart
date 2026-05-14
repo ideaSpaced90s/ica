@@ -350,6 +350,7 @@ class SettingsPage extends ConsumerWidget {
                           label: 'Persona',
                           description: '${currentAvatar.name} • ${currentAvatar.title}',
                           icon: currentAvatar.icon,
+                          imagePath: currentAvatar.imagePath,
                           onTap: () => _showStrengthOverlay(context, ref),
                           trailing: Container(
                             padding: const EdgeInsets.symmetric(
@@ -1355,7 +1356,7 @@ void showAvatarSelectionSheet(BuildContext context, WidgetRef ref, {bool isBotto
                       final avatar = AiAvatar.avatars[index];
                       final isSelected = currentLevel == avatar.id;
                       final isLightColor = avatar.color.computeLuminance() > 0.6;
-                      final iconColor = isLightColor ? Colors.black87 : avatar.color;
+
 
                       return InkWell(
                         onTap: () {
@@ -1396,7 +1397,12 @@ void showAvatarSelectionSheet(BuildContext context, WidgetRef ref, {bool isBotto
                                   shape: BoxShape.circle,
                                   border: Border.all(color: avatar.color, width: 1.5),
                                 ),
-                                child: Icon(avatar.icon, color: iconColor, size: 20),
+                                child: ClipOval(
+                                  child: Image.asset(
+                                    avatar.imagePath,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
                               ),
                               // Details Column
                               Expanded(
@@ -1606,6 +1612,7 @@ class _SettingsTile extends StatelessWidget {
   final Color? iconColor;
   final VoidCallback onTap;
   final Widget? trailing;
+  final String? imagePath;
 
   const _SettingsTile({
     required this.label,
@@ -1614,6 +1621,7 @@ class _SettingsTile extends StatelessWidget {
     this.iconColor,
     required this.onTap,
     this.trailing,
+    this.imagePath,
   });
 
   @override
@@ -1626,11 +1634,21 @@ class _SettingsTile extends StatelessWidget {
           color: ScholarlyTheme.backgroundStart,
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Icon(
-          icon,
-          color: iconColor ?? ScholarlyTheme.textPrimary,
-          size: 20,
-        ),
+        child: imagePath != null
+            ? ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: Image.asset(
+                  imagePath!,
+                  width: 20,
+                  height: 20,
+                  fit: BoxFit.cover,
+                ),
+              )
+            : Icon(
+                icon,
+                color: iconColor ?? ScholarlyTheme.textPrimary,
+                size: 20,
+              ),
       ),
       title: Text(
         label,

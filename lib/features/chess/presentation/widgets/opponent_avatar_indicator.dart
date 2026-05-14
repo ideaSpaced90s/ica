@@ -57,8 +57,7 @@ class _OpponentAvatarIndicatorState extends State<OpponentAvatarIndicator> {
 
   @override
   Widget build(BuildContext context) {
-    final isLightColor = widget.avatar.color.computeLuminance() > 0.6;
-    final iconColor = isLightColor ? Colors.black87 : widget.avatar.color;
+
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -102,10 +101,11 @@ class _OpponentAvatarIndicatorState extends State<OpponentAvatarIndicator> {
                     width: 1.5,
                   ),
                 ),
-                child: Icon(
-                  widget.avatar.icon,
-                  color: iconColor,
-                  size: 18,
+                child: ClipOval(
+                  child: Image.asset(
+                    widget.avatar.imagePath,
+                    fit: BoxFit.cover,
+                  ),
                 ),
               ),
               // Expanding Contents
