@@ -564,6 +564,15 @@ class ChessNotifier extends StateNotifier<ChessState> {
     await reset();
   }
 
+  void resetRatedStats() {
+    state = state.copyWith(
+      userFideRating: 1200,
+      ratedGamesCount: 0,
+      currentWinningStreak: 0,
+    );
+    _saveSettings();
+  }
+
   void toggleSound() {
     final newEnabled = !state.isSoundEnabled;
     state = state.copyWith(isSoundEnabled: newEnabled);

@@ -95,26 +95,32 @@ Every piece type has a unique motion profile defined in `PieceMotionProfile`:
 
 ## 🧠 AI & Engine Architecture
 
-### The "Engine" Layer (Stockfish / S-engine)
+### 1. The "Engine" Layer (Stockfish / S-engine)
 - **Binary Management**: Managed via `StockfishService` using a native Android library (`libstockfish.so`).
 - **Gameplay Authority**: The S-engine is responsible for all board moves, executing strikes immediately upon calculation.
 - **UCI Protocol**: Communicates via `stdin/stdout`, translating FEN strings into evaluations and moves.
 
-### The "Brain" Layer (High Council / AI)
+### 2. The "Brain" Layer (High Council / AI)
 - **Engine**: Powered by Sarvam AI / Gemini Cloud via a dedicated Python FastAPI backend.
 - **On-Demand Intelligence**: Remains silent by default, only revealing insights when explicitly requested (Hints/Chat).
 - **Decoupled Workflow**: Completely separated from the S-engine's move execution to ensure rapid gameplay.
+
+### 3. The "Bare-Metal" State Layer (Rust FFI / `shakmaty`)
+- **Native Bitboard Authority**: Integrated bare-metal Rust core via `flutter_rust_bridge` to handle advanced board mechanics instantly.
+- **Unified Logic Handling**: Evaluates real-time threats, precise status conditions (check/mate/stalemate), legal move destination arrays, and blazingly fast PGN/SAN tape assembly directly on 64-bit CPU bitmasks.
+- **Side-by-Side Parity Checks**: Runs non-blocking microsecond validation in parallel with Dart state for seamless runtime reliability.
 
 ---
 
 ## 🛠️ System Wiring
 
-### 1. State Hub (`Riverpod`)
-- **`ChessProvider`**: Manages the `chess.dart` engine and core state.
+### 1. State Hub (`Riverpod` & FFI Core)
+- **`ChessProvider`**: Manages the application lifecycle, orchestration loops, and persistent configurations.
+- **`ChessGame` Domain Model**: Encapsulates unified board state management, querying native Rust FFI interfaces (`moves.rs`, `status.rs`, `state.rs`, `history.rs`) to compute legal moves and status conditions in microseconds.
 - **`StockfishController`**: Bridges the Flutter state with the native engine process.
 
 ### 2. Communication Loop
-1.  **User Action**: Piece movement is validated by `ChessProvider`.
+1.  **User Action**: Piece movement and square selections trigger native Rust bitboard destination arrays and state validation.
 2.  **Engine Dispatch**: Valid moves trigger a FEN update to the S-engine.
 3.  **Immediate Strike**: S-engine responds with a move calculation.
 4.  **Requested Insight**: High Council (AI) provides contextual narration on demand.
@@ -147,9 +153,16 @@ Every piece type has a unique motion profile defined in `PieceMotionProfile`:
 - [x] **Complete**: Implement time controls and auto-play delay settings.
 - [x] **Complete**: Transition Analysis Mode to placeholder for sleeker UX.
 
-### Phase 5: Cinematic Excellence (New)
+### Phase 5: Cinematic Excellence
 - [x] **Complete**: Implement Cinematic Board Camera with dynamic zoom and drift.
 - [x] **Complete**: Implement Signature Movement profiles for all piece types.
 - [x] **Complete**: Add Landing Feedback (micro-settle) and Tap Ripple systems.
 - [x] **Complete**: Implement Breathing Selection and King Check pulse effects.
 - [x] **Complete**: Refine theme contrast and accessibility.
+
+### Phase 6: Bare-Metal Core Optimization (Complete)
+- [x] **Complete**: Scaffold `flutter_rust_bridge` infrastructure and high-speed `shakmaty` core logic.
+- [x] **Complete**: Implement instant multi-threaded square Threat evaluation engine.
+- [x] **Complete**: Migrate game termination Status conditions (check/checkmate/stalemate) to native bitmask verifications.
+- [x] **Complete**: Embed microsecond Legal Destinations arrays and multi-move post-state validation directly inside the UI selection pipelines.
+- [x] **Complete**: Assemble unified bare-metal PGN/SAN tape compilation.

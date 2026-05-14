@@ -8,9 +8,12 @@ import 'history_page.dart';
 import 'package:kingslayer_chess/features/chess/presentation/themes/theme_registry.dart';
 import 'package:kingslayer_chess/features/chess/presentation/themes/chess_theme.dart';
 import '../domain/models/ai_avatar.dart';
+import 'academy_page.dart';
 
 class SettingsPage extends ConsumerWidget {
-  const SettingsPage({super.key});
+  final bool isAcademyMode;
+
+  const SettingsPage({super.key, this.isAcademyMode = false});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -63,6 +66,159 @@ class SettingsPage extends ConsumerWidget {
           // Settings Sections
           SliverList(
             delegate: SliverChildListDelegate([
+              // MATCH TYPE & COMPETITIVE SYSTEM
+              if (!isAcademyMode)
+                _SettingsCategory(
+                  title: 'MATCH TYPE',
+                  children: [
+                    _SettingsTile(
+                      label: 'Casual / Unrated',
+                      description: 'Relaxed practice. Rating unaffected, visual animations unrestricted.',
+                      icon: Icons.spa_rounded,
+                      iconColor: !state.isRatedMode ? ScholarlyTheme.accentBlue : null,
+                      onTap: () => notifier.setRatedMode(false),
+                      trailing: !state.isRatedMode
+                          ? const Icon(
+                              Icons.check_circle_rounded,
+                              color: ScholarlyTheme.accentBlue,
+                            )
+                          : const SizedBox(),
+                    ),
+                    _SettingsTile(
+                      label: 'Rated Competitive',
+                      description: 'Simulated FIDE Elo tracked. Enforces snappy boards and minimal ambient noise.',
+                      icon: Icons.emoji_events_rounded,
+                      iconColor: state.isRatedMode ? Colors.amber : null,
+                      onTap: () => notifier.setRatedMode(true),
+                      trailing: state.isRatedMode
+                          ? const Icon(
+                              Icons.check_circle_rounded,
+                              color: ScholarlyTheme.accentBlue,
+                            )
+                          : const SizedBox(),
+                    ),
+                    // Rating Overview Premium Card
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              ScholarlyTheme.panelBase.withValues(alpha: 0.6),
+                              ScholarlyTheme.panelBase,
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: state.isRatedMode
+                                ? Colors.amber.withValues(alpha: 0.3)
+                                : ScholarlyTheme.panelStroke,
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: state.ratedGamesCount < 10
+                                        ? ScholarlyTheme.accentBlueSoft
+                                        : Colors.amber.withValues(alpha: 0.2),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    state.ratedGamesCount < 10 ? 'PROVISIONAL' : 'OFFICIAL ELO',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: state.ratedGamesCount < 10
+                                          ? ScholarlyTheme.accentBlue
+                                          : Colors.amber.shade300,
+                                    ),
+                                  ),
+                                ),
+                                const Spacer(),
+                                if (state.currentWinningStreak > 0)
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.local_fire_department_rounded, color: Colors.deepOrangeAccent, size: 16),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        '${state.currentWinningStreak} Streak',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.deepOrangeAccent,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.baseline,
+                              textBaseline: TextBaseline.alphabetic,
+                              children: [
+                                Text(
+                                  '${state.userFideRating}',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.bold,
+                                    color: ScholarlyTheme.textPrimary,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'ELO',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: ScholarlyTheme.textMuted,
+                                  ),
+                                ),
+                                const Spacer(),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      '${state.ratedGamesCount}',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: ScholarlyTheme.textPrimary,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Games Played',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 10,
+                                        color: ScholarlyTheme.textSubtle,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    _SettingsTile(
+                      label: 'Reset Rated Progress',
+                      description: 'Reset rating enhancement to factory default settings',
+                      icon: Icons.refresh_rounded,
+                      iconColor: Colors.redAccent,
+                      onTap: () => _confirmResetRatedStats(context, ref),
+                    ),
+                  ],
+                ),
+
               // GAME MODE
               _SettingsCategory(
                 title: 'GAME MODE',
@@ -91,151 +247,6 @@ class SettingsPage extends ConsumerWidget {
                             color: ScholarlyTheme.accentBlue,
                           )
                         : const SizedBox(),
-                  ),
-                ],
-              ),
-
-              // MATCH TYPE & COMPETITIVE SYSTEM
-              _SettingsCategory(
-                title: 'MATCH TYPE',
-                children: [
-                  _SettingsTile(
-                    label: 'Casual / Unrated',
-                    description: 'Relaxed practice. Rating unaffected, visual animations unrestricted.',
-                    icon: Icons.spa_rounded,
-                    iconColor: !state.isRatedMode ? ScholarlyTheme.accentBlue : null,
-                    onTap: () => notifier.setRatedMode(false),
-                    trailing: !state.isRatedMode
-                        ? const Icon(
-                            Icons.check_circle_rounded,
-                            color: ScholarlyTheme.accentBlue,
-                          )
-                        : const SizedBox(),
-                  ),
-                  _SettingsTile(
-                    label: 'Rated Competitive',
-                    description: 'Simulated FIDE Elo tracked. Enforces snappy boards and minimal ambient noise.',
-                    icon: Icons.emoji_events_rounded,
-                    iconColor: state.isRatedMode ? Colors.amber : null,
-                    onTap: () => notifier.setRatedMode(true),
-                    trailing: state.isRatedMode
-                        ? const Icon(
-                            Icons.check_circle_rounded,
-                            color: ScholarlyTheme.accentBlue,
-                          )
-                        : const SizedBox(),
-                  ),
-                  // Rating Overview Premium Card
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            ScholarlyTheme.panelBase.withValues(alpha: 0.6),
-                            ScholarlyTheme.panelBase,
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: state.isRatedMode
-                              ? Colors.amber.withValues(alpha: 0.3)
-                              : ScholarlyTheme.panelStroke,
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: state.ratedGamesCount < 10
-                                      ? ScholarlyTheme.accentBlueSoft
-                                      : Colors.amber.withValues(alpha: 0.2),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  state.ratedGamesCount < 10 ? 'PROVISIONAL' : 'OFFICIAL ELO',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: state.ratedGamesCount < 10
-                                        ? ScholarlyTheme.accentBlue
-                                        : Colors.amber.shade300,
-                                  ),
-                                ),
-                              ),
-                              const Spacer(),
-                              if (state.currentWinningStreak > 0)
-                                Row(
-                                  children: [
-                                    const Icon(Icons.local_fire_department_rounded, color: Colors.deepOrangeAccent, size: 16),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      '${state.currentWinningStreak} Streak',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.deepOrangeAccent,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.baseline,
-                            textBaseline: TextBaseline.alphabetic,
-                            children: [
-                              Text(
-                                '${state.userFideRating}',
-                                style: GoogleFonts.outfit(
-                                  fontSize: 32,
-                                  fontWeight: FontWeight.bold,
-                                  color: ScholarlyTheme.textPrimary,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'ELO',
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: ScholarlyTheme.textMuted,
-                                ),
-                              ),
-                              const Spacer(),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Text(
-                                    '${state.ratedGamesCount}',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: ScholarlyTheme.textPrimary,
-                                    ),
-                                  ),
-                                  Text(
-                                    'Games Played',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 10,
-                                      color: ScholarlyTheme.textSubtle,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
                   ),
                 ],
               ),
@@ -312,86 +323,102 @@ class SettingsPage extends ConsumerWidget {
               ),
 
               // GAMEPLAY
-              _SettingsCategory(
-                title: 'GAMEPLAY',
-                children: [
-                  _SettingsTile(
-                    label: 'Time Control',
-                    description:
-                        '${state.whiteTimeLeft.inMinutes}+${state.incrementDuration.inSeconds} • Tap to change',
-                    icon: Icons.timer_rounded,
-                    onTap: () => _showTimeControlSelector(context, ref),
-                    trailing: Icon(
-                      Icons.edit_rounded,
-                      size: 18,
-                      color: ScholarlyTheme.accentBlue,
+              if (!isAcademyMode)
+                _SettingsCategory(
+                  title: 'GAMEPLAY',
+                  children: [
+                    _SettingsTile(
+                      label: 'Time Control',
+                      description:
+                          '${state.whiteTimeLeft.inMinutes}+${state.incrementDuration.inSeconds} • Tap to change',
+                      icon: Icons.timer_rounded,
+                      onTap: () => _showTimeControlSelector(context, ref),
+                      trailing: Icon(
+                        Icons.edit_rounded,
+                        size: 18,
+                        color: ScholarlyTheme.accentBlue,
+                      ),
                     ),
-                  ),
-                  Builder(
-                    builder: (context) {
-                      final currentAvatar = AiAvatar.getAvatar(state.engineLevel);
-                      return _SettingsTile(
-                        label: 'Opponent Avatar',
-                        description: '${currentAvatar.name} • ${currentAvatar.title}',
-                        icon: currentAvatar.icon,
-                        onTap: () => _showStrengthOverlay(context, ref),
-                        trailing: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: currentAvatar.color.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: currentAvatar.color),
-                          ),
-                          child: Text(
-                            'FIDE ${currentAvatar.fideRatingRange}',
-                            style: GoogleFonts.jetBrainsMono(
-                              color: currentAvatar.color.computeLuminance() > 0.6 ? Colors.black87 : currentAvatar.color,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 11,
+                    Builder(
+                      builder: (context) {
+                        final currentAvatar = AiAvatar.getAvatar(state.engineLevel);
+                        return _SettingsTile(
+                          label: 'Persona',
+                          description: '${currentAvatar.name} • ${currentAvatar.title}',
+                          icon: currentAvatar.icon,
+                          onTap: () => _showStrengthOverlay(context, ref),
+                          trailing: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: currentAvatar.color.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: currentAvatar.color),
+                            ),
+                            child: Text(
+                              'FIDE ${currentAvatar.fideRatingRange}',
+                              style: GoogleFonts.jetBrainsMono(
+                                color: currentAvatar.color.computeLuminance() > 0.6 ? Colors.black87 : currentAvatar.color,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11,
+                              ),
                             ),
                           ),
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
 
               // DATA & MANAGEMENT
-              _SettingsCategory(
-                title: 'MANAGEMENT',
-                children: [
-                  _SettingsTile(
-                    label: 'Game History',
-                    description: 'View, resume, and manage your matches',
-                    icon: Icons.history_rounded,
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const HistoryPage(),
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
+              if (!isAcademyMode)
+                _SettingsCategory(
+                  title: 'MANAGEMENT',
+                  children: [
+                    _SettingsTile(
+                      label: 'Game History',
+                      description: 'View, resume, and manage your matches',
+                      icon: Icons.history_rounded,
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const HistoryPage(),
+                          ),
+                        );
+                      },
+                    ),
+                    _SettingsTile(
+                      label: 'Enter Academy',
+                      description: 'Landscape study environment with persistent AI commentary',
+                      icon: Icons.school_rounded,
+                      iconColor: ScholarlyTheme.accentBlue,
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const AcademyPage(),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
 
               // DANGER ZONE
-              _SettingsCategory(
-                title: 'EXIT',
-                children: [
-                  _SettingsTile(
-                    label: 'Exit Game',
-                    description: 'Save and return to system',
-                    icon: Icons.exit_to_app_rounded,
-                    iconColor: Colors.red.shade600,
-                    onTap: () => _confirmSaveAndExit(context, ref),
-                  ),
-                ],
-              ),
+              if (!isAcademyMode)
+                _SettingsCategory(
+                  title: 'EXIT',
+                  children: [
+                    _SettingsTile(
+                      label: 'Exit Game',
+                      description: 'Save and return to system',
+                      icon: Icons.exit_to_app_rounded,
+                      iconColor: Colors.red.shade600,
+                      onTap: () => _confirmSaveAndExit(context, ref),
+                    ),
+                  ],
+                ),
 
               const SizedBox(height: 40),
             ]),
@@ -707,6 +734,146 @@ class SettingsPage extends ConsumerWidget {
     SystemNavigator.pop();
   }
 
+  Future<void> _confirmResetRatedStats(BuildContext context, WidgetRef ref) async {
+    final proceed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: ScholarlyTheme.panelBase,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Text(
+            'Reset Rated Progress?',
+            style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: ScholarlyTheme.textPrimary),
+          ),
+          content: Text(
+            'This action will reset your official ELO rating and games count to factory default settings. Are you sure you want to proceed?',
+            style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 14),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(
+                'No',
+                style: GoogleFonts.inter(color: ScholarlyTheme.textMuted),
+              ),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: FilledButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: Text(
+                'Yes',
+                style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.white),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (proceed != true) return;
+
+    if (!context.mounted) return;
+
+    final controller = TextEditingController();
+    final finalConfirm = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              backgroundColor: ScholarlyTheme.panelBase,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: Text(
+                'Re-verification Required',
+                style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: ScholarlyTheme.textPrimary),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Please type "reset" below to confirm factory reset.',
+                    style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 14),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: controller,
+                    style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary),
+                    decoration: InputDecoration(
+                      hintText: 'reset',
+                      hintStyle: GoogleFonts.inter(color: ScholarlyTheme.textSubtle),
+                      filled: true,
+                      fillColor: ScholarlyTheme.backgroundStart,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide.none,
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Colors.redAccent),
+                      ),
+                    ),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: Text(
+                    'Cancel',
+                    style: GoogleFonts.inter(color: ScholarlyTheme.textMuted),
+                  ),
+                ),
+                FilledButton(
+                  onPressed: controller.text.trim().toLowerCase() == 'reset'
+                      ? () => Navigator.of(context).pop(true)
+                      : null,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Colors.redAccent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: Text(
+                    'Confirm',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.white),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (finalConfirm == true) {
+      ref.read(chessProvider.notifier).resetRatedStats();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Rated stats reset to factory defaults.',
+              style: GoogleFonts.inter(color: Colors.white),
+            ),
+            backgroundColor: ScholarlyTheme.accentBlue,
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _showAnimationSettingsOverlay(
     BuildContext context,
     WidgetRef ref,
@@ -935,7 +1102,7 @@ void showAvatarSelectionSheet(BuildContext context, WidgetRef ref, {bool isBotto
                 ),
                 // Title
                 Text(
-                  isBottomSlot ? 'Select Bottom Avatar' : 'Select Opponent Avatar',
+                  isBottomSlot ? 'Select Bottom Avatar' : 'Select Persona',
                   style: GoogleFonts.inter(
                     color: ScholarlyTheme.textPrimary,
                     fontSize: 18,
