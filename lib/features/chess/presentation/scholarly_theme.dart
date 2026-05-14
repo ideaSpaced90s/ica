@@ -128,6 +128,13 @@ class ScholarlyTheme {
       ],
     );
   }
+
+  static BoxDecoration get glassPanelDecoration => BoxDecoration(
+    color: panelBase,
+    borderRadius: BorderRadius.circular(radiusMedium),
+    border: Border.all(color: panelStroke),
+    boxShadow: cardShadow,
+  );
 }
 
 class GlassPanel extends StatelessWidget {

@@ -10,6 +10,7 @@ import 'widgets/commentary_history.dart';
 import 'widgets/board_stage.dart';
 import 'themes/theme_registry.dart';
 import 'settings_page.dart';
+import 'tutorial_page.dart';
 
 class AcademyPage extends ConsumerStatefulWidget {
   const AcademyPage({super.key});
@@ -362,6 +363,20 @@ class _AcademyPageState extends ConsumerState<AcademyPage> {
                                   customBgColor: ScholarlyTheme.accentBlue.withValues(alpha: 0.15),
                                   customIconColor: ScholarlyTheme.accentBlue,
                                   onTap: () => notifier.startPuzzleMode(),
+                                ),
+                                const SizedBox(height: 6),
+                                _CompactActionIcon(
+                                  icon: Icons.menu_book_rounded,
+                                  tooltip: 'Interactive Tutorial',
+                                  customBgColor: Colors.deepPurple.withValues(alpha: 0.15),
+                                  customIconColor: Colors.deepPurpleAccent,
+                                  onTap: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (context) => const TutorialPage(),
+                                      ),
+                                    );
+                                  },
                                 ),
                                 const SizedBox(height: 6),
                                 _CompactActionIcon(

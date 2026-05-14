@@ -24,10 +24,10 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
   @override
   void initState() {
     super.initState();
-    _ticker = Ticker((_) {
+    _ticker = Ticker((elapsed) {
       if (!mounted) return;
       setState(() {
-        _pulse = (_pulse + 1) % 4;
+        _pulse = ((elapsed.inMilliseconds ~/ 300) % 4);
       });
     })..start();
   }
@@ -111,7 +111,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
                 color: ScholarlyTheme.textPrimary,
               ),
               decoration: InputDecoration(
-                hintText: 'Ask Mr. Bard...',
+                hintText: 'Ask GM Bard...',
                 hintStyle: GoogleFonts.inter(
                   color: ScholarlyTheme.textSubtle,
                   fontSize: 13,
@@ -177,7 +177,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
             ),
             const SizedBox(height: 12),
             Text(
-              'Initializing Mr. Bard...',
+              'Initializing GM Bard...',
               style: GoogleFonts.inter(
                 color: ScholarlyTheme.textMuted,
                 fontSize: 14,
@@ -275,7 +275,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'MR. BARD • ${_formatTime(entry.timestamp)}',
+                  'GM BARD • ${_formatTime(entry.timestamp)}',
                   style: GoogleFonts.inter(
                     fontSize: 10,
                     color: ScholarlyTheme.accentBlue.withValues(alpha: 0.8),
@@ -348,12 +348,8 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
         children: [
           CircleAvatar(
             radius: 12,
-            backgroundColor: ScholarlyTheme.accentBlueSoft,
-            child: Icon(
-              Icons.psychology,
-              size: 14,
-              color: ScholarlyTheme.accentBlue,
-            ),
+            backgroundColor: Colors.transparent,
+            backgroundImage: const AssetImage('assets/persona/gm_bard.png'),
           ),
           const SizedBox(width: 10),
           Container(
@@ -365,14 +361,41 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
                 bottomLeft: Radius.circular(12),
                 bottomRight: Radius.circular(12),
               ),
-            ),
-            child: Text(
-              'Analyzing Position$dots',
-              style: GoogleFonts.inter(
-                color: ScholarlyTheme.textMuted,
-                fontSize: 13,
-                fontStyle: FontStyle.italic,
+              border: Border.all(
+                color: ScholarlyTheme.panelStroke.withValues(alpha: 0.5),
               ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'GM Bard is writing',
+                  style: GoogleFonts.inter(
+                    color: ScholarlyTheme.textMuted,
+                    fontSize: 12,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: List.generate(3, (index) {
+                    final isActive = _pulse >= index + 1;
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      margin: const EdgeInsets.symmetric(horizontal: 1.5),
+                      width: 4,
+                      height: isActive ? 6 : 4,
+                      decoration: BoxDecoration(
+                        color: isActive
+                            ? ScholarlyTheme.accentBlue
+                            : ScholarlyTheme.textMuted.withValues(alpha: 0.4),
+                        shape: BoxShape.circle,
+                      ),
+                    );
+                  }),
+                ),
+              ],
             ),
           ),
         ],

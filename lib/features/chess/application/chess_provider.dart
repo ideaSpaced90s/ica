@@ -485,8 +485,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
           game: ChessGame(),
           commentaryHistory: [
             CommentaryEntry(
-              text: "How can I help you?",
+              text: "Welcome to the Academy, Apprentice. I am GM Bard. Place your pieces on the board or ask me for strategic counsel, and we shall prepare for the coming trials against the machine collective.",
               timestamp: DateTime.now(),
+              isComplete: true,
               isUser: false,
             ),
           ],
@@ -1610,7 +1611,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
     _syncUndoRedoFlags();
 
-    final introText = "Master, I have loaded puzzle #${puzzle.id}. Rating: ${puzzle.rating}. Find the best sequence for ${isPlayerWhite ? 'White' : 'Black'}.";
+    final introText = "Apprentice, I have loaded puzzle #${puzzle.id}. Rating: ${puzzle.rating}. Find the best sequence for ${isPlayerWhite ? 'White' : 'Black'}.";
     state = state.copyWith(
       commentaryHistory: [
         CommentaryEntry(
@@ -1692,7 +1693,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
               commentaryHistory: [
                 ...state.commentaryHistory,
                 CommentaryEntry(
-                  text: "Brilliant execution, Master! Puzzle solved perfectly.",
+                  text: "Brilliant execution, Apprentice! Puzzle solved perfectly.",
                   timestamp: DateTime.now(),
                   isComplete: true,
                   isUser: false,
@@ -1736,7 +1737,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
                 commentaryHistory: [
                   ...state.commentaryHistory,
                   CommentaryEntry(
-                    text: "Brilliant execution, Master! Puzzle solved perfectly.",
+                    text: "Brilliant execution, Apprentice! Puzzle solved perfectly.",
                     timestamp: DateTime.now(),
                     isComplete: true,
                     isUser: false,
@@ -1755,7 +1756,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
           commentaryHistory: [
             ...state.commentaryHistory,
             CommentaryEntry(
-              text: "Ah, not quite the best continuation. Look closer at the tactical weaknesses.",
+              text: "Ah, not quite the best continuation, Apprentice. Look closer at the tactical weaknesses.",
               timestamp: DateTime.now(),
               isComplete: true,
               isUser: false,

@@ -2,6 +2,15 @@ import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 
+enum SoundEffect {
+  move,
+  capture,
+  illegal,
+  click,
+  check,
+  gameover,
+}
+
 class ChessSoundService {
   final Map<String, AudioPlayer> _players = {};
   final AudioPlayer _bgmPlayer1 = AudioPlayer();
@@ -242,6 +251,29 @@ class ChessSoundService {
   Future<void> playWhoosh() async => _playSound('whoosh.mp3');
   Future<void> playPawnMove() async => _playSound('piecemove.mp3');
   Future<void> playKingMove() async => _playSound('move-self.mp3');
+
+  void playSfx(SoundEffect effect) {
+    switch (effect) {
+      case SoundEffect.move:
+        playMove();
+        break;
+      case SoundEffect.capture:
+        playCapture();
+        break;
+      case SoundEffect.illegal:
+        _playSound('illegal.mp3'); // Dedicated correction tone mapping
+        break;
+      case SoundEffect.click:
+        playNotify();
+        break;
+      case SoundEffect.check:
+        playNotify();
+        break;
+      case SoundEffect.gameover:
+        playWhoosh();
+        break;
+    }
+  }
 
   Future<void> duckBgmTemporarily({
     Duration hold = const Duration(milliseconds: 900),
