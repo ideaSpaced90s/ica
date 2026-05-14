@@ -35,7 +35,7 @@ class ChapterSelectScreen extends ConsumerWidget {
           children: [
             // Header dashboard strip
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
               child: Row(
                 children: [
                   IconButton(
@@ -43,44 +43,50 @@ class ChapterSelectScreen extends ConsumerWidget {
                     icon: const Icon(Icons.arrow_back_rounded, color: ScholarlyTheme.textPrimary),
                     tooltip: 'Exit Academy',
                   ),
-                  const SizedBox(width: 8),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'KINGSLAYER ACADEMY',
-                        style: GoogleFonts.inter(
-                          color: ScholarlyTheme.accentGold,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1.5,
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'KINGSLAYER ACADEMY',
+                          style: GoogleFonts.inter(
+                            color: ScholarlyTheme.accentGold,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.0,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                      Text(
-                        'Interactive Tutorial',
-                        style: GoogleFonts.inter(
-                          color: ScholarlyTheme.textPrimary,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
+                        Text(
+                          'Interactive Tutorial',
+                          style: GoogleFonts.inter(
+                            color: ScholarlyTheme.textPrimary,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                  const Spacer(),
+                  const SizedBox(width: 4),
 
                   // Rank and XP Summary Widget
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
                       color: ScholarlyTheme.backgroundStart.withValues(alpha: 0.5),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: ScholarlyTheme.panelStroke),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.school_rounded, color: ScholarlyTheme.accentBlueSoft, size: 20),
-                        const SizedBox(width: 10),
+                        const Icon(Icons.school_rounded, color: ScholarlyTheme.accentBlueSoft, size: 16),
+                        const SizedBox(width: 6),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -88,7 +94,7 @@ class ChapterSelectScreen extends ConsumerWidget {
                               p.currentRank.displayName.toUpperCase(),
                               style: GoogleFonts.inter(
                                 color: ScholarlyTheme.accentBlueSoft,
-                                fontSize: 10,
+                                fontSize: 9,
                                 fontWeight: FontWeight.bold,
                                 letterSpacing: 0.5,
                               ),
@@ -97,7 +103,7 @@ class ChapterSelectScreen extends ConsumerWidget {
                               '${p.totalXp} XP',
                               style: GoogleFonts.inter(
                                 color: ScholarlyTheme.textPrimary,
-                                fontSize: 13,
+                                fontSize: 11,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -107,7 +113,7 @@ class ChapterSelectScreen extends ConsumerWidget {
                     ),
                   ),
 
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 4),
 
                   // Custom tutorial preferences button
                   IconButton(
@@ -124,12 +130,12 @@ class ChapterSelectScreen extends ConsumerWidget {
             // Main horizontal browser grid
             Expanded(
               child: GridView.builder(
-                padding: const EdgeInsets.all(24),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  childAspectRatio: 1.6,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
+                  crossAxisCount: 2,
+                  mainAxisExtent: 116,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
                 ),
                 itemCount: lessons.length,
                 itemBuilder: (context, index) {
@@ -186,7 +192,7 @@ class _ChapterCard extends StatelessWidget {
         onTap: isUnlocked ? onTap : null,
         borderRadius: BorderRadius.circular(16),
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
             color: ScholarlyTheme.backgroundStart.withValues(alpha: isCompleted ? 0.4 : 0.2),
             borderRadius: BorderRadius.circular(16),
@@ -198,18 +204,18 @@ class _ChapterCard extends StatelessWidget {
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                       color: isCompleted
                           ? ScholarlyTheme.accentBlueSoft.withValues(alpha: 0.2)
                           : ScholarlyTheme.backgroundStart,
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
                       'CH. ${lesson.chapterId}',
                       style: GoogleFonts.inter(
                         color: isCompleted ? ScholarlyTheme.accentBlueSoft : ScholarlyTheme.textSubtle,
-                        fontSize: 10,
+                        fontSize: 9,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -217,7 +223,7 @@ class _ChapterCard extends StatelessWidget {
                   const Spacer(),
                   if (isActiveCheckpoint)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                       decoration: BoxDecoration(
                         color: ScholarlyTheme.accentYellow.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(4),
@@ -227,16 +233,15 @@ class _ChapterCard extends StatelessWidget {
                         'ACTIVE',
                         style: GoogleFonts.inter(
                           color: ScholarlyTheme.accentYellow,
-                          fontSize: 9,
+                          fontSize: 8,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     )
                   else if (isCompleted)
-                    // Display compact replay refresh trigger indicator
-                    const Icon(Icons.replay_rounded, size: 14, color: ScholarlyTheme.textSubtle)
+                    const Icon(Icons.replay_rounded, size: 12, color: ScholarlyTheme.textSubtle)
                   else if (!isUnlocked)
-                    const Icon(Icons.lock_rounded, size: 14, color: ScholarlyTheme.textSubtle),
+                    const Icon(Icons.lock_rounded, size: 12, color: ScholarlyTheme.textSubtle),
                 ],
               ),
               
@@ -246,14 +251,15 @@ class _ChapterCard extends StatelessWidget {
                 lesson.title,
                 style: GoogleFonts.inter(
                   color: ScholarlyTheme.textPrimary,
-                  fontSize: 14,
+                  fontSize: 12,
                   fontWeight: FontWeight.bold,
+                  height: 1.2,
                 ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
 
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
 
               // Bottom star tally strip
               if (isCompleted)
@@ -264,7 +270,7 @@ class _ChapterCard extends StatelessWidget {
                       padding: const EdgeInsets.only(right: 2),
                       child: Icon(
                         earned ? Icons.star_rounded : Icons.star_outline_rounded,
-                        size: 14,
+                        size: 12,
                         color: earned ? ScholarlyTheme.accentGold : ScholarlyTheme.panelStroke,
                       ),
                     );
@@ -273,7 +279,7 @@ class _ChapterCard extends StatelessWidget {
               else
                 Text(
                   '${lesson.steps.length} Steps',
-                  style: GoogleFonts.inter(color: ScholarlyTheme.textSubtle, fontSize: 11),
+                  style: GoogleFonts.inter(color: ScholarlyTheme.textSubtle, fontSize: 10),
                 ),
             ],
           ),

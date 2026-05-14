@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -20,6 +21,15 @@ class TutorialPage extends ConsumerStatefulWidget {
 class _TutorialPageState extends ConsumerState<TutorialPage> {
   bool _isChapterSelectionVisible = true;
   bool _hasCheckedResumePrompt = false;
+
+  @override
+  void initState() {
+    super.initState();
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+  }
 
   void _handleChapterSelected(int chapterId) {
     ref.read(tutorialProvider.notifier).loadChapter(chapterId);
@@ -89,57 +99,68 @@ class _TutorialPageState extends ConsumerState<TutorialPage> {
                     ),
                   ],
                 ),
-                child: Row(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Icon(Icons.restore_rounded, color: Colors.black, size: 28),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'MID-LESSON SESSION RECOVERED',
-                            style: GoogleFonts.inter(
-                              color: Colors.black,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 1.0,
-                            ),
+                    Row(
+                      children: [
+                        const Icon(Icons.restore_rounded, color: Colors.black, size: 24),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'SESSION RECOVERED',
+                                style: GoogleFonts.inter(
+                                  color: Colors.black,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 1.0,
+                                ),
+                              ),
+                              Text(
+                                'Resume Chapter ${p.activeChapterIndex} from Step ${p.activeStepIndex}?',
+                                style: GoogleFonts.inter(
+                                  color: Colors.black87,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
                           ),
-                          Text(
-                            'Resume Chapter ${p.activeChapterIndex} from Step ${p.activeStepIndex}?',
-                            style: GoogleFonts.inter(
-                              color: Colors.black87,
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                            ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () {
+                            ref.read(tutorialProvider.notifier).clearIllegalFeedback();
+                            ref.read(tutorialProvider.notifier).loadChapter(1);
+                          },
+                          child: Text(
+                            'Restart',
+                            style: GoogleFonts.inter(color: Colors.black54, fontWeight: FontWeight.bold, fontSize: 12),
                           ),
-                        ],
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        // Dismiss snapshot and allow browse
-                        ref.read(tutorialProvider.notifier).clearIllegalFeedback();
-                        // Trigger immediate state reload clean loop
-                        ref.read(tutorialProvider.notifier).loadChapter(1);
-                      },
-                      child: Text(
-                        'Restart Chapter',
-                        style: GoogleFonts.inter(color: Colors.black54, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    ElevatedButton.icon(
-                      onPressed: _resumeSession,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.black,
-                        foregroundColor: ScholarlyTheme.accentYellow,
-                        elevation: 0,
-                      ),
-                      icon: const Icon(Icons.play_arrow_rounded, size: 18),
-                      label: Text('Resume', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton.icon(
+                          onPressed: _resumeSession,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.black,
+                            foregroundColor: ScholarlyTheme.accentYellow,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          ),
+                          icon: const Icon(Icons.play_arrow_rounded, size: 16),
+                          label: Text('Resume', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 12)),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -151,66 +172,88 @@ class _TutorialPageState extends ConsumerState<TutorialPage> {
 
     // 3. Main Active Lesson Runtime Surface
     return Scaffold(
-      backgroundColor: ScholarlyTheme.panelBase,
+      backgroundColor: ScholarlyTheme.backgroundStart,
       body: SafeArea(
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Left Action / Breadcrumb Header Column
+            // Top Action / Breadcrumb Header Strip matching the app's modern glass panels
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Column(
-                children: [
-                  IconButton(
-                    onPressed: () => setState(() => _isChapterSelectionVisible = true),
-                    icon: const Icon(Icons.grid_view_rounded, color: ScholarlyTheme.textSubtle),
-                    tooltip: 'Chapter Selection',
-                  ),
-                  const Spacer(),
-                  // Progress metrics indicator
-                  Text(
-                    '${state.currentStepIndex + 1}/${state.currentLesson.steps.length}',
-                    style: GoogleFonts.inter(
-                      color: ScholarlyTheme.textSubtle,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: ScholarlyTheme.modernDecoration().copyWith(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  children: [
+                    IconButton(
+                      onPressed: () => setState(() => _isChapterSelectionVisible = true),
+                      icon: const Icon(Icons.grid_view_rounded, size: 20, color: ScholarlyTheme.accentBlue),
+                      tooltip: 'Chapter Selection',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    height: 120,
-                    width: 4,
-                    child: RotatedBox(
-                      quarterTurns: 1,
-                      child: LinearProgressIndicator(
-                        value: (state.currentStepIndex + 1) / state.currentLesson.steps.length,
-                        backgroundColor: ScholarlyTheme.panelStroke,
-                        color: ScholarlyTheme.accentBlueSoft,
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                'CHAPTER ${state.currentLesson.chapterId}',
+                                style: GoogleFonts.inter(
+                                  color: ScholarlyTheme.accentBlue,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 1.0,
+                                ),
+                              ),
+                              const Spacer(),
+                              Text(
+                                'STEP ${state.currentStepIndex + 1} OF ${state.currentLesson.steps.length}',
+                                style: GoogleFonts.inter(
+                                  color: ScholarlyTheme.textMuted,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: LinearProgressIndicator(
+                              value: (state.currentStepIndex + 1) / state.currentLesson.steps.length,
+                              backgroundColor: ScholarlyTheme.panelStroke.withValues(alpha: 0.5),
+                              color: ScholarlyTheme.accentBlue,
+                              minHeight: 6,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ),
-                  const Spacer(),
-                ],
+                  ],
+                ),
               ),
             ),
 
             // Isolated interactive board container
             const Expanded(
-              flex: 5,
               child: Padding(
-                padding: EdgeInsets.all(8.0),
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 child: TutorialIllegalMoveFeedback(
                   child: TutorialBoardStage(),
                 ),
               ),
             ),
 
-            // Right adaptive advisor side panel
-            const Expanded(
-              flex: 3,
-              child: Padding(
-                padding: EdgeInsets.only(top: 16, bottom: 16, right: 16),
-                child: TutorialMentorPanel(),
-              ),
+            // Base adaptive advisor bottom panel
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 4, 16, 16),
+              child: TutorialMentorPanel(),
             ),
           ],
         ),

@@ -25,10 +25,17 @@ class BoardStage extends ConsumerWidget {
     final bottomPieces = isFlipped ? capturedByBlack : capturedByWhite;
 
     return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisAlignment: isExpanded ? MainAxisAlignment.start : MainAxisAlignment.center,
       children: [
         if (!isExpanded) CapturedPiecesBar(pieces: topPieces),
-        const Expanded(child: Center(child: ChessBoard())),
+        Expanded(
+          child: Align(
+            alignment: isExpanded ? Alignment.topCenter : Alignment.center,
+            child: ChessBoard(
+              alignment: isExpanded ? Alignment.topCenter : Alignment.center,
+            ),
+          ),
+        ),
         if (!isExpanded) CapturedPiecesBar(pieces: bottomPieces),
       ],
     );

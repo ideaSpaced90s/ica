@@ -130,10 +130,31 @@ class _TutorialMentorPanelState extends ConsumerState<TutorialMentorPanel> with 
                              state.currentStep.type == TutorialStepType.demonstrate ||
                              state.currentStep.type == TutorialStepType.celebration;
 
-    return Container(
-      decoration: ScholarlyTheme.glassPanelDecoration,
-      padding: const EdgeInsets.all(16),
+    return AnimatedBuilder(
+      animation: _glowController,
+      builder: (context, child) {
+        return Container(
+          decoration: ScholarlyTheme.modernDecoration().copyWith(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: moodColor.withValues(alpha: 0.3 + (_glowController.value * 0.3)),
+              width: 1.5,
+            ),
+            boxShadow: [
+              ...ScholarlyTheme.modernDecoration().boxShadow!,
+              BoxShadow(
+                color: moodColor.withValues(alpha: 0.1 + (_glowController.value * 0.1)),
+                blurRadius: 16,
+                spreadRadius: 1,
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.all(20),
+          child: child,
+        );
+      },
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // Header identity strip
@@ -144,8 +165,8 @@ class _TutorialMentorPanelState extends ConsumerState<TutorialMentorPanel> with 
                 animation: _glowController,
                 builder: (context, child) {
                   return Container(
-                    width: 48,
-                    height: 48,
+                    width: 52,
+                    height: 52,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
@@ -155,7 +176,7 @@ class _TutorialMentorPanelState extends ConsumerState<TutorialMentorPanel> with 
                       boxShadow: [
                         BoxShadow(
                           color: moodColor.withValues(alpha: 0.2 + (_glowController.value * 0.3)),
-                          blurRadius: 12,
+                          blurRadius: 16,
                           spreadRadius: 2,
                         ),
                       ],
@@ -172,23 +193,45 @@ class _TutorialMentorPanelState extends ConsumerState<TutorialMentorPanel> with 
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'GM BARD',
-                      style: GoogleFonts.inter(
-                        color: moodColor,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 1.5,
-                      ),
+                    Row(
+                      children: [
+                        Text(
+                          'GM BARD',
+                          style: GoogleFonts.inter(
+                            color: moodColor,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.5,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: moodColor,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: moodColor.withValues(alpha: 0.5),
+                                blurRadius: 4,
+                                spreadRadius: 1,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 3),
                     Text(
                       state.currentLesson.title,
                       style: GoogleFonts.inter(
-                        color: ScholarlyTheme.textSubtle,
-                        fontSize: 11,
+                        color: ScholarlyTheme.textMuted,
+                        fontSize: 12,
                         fontWeight: FontWeight.w600,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
@@ -199,75 +242,105 @@ class _TutorialMentorPanelState extends ConsumerState<TutorialMentorPanel> with 
           const SizedBox(height: 16),
 
           // Dialogue text canvas
-          Expanded(
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: _isTyping ? _completeTypingInstantly : null,
-              child: SingleChildScrollView(
-                child: Text(
-                  _displayedText,
-                  style: GoogleFonts.inter(
-                    color: ScholarlyTheme.textPrimary,
-                    fontSize: 14,
-                    height: 1.5,
+              child: AnimatedSize(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeOutCubic,
+                alignment: Alignment.topCenter,
+                child: Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(
+                        text: _displayedText,
+                        style: GoogleFonts.inter(
+                          color: ScholarlyTheme.textPrimary,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          height: 1.6,
+                        ),
+                      ),
+                      if (_isTyping)
+                        TextSpan(
+                          text: ' ┃',
+                          style: GoogleFonts.inter(
+                            color: moodColor,
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                    ],
                   ),
                 ),
               ),
             ),
           ),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
 
           // Actionable prompt indicator or manual instruction bar
           if (isActionableStep)
             Align(
               alignment: Alignment.bottomRight,
-              child: ElevatedButton.icon(
-                onPressed: _isTyping ? _completeTypingInstantly : () => notifier.advanceStep(),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: moodColor.withValues(alpha: 0.2),
-                  foregroundColor: moodColor,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  side: BorderSide(color: moodColor.withValues(alpha: 0.5)),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: moodColor.withValues(alpha: 0.25),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
-                icon: Icon(_isTyping ? Icons.fast_forward_rounded : Icons.arrow_forward_rounded, size: 16),
-                label: Text(
-                  _isTyping ? 'Skip' : (state.currentStep.type == TutorialStepType.celebration ? 'Finish' : 'Next'),
-                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold),
+                child: ElevatedButton.icon(
+                  onPressed: _isTyping ? _completeTypingInstantly : () => notifier.advanceStep(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: moodColor,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  icon: Icon(_isTyping ? Icons.fast_forward_rounded : Icons.arrow_forward_rounded, size: 16),
+                  label: Text(
+                    _isTyping ? 'Skip' : (state.currentStep.type == TutorialStepType.celebration ? 'Finish' : 'Next'),
+                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                  ),
                 ),
               ),
             )
           else
             // Instructional guidance bar detailing awaited board targets
             Container(
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
               decoration: BoxDecoration(
-                color: ScholarlyTheme.backgroundStart.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: ScholarlyTheme.panelStroke.withValues(alpha: 0.4)),
+                color: moodColor.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: moodColor.withValues(alpha: 0.2)),
               ),
               child: Row(
                 children: [
                   Icon(
                     state.currentStep.type == TutorialStepType.awaitMove
-                        ? Icons.pan_tool_rounded // Dragging action
-                        : Icons.touch_app_rounded, // Tapping action
-                    size: 14,
-                    color: ScholarlyTheme.accentYellow,
+                        ? Icons.pan_tool_rounded
+                        : Icons.touch_app_rounded,
+                    size: 16,
+                    color: moodColor,
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       state.currentStep.type == TutorialStepType.awaitMove
                           ? 'Make the requested move on the board'
                           : 'Tap the correct square on the board',
                       style: GoogleFonts.inter(
-                        color: ScholarlyTheme.accentYellow,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        fontStyle: FontStyle.italic,
+                        color: moodColor.withValues(alpha: 0.9),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),

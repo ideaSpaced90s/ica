@@ -94,7 +94,8 @@ class _TutorialBoardStageState extends ConsumerState<TutorialBoardStage> with Si
         final boardSize = math.min(constraints.maxWidth, constraints.maxHeight);
         final double sqSize = boardSize / 8;
 
-        return Center(
+        return Align(
+          alignment: Alignment.topCenter,
           child: SizedBox(
             width: boardSize,
             height: boardSize,

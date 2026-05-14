@@ -32,7 +32,9 @@ import 'themes/chess_theme.dart';
 import 'themes/shadow_theme.dart';
 
 class ChessBoard extends ConsumerStatefulWidget {
-  const ChessBoard({super.key});
+  final AlignmentGeometry alignment;
+
+  const ChessBoard({super.key, this.alignment = Alignment.center});
 
   @override
   ConsumerState<ChessBoard> createState() => _ChessBoardState();
@@ -116,7 +118,7 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
         final boardSize = min(constraints.maxWidth, constraints.maxHeight);
 
         return Align(
-          alignment: Alignment.center,
+          alignment: widget.alignment,
           child: SizedBox(
             width: boardSize,
             height: boardSize,

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:chess/chess.dart' as chess_lib;
@@ -23,20 +22,10 @@ class _AcademyPageState extends ConsumerState<AcademyPage> {
   @override
   void initState() {
     super.initState();
-    // Lock to landscape mode for Academy study environment
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
-    ]);
   }
 
   @override
   void dispose() {
-    // Restore preferred orientations back to normal game app settings
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
-    ]);
     super.dispose();
   }
 
@@ -95,10 +84,6 @@ class _AcademyPageState extends ConsumerState<AcademyPage> {
 
     if (confirm == true) {
       if (!mounted) return;
-      SystemChrome.setPreferredOrientations([
-        DeviceOrientation.portraitUp,
-        DeviceOrientation.portraitDown,
-      ]);
       Navigator.of(context).pop();
     }
   }
@@ -256,198 +241,209 @@ class _AcademyPageState extends ConsumerState<AcademyPage> {
       child: Scaffold(
         backgroundColor: ScholarlyTheme.backgroundStart,
         body: SafeArea(
+          top: false,
           left: false, // Allow AI chat box on far left to reach edge-to-edge under notch/notification area
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
-            child: Row(
+            padding: const EdgeInsets.fromLTRB(0, 0, 0, 8),
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // 1. AI Chat Box fully left edge-to-edge
+                // 1. Top side chessboard taking exact square space, extending edge-to-edge
+                const AspectRatio(
+                  aspectRatio: 1.0,
+                  child: BoardStage(isExpanded: true),
+                ),
+                const SizedBox(height: 4),
+                // 2. AI Chat Box claiming all remaining vertical space directly below the board
                 Expanded(
-                  flex: 1,
-                  child: GlassPanel(
-                    padding: const EdgeInsets.fromLTRB(10, 8, 10, 4),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12.0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         _CompactCapturedPiecesHeader(state: state),
                         const SizedBox(height: 6),
                         Expanded(
-                          child: state.showLog
-                              ? _buildMoveLog(context, state)
-                              : CommentaryHistory(state: state),
+                          child: ShaderMask(
+                            shaderCallback: (Rect bounds) {
+                              return const LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [Colors.transparent, Colors.white],
+                                stops: [0.0, 0.20],
+                              ).createShader(bounds);
+                            },
+                            blendMode: BlendMode.dstIn,
+                            child: state.showLog
+                                ? _buildMoveLog(context, state)
+                                : CommentaryHistory(state: state),
+                          ),
                         ),
                       ],
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
-                // 2. Vertical action strip elegantly centered in between the chat box and the chessboard
-                Center(
-                  child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4.0),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: state.isPuzzleMode
-                            ? [
-                                _CompactActionIcon(
-                                  icon: Icons.exit_to_app_rounded,
-                                  customBgColor: Colors.redAccent.withValues(alpha: 0.15),
-                                  customIconColor: Colors.redAccent,
-                                  tooltip: 'Exit Academy',
-                                  onTap: _requestExitAcademy,
-                                ),
-                                const SizedBox(height: 6),
-                                _CompactActionIcon(
-                                  icon: Icons.school_rounded,
-                                  customBgColor: Colors.orange.withValues(alpha: 0.15),
-                                  customIconColor: Colors.orange,
-                                  tooltip: 'Free Study Mode',
-                                  onTap: () => notifier.exitPuzzleMode(),
-                                ),
-                                const SizedBox(height: 6),
-                                _CompactActionIcon(
-                                  icon: Icons.skip_next_rounded,
-                                  tooltip: 'Next Puzzle',
-                                  onTap: () => notifier.nextPuzzle(),
-                                ),
-                                const SizedBox(height: 6),
-                                _CompactActionIcon(
-                                  icon: Icons.refresh_rounded,
-                                  tooltip: 'Reset Line',
-                                  onTap: () => notifier.resetPuzzleLine(),
-                                ),
-                                const SizedBox(height: 6),
-                                _CompactActionIcon(
-                                  icon: Icons.flip_camera_android_outlined,
-                                  tooltip: 'Flip Board',
-                                  isActive: state.isBoardFlipped,
-                                  onTap: () => notifier.toggleBoardOrientation(),
-                                ),
-                                const SizedBox(height: 6),
-                                _CompactActionIcon(
-                                  icon: state.isBulbGlowing
-                                      ? Icons.lightbulb_rounded
-                                      : Icons.lightbulb_outline_rounded,
-                                  tooltip: 'Hint',
-                                  isEnabled: !state.isHintLoading,
-                                  isActive: state.isBulbGlowing,
-                                  activeColor: ScholarlyTheme.accentYellowSoft,
-                                  activeIconColor: ScholarlyTheme.accentYellow,
-                                  onTap: () => notifier.requestHint(),
-                                ),
-                                const SizedBox(height: 6),
-                                _CompactActionIcon(
-                                  icon: state.showLog
-                                      ? Icons.chat_bubble_outline_rounded
-                                      : Icons.history_edu_rounded,
-                                  tooltip: 'Toggle Log',
-                                  isActive: state.showLog,
-                                  onTap: () => notifier.toggleLog(),
-                                ),
-                              ]
-                            : [
-                                _CompactActionIcon(
-                                  icon: Icons.exit_to_app_rounded,
-                                  customBgColor: Colors.redAccent.withValues(alpha: 0.15),
-                                  customIconColor: Colors.redAccent,
-                                  tooltip: 'Exit Academy',
-                                  onTap: _requestExitAcademy,
-                                ),
-                                const SizedBox(height: 6),
-                                _CompactActionIcon(
-                                  icon: Icons.extension_rounded,
-                                  tooltip: 'Puzzle Training',
-                                  customBgColor: ScholarlyTheme.accentBlue.withValues(alpha: 0.15),
-                                  customIconColor: ScholarlyTheme.accentBlue,
-                                  onTap: () => notifier.startPuzzleMode(),
-                                ),
-                                const SizedBox(height: 6),
-                                _CompactActionIcon(
-                                  icon: Icons.menu_book_rounded,
-                                  tooltip: 'Interactive Tutorial',
-                                  customBgColor: Colors.deepPurple.withValues(alpha: 0.15),
-                                  customIconColor: Colors.deepPurpleAccent,
-                                  onTap: () {
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (context) => const TutorialPage(),
-                                      ),
-                                    );
-                                  },
-                                ),
-                                const SizedBox(height: 6),
-                                _CompactActionIcon(
-                                  icon: Icons.add_box_rounded,
-                                  tooltip: 'New Game',
-                                  onTap: () => _handleNewGame(context, ref),
-                                ),
-                                const SizedBox(height: 6),
-                                _CompactActionIcon(
-                                  icon: Icons.tune_rounded,
-                                  tooltip: 'Settings',
-                                  onTap: () {
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (context) => const SettingsPage(isAcademyMode: true),
-                                      ),
-                                    );
-                                  },
-                                ),
-                                const SizedBox(height: 6),
-                                _CompactActionIcon(
-                                  icon: Icons.undo_rounded,
-                                  tooltip: 'Undo',
-                                  isEnabled: state.canUndo,
-                                  onTap: state.canUndo ? () => notifier.undo() : null,
-                                ),
-                                const SizedBox(height: 6),
-                                _CompactActionIcon(
-                                  icon: Icons.redo_rounded,
-                                  tooltip: 'Redo',
-                                  isEnabled: state.canRedo,
-                                  onTap: state.canRedo ? () => notifier.redo() : null,
-                                ),
-                                const SizedBox(height: 6),
-                                _CompactActionIcon(
-                                  icon: Icons.flip_camera_android_outlined,
-                                  tooltip: 'Flip Board',
-                                  isActive: state.isBoardFlipped,
-                                  onTap: () => notifier.toggleBoardOrientation(),
-                                ),
-                                const SizedBox(height: 6),
-                                _CompactActionIcon(
-                                  icon: state.isBulbGlowing
-                                      ? Icons.lightbulb_rounded
-                                      : Icons.lightbulb_outline_rounded,
-                                  tooltip: 'Hint',
-                                  isEnabled: !state.isHintLoading,
-                                  isActive: state.isBulbGlowing,
-                                  activeColor: ScholarlyTheme.accentYellowSoft,
-                                  activeIconColor: ScholarlyTheme.accentYellow,
-                                  onTap: () => notifier.requestHint(),
-                                ),
-                                const SizedBox(height: 6),
-                                _CompactActionIcon(
-                                  icon: state.showLog
-                                      ? Icons.chat_bubble_outline_rounded
-                                      : Icons.history_edu_rounded,
-                                  tooltip: 'Toggle Log',
-                                  isActive: state.showLog,
-                                  onTap: () => notifier.toggleLog(),
-                                ),
-                              ],
-                      ),
-                    ),
+                const SizedBox(height: 8),
+                // 3. Horizontal action bar at the bottom
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
+                    child: state.isPuzzleMode
+                        ? Row(
+                            children: [
+                              _CompactActionIcon(
+                                icon: Icons.exit_to_app_rounded,
+                                customBgColor: Colors.redAccent.withValues(alpha: 0.15),
+                                customIconColor: Colors.redAccent,
+                                tooltip: 'Exit Academy',
+                                onTap: _requestExitAcademy,
+                              ),
+                              const SizedBox(width: 8),
+                              _CompactActionIcon(
+                                icon: Icons.school_rounded,
+                                customBgColor: Colors.orange.withValues(alpha: 0.15),
+                                customIconColor: Colors.orange,
+                                tooltip: 'Free Study Mode',
+                                onTap: () => notifier.exitPuzzleMode(),
+                              ),
+                              const SizedBox(width: 8),
+                              _CompactActionIcon(
+                                icon: Icons.skip_next_rounded,
+                                tooltip: 'Next Puzzle',
+                                onTap: () => notifier.nextPuzzle(),
+                              ),
+                              const SizedBox(width: 8),
+                              _CompactActionIcon(
+                                icon: Icons.refresh_rounded,
+                                tooltip: 'Reset Line',
+                                onTap: () => notifier.resetPuzzleLine(),
+                              ),
+                              const SizedBox(width: 8),
+                              _CompactActionIcon(
+                                icon: Icons.flip_camera_android_outlined,
+                                tooltip: 'Flip Board',
+                                isActive: state.isBoardFlipped,
+                                onTap: () => notifier.toggleBoardOrientation(),
+                              ),
+                              const SizedBox(width: 8),
+                              _CompactActionIcon(
+                                icon: state.isBulbGlowing
+                                    ? Icons.lightbulb_rounded
+                                    : Icons.lightbulb_outline_rounded,
+                                tooltip: 'Hint',
+                                isEnabled: !state.isHintLoading,
+                                isActive: state.isBulbGlowing,
+                                activeColor: ScholarlyTheme.accentYellowSoft,
+                                activeIconColor: ScholarlyTheme.accentYellow,
+                                onTap: () => notifier.requestHint(),
+                              ),
+                              const SizedBox(width: 8),
+                              _CompactActionIcon(
+                                icon: state.showLog
+                                    ? Icons.chat_bubble_outline_rounded
+                                    : Icons.history_edu_rounded,
+                                tooltip: 'Toggle Log',
+                                isActive: state.showLog,
+                                onTap: () => notifier.toggleLog(),
+                              ),
+                            ],
+                          )
+                        : Row(
+                            children: [
+                              _CompactActionIcon(
+                                icon: Icons.exit_to_app_rounded,
+                                customBgColor: Colors.redAccent.withValues(alpha: 0.15),
+                                customIconColor: Colors.redAccent,
+                                tooltip: 'Exit Academy',
+                                onTap: _requestExitAcademy,
+                              ),
+                              const SizedBox(width: 8),
+                              _CompactActionIcon(
+                                icon: Icons.extension_rounded,
+                                tooltip: 'Puzzle Training',
+                                customBgColor: ScholarlyTheme.accentBlue.withValues(alpha: 0.15),
+                                customIconColor: ScholarlyTheme.accentBlue,
+                                onTap: () => notifier.startPuzzleMode(),
+                              ),
+                              const SizedBox(width: 8),
+                              _CompactActionIcon(
+                                icon: Icons.menu_book_rounded,
+                                tooltip: 'Interactive Tutorial',
+                                customBgColor: Colors.deepPurple.withValues(alpha: 0.15),
+                                customIconColor: Colors.deepPurpleAccent,
+                                onTap: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (context) => const TutorialPage(),
+                                    ),
+                                  );
+                                },
+                              ),
+                              const SizedBox(width: 8),
+                              _CompactActionIcon(
+                                icon: Icons.add_box_rounded,
+                                tooltip: 'New Game',
+                                onTap: () => _handleNewGame(context, ref),
+                              ),
+                              const SizedBox(width: 8),
+                              _CompactActionIcon(
+                                icon: Icons.tune_rounded,
+                                tooltip: 'Settings',
+                                onTap: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (context) => const SettingsPage(isAcademyMode: true),
+                                    ),
+                                  );
+                                },
+                              ),
+                              const SizedBox(width: 8),
+                              _CompactActionIcon(
+                                icon: Icons.undo_rounded,
+                                tooltip: 'Undo',
+                                isEnabled: state.canUndo,
+                                onTap: state.canUndo ? () => notifier.undo() : null,
+                              ),
+                              const SizedBox(width: 8),
+                              _CompactActionIcon(
+                                icon: Icons.redo_rounded,
+                                tooltip: 'Redo',
+                                isEnabled: state.canRedo,
+                                onTap: state.canRedo ? () => notifier.redo() : null,
+                              ),
+                              const SizedBox(width: 8),
+                              _CompactActionIcon(
+                                icon: Icons.flip_camera_android_outlined,
+                                tooltip: 'Flip Board',
+                                isActive: state.isBoardFlipped,
+                                onTap: () => notifier.toggleBoardOrientation(),
+                              ),
+                              const SizedBox(width: 8),
+                              _CompactActionIcon(
+                                icon: state.isBulbGlowing
+                                    ? Icons.lightbulb_rounded
+                                    : Icons.lightbulb_outline_rounded,
+                                tooltip: 'Hint',
+                                isEnabled: !state.isHintLoading,
+                                isActive: state.isBulbGlowing,
+                                activeColor: ScholarlyTheme.accentYellowSoft,
+                                activeIconColor: ScholarlyTheme.accentYellow,
+                                onTap: () => notifier.requestHint(),
+                              ),
+                              const SizedBox(width: 8),
+                              _CompactActionIcon(
+                                icon: state.showLog
+                                    ? Icons.chat_bubble_outline_rounded
+                                    : Icons.history_edu_rounded,
+                                tooltip: 'Toggle Log',
+                                isActive: state.showLog,
+                                onTap: () => notifier.toggleLog(),
+                              ),
+                            ],
+                          ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                // 3. Right side chessboard taking the remaining 50% flex area
-                const Expanded(
-                  flex: 1,
-                  child: BoardStage(isExpanded: true),
                 ),
               ],
             ),

@@ -303,14 +303,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
                   child: Text.rich(
                     TextSpan(
                       children: [
-                        TextSpan(
-                          text: entry.text,
-                          style: GoogleFonts.inter(
-                            color: ScholarlyTheme.textPrimary,
-                            fontSize: 13,
-                            height: 1.4,
-                          ),
-                        ),
+                        ..._parseChessFormattedText(entry.text),
                         if (!entry.isComplete && !isStreaming)
                           TextSpan(
                             text: ' •••',
@@ -401,5 +394,79 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
         ],
       ),
     );
+  }
+
+  List<InlineSpan> _parseChessFormattedText(String text) {
+    final List<InlineSpan> spans = [];
+    final regExp = RegExp(
+      r'\*\*(.*?)\*\*|\b(King|Queen|Rook|Bishop|Knight|Pawn)s?\b|\b([a-h][1-8])\b',
+      caseSensitive: false,
+    );
+
+    int lastIndex = 0;
+    for (final match in regExp.allMatches(text)) {
+      if (match.start > lastIndex) {
+        spans.add(TextSpan(
+          text: text.substring(lastIndex, match.start),
+          style: GoogleFonts.inter(
+            color: ScholarlyTheme.textPrimary,
+            fontSize: 13,
+            height: 1.4,
+          ),
+        ));
+      }
+
+      if (match.group(1) != null) {
+        // Markdown Bold
+        spans.add(TextSpan(
+          text: match.group(1),
+          style: GoogleFonts.inter(
+            color: ScholarlyTheme.textPrimary,
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            height: 1.4,
+          ),
+        ));
+      } else if (match.group(2) != null) {
+        // Piece Name
+        final rawPiece = match.group(0)!;
+        final formattedPiece = rawPiece[0].toUpperCase() + rawPiece.substring(1);
+        spans.add(TextSpan(
+          text: formattedPiece,
+          style: GoogleFonts.inter(
+            color: ScholarlyTheme.accentBlue,
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            height: 1.4,
+          ),
+        ));
+      } else if (match.group(3) != null) {
+        // Algebraic Square
+        spans.add(TextSpan(
+          text: match.group(3),
+          style: GoogleFonts.jetBrainsMono(
+            color: const Color(0xFFD97706), // Striking modern amber/gold accent
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            height: 1.4,
+          ),
+        ));
+      }
+
+      lastIndex = match.end;
+    }
+
+    if (lastIndex < text.length) {
+      spans.add(TextSpan(
+        text: text.substring(lastIndex),
+        style: GoogleFonts.inter(
+          color: ScholarlyTheme.textPrimary,
+          fontSize: 13,
+          height: 1.4,
+        ),
+      ));
+    }
+
+    return spans;
   }
 }
