@@ -20,6 +20,10 @@ class SettingsPage extends ConsumerWidget {
     final state = ref.watch(chessProvider);
     final notifier = ref.read(chessProvider.notifier);
 
+    if (isAcademyMode) {
+      return _buildLandscapeDashboard(context, ref, state, notifier);
+    }
+
     return Scaffold(
       backgroundColor: ScholarlyTheme.backgroundStart,
       body: CustomScrollView(
@@ -424,6 +428,223 @@ class SettingsPage extends ConsumerWidget {
             ]),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildLandscapeDashboard(
+    BuildContext context,
+    WidgetRef ref,
+    ChessState state,
+    ChessNotifier notifier,
+  ) {
+    return Scaffold(
+      backgroundColor: ScholarlyTheme.backgroundStart,
+      appBar: AppBar(
+        backgroundColor: ScholarlyTheme.backgroundStart,
+        surfaceTintColor: ScholarlyTheme.backgroundStart,
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: ScholarlyTheme.textPrimary,
+            size: 20,
+          ),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: Text(
+          'Academy Settings',
+          style: GoogleFonts.inter(
+            color: ScholarlyTheme.textPrimary,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        centerTitle: true,
+      ),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Column 1: GAME MODE
+              Expanded(
+                child: GlassPanel(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.sports_esports_rounded, size: 16, color: ScholarlyTheme.accentGold),
+                          const SizedBox(width: 8),
+                          Text(
+                            'GAME MODE',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: ScholarlyTheme.accentGold,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          physics: const BouncingScrollPhysics(),
+                          child: Column(
+                            children: [
+                              _CompactGridTile(
+                                label: 'Classic Chess',
+                                description: 'Standard starting position and orthodox rules',
+                                icon: Icons.grid_on_rounded,
+                                onTap: () => notifier.setGameMode('classic'),
+                                trailing: state.gameMode == 'classic'
+                                    ? const Icon(Icons.check_circle_rounded, size: 16, color: ScholarlyTheme.accentBlue)
+                                    : null,
+                              ),
+                              _CompactGridTile(
+                                label: 'Chess 960',
+                                description: 'Fischer Random setup',
+                                icon: Icons.shuffle_rounded,
+                                onTap: () => notifier.setGameMode('chess960'),
+                                trailing: state.gameMode == 'chess960'
+                                    ? const Icon(Icons.check_circle_rounded, size: 16, color: ScholarlyTheme.accentBlue)
+                                    : null,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+
+              // Column 2: PREFERENCES
+              Expanded(
+                child: GlassPanel(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.tune_rounded, size: 16, color: ScholarlyTheme.accentBlue),
+                          const SizedBox(width: 8),
+                          Text(
+                            'PREFERENCES',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: ScholarlyTheme.accentBlue,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          physics: const BouncingScrollPhysics(),
+                          child: Column(
+                            children: [
+                              _CompactGridSwitchTile(
+                                label: 'Music',
+                                description: 'Background audio',
+                                icon: state.isMusicEnabled ? Icons.music_note_rounded : Icons.music_off_rounded,
+                                value: state.isMusicEnabled,
+                                onChanged: (v) => notifier.toggleMusic(),
+                              ),
+                              _CompactGridSwitchTile(
+                                label: 'Sound Effects',
+                                description: 'Move sounds & alerts',
+                                icon: state.isSoundEnabled ? Icons.volume_up_rounded : Icons.volume_off_rounded,
+                                value: state.isSoundEnabled,
+                                onChanged: (v) => notifier.toggleSound(),
+                              ),
+                              _CompactGridSwitchTile(
+                                label: 'Haptics',
+                                description: 'Impact vibrations',
+                                icon: state.isHapticsEnabled ? Icons.vibration_rounded : Icons.vibration_outlined,
+                                value: state.isHapticsEnabled,
+                                onChanged: (v) => notifier.toggleHaptics(),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+
+              // Column 3: VISUALS
+              Expanded(
+                child: GlassPanel(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.palette_rounded, size: 16, color: Colors.purpleAccent),
+                          const SizedBox(width: 8),
+                          Text(
+                            'VISUALS',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.purpleAccent,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          physics: const BouncingScrollPhysics(),
+                          child: Column(
+                            children: [
+                              _CompactGridTile(
+                                label: 'Board Theme',
+                                description: ThemeRegistry.getTheme(state.boardThemeId).name,
+                                icon: Icons.palette_rounded,
+                                onTap: () => _showThemeSelector(context, ref),
+                                trailing: _ThemeMiniPreview(
+                                  theme: ThemeRegistry.getTheme(state.boardThemeId),
+                                ),
+                              ),
+                              _CompactGridTile(
+                                label: 'Animation Engine',
+                                description: 'Fine-tune movement',
+                                icon: Icons.movie_filter_rounded,
+                                onTap: () => _showAnimationSettingsOverlay(context, ref),
+                                trailing: const Icon(Icons.chevron_right_rounded, size: 16, color: Colors.grey),
+                              ),
+                              _CompactGridSwitchTile(
+                                label: 'Animations',
+                                description: 'Master toggle',
+                                icon: state.isAnimationsEnabled ? Icons.auto_awesome_rounded : Icons.auto_awesome_outlined,
+                                value: state.isAnimationsEnabled,
+                                onChanged: (v) => notifier.toggleAnimations(),
+                                enabled: !state.isRatedMode,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -1760,6 +1981,168 @@ class _TimeSliderRow extends StatelessWidget {
           child: Slider(value: value, min: min, max: max, onChanged: onChanged),
         ),
       ],
+    );
+  }
+}
+
+class _CompactGridTile extends StatelessWidget {
+  final String label;
+  final String description;
+  final IconData icon;
+  final VoidCallback? onTap;
+  final Widget? trailing;
+
+  const _CompactGridTile({
+    required this.label,
+    required this.description,
+    required this.icon,
+    this.onTap,
+    this.trailing,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          decoration: BoxDecoration(
+            color: ScholarlyTheme.panelBase.withValues(alpha: 0.4),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: ScholarlyTheme.panelStroke, width: 0.5),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, size: 18, color: ScholarlyTheme.textPrimary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: GoogleFonts.inter(
+                        color: ScholarlyTheme.textPrimary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      description,
+                      style: GoogleFonts.inter(
+                        color: ScholarlyTheme.textMuted,
+                        fontSize: 9,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              if (trailing != null) ...[
+                const SizedBox(width: 4),
+                trailing!,
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CompactGridSwitchTile extends StatelessWidget {
+  final String label;
+  final String description;
+  final IconData icon;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+  final bool enabled;
+
+  const _CompactGridSwitchTile({
+    required this.label,
+    required this.description,
+    required this.icon,
+    required this.value,
+    required this.onChanged,
+    this.enabled = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Opacity(
+      opacity: enabled ? 1.0 : 0.4,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 8.0),
+        child: InkWell(
+          onTap: () {
+            if (!enabled) return;
+            onChanged(!value);
+          },
+          borderRadius: BorderRadius.circular(10),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            decoration: BoxDecoration(
+              color: value
+                  ? ScholarlyTheme.accentBlueSoft.withValues(alpha: 0.5)
+                  : ScholarlyTheme.panelBase.withValues(alpha: 0.4),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: value ? ScholarlyTheme.accentBlue : ScholarlyTheme.panelStroke,
+                width: 0.5,
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(icon, size: 18, color: value ? ScholarlyTheme.accentBlue : ScholarlyTheme.textPrimary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        label,
+                        style: GoogleFonts.inter(
+                          color: ScholarlyTheme.textPrimary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        description,
+                        style: GoogleFonts.inter(
+                          color: ScholarlyTheme.textMuted,
+                          fontSize: 9,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(
+                  height: 24,
+                  child: Transform.scale(
+                    scale: 0.7,
+                    child: Switch(
+                      value: value,
+                      onChanged: enabled ? onChanged : null,
+                      activeThumbColor: ScholarlyTheme.accentBlue,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
