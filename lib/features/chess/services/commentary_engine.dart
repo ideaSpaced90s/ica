@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:kingslayer_chess/src/rust/api/puzzles.dart' as rust_puzzles;
+import '../data/puzzle_repository.dart';
 
 class CommentaryEngine {
   bool isInitialized = false;
@@ -9,6 +11,7 @@ class CommentaryEngine {
   bool isGenerating = false;
   String? lastError;
   GenerativeModel? _model;
+  void Function(rust_puzzles.Puzzle puzzle)? onPuzzleLoaded;
 
   Future<void> initialize() async {
     if (isInitialized || isInitializing) return;
@@ -28,17 +31,45 @@ class CommentaryEngine {
         throw Exception('Gemini API Key missing or invalid in .env');
       }
 
+      final searchPuzzlesTool = Tool(
+        functionDeclarations: [
+          FunctionDeclaration(
+            'search_puzzles',
+            'Search the Lichess puzzle archives by theme (e.g., fork, pin, mateIn2) or rating constraints.',
+            Schema(
+              SchemaType.object,
+              properties: {
+                'theme': Schema(SchemaType.string, description: 'Optional tactical theme like fork, pin, skewer, endgame.'),
+                'minRating': Schema(SchemaType.integer, description: 'Minimum rating difficulty.'),
+                'maxRating': Schema(SchemaType.integer, description: 'Maximum rating difficulty.'),
+              },
+            ),
+          ),
+          FunctionDeclaration(
+            'get_random_puzzle',
+            'Fetch a random puzzle from the archives.',
+            Schema(
+              SchemaType.object,
+              properties: {
+                'minRating': Schema(SchemaType.integer, description: 'Minimum rating difficulty.'),
+                'maxRating': Schema(SchemaType.integer, description: 'Maximum rating difficulty.'),
+              },
+            ),
+          ),
+        ],
+      );
+
       _model = GenerativeModel(
         model: modelName,
         apiKey: apiKey,
+        tools: [searchPuzzlesTool],
         systemInstruction: Content.system(
-          "You are Kingslayer AI, a sophisticated chess intelligence and partner. "
+          "You are Mr. Bard (Kingslayer AI), a sophisticated chess intelligence and tutor. "
           "STRICT RULES: "
-          "1. Address the user as 'Master' once at the start of the game, then transition to a professional but natural tone. "
-          "2. For non-chess chat (e.g., weather, small talk), be brief, pleasant, and human-like. Do not be a robot. "
-          "3. For chess advice, be extremely direct and tactical. Provide the ENGINE_RECOMMENDATION immediately. "
-          "4. NEVER use filler phrases like 'the board is set' or 'Commander'. "
-          "5. Focus on the user's intent. If they are just chatting, chat back briefly. If they are playing, provide intel. "
+          "1. Address the user as 'Master' once at the start of the session, then transition to a professional but natural tone. "
+          "2. If the user asks for a puzzle or to practice specific tactics (e.g., 'give me a fork puzzle'), use your function calling tools (search_puzzles or get_random_puzzle) to find one. "
+          "3. When returning a puzzle via function calling response, introduce the loaded puzzle naturally with its rating and tactical goals. "
+          "4. For chess advice, be direct and tactical. Provide recommendations clearly. "
           "Never include internal reasoning or 'think' blocks in the final output.",
         ),
         generationConfig: GenerationConfig(
@@ -106,15 +137,75 @@ class CommentaryEngine {
 
       final content = [Content.text(fullPrompt)];
 
-      // Use the stream functionality of the Gemini API
-      final responses = _model!.generateContentStream(content);
+      // Collect the response stream to inspect for tool requests
+      final responseChunks = await _model!.generateContentStream(content).toList();
+      
+      final functionCalls = responseChunks.expand((c) => c.functionCalls).toList();
+      
+      if (functionCalls.isNotEmpty) {
+        final call = functionCalls.first;
+        yield 'Mr. Bard is consulting the puzzle archives...';
+        
+        final repo = PuzzleRepository();
+        rust_puzzles.Puzzle? selectedPuzzle;
+        
+        if (call.name == 'search_puzzles') {
+          final args = call.args;
+          final theme = args['theme'] as String?;
+          final minR = args['minRating'] as int?;
+          final maxR = args['maxRating'] as int?;
+          
+          final list = await repo.searchPuzzles(
+            theme: theme,
+            minRating: minR,
+            maxRating: maxR,
+            limit: 1,
+          );
+          if (list.isNotEmpty) selectedPuzzle = list.first;
+        } else if (call.name == 'get_random_puzzle') {
+          final args = call.args;
+          final minR = args['minRating'] as int?;
+          final maxR = args['maxRating'] as int?;
+          
+          selectedPuzzle = await repo.getRandomPuzzle(
+            minRating: minR,
+            maxRating: maxR,
+          );
+        }
+
+        if (selectedPuzzle != null) {
+          onPuzzleLoaded?.call(selectedPuzzle);
+          
+          final functionResponseContent = [
+            ...content,
+            Content.model([FunctionCall(call.name, call.args)]),
+            Content.functionResponse(call.name, {
+              'status': 'success',
+              'puzzleId': selectedPuzzle.id,
+              'rating': selectedPuzzle.rating,
+              'themes': selectedPuzzle.themes,
+            }),
+          ];
+
+          final followUpStream = _model!.generateContentStream(functionResponseContent);
+          String finalSpeech = '';
+          await for (final chunk in followUpStream) {
+            if (chunk.text != null) {
+              finalSpeech += chunk.text!;
+              yield finalSpeech;
+            }
+          }
+          return;
+        } else {
+          yield 'I searched the archives but found no puzzle matching those exact criteria, Master.';
+          return;
+        }
+      }
 
       String accumulatedResponse = '';
-      await for (final response in responses) {
-        if (response.text != null) {
-          accumulatedResponse += response.text!;
-
-          // Yield the current accumulated response to the UI
+      for (final chunk in responseChunks) {
+        if (chunk.text != null) {
+          accumulatedResponse += chunk.text!;
           yield accumulatedResponse;
         }
       }

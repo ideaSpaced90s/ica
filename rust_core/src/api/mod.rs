@@ -5,3 +5,4 @@ pub mod context;
 pub mod history;
 pub mod state;
 pub mod status;
+pub mod puzzles;

@@ -76,7 +76,7 @@ class SettingsPage extends ConsumerWidget {
                   title: 'MATCH TYPE',
                   children: [
                     _SettingsTile(
-                      label: 'Casual / Unrated',
+                      label: 'Unrated',
                       description: 'Relaxed practice. Rating unaffected, visual animations unrestricted.',
                       icon: Icons.spa_rounded,
                       iconColor: !state.isRatedMode ? ScholarlyTheme.accentBlue : null,
@@ -89,7 +89,7 @@ class SettingsPage extends ConsumerWidget {
                           : const SizedBox(),
                     ),
                     _SettingsTile(
-                      label: 'Rated Competitive',
+                      label: 'Rated',
                       description: 'Simulated FIDE Elo tracked. Enforces snappy boards and minimal ambient noise.',
                       icon: Icons.emoji_events_rounded,
                       iconColor: state.isRatedMode ? Colors.amber : null,

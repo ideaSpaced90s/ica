@@ -289,84 +289,150 @@ class _AcademyPageState extends ConsumerState<AcademyPage> {
                       padding: const EdgeInsets.symmetric(vertical: 4.0),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _CompactActionIcon(
-                            icon: Icons.exit_to_app_rounded,
-                            customBgColor: Colors.redAccent.withValues(alpha: 0.15),
-                            customIconColor: Colors.redAccent,
-                            tooltip: 'Exit Academy',
-                            onTap: _requestExitAcademy,
-                          ),
-                          const SizedBox(height: 6),
-                          _CompactActionIcon(
-                            icon: Icons.add_box_rounded,
-                            tooltip: 'New Game',
-                            onTap: () => _handleNewGame(context, ref),
-                          ),
-                          const SizedBox(height: 6),
-                          _CompactActionIcon(
-                            icon: Icons.tune_rounded,
-                            tooltip: 'Settings',
-                            onTap: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (context) => const SettingsPage(isAcademyMode: true),
+                        children: state.isPuzzleMode
+                            ? [
+                                _CompactActionIcon(
+                                  icon: Icons.exit_to_app_rounded,
+                                  customBgColor: Colors.redAccent.withValues(alpha: 0.15),
+                                  customIconColor: Colors.redAccent,
+                                  tooltip: 'Exit Academy',
+                                  onTap: _requestExitAcademy,
                                 ),
-                              );
-                            },
-                          ),
-                          const SizedBox(height: 6),
-                          _CompactActionIcon(
-                            icon: Icons.undo_rounded,
-                            tooltip: 'Undo',
-                            isEnabled: state.canUndo,
-                            onTap: state.canUndo ? () => notifier.undo() : null,
-                          ),
-                          const SizedBox(height: 6),
-                          _CompactActionIcon(
-                            icon: Icons.redo_rounded,
-                            tooltip: 'Redo',
-                            isEnabled: state.canRedo,
-                            onTap: state.canRedo ? () => notifier.redo() : null,
-                          ),
-                          const SizedBox(height: 6),
-                          _CompactActionIcon(
-                            icon: Icons.flip_camera_android_outlined,
-                            tooltip: 'Flip Board',
-                            isActive: state.isBoardFlipped,
-                            onTap: () => notifier.toggleBoardOrientation(),
-                          ),
-                          const SizedBox(height: 6),
-                          _CompactActionIcon(
-                            icon: state.isPaused
-                                ? Icons.play_arrow_rounded
-                                : Icons.pause_rounded,
-                            tooltip: state.isPaused ? 'Resume' : 'Pause',
-                            isActive: state.isPaused,
-                            onTap: () => notifier.togglePause(),
-                          ),
-                          const SizedBox(height: 6),
-                          _CompactActionIcon(
-                            icon: state.isBulbGlowing
-                                ? Icons.lightbulb_rounded
-                                : Icons.lightbulb_outline_rounded,
-                            tooltip: 'Hint',
-                            isEnabled: !state.isHintLoading,
-                            isActive: state.isBulbGlowing,
-                            activeColor: ScholarlyTheme.accentYellowSoft,
-                            activeIconColor: ScholarlyTheme.accentYellow,
-                            onTap: () => notifier.requestHint(),
-                          ),
-                          const SizedBox(height: 6),
-                          _CompactActionIcon(
-                            icon: state.showLog
-                                ? Icons.chat_bubble_outline_rounded
-                                : Icons.history_edu_rounded,
-                            tooltip: 'Toggle Log',
-                            isActive: state.showLog,
-                            onTap: () => notifier.toggleLog(),
-                          ),
-                        ],
+                                const SizedBox(height: 6),
+                                _CompactActionIcon(
+                                  icon: Icons.school_rounded,
+                                  customBgColor: Colors.orange.withValues(alpha: 0.15),
+                                  customIconColor: Colors.orange,
+                                  tooltip: 'Free Study Mode',
+                                  onTap: () => notifier.exitPuzzleMode(),
+                                ),
+                                const SizedBox(height: 6),
+                                _CompactActionIcon(
+                                  icon: Icons.skip_next_rounded,
+                                  tooltip: 'Next Puzzle',
+                                  onTap: () => notifier.nextPuzzle(),
+                                ),
+                                const SizedBox(height: 6),
+                                _CompactActionIcon(
+                                  icon: Icons.refresh_rounded,
+                                  tooltip: 'Reset Line',
+                                  onTap: () => notifier.resetPuzzleLine(),
+                                ),
+                                const SizedBox(height: 6),
+                                _CompactActionIcon(
+                                  icon: Icons.flip_camera_android_outlined,
+                                  tooltip: 'Flip Board',
+                                  isActive: state.isBoardFlipped,
+                                  onTap: () => notifier.toggleBoardOrientation(),
+                                ),
+                                const SizedBox(height: 6),
+                                _CompactActionIcon(
+                                  icon: state.isBulbGlowing
+                                      ? Icons.lightbulb_rounded
+                                      : Icons.lightbulb_outline_rounded,
+                                  tooltip: 'Hint',
+                                  isEnabled: !state.isHintLoading,
+                                  isActive: state.isBulbGlowing,
+                                  activeColor: ScholarlyTheme.accentYellowSoft,
+                                  activeIconColor: ScholarlyTheme.accentYellow,
+                                  onTap: () => notifier.requestHint(),
+                                ),
+                                const SizedBox(height: 6),
+                                _CompactActionIcon(
+                                  icon: state.showLog
+                                      ? Icons.chat_bubble_outline_rounded
+                                      : Icons.history_edu_rounded,
+                                  tooltip: 'Toggle Log',
+                                  isActive: state.showLog,
+                                  onTap: () => notifier.toggleLog(),
+                                ),
+                              ]
+                            : [
+                                _CompactActionIcon(
+                                  icon: Icons.exit_to_app_rounded,
+                                  customBgColor: Colors.redAccent.withValues(alpha: 0.15),
+                                  customIconColor: Colors.redAccent,
+                                  tooltip: 'Exit Academy',
+                                  onTap: _requestExitAcademy,
+                                ),
+                                const SizedBox(height: 6),
+                                _CompactActionIcon(
+                                  icon: Icons.extension_rounded,
+                                  tooltip: 'Puzzle Training',
+                                  customBgColor: ScholarlyTheme.accentBlue.withValues(alpha: 0.15),
+                                  customIconColor: ScholarlyTheme.accentBlue,
+                                  onTap: () => notifier.startPuzzleMode(),
+                                ),
+                                const SizedBox(height: 6),
+                                _CompactActionIcon(
+                                  icon: Icons.add_box_rounded,
+                                  tooltip: 'New Game',
+                                  onTap: () => _handleNewGame(context, ref),
+                                ),
+                                const SizedBox(height: 6),
+                                _CompactActionIcon(
+                                  icon: Icons.tune_rounded,
+                                  tooltip: 'Settings',
+                                  onTap: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (context) => const SettingsPage(isAcademyMode: true),
+                                      ),
+                                    );
+                                  },
+                                ),
+                                const SizedBox(height: 6),
+                                _CompactActionIcon(
+                                  icon: Icons.undo_rounded,
+                                  tooltip: 'Undo',
+                                  isEnabled: state.canUndo,
+                                  onTap: state.canUndo ? () => notifier.undo() : null,
+                                ),
+                                const SizedBox(height: 6),
+                                _CompactActionIcon(
+                                  icon: Icons.redo_rounded,
+                                  tooltip: 'Redo',
+                                  isEnabled: state.canRedo,
+                                  onTap: state.canRedo ? () => notifier.redo() : null,
+                                ),
+                                const SizedBox(height: 6),
+                                _CompactActionIcon(
+                                  icon: Icons.flip_camera_android_outlined,
+                                  tooltip: 'Flip Board',
+                                  isActive: state.isBoardFlipped,
+                                  onTap: () => notifier.toggleBoardOrientation(),
+                                ),
+                                const SizedBox(height: 6),
+                                _CompactActionIcon(
+                                  icon: state.isPaused
+                                      ? Icons.play_arrow_rounded
+                                      : Icons.pause_rounded,
+                                  tooltip: state.isPaused ? 'Resume' : 'Pause',
+                                  isActive: state.isPaused,
+                                  onTap: () => notifier.togglePause(),
+                                ),
+                                const SizedBox(height: 6),
+                                _CompactActionIcon(
+                                  icon: state.isBulbGlowing
+                                      ? Icons.lightbulb_rounded
+                                      : Icons.lightbulb_outline_rounded,
+                                  tooltip: 'Hint',
+                                  isEnabled: !state.isHintLoading,
+                                  isActive: state.isBulbGlowing,
+                                  activeColor: ScholarlyTheme.accentYellowSoft,
+                                  activeIconColor: ScholarlyTheme.accentYellow,
+                                  onTap: () => notifier.requestHint(),
+                                ),
+                                const SizedBox(height: 6),
+                                _CompactActionIcon(
+                                  icon: state.showLog
+                                      ? Icons.chat_bubble_outline_rounded
+                                      : Icons.history_edu_rounded,
+                                  tooltip: 'Toggle Log',
+                                  isActive: state.showLog,
+                                  onTap: () => notifier.toggleLog(),
+                                ),
+                              ],
                       ),
                     ),
                   ),
@@ -464,6 +530,70 @@ class _CompactCapturedPiecesHeader extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (state.isPuzzleMode) {
+      final p = state.currentPuzzle;
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: ScholarlyTheme.accentBlue.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: ScholarlyTheme.accentBlue.withValues(alpha: 0.3),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.extension_rounded, size: 14, color: ScholarlyTheme.accentBlue),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    p != null ? 'PUZZLE #${p.id}' : 'PUZZLE MODE',
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: ScholarlyTheme.accentBlue,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  if (p != null)
+                    Text(
+                      'Rating: ${p.rating} • To Move: ${state.isPlayerWhite ? "White" : "Black"}',
+                      style: GoogleFonts.inter(
+                        fontSize: 10,
+                        color: ScholarlyTheme.textPrimary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: state.puzzleMovesRemaining.isEmpty
+                    ? Colors.green.withValues(alpha: 0.2)
+                    : ScholarlyTheme.panelBase,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                state.puzzleMovesRemaining.isEmpty ? 'SOLVED' : '${(state.puzzleMovesRemaining.length / 2).ceil()} moves left',
+                style: GoogleFonts.inter(
+                  fontSize: 9,
+                  fontWeight: FontWeight.bold,
+                  color: state.puzzleMovesRemaining.isEmpty ? Colors.greenAccent : ScholarlyTheme.textSubtle,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     final whiteCaptures = state.game.capturedByWhite;
     final blackCaptures = state.game.capturedByBlack;
 

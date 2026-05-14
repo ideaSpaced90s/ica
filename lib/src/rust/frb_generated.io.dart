@@ -6,6 +6,7 @@
 import 'api/context.dart';
 import 'api/history.dart';
 import 'api/moves.dart';
+import 'api/puzzles.dart';
 import 'api/simple.dart';
 import 'api/state.dart';
 import 'api/status.dart';
@@ -31,7 +32,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool dco_decode_bool(dynamic raw);
 
   @protected
+  int dco_decode_box_autoadd_i_32(dynamic raw);
+
+  @protected
+  Puzzle dco_decode_box_autoadd_puzzle(dynamic raw);
+
+  @protected
   GameTerminationStatus dco_decode_game_termination_status(dynamic raw);
+
+  @protected
+  int dco_decode_i_32(dynamic raw);
 
   @protected
   List<String> dco_decode_list_String(dynamic raw);
@@ -40,10 +50,22 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
 
   @protected
+  List<Puzzle> dco_decode_list_puzzle(dynamic raw);
+
+  @protected
   String? dco_decode_opt_String(dynamic raw);
 
   @protected
+  int? dco_decode_opt_box_autoadd_i_32(dynamic raw);
+
+  @protected
+  Puzzle? dco_decode_opt_box_autoadd_puzzle(dynamic raw);
+
+  @protected
   PositionMetrics dco_decode_position_metrics(dynamic raw);
+
+  @protected
+  Puzzle dco_decode_puzzle(dynamic raw);
 
   @protected
   int dco_decode_u_32(dynamic raw);
@@ -61,9 +83,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool sse_decode_bool(SseDeserializer deserializer);
 
   @protected
+  int sse_decode_box_autoadd_i_32(SseDeserializer deserializer);
+
+  @protected
+  Puzzle sse_decode_box_autoadd_puzzle(SseDeserializer deserializer);
+
+  @protected
   GameTerminationStatus sse_decode_game_termination_status(
     SseDeserializer deserializer,
   );
+
+  @protected
+  int sse_decode_i_32(SseDeserializer deserializer);
 
   @protected
   List<String> sse_decode_list_String(SseDeserializer deserializer);
@@ -72,10 +103,22 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
 
   @protected
+  List<Puzzle> sse_decode_list_puzzle(SseDeserializer deserializer);
+
+  @protected
   String? sse_decode_opt_String(SseDeserializer deserializer);
 
   @protected
+  int? sse_decode_opt_box_autoadd_i_32(SseDeserializer deserializer);
+
+  @protected
+  Puzzle? sse_decode_opt_box_autoadd_puzzle(SseDeserializer deserializer);
+
+  @protected
   PositionMetrics sse_decode_position_metrics(SseDeserializer deserializer);
+
+  @protected
+  Puzzle sse_decode_puzzle(SseDeserializer deserializer);
 
   @protected
   int sse_decode_u_32(SseDeserializer deserializer);
@@ -87,19 +130,25 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_decode_unit(SseDeserializer deserializer);
 
   @protected
-  int sse_decode_i_32(SseDeserializer deserializer);
-
-  @protected
   void sse_encode_String(String self, SseSerializer serializer);
 
   @protected
   void sse_encode_bool(bool self, SseSerializer serializer);
 
   @protected
+  void sse_encode_box_autoadd_i_32(int self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_puzzle(Puzzle self, SseSerializer serializer);
+
+  @protected
   void sse_encode_game_termination_status(
     GameTerminationStatus self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_i_32(int self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_String(List<String> self, SseSerializer serializer);
@@ -111,13 +160,28 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_puzzle(List<Puzzle> self, SseSerializer serializer);
+
+  @protected
   void sse_encode_opt_String(String? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_i_32(int? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_puzzle(
+    Puzzle? self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_position_metrics(
     PositionMetrics self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_puzzle(Puzzle self, SseSerializer serializer);
 
   @protected
   void sse_encode_u_32(int self, SseSerializer serializer);
@@ -127,9 +191,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_unit(void self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_i_32(int self, SseSerializer serializer);
 }
 
 // Section: wire_class

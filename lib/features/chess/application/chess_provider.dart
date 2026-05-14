@@ -20,6 +20,8 @@ import '../data/settings_repository.dart';
 import '../services/chess_haptics_service.dart';
 import '../domain/models/ai_avatar.dart';
 import '../domain/models/candidate_move.dart';
+import 'package:kingslayer_chess/src/rust/api/puzzles.dart' as rust_puzzles;
+import '../data/puzzle_repository.dart';
 
 const _sentinel = Object();
 // Commentary default
@@ -65,6 +67,9 @@ class _BoardSnapshot {
     required this.userFideRating,
     required this.ratedGamesCount,
     required this.currentWinningStreak,
+    required this.isPuzzleMode,
+    this.currentPuzzle,
+    required this.puzzleMovesRemaining,
   });
 
   final String fen;
@@ -102,6 +107,9 @@ class _BoardSnapshot {
   final int userFideRating;
   final int ratedGamesCount;
   final int currentWinningStreak;
+  final bool isPuzzleMode;
+  final rust_puzzles.Puzzle? currentPuzzle;
+  final List<String> puzzleMovesRemaining;
 }
 
 class MoveAnimationData {
@@ -202,6 +210,9 @@ class ChessState {
     this.userFideRating = 1200,
     this.ratedGamesCount = 0,
     this.currentWinningStreak = 0,
+    this.isPuzzleMode = false,
+    this.currentPuzzle,
+    this.puzzleMovesRemaining = const [],
   });
 
   final ChessGame game;
@@ -269,6 +280,9 @@ class ChessState {
   final int userFideRating;
   final int ratedGamesCount;
   final int currentWinningStreak;
+  final bool isPuzzleMode;
+  final rust_puzzles.Puzzle? currentPuzzle;
+  final List<String> puzzleMovesRemaining;
 
   bool get isChess960 => gameMode == 'chess960';
 
@@ -349,6 +363,9 @@ class ChessState {
     int? userFideRating,
     int? ratedGamesCount,
     int? currentWinningStreak,
+    bool? isPuzzleMode,
+    Object? currentPuzzle = _sentinel,
+    List<String>? puzzleMovesRemaining,
   }) {
     return ChessState(
       game: game ?? this.game,
@@ -444,6 +461,11 @@ class ChessState {
       userFideRating: userFideRating ?? this.userFideRating,
       ratedGamesCount: ratedGamesCount ?? this.ratedGamesCount,
       currentWinningStreak: currentWinningStreak ?? this.currentWinningStreak,
+      isPuzzleMode: isPuzzleMode ?? this.isPuzzleMode,
+      currentPuzzle: identical(currentPuzzle, _sentinel)
+          ? this.currentPuzzle
+          : currentPuzzle as rust_puzzles.Puzzle?,
+      puzzleMovesRemaining: puzzleMovesRemaining ?? this.puzzleMovesRemaining,
     );
   }
 }
@@ -457,6 +479,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
     this._hapticsService,
     this._aiContextService,
     this._settingsRepository,
+    this._puzzleRepository,
   ) : super(
         ChessState(
           game: ChessGame(),
@@ -471,6 +494,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
       ) {
     _soundService.updateSettings(sfxEnabled: true, bgmEnabled: false);
     _hapticsService.updateSettings(hapticsEnabled: true);
+    _commentaryEngine.onPuzzleLoaded = loadPuzzle;
     _loadSettings();
   }
 
@@ -563,7 +587,10 @@ class ChessNotifier extends StateNotifier<ChessState> {
     if (state.recentMoves.isNotEmpty) {
       await saveCurrentGame();
     }
-    state = state.copyWith(isRatedMode: isRated);
+    state = state.copyWith(
+      isRatedMode: isRated,
+      isEngineVsEngine: isRated ? false : state.isEngineVsEngine,
+    );
     await _saveSettings();
     await reset();
   }
@@ -799,6 +826,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
   final ChessHapticsService _hapticsService;
   final AiContextService _aiContextService;
   final SettingsRepository _settingsRepository;
+  final PuzzleRepository _puzzleRepository;
   final _uuid = const Uuid();
 
   Timer? _engineMoveTimer;
@@ -1344,6 +1372,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
       userFideRating: state.userFideRating,
       ratedGamesCount: state.ratedGamesCount,
       currentWinningStreak: state.currentWinningStreak,
+      isPuzzleMode: state.isPuzzleMode,
+      currentPuzzle: state.currentPuzzle,
+      puzzleMovesRemaining: List<String>.from(state.puzzleMovesRemaining),
     );
   }
 
@@ -1390,6 +1421,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
       userFideRating: snapshot.userFideRating,
       ratedGamesCount: snapshot.ratedGamesCount,
       currentWinningStreak: snapshot.currentWinningStreak,
+      isPuzzleMode: snapshot.isPuzzleMode,
+      currentPuzzle: snapshot.currentPuzzle,
+      puzzleMovesRemaining: snapshot.puzzleMovesRemaining,
     );
     _syncUndoRedoFlags();
     if (state.clockStarted) {
@@ -1510,8 +1544,227 @@ class ChessNotifier extends StateNotifier<ChessState> {
     return state.game.turn == chess_lib.Color.WHITE ? 'Black' : 'White';
   }
 
+  Future<void> startPuzzleMode() async {
+    state = state.copyWith(isPuzzleMode: true);
+    await nextPuzzle();
+  }
+
+  Future<void> exitPuzzleMode() async {
+    state = state.copyWith(
+      isPuzzleMode: false,
+      currentPuzzle: null,
+      puzzleMovesRemaining: const [],
+    );
+    await reset();
+  }
+
+  Future<void> nextPuzzle() async {
+    if (!state.isPuzzleMode) return;
+    
+    final puzzle = await _puzzleRepository.getRandomPuzzle();
+    if (puzzle != null) {
+      await loadPuzzle(puzzle);
+    } else {
+      state = state.copyWith(
+        commentaryError: 'Could not fetch a puzzle from the archives.',
+      );
+    }
+  }
+
+  Future<void> loadPuzzle(rust_puzzles.Puzzle puzzle) async {
+    _engineMoveTimer?.cancel();
+    _cancelCommentaryReveal();
+    _pendingHintFen = null;
+    _undoStack.clear();
+    _redoStack.clear();
+    _stopClock();
+
+    final restoredGame = ChessGame(fen: puzzle.fen, isChess960: false);
+    
+    final baseTurn = restoredGame.turn;
+    final isPlayerWhite = baseTurn == chess_lib.Color.BLACK;
+
+    final List<String> remainingMoves = List<String>.from(puzzle.moves);
+    String? initialMove;
+    if (remainingMoves.isNotEmpty) {
+      initialMove = remainingMoves.removeAt(0);
+    }
+
+    state = ChessState(
+      game: restoredGame,
+      isPlayerWhite: isPlayerWhite,
+      isBoardFlipped: !isPlayerWhite,
+      isPuzzleMode: true,
+      currentPuzzle: puzzle,
+      puzzleMovesRemaining: remainingMoves,
+      boardThemeId: state.boardThemeId,
+      isSoundEnabled: state.isSoundEnabled,
+      isMusicEnabled: state.isMusicEnabled,
+      isHapticsEnabled: state.isHapticsEnabled,
+      showCoordinates: state.showCoordinates,
+      isAnimationsEnabled: state.isAnimationsEnabled,
+      animationSettings: state.animationSettings,
+      gameMode: 'classic',
+      isRatedMode: false,
+    );
+
+    _syncUndoRedoFlags();
+
+    final introText = "Master, I have loaded puzzle #${puzzle.id}. Rating: ${puzzle.rating}. Find the best sequence for ${isPlayerWhite ? 'White' : 'Black'}.";
+    state = state.copyWith(
+      commentaryHistory: [
+        CommentaryEntry(
+          text: introText,
+          timestamp: DateTime.now(),
+          isComplete: true,
+          isUser: false,
+        ),
+      ],
+    );
+
+    if (initialMove != null && initialMove.length >= 4) {
+      final from = initialMove.substring(0, 2);
+      final to = initialMove.substring(2, 4);
+      final promotion = initialMove.length > 4 ? initialMove[4] : 'q';
+      
+      await Future.delayed(const Duration(milliseconds: 400));
+      if (_isDisposed || !state.isPuzzleMode) return;
+
+      final piece = state.game.getPiece(from);
+      final colorPrefix = piece?.color == chess_lib.Color.WHITE ? 'w' : 'b';
+      final pieceCode = piece != null ? '$colorPrefix${piece.type.toUpperCase()}' : 'bP';
+
+      state = state.copyWith(
+        moveAnimation: MoveAnimationData(
+          from: from,
+          to: to,
+          pieceCode: pieceCode,
+        ),
+      );
+
+      final moveMade = state.game.makeMove({
+        'from': from,
+        'to': to,
+        'promotion': promotion,
+      });
+
+      if (moveMade) {
+        _onMoveCompleted(initialMove);
+      }
+    }
+  }
+
+  Future<void> resetPuzzleLine() async {
+    if (state.currentPuzzle != null) {
+      await loadPuzzle(state.currentPuzzle!);
+    }
+  }
+
   Future<void> makeMove(String from, String to) async {
     if (state.game.gameOver) return;
+
+    if (state.isPuzzleMode) {
+      if (state.puzzleMovesRemaining.isEmpty) return;
+      
+      final expectedMove = state.puzzleMovesRemaining.first;
+      final uciAttempt = '$from$to';
+      
+      if (expectedMove.startsWith(uciAttempt)) {
+        final remaining = List<String>.from(state.puzzleMovesRemaining);
+        remaining.removeAt(0);
+        
+        final moveMade = state.game.makeMove({
+          'from': from,
+          'to': to,
+          'promotion': expectedMove.length > 4 ? expectedMove[4] : 'q',
+        });
+
+        if (moveMade) {
+          _onMoveCompleted(expectedMove);
+          
+          if (state.isHapticsEnabled) {
+            _hapticsService.softTap();
+          }
+
+          if (remaining.isEmpty) {
+            state = state.copyWith(
+              puzzleMovesRemaining: const [],
+              commentaryHistory: [
+                ...state.commentaryHistory,
+                CommentaryEntry(
+                  text: "Brilliant execution, Master! Puzzle solved perfectly.",
+                  timestamp: DateTime.now(),
+                  isComplete: true,
+                  isUser: false,
+                ),
+              ],
+            );
+            return;
+          }
+
+          final oppMove = remaining.removeAt(0);
+          state = state.copyWith(puzzleMovesRemaining: remaining);
+          
+          Future.delayed(const Duration(milliseconds: 500), () {
+            if (_isDisposed || !state.isPuzzleMode) return;
+            
+            final oppFrom = oppMove.substring(0, 2);
+            final oppTo = oppMove.substring(2, 4);
+            final oppPromo = oppMove.length > 4 ? oppMove[4] : 'q';
+            
+            final p = state.game.getPiece(oppFrom);
+            final cp = p?.color == chess_lib.Color.WHITE ? 'w' : 'b';
+            final pc = p != null ? '$cp${p.type.toUpperCase()}' : 'bP';
+
+            state = state.copyWith(
+              moveAnimation: MoveAnimationData(
+                from: oppFrom,
+                to: oppTo,
+                pieceCode: pc,
+              ),
+            );
+
+            state.game.makeMove({
+              'from': oppFrom,
+              'to': oppTo,
+              'promotion': oppPromo,
+            });
+            _onMoveCompleted(oppMove);
+
+            if (remaining.isEmpty) {
+              state = state.copyWith(
+                commentaryHistory: [
+                  ...state.commentaryHistory,
+                  CommentaryEntry(
+                    text: "Brilliant execution, Master! Puzzle solved perfectly.",
+                    timestamp: DateTime.now(),
+                    isComplete: true,
+                    isUser: false,
+                  ),
+                ],
+              );
+            }
+          });
+        }
+      } else {
+        if (state.isHapticsEnabled) {
+          _hapticsService.errorFeedback();
+        }
+        
+        state = state.copyWith(
+          commentaryHistory: [
+            ...state.commentaryHistory,
+            CommentaryEntry(
+              text: "Ah, not quite the best continuation. Look closer at the tactical weaknesses.",
+              timestamp: DateTime.now(),
+              isComplete: true,
+              isUser: false,
+            ),
+          ],
+        );
+      }
+      return;
+    }
 
     // 1. Handle branching from history viewing
     if (state.viewingMoveIndex != null) {
@@ -1739,6 +1992,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
   }
 
   Future<void> toggleEngineVsEngine() async {
+    if (state.isRatedMode) return;
     final newVal = !state.isEngineVsEngine;
     state = state.copyWith(isEngineVsEngine: newVal);
 
@@ -2371,7 +2625,8 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
     final preservePlayerWhite = state.isPlayerWhite;
     final preserveBoardFlipped = state.isBoardFlipped;
-    final preserveEvE = state.isEngineVsEngine;
+    final preserveRated = state.isRatedMode;
+    final preserveEvE = preserveRated ? false : state.isEngineVsEngine;
     final preserveLevel = state.engineLevel;
     final preserveBottomLevel = state.bottomAvatarId;
 
@@ -2391,7 +2646,6 @@ class ChessNotifier extends StateNotifier<ChessState> {
     final preserveIncrement = state.incrementDuration;
     final baseTime = state.baseTimeDuration;
     final preserveMode = state.gameMode;
-    final preserveRated = state.isRatedMode;
     final preserveRating = state.userFideRating;
     final preserveCount = state.ratedGamesCount;
     final preserveStreak = state.currentWinningStreak;
@@ -2491,6 +2745,7 @@ final chessProvider = StateNotifierProvider<ChessNotifier, ChessState>((ref) {
   final hapticsService = ref.watch(chessHapticsServiceProvider);
   final aiContextService = ref.watch(aiContextServiceProvider);
   final settingsRepository = ref.watch(settingsRepositoryProvider);
+  final puzzleRepository = ref.watch(puzzleRepositoryProvider);
   return ChessNotifier(
     engine,
     commentaryEngine,
@@ -2499,5 +2754,6 @@ final chessProvider = StateNotifierProvider<ChessNotifier, ChessState>((ref) {
     hapticsService,
     aiContextService,
     settingsRepository,
+    puzzleRepository,
   );
 });

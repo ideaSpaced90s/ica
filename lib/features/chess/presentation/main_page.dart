@@ -402,6 +402,7 @@ class _MainPageState extends ConsumerState<MainPage>
                 ? Icons.smart_toy_rounded
                 : Icons.smart_toy_outlined,
             isActive: state.isEngineVsEngine,
+            isEnabled: !state.isRatedMode,
             onTap: () {
               ref.read(chessProvider.notifier).toggleEngineVsEngine();
               // If we enable engine vs engine, we might want to flip board to side to move
