@@ -7,7 +7,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../application/chess_provider.dart';
 import 'chess_clock.dart';
 import 'scholarly_theme.dart';
-import 'widgets/commentary_history.dart';
 
 import 'widgets/game_controls.dart';
 import 'widgets/board_stage.dart';
@@ -24,8 +23,6 @@ class MainPage extends ConsumerStatefulWidget {
 
 class _MainPageState extends ConsumerState<MainPage>
     with WidgetsBindingObserver {
-  bool _isCommentaryExpanded = false;
-
   @override
   void initState() {
     super.initState();
@@ -324,74 +321,21 @@ class _MainPageState extends ConsumerState<MainPage>
         ),
 
         // Board Area
-        if (_isCommentaryExpanded)
-          Flexible(
-            flex: isKeyboardOpen ? 1 : 0,
-            child: AspectRatio(
-              aspectRatio: 1.0,
-              child: BoardStage(isExpanded: true),
-            ),
-          )
-        else
-          Expanded(child: const BoardStage(isExpanded: false)),
+        Expanded(child: const BoardStage(isExpanded: false)),
 
         // Bottom Side Footer Row
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // Bottom-Left: Circular AI Chat toggle icon
-              GestureDetector(
-                onTap: () {
-                  setState(() => _isCommentaryExpanded = !_isCommentaryExpanded);
-                },
-                child: Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: _isCommentaryExpanded 
-                        ? ScholarlyTheme.accentBlueSoft 
-                        : ScholarlyTheme.panelBase,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: _isCommentaryExpanded 
-                          ? ScholarlyTheme.accentBlue 
-                          : ScholarlyTheme.panelStroke,
-                      width: 1.5,
-                    ),
-                    boxShadow: ScholarlyTheme.cardShadow,
-                  ),
-                  child: Icon(
-                    Icons.auto_awesome_rounded,
-                    color: _isCommentaryExpanded 
-                        ? ScholarlyTheme.accentBlue 
-                        : ScholarlyTheme.accentBlue.withValues(alpha: 0.8),
-                    size: 20,
-                  ),
-                ),
-              ),
-              // Bottom-Right: Switchable User/Bot indicator
-              Flexible(
-                child: state.isEngineVsEngine
-                    ? OpponentAvatarIndicator(
-                        avatar: AiAvatar.getAvatar(state.bottomAvatarId),
-                        onTap: () => showAvatarSelectionSheet(context, ref, isBottomSlot: true),
-                      )
-                    : const _UserAvatarIndicator(),
-              ),
-            ],
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: state.isEngineVsEngine
+                ? OpponentAvatarIndicator(
+                    avatar: AiAvatar.getAvatar(state.bottomAvatarId),
+                    onTap: () => showAvatarSelectionSheet(context, ref, isBottomSlot: true),
+                  )
+                : const _UserAvatarIndicator(),
           ),
         ),
-
-        // Chat Area (Expanded view)
-        if (_isCommentaryExpanded)
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: _buildCommentaryPanel(context, ref, state),
-            ),
-          ),
 
         if (!isKeyboardOpen) ...[
           const SizedBox(height: 8),
@@ -511,106 +455,8 @@ class _MainPageState extends ConsumerState<MainPage>
             activeIconColor: ScholarlyTheme.accentYellow,
             onTap: () => ref.read(chessProvider.notifier).requestHint(),
           ),
-          if (_isCommentaryExpanded) ...[
-            const SizedBox(width: 6),
-            ActionIconButton(
-              icon: state.showLog
-                  ? Icons.chat_bubble_outline_rounded
-                  : Icons.history_edu_rounded,
-              isActive: state.showLog,
-              onTap: () => ref.read(chessProvider.notifier).toggleLog(),
-            ),
-            const SizedBox(width: 6),
-            ActionIconButton(
-              icon: Icons.close_rounded,
-              onTap: () {
-                setState(() => _isCommentaryExpanded = false);
-              },
-            ),
-          ],
         ],
       ),
-    );
-  }
-
-  Widget _buildCommentaryPanel(
-    BuildContext context,
-    WidgetRef ref,
-    ChessState state,
-  ) {
-    return GlassPanel(
-      padding: const EdgeInsets.fromLTRB(12, 4, 12, 4), // Reduced padding
-      child: state.showLog
-          ? _buildMoveLog(context, state)
-          : CommentaryHistory(state: state),
-    );
-  }
-
-  Widget _buildMoveLog(BuildContext context, ChessState state) {
-    final moves = state.recentMoves;
-    if (moves.isEmpty) {
-      return const Center(
-        child: Text(
-          'Log is empty.',
-          style: TextStyle(
-            color: ScholarlyTheme.textMuted,
-            fontSize: 13,
-            fontStyle: FontStyle.italic,
-          ),
-        ),
-      );
-    }
-
-    final List<List<String>> pairs = [];
-    for (int i = 0; i < moves.length; i += 2) {
-      pairs.add([moves[i], if (i + 1 < moves.length) moves[i + 1]]);
-    }
-
-    return ListView.builder(
-      padding: EdgeInsets.zero,
-      itemCount: pairs.length,
-      itemBuilder: (context, index) {
-        final pair = pairs[index];
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Row(
-            children: [
-              SizedBox(
-                width: 24,
-                child: Text(
-                  '${index + 1}.',
-                  style: GoogleFonts.jetBrainsMono(
-                    color: ScholarlyTheme.accentBlue,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              Expanded(
-                child: Text(
-                  pair[0],
-                  style: GoogleFonts.inter(
-                    color: ScholarlyTheme.textPrimary,
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-              if (pair.length > 1)
-                Expanded(
-                  child: Text(
-                    pair[1],
-                    style: GoogleFonts.inter(
-                      color: ScholarlyTheme.textPrimary,
-                      fontSize: 12,
-                    ),
-                  ),
-                )
-              else
-                const Expanded(child: SizedBox()),
-            ],
-          ),
-        );
-      },
     );
   }
 

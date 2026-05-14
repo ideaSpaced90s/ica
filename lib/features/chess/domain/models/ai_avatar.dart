@@ -51,8 +51,8 @@ class AiAvatar {
       title: 'The Novice',
       fideRatingRange: '800 - 950',
       playingStyle: 'Highly erratic. Moves pawns blindly and frequently overlooks standard one-move tactical captures.',
-      skillLevel: 0,
-      depth: 1,
+      skillLevel: 1,
+      depth: 2,
       icon: Icons.cruelty_free_rounded,
       color: Color(0xFF81C784), // Soft green
     ),
@@ -62,8 +62,8 @@ class AiAvatar {
       title: 'The Casual Woodpusher',
       fideRatingRange: '950 - 1050',
       playingStyle: 'Loves capturing undefended pieces instantly without calculating potential recapture risks or structural damage.',
-      skillLevel: 1,
-      depth: 2,
+      skillLevel: 2,
+      depth: 3,
       icon: Icons.castle_rounded,
       color: Color(0xFF64B5F6), // Soft blue
     ),
@@ -73,8 +73,8 @@ class AiAvatar {
       title: 'The Steadfast Defender',
       fideRatingRange: '1100 - 1250',
       playingStyle: 'Ultra-conservative closed formations. Strongly avoids taking early tactical risks, seeking solid, locked pawn chains.',
-      skillLevel: 3,
-      depth: 3,
+      skillLevel: 4,
+      depth: 4,
       icon: Icons.shield_rounded,
       color: Color(0xFF90A4AE), // Muted blue-grey
     ),
@@ -84,7 +84,7 @@ class AiAvatar {
       title: 'The Aggressive Attacker',
       fideRatingRange: '1300 - 1450',
       playingStyle: 'Develops minor pieces rapidly targeting early king assaults. High tactical aggression but leaves exploitable gaps.',
-      skillLevel: 5,
+      skillLevel: 6,
       depth: 5,
       icon: Icons.bolt_rounded,
       color: Color(0xFFFFB74D), // Soft orange
@@ -96,7 +96,7 @@ class AiAvatar {
       fideRatingRange: '1500 - 1650',
       playingStyle: 'Thrives in chaotic, imbalanced positions. Frequently trades material early or sacrifices pawns to open active attack vectors.',
       skillLevel: 8,
-      depth: 8,
+      depth: 7,
       icon: Icons.auto_awesome_rounded,
       color: Color(0xFFBA68C8), // Muted purple
     ),
@@ -128,7 +128,7 @@ class AiAvatar {
       title: 'The Master Strategist',
       fideRatingRange: '2200 - 2400',
       playingStyle: 'Classical elegance. Achieves rapid piece coordination, controls open lines, and unleashes precise, devastating sacrifices.',
-      skillLevel: 17,
+      skillLevel: 16,
       depth: 15,
       icon: Icons.local_fire_department_rounded,
       color: Color(0xFFE57373), // Red soft
@@ -139,7 +139,7 @@ class AiAvatar {
       title: 'The Grandmaster',
       fideRatingRange: '2500 - 2700',
       playingStyle: 'Relentless positional pressure. Leverages deep calculation to squeeze micro-advantages and transition into flawless endgames.',
-      skillLevel: 19,
+      skillLevel: 18,
       depth: 18,
       icon: Icons.psychology_rounded,
       color: Color(0xFFFFD54F), // Amber
@@ -149,7 +149,7 @@ class AiAvatar {
       name: 'Kingslayer',
       title: 'The Ultimate Apex',
       fideRatingRange: '2850 - 3200+',
-      playingStyle: 'Full throttle Stockfish 18 engine representation. Maximizes objective evaluations with absolutely stable, inhuman accuracy.',
+      playingStyle: 'The absolute pinnacle of computational mastery. Maximizes objective evaluations with flawless stability, perfection, and absolute, unadulterated precision.',
       skillLevel: 20,
       depth: 22,
       icon: Icons.diamond_rounded,

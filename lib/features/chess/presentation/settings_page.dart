@@ -653,6 +653,7 @@ class SettingsPage extends ConsumerWidget {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (context) {
         return Consumer(
           builder: (context, ref, _) {
@@ -664,101 +665,104 @@ class SettingsPage extends ConsumerWidget {
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(32),
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Choose Board Theme',
-                    style: GoogleFonts.inter(
-                      color: ScholarlyTheme.textPrimary,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Choose Board Theme',
+                      style: GoogleFonts.inter(
+                        color: ScholarlyTheme.textPrimary,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    height: 120,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: ThemeRegistry.allThemes.length,
-                      separatorBuilder: (context, index) =>
-                          const SizedBox(width: 16),
-                      itemBuilder: (context, index) {
-                        final theme = ThemeRegistry.allThemes[index];
-                        final isSelected = state.boardThemeId == theme.id;
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      height: 120,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: ThemeRegistry.allThemes.length,
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(width: 16),
+                        itemBuilder: (context, index) {
+                          final theme = ThemeRegistry.allThemes[index];
+                          final isSelected = state.boardThemeId == theme.id;
 
-                        return GestureDetector(
-                          onTap: () {
-                            notifier.setBoardTheme(theme.id);
-                            Navigator.of(context).popUntil((route) => route.isFirst);
-                          },
-                          child: Column(
-                            children: [
-                              Container(
-                                width: 70,
-                                height: 70,
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      theme.lightSquare,
-                                      theme.darkSquare,
-                                    ],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
+                          return GestureDetector(
+                            onTap: () {
+                              notifier.setBoardTheme(theme.id);
+                              Navigator.of(context).popUntil((route) => route.isFirst);
+                            },
+                            child: Column(
+                              children: [
+                                Container(
+                                  width: 70,
+                                  height: 70,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        theme.lightSquare,
+                                        theme.darkSquare,
+                                      ],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? ScholarlyTheme.accentBlue
+                                          : ScholarlyTheme.panelStroke,
+                                      width: isSelected ? 3 : 1,
+                                    ),
+                                    boxShadow: isSelected
+                                        ? [
+                                            BoxShadow(
+                                              color: ScholarlyTheme.accentBlue
+                                                  .withValues(alpha: 0.3),
+                                              blurRadius: 10,
+                                            ),
+                                          ]
+                                        : [],
                                   ),
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                    color: isSelected
-                                        ? ScholarlyTheme.accentBlue
-                                        : ScholarlyTheme.panelStroke,
-                                    width: isSelected ? 3 : 1,
-                                  ),
-                                  boxShadow: isSelected
-                                      ? [
-                                          BoxShadow(
-                                            color: ScholarlyTheme.accentBlue
-                                                .withValues(alpha: 0.3),
-                                            blurRadius: 10,
-                                          ),
-                                        ]
-                                      : [],
-                                ),
-                                child: Center(
-                                  child: SizedBox(
-                                    width: 44,
-                                    height: 44,
-                                    child: theme.buildPiece(
-                                      context,
-                                      'N',
-                                      true,
-                                      false,
-                                      0.0,
+                                  child: Center(
+                                    child: SizedBox(
+                                      width: 44,
+                                      height: 44,
+                                      child: theme.buildPiece(
+                                        context,
+                                        'N',
+                                        true,
+                                        false,
+                                        0.0,
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                theme.name,
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  fontWeight: isSelected
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
-                                  color: isSelected
-                                      ? ScholarlyTheme.accentBlue
-                                      : ScholarlyTheme.textPrimary,
+                                const SizedBox(height: 8),
+                                Text(
+                                  theme.name,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    fontWeight: isSelected
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                    color: isSelected
+                                        ? ScholarlyTheme.accentBlue
+                                        : ScholarlyTheme.textPrimary,
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
+                              ],
+                            ),
+                          );
+                        },
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 20),
-                ],
+                    const SizedBox(height: 20),
+                  ],
+                ),
               ),
             );
           },

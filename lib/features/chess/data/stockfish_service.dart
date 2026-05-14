@@ -178,9 +178,7 @@ class StockfishService {
       return;
     }
     try {
-      final cmd = command.endsWith('\n') ? command : '$command\n';
-      _process!.stdin.write(cmd);
-      await _process!.stdin.flush();
+      _process!.stdin.writeln(command.trim());
     } catch (e) {
       debugPrint('StockfishService: Failed to send command "$command": $e');
       _isReady = false;
@@ -199,7 +197,8 @@ class StockfishService {
     await sendCommand('stop');
   }
 
-  Future<void> setSkillLevel(int level) async {
+  Future<void> setSkillLevel(int level, {int multiPV = 1}) async {
+    await sendCommand('setoption name MultiPV value $multiPV');
     await sendCommand('setoption name Skill Level value $level');
   }
 

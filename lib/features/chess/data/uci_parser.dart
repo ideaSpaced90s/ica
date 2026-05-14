@@ -34,6 +34,8 @@ class UCIParser {
         result['nps'] = int.tryParse(parts[i + 1]);
       } else if (parts[i] == 'time' && i + 1 < parts.length) {
         result['time'] = int.tryParse(parts[i + 1]);
+      } else if (parts[i] == 'multipv' && i + 1 < parts.length) {
+        result['multipv'] = int.tryParse(parts[i + 1]);
       } else if (parts[i] == 'pv' && i + 1 < parts.length) {
         result['pv'] = parts.sublist(i + 1);
         break;

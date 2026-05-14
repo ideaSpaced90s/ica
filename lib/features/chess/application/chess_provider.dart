@@ -19,6 +19,7 @@ import '../services/ai_context_service.dart';
 import '../data/settings_repository.dart';
 import '../services/chess_haptics_service.dart';
 import '../domain/models/ai_avatar.dart';
+import '../domain/models/candidate_move.dart';
 
 const _sentinel = Object();
 // Commentary default
@@ -508,7 +509,10 @@ class ChessNotifier extends StateNotifier<ChessState> {
       );
       await _engine.setChess960Mode(is960);
       final avatar = AiAvatar.getAvatar(s.engineLevel);
-      await _engine.setSkillLevel(avatar.skillLevel);
+      await _engine.setSkillLevel(
+        avatar.skillLevel,
+        multiPV: avatar.name == 'Kingslayer' ? 1 : 4,
+      );
       _soundService.updateSettings(
         sfxEnabled: s.isSoundEnabled,
         bgmEnabled: s.isMusicEnabled,
@@ -805,6 +809,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
   StreamSubscription<String>? _engineOutputSubscription;
   final List<_BoardSnapshot> _undoStack = [];
   final List<_BoardSnapshot> _redoStack = [];
+  final List<CandidateMove> _currentCandidates = [];
 
   String? _pendingHintFen;
   Future<void>? _startupFuture;
@@ -861,7 +866,10 @@ class ChessNotifier extends StateNotifier<ChessState> {
       await _engine.init();
 
       final avatar = AiAvatar.getAvatar(state.engineLevel);
-      await _engine.setSkillLevel(avatar.skillLevel);
+      await _engine.setSkillLevel(
+        avatar.skillLevel,
+        multiPV: avatar.name == 'Kingslayer' ? 1 : 4,
+      );
 
       state = state.copyWith(
         servicesStarted: true,
@@ -919,37 +927,72 @@ class ChessNotifier extends StateNotifier<ChessState> {
       engineReady: true,
     );
 
-    // debugPrint(
-    //   'ChessNotifier: Parsed engine output. type: ${parsed['type']}, isAiTurn: ${_isAiTurn()}, isEngineThinking: ${state.isEngineThinking}',
-    // );
-    if (newEval != null) {
-      // Just record the evaluation, don't trigger commentary here anymore.
-      // The orchestration is handled in makeMove and _runCommentary.
-      // debugPrint('ChessNotifier: Score updated: $newEval');
+    if (parsed.containsKey('multipv') && parsed.containsKey('pv')) {
+      final mpv = parsed['multipv'] as int;
+      final pvList = parsed['pv'] as List<String>;
+      if (pvList.isNotEmpty) {
+        final uciMove = pvList.first;
+        final candidate = CandidateMove(
+          multipvIndex: mpv,
+          uciMove: uciMove,
+          evaluation: newEval ?? state.currentEvaluation,
+          fullPv: pvList,
+        );
+        final idx = _currentCandidates.indexWhere((c) => c.multipvIndex == mpv);
+        if (idx != -1) {
+          _currentCandidates[idx] = candidate;
+        } else {
+          _currentCandidates.add(candidate);
+        }
+      }
     }
 
     if (parsed.containsKey('bestMove')) {
-      final bestMove = parsed['bestMove'] as String?;
+      final rawBestMove = parsed['bestMove'] as String?;
       final aiTurn = _isAiTurn();
+
+      String? bestMoveToPlay = rawBestMove;
+
+      if (rawBestMove != null && _currentCandidates.isNotEmpty) {
+        bool isBottomTurn = false;
+        final fenParts = state.game.fen.split(' ');
+        if (fenParts.length > 1) {
+          final turnWhite = fenParts[1] == 'w';
+          isBottomTurn = (state.isPlayerWhite == turnWhite);
+        }
+        final activeAvatarId = (state.isEngineVsEngine && isBottomTurn)
+            ? state.bottomAvatarId
+            : state.engineLevel;
+        final currentAvatar = AiAvatar.getAvatar(activeAvatarId);
+
+        if (currentAvatar.name != 'Kingslayer') {
+          bestMoveToPlay = _applyPersonaHeuristics(
+            List.from(_currentCandidates),
+            currentAvatar,
+            state.game,
+            rawBestMove,
+          );
+        }
+      }
 
       // Ensure the move is actually intended for the current turn's side
       bool isMoveValidForCurrentTurn = false;
-      if (bestMove != null && bestMove.length >= 4) {
-        final fromSquare = bestMove.substring(0, 2);
+      if (bestMoveToPlay != null && bestMoveToPlay.length >= 4) {
+        final fromSquare = bestMoveToPlay.substring(0, 2);
         final piece = state.game.getPiece(fromSquare);
         if (piece != null && piece.color == state.game.turn) {
           isMoveValidForCurrentTurn = true;
         }
       }
 
-      if (bestMove != null &&
+      if (bestMoveToPlay != null &&
           _pendingHintFen != null &&
           _pendingHintFen == state.game.fen) {
         _pendingHintFen = null;
-        unawaited(_runHintFlow(bestMove));
+        unawaited(_runHintFlow(bestMoveToPlay));
       }
 
-      if (bestMove != null &&
+      if (bestMoveToPlay != null &&
           aiTurn &&
           isMoveValidForCurrentTurn &&
           !state.game.gameOver &&
@@ -958,6 +1001,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
         _maxThinkingTimer = null;
         _engineMoveTimer?.cancel();
 
+        final finalMove = bestMoveToPlay;
         if (state.isAnimationsEnabled && !state.isRatedMode) {
           final now = DateTime.now();
           final elapsed = now
@@ -968,14 +1012,91 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
           _engineMoveTimer = Timer(Duration(milliseconds: remainingDelay), () {
             if (!_isDisposed && !state.isPaused) {
-              _makeEngineMove(bestMove);
+              _makeEngineMove(finalMove);
             }
           });
         } else {
-          _makeEngineMove(bestMove);
+          _makeEngineMove(finalMove);
         }
       }
     }
+  }
+
+  String _applyPersonaHeuristics(
+    List<CandidateMove> candidates,
+    AiAvatar avatar,
+    ChessGame game,
+    String engineBestMove,
+  ) {
+    if (candidates.isEmpty) return engineBestMove;
+
+    String bestCandidateMove = candidates.first.uciMove;
+    double highestAdjustedScore = -999.0;
+
+    final turnColor = game.turn;
+    final opponentColor = turnColor == chess_lib.Color.WHITE
+        ? chess_lib.Color.BLACK
+        : chess_lib.Color.WHITE;
+
+    debugPrint('--- Persona Candidate Interception (${avatar.name}) ---');
+
+    for (final candidate in candidates) {
+      if (candidate.uciMove.length < 4) continue;
+      final fromSq = candidate.uciMove.substring(0, 2);
+      final toSq = candidate.uciMove.substring(2, 4);
+
+      final piece = game.getPiece(fromSq);
+      final targetPiece = game.getPiece(toSq);
+
+      double adjustedScore = candidate.evaluation;
+
+      // Trait scoring adjustments
+      if (avatar.name == 'Pawnzy') {
+        if (piece?.type == chess_lib.PieceType.PAWN) {
+          adjustedScore += 1.5;
+        }
+      } else if (avatar.name == 'Rook-ie') {
+        if (targetPiece != null) {
+          // If target piece is undefended by the opponent
+          if (!game.isAttacked(toSq, opponentColor)) {
+            adjustedScore += 2.0;
+          } else {
+            adjustedScore += 0.5; // Loves capturing generally
+          }
+        }
+      } else if (avatar.name == 'Stonewall') {
+        if (piece?.type == chess_lib.PieceType.PAWN) {
+          final fromRank = int.tryParse(fromSq[1]) ?? 0;
+          final toRank = int.tryParse(toSq[1]) ?? 0;
+          if ((toRank - fromRank).abs() <= 1) {
+            adjustedScore += 0.6; // Closed short steps
+          }
+        } else if (targetPiece != null) {
+          adjustedScore -= 0.5; // Penalize early unforced trades
+        }
+      } else if (avatar.name == 'Gambit') {
+        // Enjoys material chaos or sacrifices to open active vectors
+        if (candidate.evaluation < -0.5 && (targetPiece != null || piece?.type == chess_lib.PieceType.PAWN)) {
+          adjustedScore += 1.2;
+        }
+      } else if (avatar.name == 'Blitzer') {
+        if (piece?.type == chess_lib.PieceType.KNIGHT || piece?.type == chess_lib.PieceType.BISHOP) {
+          adjustedScore += 0.8;
+        }
+      }
+
+      debugPrint(
+        '  Candidate ${candidate.multipvIndex}: ${candidate.uciMove} | Base Eval: ${candidate.evaluation.toStringAsFixed(2)} | Adjusted: ${adjustedScore.toStringAsFixed(2)}',
+      );
+
+      if (adjustedScore > highestAdjustedScore) {
+        highestAdjustedScore = adjustedScore;
+        bestCandidateMove = candidate.uciMove;
+      }
+    }
+
+    debugPrint('  Selected Persona Move: $bestCandidateMove');
+    return bestCandidateMove;
   }
 
   void sendCommand(String command) {
@@ -1529,7 +1650,11 @@ class ChessNotifier extends StateNotifier<ChessState> {
     final targetDepth = depth ?? avatar.depth;
 
     // Dynamically apply current moving engine's skill level constraints
-    _engine.setSkillLevel(avatar.skillLevel);
+    _currentCandidates.clear();
+    _engine.setSkillLevel(
+      avatar.skillLevel,
+      multiPV: avatar.name == 'Kingslayer' ? 1 : 4,
+    );
 
     // Record start time for the 2s minimum delay logic
     _engineStartTime = DateTime.now();
@@ -1633,9 +1758,13 @@ class ChessNotifier extends StateNotifier<ChessState> {
     final avatar = AiAvatar.getAvatar(level);
     state = state.copyWith(engineLevel: level);
 
-    await _engine.setSkillLevel(avatar.skillLevel);
+    await _engine.setSkillLevel(
+      avatar.skillLevel,
+      multiPV: avatar.name == 'Kingslayer' ? 1 : 4,
+    );
     _saveSettings();
     if (state.servicesStarted && _isAiTurn()) {
+      _currentCandidates.clear();
       _engine.analyzePosition(state.game.fen, depth: avatar.depth);
     }
   }
@@ -1654,7 +1783,11 @@ class ChessNotifier extends StateNotifier<ChessState> {
         isBottomTurn = (state.isPlayerWhite == turnWhite);
       }
       if (isBottomTurn) {
-        await _engine.setSkillLevel(avatar.skillLevel);
+        await _engine.setSkillLevel(
+          avatar.skillLevel,
+          multiPV: avatar.name == 'Kingslayer' ? 1 : 4,
+        );
+        _currentCandidates.clear();
         _engine.analyzePosition(state.game.fen, depth: avatar.depth);
       }
     }

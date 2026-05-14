@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/stockfish_service.dart';
+import '../data/uci_parser.dart';
+import '../domain/models/candidate_move.dart';
 
 /// State of the Stockfish engine.
 class StockfishState {
@@ -10,6 +12,7 @@ class StockfishState {
   final String? bestMove;
   final String? pondermove;
   final String? evaluation;
+  final List<CandidateMove> candidates;
 
   StockfishState({
     this.isReady = false,
@@ -18,6 +21,7 @@ class StockfishState {
     this.bestMove,
     this.pondermove,
     this.evaluation,
+    this.candidates = const [],
   });
 
   StockfishState copyWith({
@@ -27,6 +31,7 @@ class StockfishState {
     String? bestMove,
     String? pondermove,
     String? evaluation,
+    List<CandidateMove>? candidates,
   }) {
     return StockfishState(
       isReady: isReady ?? this.isReady,
@@ -35,6 +40,7 @@ class StockfishState {
       bestMove: bestMove ?? this.bestMove,
       pondermove: pondermove ?? this.pondermove,
       evaluation: evaluation ?? this.evaluation,
+      candidates: candidates ?? this.candidates,
     );
   }
 }
@@ -61,6 +67,39 @@ class StockfishController extends StateNotifier<StockfishState> {
 
   void _handleOutput(String line) {
     if (line.startsWith('info')) {
+      final parsed = UCIParser.parseLine(line);
+      if (parsed.containsKey('multipv') && parsed.containsKey('pv')) {
+        final mpv = parsed['multipv'] as int;
+        final pvList = parsed['pv'] as List<String>;
+        if (pvList.isNotEmpty) {
+          final uciMove = pvList.first;
+          double eval = 0.0;
+          if (parsed.containsKey('score')) {
+            final score = parsed['score'] as int;
+            eval = parsed['scoreType'] == 'mate'
+                ? (score > 0 ? 99.0 : -99.0)
+                : score / 100.0;
+          }
+
+          final candidate = CandidateMove(
+            multipvIndex: mpv,
+            uciMove: uciMove,
+            evaluation: eval,
+            fullPv: pvList,
+          );
+
+          final newList = List<CandidateMove>.from(state.candidates);
+          final idx = newList.indexWhere((c) => c.multipvIndex == mpv);
+          if (idx != -1) {
+            newList[idx] = candidate;
+          } else {
+            newList.add(candidate);
+            newList.sort((a, b) => a.multipvIndex.compareTo(b.multipvIndex));
+          }
+          state = state.copyWith(candidates: newList);
+        }
+      }
+
       final now = DateTime.now();
       if (now.difference(_lastUpdateTime).inMilliseconds < 250) {
         return;
@@ -92,6 +131,7 @@ class StockfishController extends StateNotifier<StockfishState> {
 
   /// Sets the position and starts analysis.
   Future<void> analyzePosition(String fen, {int depth = 15}) async {
+    state = state.copyWith(candidates: const []);
     await _service.analyzePosition(fen, depth: depth);
   }
 
