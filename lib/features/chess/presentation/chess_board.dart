@@ -1466,6 +1466,7 @@ class _AcademySuggestionOverlayState extends State<AcademySuggestionOverlay>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
+  bool _isVisible = true;
 
   @override
   void initState() {
@@ -1476,15 +1477,25 @@ class _AcademySuggestionOverlayState extends State<AcademySuggestionOverlay>
     );
     _animation =
         CurvedAnimation(parent: _controller, curve: Curves.easeInOutCubic);
-    _controller.forward();
+    _startAnimation();
+  }
+
+  void _startAnimation() {
+    setState(() => _isVisible = true);
+    _controller.reset();
+    _controller.forward().then((_) {
+      // Auto-vanish the whole overlay after a short delay
+      Future.delayed(const Duration(milliseconds: 1500), () {
+        if (mounted) setState(() => _isVisible = false);
+      });
+    });
   }
 
   @override
   void didUpdateWidget(AcademySuggestionOverlay oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.trigger != widget.trigger || oldWidget.data != widget.data) {
-      _controller.reset();
-      _controller.forward();
+      _startAnimation();
     }
   }
 
@@ -1496,6 +1507,8 @@ class _AcademySuggestionOverlayState extends State<AcademySuggestionOverlay>
 
   @override
   Widget build(BuildContext context) {
+    if (!_isVisible) return const SizedBox.shrink();
+
     final squareSize = widget.boardSize / 8;
 
     Offset getPos(String square) {
@@ -1570,26 +1583,6 @@ class _AcademySuggestionOverlayState extends State<AcademySuggestionOverlay>
             },
           ),
 
-          // 3. Final Destination Marker (Stationary Ghost)
-          if (_animation.value > 0.8)
-            Positioned(
-              left: toPos.dx,
-              top: toPos.dy,
-              child: Opacity(
-                opacity: (_animation.value - 0.8) / 0.2 * 0.4,
-                child: Container(
-                  width: squareSize,
-                  height: squareSize,
-                  padding: const EdgeInsets.all(4),
-                  child: Center(
-                    child: SvgPicture.asset(
-                      'assets/pieces/${widget.data.pieceCode}.svg',
-                      fit: BoxFit.contain,
-                    ),
-                  ),
-                ),
-              ),
-            ),
         ],
       ),
     );
