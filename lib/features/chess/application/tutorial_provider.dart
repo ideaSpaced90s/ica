@@ -219,9 +219,15 @@ class TutorialNotifier extends StateNotifier<TutorialState> {
       activeHighlights = nextStep.allowedSquares;
     }
 
+    // Handle mid-lesson board reset if specified
+    if (nextStep.resetToFen != null) {
+      state.board.load(nextStep.resetToFen!);
+    }
+
     state = state.copyWith(
       currentStepIndex: nextStepIdx,
       currentStep: nextStep,
+      board: state.board, // Explicitly pass the board to trigger UI update if reset
       highlightSquares: activeHighlights,
       animatePathSquares: nextStep.animatePathSquares,
       lastMentorDialogue: nextStep.dialogue,
@@ -280,6 +286,11 @@ class TutorialNotifier extends StateNotifier<TutorialState> {
     bool isExpected = false;
     if (expectedUci != null) {
       isExpected = attemptedUci.startsWith(expectedUci.substring(0, 4));
+    }
+    
+    // Check alternative moves if primary didn't match
+    if (!isExpected && state.currentStep.alternativeMoves.isNotEmpty) {
+      isExpected = state.currentStep.alternativeMoves.any((m) => attemptedUci.startsWith(m.substring(0, 4)));
     }
 
     if (isExpected) {

@@ -6,7 +6,7 @@ class TutorialLessonsDatabase {
     TutorialLesson(
       chapterId: 1,
       title: 'Board Introduction',
-      setupFen: '8/8/8/8/8/8/8/8 w - - 0 1',
+      setupFen: 'k7/8/8/8/8/8/8/7K w - - 0 1',
       steps: [
         TutorialStep(
           type: TutorialStepType.dialogue,
@@ -56,7 +56,7 @@ class TutorialLessonsDatabase {
     TutorialLesson(
       chapterId: 2,
       title: 'Coordinates & Tiles',
-      setupFen: '8/8/8/8/8/8/8/8 w - - 0 1',
+      setupFen: 'k7/8/8/8/8/8/8/7K w - - 0 1',
       steps: [
         TutorialStep(
           type: TutorialStepType.dialogue,
@@ -94,7 +94,7 @@ class TutorialLessonsDatabase {
     TutorialLesson(
       chapterId: 3,
       title: 'Pawn Movement',
-      setupFen: '8/8/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+      setupFen: 'r3k2r/8/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
       steps: [
         TutorialStep(
           type: TutorialStepType.dialogue,
@@ -133,7 +133,7 @@ class TutorialLessonsDatabase {
     TutorialLesson(
       chapterId: 4,
       title: 'Rook Movement',
-      setupFen: '8/8/8/8/3R4/8/8/8 w - - 0 1',
+      setupFen: 'k7/8/8/8/3R4/8/8/7K w - - 0 1',
       steps: [
         TutorialStep(
           type: TutorialStepType.dialogue,
@@ -172,7 +172,7 @@ class TutorialLessonsDatabase {
     TutorialLesson(
       chapterId: 5,
       title: 'Bishop Movement',
-      setupFen: '8/8/8/8/3B4/8/8/8 w - - 0 1',
+      setupFen: 'k7/8/8/8/3B4/8/8/7K w - - 0 1',
       steps: [
         TutorialStep(
           type: TutorialStepType.dialogue,
@@ -211,7 +211,7 @@ class TutorialLessonsDatabase {
     TutorialLesson(
       chapterId: 6,
       title: 'Knight Movement',
-      setupFen: '8/8/8/8/3N4/8/8/8 w - - 0 1',
+      setupFen: 'k7/8/8/8/3N4/8/8/7K w - - 0 1',
       steps: [
         TutorialStep(
           type: TutorialStepType.dialogue,
@@ -255,7 +255,7 @@ class TutorialLessonsDatabase {
     TutorialLesson(
       chapterId: 7,
       title: 'Queen Movement',
-      setupFen: '8/8/8/8/3Q4/8/8/8 w - - 0 1',
+      setupFen: 'k7/8/8/8/3Q4/8/8/7K w - - 0 1',
       steps: [
         TutorialStep(
           type: TutorialStepType.dialogue,
@@ -294,7 +294,7 @@ class TutorialLessonsDatabase {
     TutorialLesson(
       chapterId: 8,
       title: 'King Movement',
-      setupFen: '8/8/8/8/3K4/8/8/8 w - - 0 1',
+      setupFen: 'k7/8/8/8/3K4/8/8/8 w - - 0 1',
       steps: [
         TutorialStep(
           type: TutorialStepType.dialogue,
@@ -333,7 +333,7 @@ class TutorialLessonsDatabase {
     TutorialLesson(
       chapterId: 9,
       title: 'Capturing Pieces',
-      setupFen: '8/8/8/4p3/3R4/8/8/8 w - - 0 1',
+      setupFen: 'k7/8/8/4p3/3R4/8/8/7K w - - 0 1',
       steps: [
         TutorialStep(
           type: TutorialStepType.dialogue,
@@ -363,7 +363,7 @@ class TutorialLessonsDatabase {
     TutorialLesson(
       chapterId: 10,
       title: 'Understanding Check',
-      setupFen: '8/8/8/8/8/8/4r3/4K3 w - - 0 1',
+      setupFen: '4k3/8/8/8/8/8/4r3/4K3 w - - 0 1',
       steps: [
         TutorialStep(
           type: TutorialStepType.dialogue,
@@ -402,7 +402,7 @@ class TutorialLessonsDatabase {
     TutorialLesson(
       chapterId: 11,
       title: 'Escaping Check',
-      setupFen: '8/8/8/8/8/8/3B4/r3K3 w - - 0 1',
+      setupFen: 'k7/8/8/8/8/8/4B3/r3K3 w - - 0 1',
       steps: [
         TutorialStep(
           type: TutorialStepType.dialogue,
@@ -417,15 +417,15 @@ class TutorialLessonsDatabase {
         ),
         TutorialStep(
           type: TutorialStepType.awaitMove,
-          dialogue: "Intercept. Move the Bishop from d2 to c1. Shield the King.",
-          highlightSquares: ['d2'],
-          expectedMove: 'd2c1',
+          dialogue: "Intercept. Move the Bishop from e2 to d1. Shield the King.",
+          highlightSquares: ['e2'],
+          expectedMove: 'e2d1',
           reactionCorrect: MentorReaction(
             dialogue: "Brilliant. Minor pieces are excellent shields.",
             mood: MentorMood.encouraging,
           ),
           reactionIllegal: MentorReaction(
-            dialogue: "Block the line. Move the Bishop to c1.",
+            dialogue: "Block the line. Move the Bishop to d1.",
             mood: MentorMood.correction,
           ),
         ),
@@ -460,7 +460,7 @@ class TutorialLessonsDatabase {
           highlightSquares: ['f7'],
           expectedMove: 'f7g7',
           reactionCorrect: MentorReaction(
-            dialogue: "Checkmate. Victory is yours.",
+            dialogue: "Checkmate. g7 is defended by the King, leaving no escape.",
             mood: MentorMood.celebration,
           ),
           reactionIllegal: MentorReaction(
@@ -469,8 +469,29 @@ class TutorialLessonsDatabase {
           ),
         ),
         TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "Efficient. But g7 isn't the only path. The Queen has range. Let's reset.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Now, find the Back-Rank Mate. f8 or e8. Strike from a distance.",
+          resetToFen: '7k/5Q2/6K1/8/8/8/8/8 w - - 0 1',
+          highlightSquares: ['f7'],
+          expectedMove: 'f7f8',
+          alternativeMoves: ['f7e8'],
+          reactionCorrect: MentorReaction(
+            dialogue: "Lethal. The back rank is a graveyard for trapped Kings.",
+            mood: MentorMood.celebration,
+          ),
+          reactionIllegal: MentorReaction(
+            dialogue: "Slide the Queen all the way to f8 or e8.",
+            mood: MentorMood.correction,
+          ),
+        ),
+        TutorialStep(
           type: TutorialStepType.celebration,
-          dialogue: "Absolute victory. Coordination is the key.",
+          dialogue: "Absolute victory. One goal, many tactical paths.",
           mentorMood: MentorMood.celebration,
         ),
       ],
@@ -519,7 +540,7 @@ class TutorialLessonsDatabase {
     TutorialLesson(
       chapterId: 14,
       title: 'Kingside Castling',
-      setupFen: '8/8/8/8/8/8/8/R3K2R w KQ - 0 1',
+      setupFen: '4k3/8/8/8/8/8/8/R3K2R w KQ - 0 1',
       steps: [
         TutorialStep(
           type: TutorialStepType.dialogue,
@@ -563,7 +584,7 @@ class TutorialLessonsDatabase {
     TutorialLesson(
       chapterId: 15,
       title: 'Queenside Castling',
-      setupFen: '8/8/8/8/8/8/8/R3K2R w KQ - 0 1',
+      setupFen: '4k3/8/8/8/8/8/8/R3K2R w KQ - 0 1',
       steps: [
         TutorialStep(
           type: TutorialStepType.dialogue,
@@ -602,7 +623,7 @@ class TutorialLessonsDatabase {
     TutorialLesson(
       chapterId: 16,
       title: 'En Passant Capture',
-      setupFen: '8/8/8/3pP3/8/8/8/8 w - d6 0 1',
+      setupFen: 'k7/8/8/3pP3/8/8/8/7K w - d6 0 1',
       steps: [
         TutorialStep(
           type: TutorialStepType.dialogue,
@@ -646,7 +667,7 @@ class TutorialLessonsDatabase {
     TutorialLesson(
       chapterId: 17,
       title: 'Pawn Promotion',
-      setupFen: '8/4P3/8/8/8/8/8/8 w - - 0 1',
+      setupFen: 'k7/4P3/8/8/8/8/8/7K w - - 0 1',
       steps: [
         TutorialStep(
           type: TutorialStepType.dialogue,
@@ -685,7 +706,7 @@ class TutorialLessonsDatabase {
     TutorialLesson(
       chapterId: 18,
       title: 'Draw Conditions',
-      setupFen: '8/8/8/8/8/8/8/8 w - - 0 1',
+      setupFen: 'k7/8/8/8/8/8/8/7K w - - 0 1',
       steps: [
         TutorialStep(
           type: TutorialStepType.dialogue,
@@ -726,7 +747,7 @@ class TutorialLessonsDatabase {
     TutorialLesson(
       chapterId: 20,
       title: 'Piece Value Concepts',
-      setupFen: '8/8/8/8/8/8/8/8 w - - 0 1',
+      setupFen: 'k7/8/8/8/8/8/8/7K w - - 0 1',
       steps: [
         TutorialStep(
           type: TutorialStepType.dialogue,
@@ -744,7 +765,7 @@ class TutorialLessonsDatabase {
     TutorialLesson(
       chapterId: 21,
       title: 'Tactical Patterns',
-      setupFen: '8/8/3q4/8/3N4/8/3K4/8 w - - 0 1',
+      setupFen: 'k7/8/3q4/8/3N4/8/3K4/8 w - - 0 1',
       steps: [
         TutorialStep(
           type: TutorialStepType.dialogue,
@@ -762,7 +783,7 @@ class TutorialLessonsDatabase {
     TutorialLesson(
       chapterId: 22,
       title: 'Practice Challenges',
-      setupFen: '8/8/8/8/8/8/8/8 w - - 0 1',
+      setupFen: 'k7/8/8/8/8/8/8/7K w - - 0 1',
       steps: [
         TutorialStep(
           type: TutorialStepType.dialogue,

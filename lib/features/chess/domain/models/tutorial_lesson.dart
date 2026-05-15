@@ -74,19 +74,25 @@ class TutorialStep {
   /// The UCI move expected from the user during `awaitMove` steps (e.g. 'e2e4').
   final String? expectedMove;
 
-  /// Specific squares the user is allowed to select during `awaitSquareTap` steps.
+  /// Alternative UCI moves that are also considered correct.
+  final List<String> alternativeMoves;
+
+  /// Optional FEN to reset the board to when this step starts.
+  final String? resetToFen;
+
+  /// Specific squares the user is allowed to tap/interact with during identifying steps.
   final List<String> allowedSquares;
 
-  /// Secondary board effects like specific piece range lanes or danger fields.
+  /// Visual overlay effect to apply to the board for this step.
   final TutorialOverlayEffect overlayEffect;
 
-  /// Specific reaction when the user plays the correct move or taps the right tile.
+  /// Reaction from GM Bard when the user performs the correct action.
   final MentorReaction? reactionCorrect;
 
-  /// Specific reaction when the user tries an incorrect/illegal move.
+  /// Reaction from GM Bard when the user performs an incorrect or illegal action.
   final MentorReaction? reactionIllegal;
 
-  /// Specific reaction when the user hesitates for more than the delay limit.
+  /// Reaction from GM Bard if the user takes too long to respond.
   final MentorReaction? reactionHesitation;
 
   const TutorialStep({
@@ -96,6 +102,8 @@ class TutorialStep {
     this.highlightSquares = const [],
     this.animatePathSquares = const [],
     this.expectedMove,
+    this.alternativeMoves = const [],
+    this.resetToFen,
     this.allowedSquares = const [],
     this.overlayEffect = TutorialOverlayEffect.none,
     this.reactionCorrect,
