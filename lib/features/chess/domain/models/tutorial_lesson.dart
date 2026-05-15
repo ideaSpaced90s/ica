@@ -80,6 +80,9 @@ class TutorialStep {
   /// Optional FEN to reset the board to when this step starts.
   final String? resetToFen;
 
+  /// An automated UCI move to perform on the board when this step starts (for demonstrations).
+  final String? scriptedMove;
+
   /// Specific squares the user is allowed to tap/interact with during identifying steps.
   final List<String> allowedSquares;
 
@@ -104,6 +107,7 @@ class TutorialStep {
     this.expectedMove,
     this.alternativeMoves = const [],
     this.resetToFen,
+    this.scriptedMove,
     this.allowedSquares = const [],
     this.overlayEffect = TutorialOverlayEffect.none,
     this.reactionCorrect,

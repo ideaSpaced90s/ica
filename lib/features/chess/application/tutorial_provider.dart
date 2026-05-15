@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:chess/chess.dart' as chess_lib;
 
@@ -180,17 +181,31 @@ class TutorialNotifier extends StateNotifier<TutorialState> {
     final newBoard = chess_lib.Chess();
     newBoard.load(lesson.setupFen);
 
+    final firstStep = lesson.steps.first;
+    var boardToUse = newBoard;
+
+    // Handle automated scripted move for demonstrations on first step
+    if (firstStep.scriptedMove != null && firstStep.scriptedMove!.length >= 4) {
+      final from = firstStep.scriptedMove!.substring(0, 2);
+      final to = firstStep.scriptedMove!.substring(2, 4);
+      
+      final animatedBoard = chess_lib.Chess();
+      animatedBoard.load(boardToUse.fen);
+      animatedBoard.move({'from': from, 'to': to, 'promotion': 'q'});
+      boardToUse = animatedBoard;
+    }
+
     state = state.copyWith(
-      board: newBoard,
+      board: boardToUse,
       currentChapterIndex: chapterId,
       currentStepIndex: 0,
       currentLesson: lesson,
-      currentStep: lesson.steps.first,
-      highlightSquares: lesson.steps.first.highlightSquares,
-      animatePathSquares: lesson.steps.first.animatePathSquares,
-      lastMentorDialogue: lesson.steps.first.dialogue,
-      mentorMood: lesson.steps.first.mentorMood,
-      isAwaitingMove: lesson.steps.first.type == TutorialStepType.awaitMove,
+      currentStep: firstStep,
+      highlightSquares: firstStep.highlightSquares,
+      animatePathSquares: firstStep.animatePathSquares,
+      lastMentorDialogue: firstStep.dialogue,
+      mentorMood: firstStep.mentorMood,
+      isAwaitingMove: firstStep.type == TutorialStepType.awaitMove,
       isChapterComplete: false,
       mistakesMadeInChapter: 0,
     );
@@ -220,14 +235,28 @@ class TutorialNotifier extends StateNotifier<TutorialState> {
     }
 
     // Handle mid-lesson board reset if specified
+    var boardToUse = state.board;
     if (nextStep.resetToFen != null) {
-      state.board.load(nextStep.resetToFen!);
+      boardToUse = chess_lib.Chess();
+      boardToUse.load(nextStep.resetToFen!);
+    }
+
+    // Handle automated scripted move for demonstrations
+    if (nextStep.scriptedMove != null && nextStep.scriptedMove!.length >= 4) {
+      final from = nextStep.scriptedMove!.substring(0, 2);
+      final to = nextStep.scriptedMove!.substring(2, 4);
+      
+      // We must create a new board instance for Riverpod to detect the change
+      final newBoard = chess_lib.Chess();
+      newBoard.load(boardToUse.fen);
+      newBoard.move({'from': from, 'to': to, 'promotion': 'q'});
+      boardToUse = newBoard;
     }
 
     state = state.copyWith(
       currentStepIndex: nextStepIdx,
       currentStep: nextStep,
-      board: state.board, // Explicitly pass the board to trigger UI update if reset
+      board: boardToUse,
       highlightSquares: activeHighlights,
       animatePathSquares: nextStep.animatePathSquares,
       lastMentorDialogue: nextStep.dialogue,
@@ -285,12 +314,30 @@ class TutorialNotifier extends StateNotifier<TutorialState> {
     // Check if move matches scripted tutorial expected behavior
     bool isExpected = false;
     if (expectedUci != null) {
-      isExpected = attemptedUci.startsWith(expectedUci.substring(0, 4));
+      final baseExpected = expectedUci.substring(0, 4);
+      if (attemptedUci.startsWith(baseExpected)) {
+        if (expectedUci.length > 4 && attemptedUci.length > 4) {
+          // Both have specific promotion suffixes, they must match exactly
+          isExpected = attemptedUci == expectedUci;
+        } else {
+          // Base squares match, and at least one is a simple coordinate move
+          isExpected = true;
+        }
+      }
     }
     
     // Check alternative moves if primary didn't match
     if (!isExpected && state.currentStep.alternativeMoves.isNotEmpty) {
-      isExpected = state.currentStep.alternativeMoves.any((m) => attemptedUci.startsWith(m.substring(0, 4)));
+      isExpected = state.currentStep.alternativeMoves.any((m) {
+        final baseAlternative = m.substring(0, math.min(4, m.length));
+        if (attemptedUci.startsWith(baseAlternative)) {
+          if (m.length > 4 && attemptedUci.length > 4) {
+             return m == attemptedUci;
+          }
+          return true;
+        }
+        return false;
+      });
     }
 
     if (isExpected) {
@@ -298,7 +345,18 @@ class TutorialNotifier extends StateNotifier<TutorialState> {
       final targetPiece = state.board.get(to);
       final isCapture = targetPiece != null;
 
-      final success = state.board.move({'from': from, 'to': to, 'promotion': 'q'});
+      // Extract promotion piece: 
+      // 1. From the user's attempt if provided
+      // 2. Otherwise from the lesson's expectedMove if it has one
+      // 3. Finally default to queen
+      String promo = 'q';
+      if (attemptedUci.length > 4) {
+        promo = attemptedUci[4];
+      } else if (expectedUci != null && expectedUci.length > 4) {
+        promo = expectedUci[4];
+      }
+      
+      final success = state.board.move({'from': from, 'to': to, 'promotion': promo});
       if (success) {
         final reaction = state.currentStep.reactionCorrect;
         if (reaction != null) {

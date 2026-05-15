@@ -623,7 +623,7 @@ class TutorialLessonsDatabase {
     TutorialLesson(
       chapterId: 16,
       title: 'En Passant Capture',
-      setupFen: 'k7/8/8/3pP3/8/8/8/7K w - d6 0 1',
+      setupFen: 'k7/3p4/8/4P3/8/8/8/7K b - - 0 1',
       steps: [
         TutorialStep(
           type: TutorialStepType.dialogue,
@@ -633,7 +633,9 @@ class TutorialLessonsDatabase {
         TutorialStep(
           type: TutorialStepType.demonstrate,
           dialogue: "An enemy pawn leaps two squares, landing adjacent to yours.",
-          highlightSquares: ['e5', 'd5'],
+          scriptedMove: 'd7d5',
+          animatePathSquares: ['d7', 'd5'],
+          highlightSquares: ['d7', 'd5'],
           overlayEffect: TutorialOverlayEffect.enPassantArrow,
         ),
         TutorialStep(
@@ -676,27 +678,47 @@ class TutorialLessonsDatabase {
         ),
         TutorialStep(
           type: TutorialStepType.demonstrate,
-          dialogue: "Promote to any major or minor piece. Usually, a Queen.",
+          dialogue: "You may exchange your pawn for a Queen, Rook, Bishop, or Knight of your color.",
           highlightSquares: ['e7', 'e8'],
           overlayEffect: TutorialOverlayEffect.glowSquare,
         ),
         TutorialStep(
           type: TutorialStepType.awaitMove,
-          dialogue: "Push to e8. Claim your Queen.",
+          dialogue: "Push to e8. Claim your Queen—the most common choice.",
           highlightSquares: ['e7'],
           expectedMove: 'e7e8q',
           reactionCorrect: MentorReaction(
-            dialogue: "A new Queen arises. Positional perseverance rewarded.",
+            dialogue: "A new Queen arises. Her power is absolute.",
             mood: MentorMood.celebration,
           ),
           reactionIllegal: MentorReaction(
-            dialogue: "March forward to e8.",
+            dialogue: "March forward to e8 and choose the Queen.",
+            mood: MentorMood.correction,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "But mastery requires flexibility. Underpromotion is a rare but lethal tool used in grandmaster matches.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Tactical variety. Promoting to a Knight on g8 can sometimes deliver a sudden check or advantage. Try it.",
+          resetToFen: 'k7/6P1/8/8/8/8/8/K7 w - - 0 1',
+          highlightSquares: ['g7'],
+          expectedMove: 'g7g8n',
+          reactionCorrect: MentorReaction(
+            dialogue: "Exceptional. Seeing beyond the Queen is the mark of a true tactician.",
+            mood: MentorMood.celebration,
+          ),
+          reactionIllegal: MentorReaction(
+            dialogue: "Select the Knight (N) for this demonstration.",
             mood: MentorMood.correction,
           ),
         ),
         TutorialStep(
           type: TutorialStepType.celebration,
-          dialogue: "Promotion verified. Passed pawns win games.",
+          dialogue: "Promotion verified. From foot soldier to officer, the choice is yours.",
           mentorMood: MentorMood.celebration,
         ),
       ],
