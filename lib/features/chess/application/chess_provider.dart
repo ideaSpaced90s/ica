@@ -2898,7 +2898,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
     // Regex to find SAN-like moves (e.g., Nf3, e4, O-O, etc.)
     final moveRegex = RegExp(
-      r'\b([NBRQK]?[a-h]?[1-8]?x?[a-h][1-8](?:=[NBRQK])?[+#]?|O-O(?:-O)?)\b',
+      r'\b([a-h][1-8]-?[a-h][1-8]|[NBRQK]?[a-h]?[1-8]?x?[a-h][1-8](?:=[NBRQK])?[+#]?|O-O(?:-O)?)\b',
     );
 
     final matches = moveRegex.allMatches(text);
@@ -2912,9 +2912,17 @@ class ChessNotifier extends StateNotifier<ChessState> {
     if (move != null) {
       final from = chess_lib.Chess.algebraic(move.from);
       final to = chess_lib.Chess.algebraic(move.to);
-      final piece = move.piece;
       final colorPrefix = move.color == chess_lib.Color.WHITE ? 'w' : 'b';
-      final pieceCode = '$colorPrefix${piece.toString().toUpperCase()}';
+      String pieceChar = 'P';
+      switch (move.piece) {
+        case chess_lib.PieceType.PAWN: pieceChar = 'P'; break;
+        case chess_lib.PieceType.KNIGHT: pieceChar = 'N'; break;
+        case chess_lib.PieceType.BISHOP: pieceChar = 'B'; break;
+        case chess_lib.PieceType.ROOK: pieceChar = 'R'; break;
+        case chess_lib.PieceType.QUEEN: pieceChar = 'Q'; break;
+        case chess_lib.PieceType.KING: pieceChar = 'K'; break;
+      }
+      final pieceCode = '$colorPrefix$pieceChar';
 
       state = state.copyWith(
         bardSuggestion: MoveAnimationData(

@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../application/chess_provider.dart';
@@ -1558,8 +1559,8 @@ class _AcademySuggestionOverlayState extends State<AcademySuggestionOverlay>
                     height: squareSize,
                     padding: const EdgeInsets.all(4),
                     child: Center(
-                      child: Image.asset(
-                        'assets/themes/classic/${widget.data.pieceCode.toLowerCase()}.png',
+                      child: SvgPicture.asset(
+                        'assets/pieces/${widget.data.pieceCode}.svg',
                         fit: BoxFit.contain,
                       ),
                     ),
@@ -1581,8 +1582,8 @@ class _AcademySuggestionOverlayState extends State<AcademySuggestionOverlay>
                   height: squareSize,
                   padding: const EdgeInsets.all(4),
                   child: Center(
-                    child: Image.asset(
-                      'assets/themes/classic/${widget.data.pieceCode.toLowerCase()}.png',
+                    child: SvgPicture.asset(
+                      'assets/pieces/${widget.data.pieceCode}.svg',
                       fit: BoxFit.contain,
                     ),
                   ),

@@ -391,15 +391,25 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
       }
 
       if (match.group(1) != null) {
-        // Markdown Bold
-        spans.add(TextSpan(
-          text: match.group(1),
-          style: baseStyle.copyWith(
-            fontWeight: state.academyHouseBoldEmphasis
-                ? FontWeight.w800
-                : FontWeight.bold,
-          ),
-        ));
+        // Markdown Bold - Check if it's actually a move hidden in bold
+        final content = match.group(1)!;
+        final moveRegex = RegExp(
+          r'^([a-h][1-8]-?[a-h][1-8]|[a-h][1-8]|[NBRQK]?[a-h]?[1-8]?x?[a-h][1-8](?:=[NBRQK])?[+#]?|O-O(?:-O)?)$',
+          caseSensitive: false,
+        );
+
+        if (moveRegex.hasMatch(content)) {
+          spans.addAll(_buildSplitNotationSpans(content, baseStyle, state));
+        } else {
+          spans.add(TextSpan(
+            text: content,
+            style: baseStyle.copyWith(
+              fontWeight: state.academyHouseBoldEmphasis
+                  ? FontWeight.w800
+                  : FontWeight.bold,
+            ),
+          ));
+        }
       } else if (match.group(2) != null) {
         // Personas/Titles
         final name = match.group(2)!;
@@ -459,43 +469,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
       } else if (match.group(5) != null || match.group(6) != null) {
         // Square or Move (Notation Chips)
         final notation = match.group(0)!;
-        // Extract target square for glowing (the last square mentioned in the move)
-        String? targetSquare;
-        final squareMatches = RegExp(r'[a-h][1-8]').allMatches(notation);
-        if (squareMatches.isNotEmpty) {
-          targetSquare = squareMatches.last.group(0);
-        }
-
-        spans.add(WidgetSpan(
-          alignment: PlaceholderAlignment.middle,
-          child: GestureDetector(
-            onTap: targetSquare == null
-                ? null
-                : () {
-                    ref.read(chessProvider.notifier).glowSquare(targetSquare!);
-                    ref.read(chessProvider.notifier).triggerAcademyAnimation();
-                  },
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 2),
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-              decoration: BoxDecoration(
-                color: ScholarlyTheme.accentBlueSoft.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(
-                  color: ScholarlyTheme.accentBlue.withValues(alpha: 0.3),
-                ),
-              ),
-              child: Text(
-                notation,
-                style: GoogleFonts.jetBrainsMono(
-                  color: ScholarlyTheme.accentBlue,
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
-        ));
+        spans.addAll(_buildSplitNotationSpans(notation, baseStyle, state));
       }
 
       lastIndex = match.end;
@@ -509,5 +483,70 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
     }
 
     return spans;
+  }
+
+  List<InlineSpan> _buildSplitNotationSpans(
+    String notation,
+    TextStyle baseStyle,
+    ChessState state,
+  ) {
+    final List<InlineSpan> spans = [];
+
+    if (notation.contains('-')) {
+      final parts = notation.split('-');
+      // First square chip
+      spans.add(_buildSingleNotationChip(parts[0], parts[0], state));
+      // Hyphen
+      spans.add(TextSpan(text: '-', style: baseStyle));
+      // Second square chip (targets the actual destination square)
+      spans.add(_buildSingleNotationChip(parts[1], parts[1], state));
+    } else {
+      // Single notation chip
+      String? targetSquare;
+      final squareMatches = RegExp(r'[a-h][1-8]').allMatches(notation);
+      if (squareMatches.isNotEmpty) {
+        targetSquare = squareMatches.last.group(0);
+      }
+      spans.add(_buildSingleNotationChip(notation, targetSquare, state));
+    }
+    return spans;
+  }
+
+  WidgetSpan _buildSingleNotationChip(
+    String label,
+    String? targetSquare,
+    ChessState state,
+  ) {
+    return WidgetSpan(
+      alignment: PlaceholderAlignment.middle,
+      child: GestureDetector(
+        onTap: targetSquare == null
+            ? null
+            : () {
+                ref.read(chessProvider.notifier).glowSquare(targetSquare);
+                ref.read(chessProvider.notifier).triggerAcademyAnimation();
+              },
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 2),
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+          decoration: BoxDecoration(
+            color: ScholarlyTheme.accentBlue.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(
+              color: ScholarlyTheme.accentBlue.withValues(alpha: 0.3),
+              width: 1,
+            ),
+          ),
+          child: Text(
+            label,
+            style: GoogleFonts.firaCode(
+              color: ScholarlyTheme.accentBlue,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
