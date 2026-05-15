@@ -386,6 +386,7 @@ class ChessState {
     bool? academyHouseTypingEffect,
     Object? bardSuggestion = _sentinel,
     bool? isAcademyActive,
+    Object? glowingSquare = _sentinel,
   }) {
     return ChessState(
       game: game ?? this.game,

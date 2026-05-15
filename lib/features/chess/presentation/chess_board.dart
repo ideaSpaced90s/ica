@@ -335,7 +335,7 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
                                                     ScholarlyTheme.accentGold,
                                                 isActive: true,
                                               ),
-                                            if (isThreatened &&
+                                                                                                                                      if (isThreatened && !isSuggestionTarget && !isGlow &&
                                                 ref
                                                     .read(
                                                       chessProvider.notifier,
@@ -347,7 +347,11 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
                                                 color: Colors.redAccent,
                                                 isActive: true,
                                               ),
-                                            // 6. Last Move Highlight
+                                                                                         if (isGlow)
+                                               const AcademySquareGlow(
+                                                 color: ScholarlyTheme.accentBlue,
+                                               ),
+                                             // 6. Last Move Highlight
                                             if (isLastMove)
                                               TweenAnimationBuilder<double>(
                                                 key: ValueKey(
