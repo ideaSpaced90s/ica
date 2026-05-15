@@ -34,6 +34,7 @@ class TutorialLessonsDatabase {
           type: TutorialStepType.awaitSquareTap,
           dialogue: "Tap any square on the central 'e' file to confirm your understanding.",
           allowedSquares: ['e1', 'e2', 'e3', 'e4', 'e5', 'e6', 'e7', 'e8'],
+          highlightSquares: ['e1', 'e2', 'e3', 'e4', 'e5', 'e6', 'e7', 'e8'],
           reactionCorrect: MentorReaction(
             dialogue: "Excellent. Mastering the grid is the first step toward visualization.",
             mood: MentorMood.encouraging,

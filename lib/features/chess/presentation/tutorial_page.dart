@@ -20,7 +20,6 @@ class TutorialPage extends ConsumerStatefulWidget {
 
 class _TutorialPageState extends ConsumerState<TutorialPage> {
   bool _isChapterSelectionVisible = true;
-  bool _hasCheckedResumePrompt = false;
 
   @override
   void initState() {
@@ -38,25 +37,11 @@ class _TutorialPageState extends ConsumerState<TutorialPage> {
     });
   }
 
-  void _resumeSession() {
-    ref.read(tutorialProvider.notifier).resumeActiveSession();
-    setState(() {
-      _isChapterSelectionVisible = false;
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(tutorialProvider);
 
-    // Evaluate single-run initial mid-lesson resume check
-    final p = state.progress;
-    if (!_hasCheckedResumePrompt && p.hasActiveSession) {
-      _hasCheckedResumePrompt = true;
-      // Show active session check inline below
-    } else if (!_hasCheckedResumePrompt) {
-      _hasCheckedResumePrompt = true;
-    }
 
     // 1. Chapter Graduation Intercept Overlay
     if (state.isChapterComplete) {
@@ -76,110 +61,36 @@ class _TutorialPageState extends ConsumerState<TutorialPage> {
 
     // 2. Main Module Browser / Dashboard
     if (_isChapterSelectionVisible) {
-      return Stack(
-        children: [
-          ChapterSelectScreen(onSelectChapter: _handleChapterSelected),
-
-          // Mid-Lesson recovery prompt banner overlay
-          if (p.hasActiveSession)
-            Positioned(
-              bottom: 24,
-              left: 24,
-              right: 24,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                decoration: BoxDecoration(
-                  color: ScholarlyTheme.accentYellow.withValues(alpha: 0.95),
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: ScholarlyTheme.accentYellow.withValues(alpha: 0.3),
-                      blurRadius: 20,
-                      spreadRadius: 2,
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.restore_rounded, color: Colors.black, size: 24),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'SESSION RECOVERED',
-                                style: GoogleFonts.inter(
-                                  color: Colors.black,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 1.0,
-                                ),
-                              ),
-                              Text(
-                                'Resume Chapter ${p.activeChapterIndex} from Step ${p.activeStepIndex}?',
-                                style: GoogleFonts.inter(
-                                  color: Colors.black87,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton(
-                          onPressed: () {
-                            ref.read(tutorialProvider.notifier).clearIllegalFeedback();
-                            ref.read(tutorialProvider.notifier).loadChapter(1);
-                          },
-                          child: Text(
-                            'Restart',
-                            style: GoogleFonts.inter(color: Colors.black54, fontWeight: FontWeight.bold, fontSize: 12),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        ElevatedButton.icon(
-                          onPressed: _resumeSession,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.black,
-                            foregroundColor: ScholarlyTheme.accentYellow,
-                            elevation: 0,
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          ),
-                          icon: const Icon(Icons.play_arrow_rounded, size: 16),
-                          label: Text('Resume', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 12)),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-        ],
-      );
+      return ChapterSelectScreen(onSelectChapter: _handleChapterSelected);
     }
 
     // 3. Main Active Lesson Runtime Surface
     return Scaffold(
       backgroundColor: ScholarlyTheme.backgroundStart,
       body: SafeArea(
+        top: false,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Top Action / Breadcrumb Header Strip matching the app's modern glass panels
+            // 1. Top side chessboard taking exact square space, extending edge-to-edge
+            const AspectRatio(
+              aspectRatio: 1.0,
+              child: TutorialIllegalMoveFeedback(
+                child: TutorialBoardStage(),
+              ),
+            ),
+
+            // 2. Base adaptive advisor panel claiming remaining space
+            const Expanded(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(16, 12, 16, 4),
+                child: TutorialMentorPanel(),
+              ),
+            ),
+
+            // 3. Bottom Action / Breadcrumb Header Strip (now at bottom)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: ScholarlyTheme.modernDecoration().copyWith(
@@ -238,22 +149,6 @@ class _TutorialPageState extends ConsumerState<TutorialPage> {
                   ],
                 ),
               ),
-            ),
-
-            // Isolated interactive board container
-            const Expanded(
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                child: TutorialIllegalMoveFeedback(
-                  child: TutorialBoardStage(),
-                ),
-              ),
-            ),
-
-            // Base adaptive advisor bottom panel
-            const Padding(
-              padding: EdgeInsets.fromLTRB(16, 4, 16, 16),
-              child: TutorialMentorPanel(),
             ),
           ],
         ),

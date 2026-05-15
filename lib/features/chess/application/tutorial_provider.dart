@@ -213,14 +213,21 @@ class TutorialNotifier extends StateNotifier<TutorialState> {
 
     final nextStep = state.currentLesson.steps[nextStepIdx];
     
+    // Automatically highlight allowed squares for identification steps if not explicitly provided
+    List<String> activeHighlights = nextStep.highlightSquares;
+    if (nextStep.type == TutorialStepType.awaitSquareTap && activeHighlights.isEmpty) {
+      activeHighlights = nextStep.allowedSquares;
+    }
+
     state = state.copyWith(
       currentStepIndex: nextStepIdx,
       currentStep: nextStep,
-      highlightSquares: nextStep.highlightSquares,
+      highlightSquares: activeHighlights,
       animatePathSquares: nextStep.animatePathSquares,
       lastMentorDialogue: nextStep.dialogue,
       mentorMood: nextStep.mentorMood,
       isAwaitingMove: nextStep.type == TutorialStepType.awaitMove,
+      isAnimating: false,
       clearIllegalMessage: true,
     );
 
@@ -230,7 +237,7 @@ class TutorialNotifier extends StateNotifier<TutorialState> {
   }
 
   void handleSquareTap(String square) {
-    if (state.currentStep.type != TutorialStepType.awaitSquareTap) return;
+    if (state.currentStep.type != TutorialStepType.awaitSquareTap || state.isAnimating) return;
 
     _cancelHesitationTimer();
 
@@ -240,6 +247,7 @@ class TutorialNotifier extends StateNotifier<TutorialState> {
         state = state.copyWith(
           lastMentorDialogue: reaction.dialogue,
           mentorMood: reaction.mood,
+          isAnimating: true,
           clearIllegalMessage: true,
         );
       }
@@ -261,7 +269,7 @@ class TutorialNotifier extends StateNotifier<TutorialState> {
   }
 
   void handleMoveAttempt(String from, String to) {
-    if (!state.isAwaitingMove) return;
+    if (!state.isAwaitingMove || state.isAnimating) return;
 
     _cancelHesitationTimer();
 
@@ -286,6 +294,7 @@ class TutorialNotifier extends StateNotifier<TutorialState> {
           state = state.copyWith(
             lastMentorDialogue: reaction.dialogue,
             mentorMood: reaction.mood,
+            isAnimating: true,
             clearIllegalMessage: true,
           );
         }

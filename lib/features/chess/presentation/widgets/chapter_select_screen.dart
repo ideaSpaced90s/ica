@@ -29,135 +29,115 @@ class ChapterSelectScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: ScholarlyTheme.backgroundStart,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Header dashboard strip
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      body: Stack(
+        children: [
+          // 1. Dashboard Content Layer
+          SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Simplified breadcrumb header matching the new layout request
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 48, 20, 8),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: const Icon(Icons.arrow_back_rounded, color: ScholarlyTheme.textPrimary, size: 22),
+                        tooltip: 'Exit Academy',
+                      ),
+                      const Spacer(),
+                      Text(
+                        'TUTORIAL',
+                        style: GoogleFonts.inter(
+                          color: ScholarlyTheme.accentBlue,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 2.0,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const Divider(height: 1, color: ScholarlyTheme.panelStroke),
+
+                // Main horizontal browser grid
+                Expanded(
+                  child: GridView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      mainAxisExtent: 116,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                    ),
+                    itemCount: lessons.length,
+                    itemBuilder: (context, index) {
+                      final lesson = lessons[index];
+                      final isUnlocked = p.unlockedChapters.contains(lesson.chapterId);
+                      final isCompleted = p.completedChapters.contains(lesson.chapterId);
+                      final stars = p.stars[lesson.chapterId] ?? 0;
+                      final isActiveCheckpoint = p.activeChapterIndex == lesson.chapterId;
+
+                      return _ChapterCard(
+                        lesson: lesson,
+                        isUnlocked: isUnlocked,
+                        isCompleted: isCompleted,
+                        stars: stars,
+                        isActiveCheckpoint: isActiveCheckpoint,
+                        onTap: () => onSelectChapter(lesson.chapterId),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // 2. Absolute Utility Layer (Outside primary safe area flow)
+          
+          // XP count container (Top Left)
+          Positioned(
+            top: 16,
+            left: 16,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.2)),
+              ),
               child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.arrow_back_rounded, color: ScholarlyTheme.textPrimary),
-                    tooltip: 'Exit Academy',
-                  ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'KINGSLAYER ACADEMY',
-                          style: GoogleFonts.inter(
-                            color: ScholarlyTheme.accentGold,
-                            fontSize: 9,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 1.0,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        Text(
-                          'Interactive Tutorial',
-                          style: GoogleFonts.inter(
-                            color: ScholarlyTheme.textPrimary,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
+                  const Icon(Icons.school_rounded, color: ScholarlyTheme.accentBlueSoft, size: 14),
+                  const SizedBox(width: 8),
+                  Text(
+                    '${p.totalXp} XP',
+                    style: GoogleFonts.inter(
+                      color: ScholarlyTheme.textPrimary,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
                     ),
-                  ),
-                  const SizedBox(width: 4),
-
-                  // Rank and XP Summary Widget
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: ScholarlyTheme.backgroundStart.withValues(alpha: 0.5),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: ScholarlyTheme.panelStroke),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.school_rounded, color: ScholarlyTheme.accentBlueSoft, size: 16),
-                        const SizedBox(width: 6),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              p.currentRank.displayName.toUpperCase(),
-                              style: GoogleFonts.inter(
-                                color: ScholarlyTheme.accentBlueSoft,
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                            Text(
-                              '${p.totalXp} XP',
-                              style: GoogleFonts.inter(
-                                color: ScholarlyTheme.textPrimary,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(width: 4),
-
-                  // Custom tutorial preferences button
-                  IconButton(
-                    onPressed: () => _showSettingsDialog(context, ref),
-                    icon: const Icon(Icons.settings_rounded, color: ScholarlyTheme.textSubtle),
-                    tooltip: 'Tutorial Settings',
                   ),
                 ],
               ),
             ),
+          ),
 
-            const Divider(height: 1, color: ScholarlyTheme.panelStroke),
-
-            // Main horizontal browser grid
-            Expanded(
-              child: GridView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  mainAxisExtent: 116,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                ),
-                itemCount: lessons.length,
-                itemBuilder: (context, index) {
-                  final lesson = lessons[index];
-                  final isUnlocked = p.unlockedChapters.contains(lesson.chapterId);
-                  final isCompleted = p.completedChapters.contains(lesson.chapterId);
-                  final stars = p.stars[lesson.chapterId] ?? 0;
-                  final isActiveCheckpoint = p.activeChapterIndex == lesson.chapterId;
-
-                  return _ChapterCard(
-                    lesson: lesson,
-                    isUnlocked: isUnlocked,
-                    isCompleted: isCompleted,
-                    stars: stars,
-                    isActiveCheckpoint: isActiveCheckpoint,
-                    onTap: () => onSelectChapter(lesson.chapterId),
-                  );
-                },
-              ),
+          // Settings Gear (Top Right)
+          Positioned(
+            top: 12,
+            right: 8,
+            child: IconButton(
+              onPressed: () => _showSettingsDialog(context, ref),
+              icon: const Icon(Icons.settings_rounded, color: ScholarlyTheme.textSubtle, size: 20),
+              tooltip: 'Tutorial Settings',
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

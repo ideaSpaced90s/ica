@@ -192,22 +192,23 @@ class _TutorialBoardStageState extends ConsumerState<TutorialBoardStage> with Si
                   ),
                 ),
 
-                // 2. Custom Painter graphical instructional layer
-                AnimatedBuilder(
-                  animation: _pulseController,
-                  builder: (context, child) {
-                    return CustomPaint(
-                      painter: TutorialBoardOverlayPainter(
-                        effect: state.currentStep.overlayEffect,
-                        highlightSquares: state.highlightSquares,
-                        animatePathSquares: state.animatePathSquares,
-                        glowSquare: state.glowSquare,
-                        dangerZone: state.dangerZone,
-                        animationProgress: _pulseController.value,
-                      ),
-                      size: Size(boardSize, boardSize),
-                    );
-                  },
+                IgnorePointer(
+                  child: AnimatedBuilder(
+                    animation: _pulseController,
+                    builder: (context, child) {
+                      return CustomPaint(
+                        painter: TutorialBoardOverlayPainter(
+                          effect: state.currentStep.overlayEffect,
+                          highlightSquares: state.highlightSquares,
+                          animatePathSquares: state.animatePathSquares,
+                          glowSquare: state.glowSquare,
+                          dangerZone: state.dangerZone,
+                          animationProgress: _pulseController.value,
+                        ),
+                        size: Size(boardSize, boardSize),
+                      );
+                    },
+                  ),
                 ),
               ],
             ),
