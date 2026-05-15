@@ -189,19 +189,11 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
       );
     }
 
-    final dots = '.' * _pulse;
-
     return ListView.builder(
       controller: _scrollController,
       padding: EdgeInsets.zero,
-      itemCount:
-          history.length +
-          (state.isCommentaryLoading && !state.isCommentaryStreaming ? 1 : 0),
+      itemCount: history.length,
       itemBuilder: (context, index) {
-        if (index == history.length) {
-          return _buildThinkingIndicator(dots);
-        }
-
         final entry = history[index];
         final isLast = index == history.length - 1;
         final isStreaming = isLast && state.isCommentaryStreaming;
@@ -259,6 +251,8 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
   }
 
   Widget _buildAiBubble(CommentaryEntry entry, bool isStreaming) {
+    final bool isThinking = entry.text.isEmpty && !entry.isComplete;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
@@ -300,93 +294,65 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
                       color: ScholarlyTheme.panelStroke.withValues(alpha: 0.5),
                     ),
                   ),
-                  child: Text.rich(
-                    TextSpan(
-                      children: [
-                        ..._parseChessFormattedText(entry.text),
-                        if (!entry.isComplete && !isStreaming)
-                          TextSpan(
-                            text: ' •••',
-                            style: GoogleFonts.inter(
-                              color: ScholarlyTheme.textMuted,
-                              fontSize: 13,
+                  child: isThinking
+                      ? Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'GM Bard is writing',
+                              style: GoogleFonts.inter(
+                                color: ScholarlyTheme.textMuted,
+                                fontSize: 12,
+                                fontStyle: FontStyle.italic,
+                              ),
                             ),
-                          ),
-                        if (isStreaming)
-                          TextSpan(
-                            text: ' ┃',
-                            style: GoogleFonts.inter(
-                              color: ScholarlyTheme.accentBlue,
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
+                            const SizedBox(width: 4),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: List.generate(3, (index) {
+                                final isActive = _pulse >= index + 1;
+                                return AnimatedContainer(
+                                  duration: const Duration(milliseconds: 150),
+                                  margin: const EdgeInsets.symmetric(
+                                      horizontal: 1.5),
+                                  width: 4,
+                                  height: isActive ? 6 : 4,
+                                  decoration: BoxDecoration(
+                                    color: isActive
+                                        ? ScholarlyTheme.accentBlue
+                                        : ScholarlyTheme.textMuted
+                                            .withValues(alpha: 0.4),
+                                    shape: BoxShape.circle,
+                                  ),
+                                );
+                              }),
                             ),
+                          ],
+                        )
+                      : Text.rich(
+                          TextSpan(
+                            children: [
+                              ..._parseChessFormattedText(entry.text),
+                              if (!entry.isComplete && !isStreaming)
+                                TextSpan(
+                                  text: ' •••',
+                                  style: GoogleFonts.inter(
+                                    color: ScholarlyTheme.textMuted,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              if (isStreaming)
+                                TextSpan(
+                                  text: ' ┃',
+                                  style: GoogleFonts.inter(
+                                    color: ScholarlyTheme.accentBlue,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                            ],
                           ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildThinkingIndicator(String dots) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          CircleAvatar(
-            radius: 12,
-            backgroundColor: Colors.transparent,
-            backgroundImage: const AssetImage('assets/persona/gm_bard.png'),
-          ),
-          const SizedBox(width: 10),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: ScholarlyTheme.backgroundStart,
-              borderRadius: const BorderRadius.only(
-                topRight: Radius.circular(12),
-                bottomLeft: Radius.circular(12),
-                bottomRight: Radius.circular(12),
-              ),
-              border: Border.all(
-                color: ScholarlyTheme.panelStroke.withValues(alpha: 0.5),
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'GM Bard is writing',
-                  style: GoogleFonts.inter(
-                    color: ScholarlyTheme.textMuted,
-                    fontSize: 12,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: List.generate(3, (index) {
-                    final isActive = _pulse >= index + 1;
-                    return AnimatedContainer(
-                      duration: const Duration(milliseconds: 150),
-                      margin: const EdgeInsets.symmetric(horizontal: 1.5),
-                      width: 4,
-                      height: isActive ? 6 : 4,
-                      decoration: BoxDecoration(
-                        color: isActive
-                            ? ScholarlyTheme.accentBlue
-                            : ScholarlyTheme.textMuted.withValues(alpha: 0.4),
-                        shape: BoxShape.circle,
-                      ),
-                    );
-                  }),
+                        ),
                 ),
               ],
             ),
