@@ -163,9 +163,10 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
                             .isAnimationTypeEnabled('themeAmbience'),
                       ),
 
-                      // 2. Check Effects
                       if (chessState.game.inCheck)
                         chessTheme.buildCheckEffect(context),
+                      if (chessState.academyHouseAnimations)
+                        const AcademyPaperOverlay(),
                       GridView.builder(
                         gridDelegate:
                             const SliverGridDelegateWithFixedCrossAxisCount(
@@ -661,6 +662,14 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
                           to: trail['to'],
                           onComplete: () =>
                               setState(() => _thunderTrails.remove(trail)),
+                        ),
+
+                      if (chessState.bardSuggestion != null &&
+                          chessState.academyHouseAnimations)
+                        AcademySuggestionOverlay(
+                          data: chessState.bardSuggestion!,
+                          boardSize: boardSize,
+                          isFlipped: chessState.isBoardFlipped,
                         ),
 
                       const PromotionOverlay(),
@@ -1402,4 +1411,142 @@ class _ShadowCaptureEffectState extends State<ShadowCaptureEffect>
       ),
     );
   }
+}
+
+class AcademyPaperOverlay extends StatelessWidget {
+  const AcademyPaperOverlay({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: RadialGradient(
+            colors: [
+              const Color(0xFFFDF6E3).withValues(alpha: 0.0),
+              const Color(0xFFFDF6E3).withValues(alpha: 0.08),
+            ],
+            center: Alignment.center,
+            radius: 1.2,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class AcademySuggestionOverlay extends StatelessWidget {
+  final MoveAnimationData data;
+  final double boardSize;
+  final bool isFlipped;
+
+  const AcademySuggestionOverlay({
+    super.key,
+    required this.data,
+    required this.boardSize,
+    required this.isFlipped,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final squareSize = boardSize / 8;
+
+    Offset getPos(String square) {
+      final col = square.codeUnitAt(0) - 'a'.codeUnitAt(0);
+      final row = 8 - int.parse(square[1]);
+      final efCol = isFlipped ? 7 - col : col;
+      final efRow = isFlipped ? 7 - row : row;
+      return Offset(efCol * squareSize, efRow * squareSize);
+    }
+
+    final fromPos = getPos(data.from);
+    final toPos = getPos(data.to);
+
+    return IgnorePointer(
+      child: Stack(
+        children: [
+          // Elegant scholarly arrow
+          CustomPaint(
+            size: Size(boardSize, boardSize),
+            painter: AcademyArrowPainter(
+              from: fromPos + Offset(squareSize / 2, squareSize / 2),
+              to: toPos + Offset(squareSize / 2, squareSize / 2),
+            ),
+          ),
+          // Ghost piece at destination
+          Positioned(
+            left: toPos.dx,
+            top: toPos.dy,
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0.0, end: 0.4),
+              duration: const Duration(milliseconds: 500),
+              builder: (context, opacity, _) {
+                return Opacity(
+                  opacity: opacity,
+                  child: Container(
+                    width: squareSize,
+                    height: squareSize,
+                    padding: const EdgeInsets.all(4),
+                    child: Center(
+                      child: Image.asset(
+                        'assets/themes/classic/${data.pieceCode.toLowerCase()}.png',
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class AcademyArrowPainter extends CustomPainter {
+  final Offset from;
+  final Offset to;
+
+  AcademyArrowPainter({required this.from, required this.to});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = ScholarlyTheme.accentBlue.withValues(alpha: 0.4)
+      ..strokeWidth = 4
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+
+    final path = Path()
+      ..moveTo(from.dx, from.dy)
+      ..quadraticBezierTo(
+        (from.dx + to.dx) / 2,
+        (from.dy + to.dy) / 2 - 20, // Slight arc
+        to.dx,
+        to.dy,
+      );
+
+    canvas.drawPath(path, paint);
+
+    // Arrowhead
+    final angle = (to - from).direction;
+    const arrowSize = 12.0;
+    final p1 = to + Offset.fromDirection(angle + 2.4, arrowSize);
+    final p2 = to + Offset.fromDirection(angle - 2.4, arrowSize);
+
+    final headPath = Path()
+      ..moveTo(to.dx, to.dy)
+      ..lineTo(p1.dx, p1.dy)
+      ..lineTo(p2.dx, p2.dy)
+      ..close();
+
+    canvas.drawPath(
+      headPath,
+      Paint()..color = ScholarlyTheme.accentBlue.withValues(alpha: 0.4),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }

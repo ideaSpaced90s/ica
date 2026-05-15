@@ -213,6 +213,11 @@ class ChessState {
     this.isPuzzleMode = false,
     this.currentPuzzle,
     this.puzzleMovesRemaining = const [],
+    this.academyHouseAnimations = true,
+    this.academyHouseColorFonts = true,
+    this.academyHouseBoldEmphasis = true,
+    this.academyHouseTypingEffect = true,
+    this.bardSuggestion,
   });
 
   final ChessGame game;
@@ -283,6 +288,11 @@ class ChessState {
   final bool isPuzzleMode;
   final rust_puzzles.Puzzle? currentPuzzle;
   final List<String> puzzleMovesRemaining;
+  final bool academyHouseAnimations;
+  final bool academyHouseColorFonts;
+  final bool academyHouseBoldEmphasis;
+  final bool academyHouseTypingEffect;
+  final MoveAnimationData? bardSuggestion;
 
   bool get isChess960 => gameMode == 'chess960';
 
@@ -366,6 +376,11 @@ class ChessState {
     bool? isPuzzleMode,
     Object? currentPuzzle = _sentinel,
     List<String>? puzzleMovesRemaining,
+    bool? academyHouseAnimations,
+    bool? academyHouseColorFonts,
+    bool? academyHouseBoldEmphasis,
+    bool? academyHouseTypingEffect,
+    Object? bardSuggestion = _sentinel,
   }) {
     return ChessState(
       game: game ?? this.game,
@@ -466,6 +481,17 @@ class ChessState {
           ? this.currentPuzzle
           : currentPuzzle as rust_puzzles.Puzzle?,
       puzzleMovesRemaining: puzzleMovesRemaining ?? this.puzzleMovesRemaining,
+      academyHouseAnimations:
+          academyHouseAnimations ?? this.academyHouseAnimations,
+      academyHouseColorFonts:
+          academyHouseColorFonts ?? this.academyHouseColorFonts,
+      academyHouseBoldEmphasis:
+          academyHouseBoldEmphasis ?? this.academyHouseBoldEmphasis,
+      academyHouseTypingEffect:
+          academyHouseTypingEffect ?? this.academyHouseTypingEffect,
+      bardSuggestion: identical(bardSuggestion, _sentinel)
+          ? this.bardSuggestion
+          : bardSuggestion as MoveAnimationData?,
     );
   }
 }
@@ -531,6 +557,10 @@ class ChessNotifier extends StateNotifier<ChessState> {
         userFideRating: s.userFideRating,
         ratedGamesCount: s.ratedGamesCount,
         currentWinningStreak: s.currentWinningStreak,
+        academyHouseAnimations: s.academyHouseAnimations,
+        academyHouseColorFonts: s.academyHouseColorFonts,
+        academyHouseBoldEmphasis: s.academyHouseBoldEmphasis,
+        academyHouseTypingEffect: s.academyHouseTypingEffect,
       );
       await _engine.setChess960Mode(is960);
       final avatar = AiAvatar.getAvatar(s.engineLevel);
@@ -568,6 +598,10 @@ class ChessNotifier extends StateNotifier<ChessState> {
         userFideRating: state.userFideRating,
         ratedGamesCount: state.ratedGamesCount,
         currentWinningStreak: state.currentWinningStreak,
+        academyHouseAnimations: state.academyHouseAnimations,
+        academyHouseColorFonts: state.academyHouseColorFonts,
+        academyHouseBoldEmphasis: state.academyHouseBoldEmphasis,
+        academyHouseTypingEffect: state.academyHouseTypingEffect,
       );
       await _settingsRepository.saveSettings(s);
     } catch (e) {
@@ -676,6 +710,26 @@ class ChessNotifier extends StateNotifier<ChessState> {
       return key == 'pieceMotion';
     }
     return state.isAnimationsEnabled && (state.animationSettings[key] ?? true);
+  }
+
+  void toggleAcademyHouseAnimations() {
+    state = state.copyWith(academyHouseAnimations: !state.academyHouseAnimations);
+    _saveSettings();
+  }
+
+  void toggleAcademyHouseColorFonts() {
+    state = state.copyWith(academyHouseColorFonts: !state.academyHouseColorFonts);
+    _saveSettings();
+  }
+
+  void toggleAcademyHouseBoldEmphasis() {
+    state = state.copyWith(academyHouseBoldEmphasis: !state.academyHouseBoldEmphasis);
+    _saveSettings();
+  }
+
+  void toggleAcademyHouseTypingEffect() {
+    state = state.copyWith(academyHouseTypingEffect: !state.academyHouseTypingEffect);
+    _saveSettings();
   }
 
   void togglePause() {
@@ -2195,6 +2249,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
           ? _clockSideForTurn()
           : state.activeClockSide,
       threatenedSquares: threatened,
+      bardSuggestion: null,
     );
 
     if (state.game.inCheckmate) {
@@ -2313,6 +2368,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
     state = state.copyWith(
       commentaryHistory: [...state.commentaryHistory, userEntry],
       commentaryError: null,
+      bardSuggestion: null,
     );
 
     await _runCommentary(
@@ -2396,6 +2452,10 @@ class ChessNotifier extends StateNotifier<ChessState> {
           isCommentaryLoading: false,
           isCommentaryStreaming: true,
         );
+
+        if (state.academyHouseAnimations) {
+          _extractMoveSuggestion(chunk);
+        }
       }
 
       if (!_isDisposed) {
@@ -2703,6 +2763,66 @@ class ChessNotifier extends StateNotifier<ChessState> {
     }
   }
 
+  Future<void> initializeAcademySession() async {
+    // Force state to Engine as White, Board Flipped
+    _undoStack.clear();
+    _redoStack.clear();
+    _cancelCommentaryReveal();
+    _pendingHintFen = null;
+    _stopClock();
+
+    final preserveTheme = state.boardThemeId;
+    final preserveSound = state.isSoundEnabled;
+    final preserveMusic = state.isMusicEnabled;
+    final preserveAnimations = state.isAnimationsEnabled;
+    final preserveHaptics = state.isHapticsEnabled;
+    final preserveCoordinates = state.showCoordinates;
+    final preserveAiOperational = state.isAiOperational;
+    final baseTime = state.baseTimeDuration;
+    final preserveLevel = state.engineLevel;
+    final preserveBottomLevel = state.bottomAvatarId;
+
+    state = ChessState(
+      game: ChessGame(isChess960: false),
+      isPlayerWhite: false, // Engine is White
+      isBoardFlipped: true, // White is at the top
+      engineLevel: preserveLevel,
+      bottomAvatarId: preserveBottomLevel,
+      boardThemeId: preserveTheme,
+      isSoundEnabled: preserveSound,
+      isMusicEnabled: preserveMusic,
+      isAnimationsEnabled: preserveAnimations,
+      isHapticsEnabled: preserveHaptics,
+      showCoordinates: preserveCoordinates,
+      isAiOperational: preserveAiOperational,
+      whiteTimeLeft: baseTime,
+      blackTimeLeft: baseTime,
+      baseTimeDuration: baseTime,
+      isEngineThinking: false,
+      servicesStarted: state.servicesStarted,
+      servicesStarting: false,
+      engineReady: state.engineReady,
+      isCommentaryEngineLoading: _commentaryEngine.isInitializing,
+      commentaryError: _commentaryEngine.lastError,
+      savedGames: state.savedGames,
+      commentaryHistory: [
+        CommentaryEntry(
+          text:
+              "Welcome back to the Academy, Apprentice. Today, I shall take the first step. Observe how I open the board to secure the center, then the path will be yours to choose.",
+          timestamp: DateTime.now(),
+          isComplete: true,
+          isUser: false,
+        ),
+      ],
+    );
+
+    _syncUndoRedoFlags();
+
+    // Start analysis which will trigger the engine move
+    await ensureGameServicesStarted(analyzeCurrentPosition: true);
+    state = state.copyWith(isEngineThinking: state.engineReady);
+  }
+
   Future<void> shutdown() async {
     _engineMoveTimer?.cancel();
     _stopClock();
@@ -2724,6 +2844,40 @@ class ChessNotifier extends StateNotifier<ChessState> {
     _engine.dispose();
     unawaited(_commentaryEngine.dispose());
     super.dispose();
+  }
+
+  void _extractMoveSuggestion(String text) {
+    if (!state.academyHouseAnimations) return;
+
+    // Regex to find SAN-like moves (e.g., Nf3, e4, O-O, etc.)
+    final moveRegex = RegExp(
+      r'\b([NBRQK]?[a-h]?[1-8]?x?[a-h][1-8](?:=[NBRQK])?[+#]?|O-O(?:-O)?)\b',
+    );
+
+    final matches = moveRegex.allMatches(text);
+    if (matches.isEmpty) return;
+
+    // Get the last mentioned move
+    final lastMatch = matches.last.group(0);
+    if (lastMatch == null) return;
+
+    final move = state.game.findMoveBySan(lastMatch);
+    if (move != null) {
+      final from = chess_lib.Chess.algebraic(move.from);
+      final to = chess_lib.Chess.algebraic(move.to);
+      final piece = move.piece;
+      final colorPrefix = move.color == chess_lib.Color.WHITE ? 'w' : 'b';
+      final pieceCode = '$colorPrefix${piece.toString().toUpperCase()}';
+
+      state = state.copyWith(
+        bardSuggestion: MoveAnimationData(
+          from: from,
+          to: to,
+          pieceCode: pieceCode,
+          isCapture: move.captured != null,
+        ),
+      );
+    }
   }
 }
 

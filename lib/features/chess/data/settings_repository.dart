@@ -23,6 +23,12 @@ class AppSettings {
   final int ratedGamesCount;
   final int currentWinningStreak;
 
+  // Academy House Specific Settings
+  final bool academyHouseAnimations;
+  final bool academyHouseColorFonts;
+  final bool academyHouseBoldEmphasis;
+  final bool academyHouseTypingEffect;
+
   AppSettings({
     this.boardThemeId = 'classic',
     this.isSoundEnabled = true,
@@ -40,6 +46,10 @@ class AppSettings {
     this.userFideRating = 1200,
     this.ratedGamesCount = 0,
     this.currentWinningStreak = 0,
+    this.academyHouseAnimations = true,
+    this.academyHouseColorFonts = true,
+    this.academyHouseBoldEmphasis = true,
+    this.academyHouseTypingEffect = true,
     this.animationSettings = const {
       'pieceMotion': true,
       'feedback': true,
@@ -68,6 +78,10 @@ class AppSettings {
     'ratedGamesCount': ratedGamesCount,
     'currentWinningStreak': currentWinningStreak,
     'animationSettings': animationSettings,
+    'academyHouseAnimations': academyHouseAnimations,
+    'academyHouseColorFonts': academyHouseColorFonts,
+    'academyHouseBoldEmphasis': academyHouseBoldEmphasis,
+    'academyHouseTypingEffect': academyHouseTypingEffect,
   };
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
@@ -114,6 +128,10 @@ class AppSettings {
       userFideRating: json['userFideRating'] ?? 1200,
       ratedGamesCount: json['ratedGamesCount'] ?? 0,
       currentWinningStreak: json['currentWinningStreak'] ?? 0,
+      academyHouseAnimations: json['academyHouseAnimations'] ?? true,
+      academyHouseColorFonts: json['academyHouseColorFonts'] ?? true,
+      academyHouseBoldEmphasis: json['academyHouseBoldEmphasis'] ?? true,
+      academyHouseTypingEffect: json['academyHouseTypingEffect'] ?? true,
       animationSettings: json['animationSettings'] != null
           ? Map<String, bool>.from(json['animationSettings'])
           : const {

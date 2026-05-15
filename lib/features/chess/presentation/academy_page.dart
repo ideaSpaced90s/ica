@@ -22,6 +22,9 @@ class _AcademyPageState extends ConsumerState<AcademyPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(chessProvider.notifier).initializeAcademySession();
+    });
   }
 
   @override
@@ -156,7 +159,7 @@ class _AcademyPageState extends ConsumerState<AcademyPage> {
       }
     }
 
-    await ref.read(chessProvider.notifier).reset();
+    await ref.read(chessProvider.notifier).initializeAcademySession();
   }
 
   Widget _buildMoveLog(BuildContext context, ChessState state) {

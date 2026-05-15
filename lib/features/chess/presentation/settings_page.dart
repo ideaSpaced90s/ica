@@ -322,6 +322,41 @@ class SettingsPage extends ConsumerWidget {
                 ],
               ),
 
+              // ACADEMY HOUSE
+              _SettingsCategory(
+                title: 'ACADEMY HOUSE',
+                children: [
+                  _SettingsSwitchTile(
+                    label: 'Scholarly Animations',
+                    description: 'Parchment overlays and ghost move suggestions',
+                    icon: Icons.history_edu_rounded,
+                    value: state.academyHouseAnimations,
+                    onChanged: (v) => notifier.toggleAcademyHouseAnimations(),
+                  ),
+                  _SettingsSwitchTile(
+                    label: 'Persona Color Fonts',
+                    description: 'Rich semantic highlighting for mentor dialogue',
+                    icon: Icons.color_lens_rounded,
+                    value: state.academyHouseColorFonts,
+                    onChanged: (v) => notifier.toggleAcademyHouseColorFonts(),
+                  ),
+                  _SettingsSwitchTile(
+                    label: 'Bold Emphasis',
+                    description: 'Enhanced weight for tactical terminology',
+                    icon: Icons.format_bold_rounded,
+                    value: state.academyHouseBoldEmphasis,
+                    onChanged: (v) => notifier.toggleAcademyHouseBoldEmphasis(),
+                  ),
+                  _SettingsSwitchTile(
+                    label: 'Refined Typing Effect',
+                    description: 'Scholarly, turn-based dialogue simulation',
+                    icon: Icons.keyboard_rounded,
+                    value: state.academyHouseTypingEffect,
+                    onChanged: (v) => notifier.toggleAcademyHouseTypingEffect(),
+                  ),
+                ],
+              ),
+
               // GAMEPLAY
               if (!isAcademyMode)
                 _SettingsCategory(

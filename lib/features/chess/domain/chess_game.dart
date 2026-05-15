@@ -235,6 +235,20 @@ class ChessGame {
     return _chess.move(move);
   }
 
+  chess_lib.Move? findMoveBySan(String san) {
+    // Remove common punctuation Bard might add
+    final cleanSan = san.replaceAll(RegExp(r'[.?!]'), '').trim();
+    if (cleanSan.isEmpty) return null;
+
+    final moves = _chess.generate_moves();
+    for (final m in moves) {
+      if (_chess.move_to_san(m) == cleanSan) {
+        return m;
+      }
+    }
+    return null;
+  }
+
   List<chess_lib.Move> generateMoves({String? square}) {
     return _chess.generate_moves({'square': square});
   }

@@ -300,7 +300,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
                           children: [
                             Text(
                               'GM Bard is writing',
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.fraunces(
                                 color: ScholarlyTheme.textMuted,
                                 fontSize: 12,
                                 fontStyle: FontStyle.italic,
@@ -332,21 +332,21 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
                       : Text.rich(
                           TextSpan(
                             children: [
-                              ..._parseChessFormattedText(entry.text),
+                              ..._parseAcademyRichText(entry.text, widget.state),
                               if (!entry.isComplete && !isStreaming)
                                 TextSpan(
                                   text: ' •••',
-                                  style: GoogleFonts.inter(
+                                  style: GoogleFonts.fraunces(
                                     color: ScholarlyTheme.textMuted,
-                                    fontSize: 13,
+                                    fontSize: 14,
                                   ),
                                 ),
                               if (isStreaming)
                                 TextSpan(
                                   text: ' ┃',
-                                  style: GoogleFonts.inter(
+                                  style: GoogleFonts.fraunces(
                                     color: ScholarlyTheme.accentBlue,
-                                    fontSize: 13,
+                                    fontSize: 14,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -362,23 +362,25 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
     );
   }
 
-  List<InlineSpan> _parseChessFormattedText(String text) {
+  List<InlineSpan> _parseAcademyRichText(String text, ChessState state) {
     final List<InlineSpan> spans = [];
     final regExp = RegExp(
-      r'\*\*(.*?)\*\*|\b(King|Queen|Rook|Bishop|Knight|Pawn)s?\b|\b([a-h][1-8])\b',
+      r'\*\*(.*?)\*\*|\b(Apprentice|Defender of Humanity|Kingslayer|Bard)\b|\b(King|Queen|Rook|Bishop|Knight|Pawn)s?\b|\b([a-h][1-8])\b|\b([NBRQK]?[a-h]?[1-8]?x?[a-h][1-8](?:=[NBRQK])?[+#]?|O-O(?:-O)?)\b',
       caseSensitive: false,
     );
 
     int lastIndex = 0;
+    final baseStyle = GoogleFonts.fraunces(
+      color: ScholarlyTheme.textPrimary,
+      fontSize: 14,
+      height: 1.5,
+    );
+
     for (final match in regExp.allMatches(text)) {
       if (match.start > lastIndex) {
         spans.add(TextSpan(
           text: text.substring(lastIndex, match.start),
-          style: GoogleFonts.inter(
-            color: ScholarlyTheme.textPrimary,
-            fontSize: 13,
-            height: 1.4,
-          ),
+          style: baseStyle,
         ));
       }
 
@@ -386,35 +388,56 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
         // Markdown Bold
         spans.add(TextSpan(
           text: match.group(1),
-          style: GoogleFonts.inter(
-            color: ScholarlyTheme.textPrimary,
-            fontSize: 13,
-            fontWeight: FontWeight.bold,
-            height: 1.4,
+          style: baseStyle.copyWith(
+            fontWeight: state.academyHouseBoldEmphasis ? FontWeight.w800 : FontWeight.bold,
           ),
         ));
       } else if (match.group(2) != null) {
-        // Piece Name
-        final rawPiece = match.group(0)!;
-        final formattedPiece = rawPiece[0].toUpperCase() + rawPiece.substring(1);
+        // Personas/Titles
+        final name = match.group(2)!;
+        Color color = ScholarlyTheme.accentBlue;
+        if (name.toLowerCase().contains('apprentice')) color = const Color(0xFFD4AF37); // Academy Gold
+        if (name.toLowerCase().contains('kingslayer')) color = Colors.redAccent;
+
         spans.add(TextSpan(
-          text: formattedPiece,
-          style: GoogleFonts.inter(
-            color: ScholarlyTheme.accentBlue,
-            fontSize: 13,
+          text: name,
+          style: baseStyle.copyWith(
+            color: state.academyHouseColorFonts ? color : ScholarlyTheme.textPrimary,
             fontWeight: FontWeight.bold,
-            height: 1.4,
           ),
         ));
       } else if (match.group(3) != null) {
-        // Algebraic Square
+        // Piece Name
         spans.add(TextSpan(
-          text: match.group(3),
-          style: GoogleFonts.jetBrainsMono(
-            color: const Color(0xFFD97706), // Striking modern amber/gold accent
-            fontSize: 12,
+          text: match.group(0),
+          style: baseStyle.copyWith(
+            color: state.academyHouseColorFonts ? ScholarlyTheme.accentBlue : ScholarlyTheme.textPrimary,
             fontWeight: FontWeight.bold,
-            height: 1.4,
+          ),
+        ));
+      } else if (match.group(4) != null || match.group(5) != null) {
+        // Square or Move (Notation Chips)
+        final notation = match.group(0)!;
+        spans.add(WidgetSpan(
+          alignment: PlaceholderAlignment.middle,
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+            decoration: BoxDecoration(
+              color: ScholarlyTheme.accentBlueSoft.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(
+                color: ScholarlyTheme.accentBlue.withValues(alpha: 0.3),
+              ),
+            ),
+            child: Text(
+              notation,
+              style: GoogleFonts.jetBrainsMono(
+                color: ScholarlyTheme.accentBlue,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ));
       }
@@ -425,11 +448,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
     if (lastIndex < text.length) {
       spans.add(TextSpan(
         text: text.substring(lastIndex),
-        style: GoogleFonts.inter(
-          color: ScholarlyTheme.textPrimary,
-          fontSize: 13,
-          height: 1.4,
-        ),
+        style: baseStyle,
       ));
     }
 
