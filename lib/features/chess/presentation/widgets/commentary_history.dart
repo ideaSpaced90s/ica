@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -427,6 +428,10 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
                 : ScholarlyTheme.textPrimary,
             fontWeight: FontWeight.bold,
           ),
+          recognizer: TapGestureRecognizer()
+            ..onTap = () {
+              ref.read(chessProvider.notifier).triggerAcademyAnimation();
+            },
         ));
       } else if (match.group(4) != null) {
         // Instructions/Keywords
@@ -466,7 +471,10 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
           child: GestureDetector(
             onTap: targetSquare == null
                 ? null
-                : () => ref.read(chessProvider.notifier).glowSquare(targetSquare!),
+                : () {
+                    ref.read(chessProvider.notifier).glowSquare(targetSquare!);
+                    ref.read(chessProvider.notifier).triggerAcademyAnimation();
+                  },
             child: Container(
               margin: const EdgeInsets.symmetric(horizontal: 2),
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),

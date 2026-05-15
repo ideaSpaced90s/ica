@@ -220,6 +220,7 @@ class ChessState {
     this.bardSuggestion,
     this.isAcademyActive = false,
     this.glowingSquare,
+    this.academyAnimationTrigger = 0,
   });
 
   final ChessGame game;
@@ -297,6 +298,7 @@ class ChessState {
   final MoveAnimationData? bardSuggestion;
   final bool isAcademyActive;
   final String? glowingSquare;
+  final int academyAnimationTrigger;
 
   bool get isChess960 => gameMode == 'chess960';
 
@@ -387,6 +389,7 @@ class ChessState {
     Object? bardSuggestion = _sentinel,
     bool? isAcademyActive,
     Object? glowingSquare = _sentinel,
+    int? academyAnimationTrigger,
   }) {
     return ChessState(
       game: game ?? this.game,
@@ -502,6 +505,8 @@ class ChessState {
       glowingSquare: identical(glowingSquare, _sentinel)
           ? this.glowingSquare
           : glowingSquare as String?,
+      academyAnimationTrigger:
+          academyAnimationTrigger ?? this.academyAnimationTrigger,
     );
   }
 }
@@ -2918,8 +2923,15 @@ class ChessNotifier extends StateNotifier<ChessState> {
           pieceCode: pieceCode,
           isCapture: move.captured != null,
         ),
+        academyAnimationTrigger: state.academyAnimationTrigger + 1,
       );
     }
+  }
+
+  void triggerAcademyAnimation() {
+    state = state.copyWith(
+      academyAnimationTrigger: state.academyAnimationTrigger + 1,
+    );
   }
 
   void glowSquare(String square) {

@@ -676,6 +676,7 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
                           data: chessState.bardSuggestion!,
                           boardSize: boardSize,
                           isFlipped: chessState.isBoardFlipped,
+                          trigger: chessState.academyAnimationTrigger,
                         ),
 
                       const PromotionOverlay(),
@@ -1441,53 +1442,116 @@ class AcademyPaperOverlay extends StatelessWidget {
   }
 }
 
-class AcademySuggestionOverlay extends StatelessWidget {
+class AcademySuggestionOverlay extends StatefulWidget {
   final MoveAnimationData data;
   final double boardSize;
   final bool isFlipped;
+  final int trigger;
 
   const AcademySuggestionOverlay({
     super.key,
     required this.data,
     required this.boardSize,
     required this.isFlipped,
+    required this.trigger,
   });
 
   @override
+  State<AcademySuggestionOverlay> createState() =>
+      _AcademySuggestionOverlayState();
+}
+
+class _AcademySuggestionOverlayState extends State<AcademySuggestionOverlay>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    );
+    _animation =
+        CurvedAnimation(parent: _controller, curve: Curves.easeInOutCubic);
+    _controller.forward();
+  }
+
+  @override
+  void didUpdateWidget(AcademySuggestionOverlay oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.trigger != widget.trigger || oldWidget.data != widget.data) {
+      _controller.reset();
+      _controller.forward();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final squareSize = boardSize / 8;
+    final squareSize = widget.boardSize / 8;
 
     Offset getPos(String square) {
       final col = square.codeUnitAt(0) - 'a'.codeUnitAt(0);
       final row = 8 - int.parse(square[1]);
-      final efCol = isFlipped ? 7 - col : col;
-      final efRow = isFlipped ? 7 - row : row;
+      final efCol = widget.isFlipped ? 7 - col : col;
+      final efRow = widget.isFlipped ? 7 - row : row;
       return Offset(efCol * squareSize, efRow * squareSize);
     }
 
-    final fromPos = getPos(data.from);
-    final toPos = getPos(data.to);
+    final fromPos = getPos(widget.data.from);
+    final toPos = getPos(widget.data.to);
 
     return IgnorePointer(
       child: Stack(
         children: [
-          // Elegant scholarly arrow
+          // 1. Animated Scholarly Arrow
           CustomPaint(
-            size: Size(boardSize, boardSize),
+            size: Size(widget.boardSize, widget.boardSize),
             painter: AcademyArrowPainter(
               from: fromPos + Offset(squareSize / 2, squareSize / 2),
               to: toPos + Offset(squareSize / 2, squareSize / 2),
+              progress: _animation.value,
             ),
           ),
-          // Ghost piece at destination
-          Positioned(
-            left: toPos.dx,
-            top: toPos.dy,
-            child: TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0.0, end: 0.4),
-              duration: const Duration(milliseconds: 500),
-              builder: (context, opacity, _) {
-                return Opacity(
+
+          // 2. Gliding Ghost Piece
+          AnimatedBuilder(
+            animation: _animation,
+            builder: (context, child) {
+              // Quadratic Bezier path for ghost piece (matching the arrow)
+              final p0 = fromPos;
+              final p2 = toPos;
+              final p1 = Offset(
+                (p0.dx + p2.dx) / 2,
+                (p0.dy + p2.dy) / 2 - 30, // Arc matching AcademyArrowPainter
+              );
+
+              final t = _animation.value;
+              final currentPos = Offset(
+                (1 - t) * (1 - t) * p0.dx +
+                    2 * (1 - t) * t * p1.dx +
+                    t * t * p2.dx,
+                (1 - t) * (1 - t) * p0.dy +
+                    2 * (1 - t) * t * p1.dy +
+                    t * t * p2.dy,
+              );
+
+              // Fade in at start, fade out at end (to reveal stationary ghost)
+              double opacity = 0.4;
+              if (t < 0.2) opacity = (t / 0.2) * 0.4;
+              if (t > 0.8) opacity = 0.4 - ((t - 0.8) / 0.2) * 0.4;
+
+              return Positioned(
+                left: currentPos.dx,
+                top: currentPos.dy,
+                child: Opacity(
                   opacity: opacity,
                   child: Container(
                     width: squareSize,
@@ -1495,15 +1559,36 @@ class AcademySuggestionOverlay extends StatelessWidget {
                     padding: const EdgeInsets.all(4),
                     child: Center(
                       child: Image.asset(
-                        'assets/themes/classic/${data.pieceCode.toLowerCase()}.png',
+                        'assets/themes/classic/${widget.data.pieceCode.toLowerCase()}.png',
                         fit: BoxFit.contain,
                       ),
                     ),
                   ),
-                );
-              },
-            ),
+                ),
+              );
+            },
           ),
+
+          // 3. Final Destination Marker (Stationary Ghost)
+          if (_animation.value > 0.8)
+            Positioned(
+              left: toPos.dx,
+              top: toPos.dy,
+              child: Opacity(
+                opacity: (_animation.value - 0.8) / 0.2 * 0.4,
+                child: Container(
+                  width: squareSize,
+                  height: squareSize,
+                  padding: const EdgeInsets.all(4),
+                  child: Center(
+                    child: Image.asset(
+                      'assets/themes/classic/${widget.data.pieceCode.toLowerCase()}.png',
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -1513,48 +1598,93 @@ class AcademySuggestionOverlay extends StatelessWidget {
 class AcademyArrowPainter extends CustomPainter {
   final Offset from;
   final Offset to;
+  final double progress;
 
-  AcademyArrowPainter({required this.from, required this.to});
+  AcademyArrowPainter({
+    required this.from,
+    required this.to,
+    required this.progress,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (progress <= 0) return;
+
     final paint = Paint()
       ..color = ScholarlyTheme.accentBlue.withValues(alpha: 0.4)
       ..strokeWidth = 4
       ..strokeCap = StrokeCap.round
       ..style = PaintingStyle.stroke;
 
-    final path = Path()
-      ..moveTo(from.dx, from.dy)
-      ..quadraticBezierTo(
-        (from.dx + to.dx) / 2,
-        (from.dy + to.dy) / 2 - 20, // Slight arc
-        to.dx,
-        to.dy,
-      );
+    final controlPoint = Offset(
+      (from.dx + to.dx) / 2,
+      (from.dy + to.dy) / 2 - 30,
+    );
+
+    final path = Path()..moveTo(from.dx, from.dy);
+
+    // Draw the path up to the current progress
+    if (progress < 1.0) {
+      // Approximate quadratic bezier for animation
+      for (double t = 0; t <= progress; t += 0.01) {
+        final x = (1 - t) * (1 - t) * from.dx +
+            2 * (1 - t) * t * controlPoint.dx +
+            t * t * to.dx;
+        final y = (1 - t) * (1 - t) * from.dy +
+            2 * (1 - t) * t * controlPoint.dy +
+            t * t * to.dy;
+        path.lineTo(x, y);
+      }
+    } else {
+      path.quadraticBezierTo(controlPoint.dx, controlPoint.dy, to.dx, to.dy);
+    }
 
     canvas.drawPath(path, paint);
 
-    // Arrowhead
-    final angle = (to - from).direction;
-    const arrowSize = 12.0;
-    final p1 = to + Offset.fromDirection(angle + 2.4, arrowSize);
-    final p2 = to + Offset.fromDirection(angle - 2.4, arrowSize);
+    // Arrowhead (only show if progress > 0.8)
+    if (progress > 0.8) {
+      final t = progress;
+      final headOpacity = (t - 0.8) / 0.2;
 
-    final headPath = Path()
-      ..moveTo(to.dx, to.dy)
-      ..lineTo(p1.dx, p1.dy)
-      ..lineTo(p2.dx, p2.dy)
-      ..close();
+      final paintHead = Paint()
+        ..color = ScholarlyTheme.accentBlue.withValues(alpha: 0.4 * headOpacity)
+        ..style = PaintingStyle.fill;
 
-    canvas.drawPath(
-      headPath,
-      Paint()..color = ScholarlyTheme.accentBlue.withValues(alpha: 0.4),
-    );
+      // Current direction at the tip of the path
+      final dx = 2 * (1 - t) * (controlPoint.dx - from.dx) +
+          2 * t * (to.dx - controlPoint.dx);
+      final dy = 2 * (1 - t) * (controlPoint.dy - from.dy) +
+          2 * t * (to.dy - controlPoint.dy);
+      final angle = Offset(dx, dy).direction;
+
+      const arrowSize = 12.0;
+      final currentTo = Offset(
+        (1 - t) * (1 - t) * from.dx +
+            2 * (1 - t) * t * controlPoint.dx +
+            t * t * to.dx,
+        (1 - t) * (1 - t) * from.dy +
+            2 * (1 - t) * t * controlPoint.dy +
+            t * t * to.dy,
+      );
+
+      final p1 = currentTo + Offset.fromDirection(angle + 2.4, arrowSize);
+      final p2 = currentTo + Offset.fromDirection(angle - 2.4, arrowSize);
+
+      final headPath = Path()
+        ..moveTo(currentTo.dx, currentTo.dy)
+        ..lineTo(p1.dx, p1.dy)
+        ..lineTo(p2.dx, p2.dy)
+        ..close();
+
+      canvas.drawPath(headPath, paintHead);
+    }
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+  bool shouldRepaint(covariant AcademyArrowPainter oldDelegate) =>
+      oldDelegate.progress != progress ||
+      oldDelegate.from != from ||
+      oldDelegate.to != to;
 }
 
 class AcademySquareGlow extends StatefulWidget {
