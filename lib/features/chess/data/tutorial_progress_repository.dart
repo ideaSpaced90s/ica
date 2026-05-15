@@ -154,7 +154,6 @@ class TutorialProgressRepository {
   }
 
   TutorialProgress _migrate(int fromVersion, int toVersion, TutorialProgress p) {
-    debugPrint('Migrating TutorialProgress from v$fromVersion to v$toVersion');
     // If layout structures have shifted fundamentally, invalidate the active mid-lesson
     // checkpoint so players restart the active lesson gracefully rather than crashing.
     // Completed metrics and structural unlocks remain entirely undisturbed.

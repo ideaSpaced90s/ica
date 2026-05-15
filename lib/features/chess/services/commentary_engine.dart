@@ -17,9 +17,6 @@ class CommentaryEngine {
     if (isInitialized || isInitializing) return;
 
     isInitializing = true;
-    debugPrint(
-      'CommentaryEngine: Initializing Kingslayer AI (Gemini Direct)...',
-    );
 
     try {
       final apiKey = dotenv.env['GEMINI_API_KEY'];
@@ -79,7 +76,6 @@ TOOL USAGE: If the Apprentice asks for a puzzle, use your tools to find one and 
       );
 
       isInitialized = true;
-      debugPrint('CommentaryEngine: Kingslayer AI (Gemini) initialized.');
     } catch (error) {
       lastError = 'Kingslayer AI Initialization failed: $error';
       debugPrint('CommentaryEngine: Failed to initialize Gemini: $error');

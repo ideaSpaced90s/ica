@@ -24,7 +24,6 @@ void main() {
     }
     try {
       await dotenv.load(fileName: ".env");
-      debugPrint('SARVAM AI ENVIORNMENT LOADED');
     } catch (e) {
       debugPrint('DOTENV LOAD ERROR: $e');
     }
