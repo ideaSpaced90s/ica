@@ -59,7 +59,7 @@ class TutorialProgress {
 
   const TutorialProgress({
     this.completedChapters = const {},
-    this.unlockedChapters = const {1}, // Default unlock chapter 1
+    this.unlockedChapters = const {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23}, // All chapters unlocked for testing
     this.stars = const {},
     this.totalXp = 0,
     this.currentRank = TutorialRank.beginner,

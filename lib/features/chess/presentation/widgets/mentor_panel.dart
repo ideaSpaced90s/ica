@@ -29,23 +29,9 @@ class _TutorialMentorPanelState extends ConsumerState<TutorialMentorPanel> with 
     )..repeat(reverse: true);
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _syncText();
-  }
-
-  @override
-  void didUpdateWidget(TutorialMentorPanel oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    _syncText();
-  }
-
-  void _syncText() {
-    final state = ref.watch(tutorialProvider);
-    final nextText = state.lastMentorDialogue ?? state.currentStep.dialogue;
-    if (nextText != _targetText) {
-      _targetText = nextText;
+  void _triggerTypewriter(String text) {
+    if (text != _targetText) {
+      _targetText = text;
       _startTypewriter();
     }
   }
@@ -119,6 +105,13 @@ class _TutorialMentorPanelState extends ConsumerState<TutorialMentorPanel> with 
   Widget build(BuildContext context) {
     final state = ref.watch(tutorialProvider);
     final notifier = ref.read(tutorialProvider.notifier);
+
+    // Reactive sync: detect dialogue changes and trigger typewriter after build
+    final nextText = state.lastMentorDialogue ?? state.currentStep.dialogue;
+    if (nextText != _targetText) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _triggerTypewriter(nextText));
+    }
+
     final moodColor = _getMoodColor(state.mentorMood);
 
     final showSubtitles = state.progress.settings.showSubtitles;
