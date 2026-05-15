@@ -369,7 +369,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
       r'\b(Apprentice|Defender of Humanity|Kingslayer|Bard)\b|'
       r'\b(King|Queen|Rook|Bishop|Knight|Pawn)s?\b|'
       r'\b(Consider|Observe|Strategy|Warning|Tactics|Recommended|Crucial|Focus|Analyze)\b|'
-      r'\b([a-h][1-8])\b|'
+      r'\b([a-h][1-8]-?[a-h][1-8]|[a-h][1-8])\b|'
       r'\b([NBRQK]?[a-h]?[1-8]?x?[a-h][1-8](?:=[NBRQK])?[+#]?|O-O(?:-O)?)\b',
       caseSensitive: false,
     );
@@ -454,11 +454,11 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
       } else if (match.group(5) != null || match.group(6) != null) {
         // Square or Move (Notation Chips)
         final notation = match.group(0)!;
-        // Extract target square for glowing
+        // Extract target square for glowing (the last square mentioned in the move)
         String? targetSquare;
-        final squareMatch = RegExp(r'[a-h][1-8]').firstMatch(notation);
-        if (squareMatch != null) {
-          targetSquare = squareMatch.group(0);
+        final squareMatches = RegExp(r'[a-h][1-8]').allMatches(notation);
+        if (squareMatches.isNotEmpty) {
+          targetSquare = squareMatches.last.group(0);
         }
 
         spans.add(WidgetSpan(
