@@ -218,6 +218,8 @@ class ChessState {
     this.academyHouseBoldEmphasis = true,
     this.academyHouseTypingEffect = true,
     this.bardSuggestion,
+    this.isAcademyActive = false,
+    this.glowingSquare,
   });
 
   final ChessGame game;
@@ -293,6 +295,8 @@ class ChessState {
   final bool academyHouseBoldEmphasis;
   final bool academyHouseTypingEffect;
   final MoveAnimationData? bardSuggestion;
+  final bool isAcademyActive;
+  final String? glowingSquare;
 
   bool get isChess960 => gameMode == 'chess960';
 
@@ -381,6 +385,7 @@ class ChessState {
     bool? academyHouseBoldEmphasis,
     bool? academyHouseTypingEffect,
     Object? bardSuggestion = _sentinel,
+    bool? isAcademyActive,
   }) {
     return ChessState(
       game: game ?? this.game,
@@ -492,6 +497,10 @@ class ChessState {
       bardSuggestion: identical(bardSuggestion, _sentinel)
           ? this.bardSuggestion
           : bardSuggestion as MoveAnimationData?,
+      isAcademyActive: isAcademyActive ?? this.isAcademyActive,
+      glowingSquare: identical(glowingSquare, _sentinel)
+          ? this.glowingSquare
+          : glowingSquare as String?,
     );
   }
 }
@@ -1163,8 +1172,32 @@ class ChessNotifier extends StateNotifier<ChessState> {
           adjustedScore += 1.2;
         }
       } else if (avatar.name == 'Blitzer') {
-        if (piece?.type == chess_lib.PieceType.KNIGHT || piece?.type == chess_lib.PieceType.BISHOP) {
+        if (piece?.type == chess_lib.PieceType.KNIGHT ||
+            piece?.type == chess_lib.PieceType.BISHOP) {
           adjustedScore += 0.8;
+        }
+      }
+
+      // Academy Variation Heuristics (Move 1-10)
+      if (state.isAcademyActive) {
+        final halfMoveCount = game.history.length;
+        if (halfMoveCount < 20) {
+          // Decay factor: high randomization at start, decreasing as opening progresses
+          final decay = math.max(0.0, (20 - halfMoveCount) / 20.0);
+          final random = math.Random();
+          // Up to 5.0 points of random variance to allow "odd" but legal moves
+          final randomBonus = random.nextDouble() * 5.0 * decay;
+
+          // Subtle bonus for "odd" flank openings mentioned by user
+          final isFlankMove = toSq.startsWith('a') ||
+              toSq.startsWith('h') ||
+              fromSq.startsWith('a') ||
+              fromSq.startsWith('h');
+          if (isFlankMove && candidate.evaluation > -1.5) {
+            adjustedScore += 1.5 * decay;
+          }
+
+          adjustedScore += randomBonus;
         }
       }
 
@@ -1239,6 +1272,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
         isFavorite: isFavorite,
         gameMode: state.gameMode,
         isRatedMode: state.isRatedMode,
+        isAcademyActive: state.isAcademyActive,
       );
 
       final saves = isUpdate
@@ -1361,6 +1395,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
       userFideRating: state.userFideRating,
       ratedGamesCount: state.ratedGamesCount,
       currentWinningStreak: state.currentWinningStreak,
+      isAcademyActive: entry.isAcademyActive,
     );
 
     _syncUndoRedoFlags();
@@ -2752,6 +2787,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
       userFideRating: preserveRating,
       ratedGamesCount: preserveCount,
       currentWinningStreak: preserveStreak,
+      isAcademyActive: false,
     );
 
     _syncUndoRedoFlags();
@@ -2759,6 +2795,8 @@ class ChessNotifier extends StateNotifier<ChessState> {
     // Always start thinking if Robot Mode is on OR if it's currently the Engine's turn
     if (preserveEvE || !preservePlayerWhite) {
       await ensureGameServicesStarted(analyzeCurrentPosition: true);
+      await _engine.setSkillLevel(AiAvatar.getAvatar(preserveLevel).skillLevel,
+          multiPV: 1); // Reset MultiPV for normal play
       state = state.copyWith(isEngineThinking: state.engineReady);
     }
   }
@@ -2805,6 +2843,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
       isCommentaryEngineLoading: _commentaryEngine.isInitializing,
       commentaryError: _commentaryEngine.lastError,
       savedGames: state.savedGames,
+      isAcademyActive: true,
       commentaryHistory: [
         CommentaryEntry(
           text:
@@ -2820,6 +2859,8 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
     // Start analysis which will trigger the engine move
     await ensureGameServicesStarted(analyzeCurrentPosition: true);
+    await _engine.setSkillLevel(AiAvatar.getAvatar(preserveLevel).skillLevel,
+        multiPV: 10); // Variety for openings
     state = state.copyWith(isEngineThinking: state.engineReady);
   }
 
@@ -2878,6 +2919,15 @@ class ChessNotifier extends StateNotifier<ChessState> {
         ),
       );
     }
+  }
+
+  void glowSquare(String square) {
+    state = state.copyWith(glowingSquare: square);
+    Timer(const Duration(milliseconds: 1000), () {
+      if (!_isDisposed && state.glowingSquare == square) {
+        state = state.copyWith(glowingSquare: null);
+      }
+    });
   }
 }
 

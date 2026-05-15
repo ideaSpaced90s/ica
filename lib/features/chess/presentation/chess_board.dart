@@ -198,6 +198,8 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
                               chessState.hintTo == squareName;
                           final isThreatened = chessState.threatenedSquares
                               .contains(squareName);
+                          final isGlow = chessState.glowingSquare == squareName;
+                          final isSuggestionTarget = chessState.bardSuggestion?.to == squareName;
                           final piece = displayGame.getPiece(squareName);
 
                           return DragTarget<String>(
@@ -1549,4 +1551,57 @@ class AcademyArrowPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+}
+
+class AcademySquareGlow extends StatefulWidget {
+  final Color color;
+
+  const AcademySquareGlow({super.key, required this.color});
+
+  @override
+  State<AcademySquareGlow> createState() => _AcademySquareGlowState();
+}
+
+class _AcademySquareGlowState extends State<AcademySquareGlow>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    )..forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Container(
+          decoration: BoxDecoration(
+            boxShadow: [
+              BoxShadow(
+                color: widget.color.withValues(alpha: 0.6 * (1.0 - _controller.value)),
+                blurRadius: 20 * _controller.value,
+                spreadRadius: 10 * _controller.value,
+              ),
+            ],
+            border: Border.all(
+              color: widget.color.withValues(alpha: 0.8 * (1.0 - _controller.value)),
+              width: 2,
+            ),
+          ),
+        );
+      },
+    );
+  }
 }

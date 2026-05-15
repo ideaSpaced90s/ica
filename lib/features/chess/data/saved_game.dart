@@ -62,6 +62,7 @@ class SavedGameEntry {
     this.customName,
     this.gameMode = 'classic',
     this.isRatedMode = false,
+    this.isAcademyActive = false,
   });
 
   final String id;
@@ -80,6 +81,7 @@ class SavedGameEntry {
   final String? customName;
   final String gameMode;
   final bool isRatedMode;
+  final bool isAcademyActive;
 
   SavedGameEntry copyWith({
     String? id,
@@ -98,6 +100,7 @@ class SavedGameEntry {
     Object? customName = _sentinel,
     String? gameMode,
     bool? isRatedMode,
+    bool? isAcademyActive,
   }) {
     return SavedGameEntry(
       id: id ?? this.id,
@@ -122,6 +125,7 @@ class SavedGameEntry {
           : customName as String?,
       gameMode: gameMode ?? this.gameMode,
       isRatedMode: isRatedMode ?? this.isRatedMode,
+      isAcademyActive: isAcademyActive ?? this.isAcademyActive,
     );
   }
 
@@ -148,6 +152,7 @@ class SavedGameEntry {
       customName: json['customName'] as String?,
       gameMode: json['gameMode'] as String? ?? 'classic',
       isRatedMode: json['isRatedMode'] as bool? ?? false,
+      isAcademyActive: json['isAcademyActive'] as bool? ?? false,
     );
   }
 
@@ -169,6 +174,7 @@ class SavedGameEntry {
       'customName': customName,
       'gameMode': gameMode,
       'isRatedMode': isRatedMode,
+      'isAcademyActive': isAcademyActive,
     };
   }
 }

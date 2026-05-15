@@ -365,7 +365,12 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
   List<InlineSpan> _parseAcademyRichText(String text, ChessState state) {
     final List<InlineSpan> spans = [];
     final regExp = RegExp(
-      r'\*\*(.*?)\*\*|\b(Apprentice|Defender of Humanity|Kingslayer|Bard)\b|\b(King|Queen|Rook|Bishop|Knight|Pawn)s?\b|\b([a-h][1-8])\b|\b([NBRQK]?[a-h]?[1-8]?x?[a-h][1-8](?:=[NBRQK])?[+#]?|O-O(?:-O)?)\b',
+      r'\*\*(.*?)\*\*|'
+      r'\b(Apprentice|Defender of Humanity|Kingslayer|Bard)\b|'
+      r'\b(King|Queen|Rook|Bishop|Knight|Pawn)s?\b|'
+      r'\b(Consider|Observe|Strategy|Warning|Tactics|Recommended|Crucial|Focus|Analyze)\b|'
+      r'\b([a-h][1-8])\b|'
+      r'\b([NBRQK]?[a-h]?[1-8]?x?[a-h][1-8](?:=[NBRQK])?[+#]?|O-O(?:-O)?)\b',
       caseSensitive: false,
     );
 
@@ -389,20 +394,26 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
         spans.add(TextSpan(
           text: match.group(1),
           style: baseStyle.copyWith(
-            fontWeight: state.academyHouseBoldEmphasis ? FontWeight.w800 : FontWeight.bold,
+            fontWeight: state.academyHouseBoldEmphasis
+                ? FontWeight.w800
+                : FontWeight.bold,
           ),
         ));
       } else if (match.group(2) != null) {
         // Personas/Titles
         final name = match.group(2)!;
         Color color = ScholarlyTheme.accentBlue;
-        if (name.toLowerCase().contains('apprentice')) color = const Color(0xFFD4AF37); // Academy Gold
+        if (name.toLowerCase().contains('apprentice')) {
+          color = const Color(0xFFD4AF37); // Academy Gold
+        }
         if (name.toLowerCase().contains('kingslayer')) color = Colors.redAccent;
 
         spans.add(TextSpan(
           text: name,
           style: baseStyle.copyWith(
-            color: state.academyHouseColorFonts ? color : ScholarlyTheme.textPrimary,
+            color: state.academyHouseColorFonts
+                ? color
+                : ScholarlyTheme.textPrimary,
             fontWeight: FontWeight.bold,
           ),
         ));
@@ -411,31 +422,68 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
         spans.add(TextSpan(
           text: match.group(0),
           style: baseStyle.copyWith(
-            color: state.academyHouseColorFonts ? ScholarlyTheme.accentBlue : ScholarlyTheme.textPrimary,
+            color: state.academyHouseColorFonts
+                ? ScholarlyTheme.accentBlue
+                : ScholarlyTheme.textPrimary,
             fontWeight: FontWeight.bold,
           ),
         ));
-      } else if (match.group(4) != null || match.group(5) != null) {
+      } else if (match.group(4) != null) {
+        // Instructions/Keywords
+        final word = match.group(4)!;
+        Color color = Colors.indigo;
+        final lWord = word.toLowerCase();
+        if (lWord.contains('warning')) color = Colors.amber.shade700;
+        if (lWord.contains('strategy')) color = Colors.teal;
+        if (lWord.contains('tactics')) color = Colors.pink;
+        if (lWord.contains('crucial') || lWord.contains('focus')) {
+          color = Colors.deepOrange;
+        }
+        if (lWord.contains('analyze') || lWord.contains('observe')) {
+          color = Colors.deepPurple;
+        }
+
+        spans.add(TextSpan(
+          text: word,
+          style: baseStyle.copyWith(
+            color: state.academyHouseColorFonts ? color : ScholarlyTheme.textPrimary,
+            fontWeight: FontWeight.w900,
+            fontStyle: FontStyle.italic,
+          ),
+        ));
+      } else if (match.group(5) != null || match.group(6) != null) {
         // Square or Move (Notation Chips)
         final notation = match.group(0)!;
+        // Extract target square for glowing
+        String? targetSquare;
+        final squareMatch = RegExp(r'[a-h][1-8]').firstMatch(notation);
+        if (squareMatch != null) {
+          targetSquare = squareMatch.group(0);
+        }
+
         spans.add(WidgetSpan(
           alignment: PlaceholderAlignment.middle,
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 2),
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-            decoration: BoxDecoration(
-              color: ScholarlyTheme.accentBlueSoft.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(4),
-              border: Border.all(
-                color: ScholarlyTheme.accentBlue.withValues(alpha: 0.3),
+          child: GestureDetector(
+            onTap: targetSquare == null
+                ? null
+                : () => ref.read(chessProvider.notifier).glowSquare(targetSquare!),
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+              decoration: BoxDecoration(
+                color: ScholarlyTheme.accentBlueSoft.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(
+                  color: ScholarlyTheme.accentBlue.withValues(alpha: 0.3),
+                ),
               ),
-            ),
-            child: Text(
-              notation,
-              style: GoogleFonts.jetBrainsMono(
-                color: ScholarlyTheme.accentBlue,
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
+              child: Text(
+                notation,
+                style: GoogleFonts.jetBrainsMono(
+                  color: ScholarlyTheme.accentBlue,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),
