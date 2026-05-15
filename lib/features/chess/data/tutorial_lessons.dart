@@ -10,43 +10,43 @@ class TutorialLessonsDatabase {
       steps: [
         TutorialStep(
           type: TutorialStepType.dialogue,
-          dialogue: "Welcome to the Kingslayer Academy, Apprentice. I am GM Bard, your mentor in this lifelong resistance to restore human strategic mastery.",
+          dialogue: "Apprentice. Welcome to the Academy. We are here to restore human mastery.",
           mentorMood: MentorMood.calm,
         ),
         TutorialStep(
           type: TutorialStepType.dialogue,
-          dialogue: "The battlefield consists of 64 squares alternating between light and dark. Notice how the bottom-right corner square is always light.",
+          dialogue: "64 squares. Alternating light and dark. Always keep a light square in your bottom-right corner.",
           mentorMood: MentorMood.calm,
         ),
         TutorialStep(
           type: TutorialStepType.demonstrate,
-          dialogue: "Vertical columns are called 'Files', labeled from 'a' on the left to 'h' on the right.",
+          dialogue: "Files are vertical. a to h.",
           highlightSquares: ['a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7', 'a8'],
           overlayEffect: TutorialOverlayEffect.rookLanes,
         ),
         TutorialStep(
           type: TutorialStepType.demonstrate,
-          dialogue: "Horizontal rows are called 'Ranks', numbered from 1 at the bottom to 8 at the top.",
+          dialogue: "Ranks are horizontal. 1 to 8.",
           highlightSquares: ['a1', 'b1', 'c1', 'd1', 'e1', 'f1', 'g1', 'h1'],
           overlayEffect: TutorialOverlayEffect.rookLanes,
         ),
         TutorialStep(
           type: TutorialStepType.awaitSquareTap,
-          dialogue: "Tap any square on the central 'e' file to confirm your understanding.",
+          dialogue: "Tap the 'e' file. Prove your grid awareness.",
           allowedSquares: ['e1', 'e2', 'e3', 'e4', 'e5', 'e6', 'e7', 'e8'],
           highlightSquares: ['e1', 'e2', 'e3', 'e4', 'e5', 'e6', 'e7', 'e8'],
           reactionCorrect: MentorReaction(
-            dialogue: "Excellent. Mastering the grid is the first step toward visualization.",
+            dialogue: "Precision. Mastering the grid is the first step toward visualization.",
             mood: MentorMood.encouraging,
           ),
           reactionIllegal: MentorReaction(
-            dialogue: "That square is not on the 'e' file. Look for the column labeled 'e' at the bottom.",
+            dialogue: "Incorrect. The 'e' file is the fifth column from the left.",
             mood: MentorMood.correction,
           ),
         ),
         TutorialStep(
           type: TutorialStepType.celebration,
-          dialogue: "Chapter complete. You have taken your first step into a larger world.",
+          dialogue: "Chapter complete. Your journey into strategic warfare begins.",
           mentorMood: MentorMood.celebration,
         ),
       ],
@@ -60,31 +60,31 @@ class TutorialLessonsDatabase {
       steps: [
         TutorialStep(
           type: TutorialStepType.dialogue,
-          dialogue: "Every square has a unique coordinate combining its File letter and Rank number.",
+          dialogue: "Coordinates. Every square is a unique intersection of File and Rank.",
           mentorMood: MentorMood.calm,
         ),
         TutorialStep(
           type: TutorialStepType.demonstrate,
-          dialogue: "For example, the central square where the 'e' file meets the 4th rank is called 'e4'.",
+          dialogue: "Like e4. The intersection of the 'e' file and the 4th rank.",
           highlightSquares: ['e4'],
           overlayEffect: TutorialOverlayEffect.glowSquare,
         ),
         TutorialStep(
           type: TutorialStepType.awaitSquareTap,
-          dialogue: "Identify and tap the square 'd5'.",
+          dialogue: "Find d5. Precision is required.",
           allowedSquares: ['d5'],
           reactionCorrect: MentorReaction(
-            dialogue: "Spot on. 'd5' is a critical central square.",
+            dialogue: "Spot on. d5 is a critical central square.",
             mood: MentorMood.encouraging,
           ),
           reactionIllegal: MentorReaction(
-            dialogue: "Incorrect coordinate. Trace the column 'd' upward until it intersects with row 5.",
+            dialogue: "Incorrect. Trace column 'd' to row 5.",
             mood: MentorMood.correction,
           ),
         ),
         TutorialStep(
           type: TutorialStepType.celebration,
-          dialogue: "Coordinates mastered. Now we can speak the universal language of chess.",
+          dialogue: "Coordinates mastered. We now speak the same language.",
           mentorMood: MentorMood.celebration,
         ),
       ],
@@ -98,32 +98,32 @@ class TutorialLessonsDatabase {
       steps: [
         TutorialStep(
           type: TutorialStepType.dialogue,
-          dialogue: "Pawns are your foot soldiers. Humble in origin, but capable of turning the tide of war.",
+          dialogue: "Pawns. The foot soldiers. Humble, but they decide the war.",
           mentorMood: MentorMood.calm,
         ),
         TutorialStep(
           type: TutorialStepType.demonstrate,
-          dialogue: "A pawn marches straight forward, one square at a time. However, on its very first move, it has the option to leap two squares forward.",
+          dialogue: "One square forward. On their first move, they can leap two.",
           animatePathSquares: ['e2', 'e3', 'e4'],
           highlightSquares: ['e2', 'e3', 'e4'],
         ),
         TutorialStep(
           type: TutorialStepType.awaitMove,
-          dialogue: "Command your central pawn on e2 to march two squares forward to e4.",
+          dialogue: "Command e2 to e4. Control the center.",
           highlightSquares: ['e2'],
           expectedMove: 'e2e4',
           reactionCorrect: MentorReaction(
-            dialogue: "Splendid. Staking an early claim in the center is a core strategic objective.",
+            dialogue: "Splendid. The center is yours.",
             mood: MentorMood.encouraging,
           ),
           reactionIllegal: MentorReaction(
-            dialogue: "Pawns cannot move diagonally or backward. March straight ahead to e4.",
+            dialogue: "No. March straight ahead to e4.",
             mood: MentorMood.correction,
           ),
         ),
         TutorialStep(
           type: TutorialStepType.celebration,
-          dialogue: "Pawn basics complete. Remember: pawns are the soul of chess.",
+          dialogue: "Pawn basics complete. They are the soul of chess.",
           mentorMood: MentorMood.celebration,
         ),
       ],
@@ -137,32 +137,32 @@ class TutorialLessonsDatabase {
       steps: [
         TutorialStep(
           type: TutorialStepType.dialogue,
-          dialogue: "Behold the Rook. A heavy siege engine that commands straight open lines.",
+          dialogue: "The Rook. A siege engine for straight open lines.",
           mentorMood: MentorMood.calm,
         ),
         TutorialStep(
           type: TutorialStepType.demonstrate,
-          dialogue: "Rooks move horizontally along ranks or vertically along files for any number of unblocked squares.",
+          dialogue: "Horizontal and vertical. Any number of unblocked squares.",
           highlightSquares: ['d4'],
           overlayEffect: TutorialOverlayEffect.rookLanes,
         ),
         TutorialStep(
           type: TutorialStepType.awaitMove,
-          dialogue: "Slide the Rook all the way up the file from d4 to d8.",
+          dialogue: "Slide the Rook from d4 to d8. Command the file.",
           highlightSquares: ['d4'],
           expectedMove: 'd4d8',
           reactionCorrect: MentorReaction(
-            dialogue: "Commanding efficiency. The back rank is now within your operational reach.",
+            dialogue: "Efficient. The back rank is now within reach.",
             mood: MentorMood.encouraging,
           ),
           reactionIllegal: MentorReaction(
-            dialogue: "Rooks move strictly in straight lines. Do not deviate diagonally.",
+            dialogue: "Straight lines only. Move to d8.",
             mood: MentorMood.correction,
           ),
         ),
         TutorialStep(
           type: TutorialStepType.celebration,
-          dialogue: "Rook movement secured. Keep your files open for these heavy pieces.",
+          dialogue: "Rook mobility secured. Keep your files open.",
           mentorMood: MentorMood.celebration,
         ),
       ],
@@ -176,32 +176,32 @@ class TutorialLessonsDatabase {
       steps: [
         TutorialStep(
           type: TutorialStepType.dialogue,
-          dialogue: "The Bishop is a swift long-range sniper operating exclusively on diagonal pathways.",
+          dialogue: "The Bishop. A long-range sniper on diagonals.",
           mentorMood: MentorMood.calm,
         ),
         TutorialStep(
           type: TutorialStepType.demonstrate,
-          dialogue: "Because it moves diagonally, a Bishop bound to light squares can never cross over to a dark square.",
+          dialogue: "Color complexes are absolute. A light-square Bishop stays on light squares.",
           highlightSquares: ['d4'],
           overlayEffect: TutorialOverlayEffect.bishopDiagonals,
         ),
         TutorialStep(
           type: TutorialStepType.awaitMove,
-          dialogue: "Send the Bishop on a long-range transit from d4 to the corner square h8.",
+          dialogue: "Send the Bishop from d4 to h8.",
           highlightSquares: ['d4'],
           expectedMove: 'd4h8',
           reactionCorrect: MentorReaction(
-            dialogue: "Flawless trajectory. Long diagonals are extremely dangerous attack vectors.",
+            dialogue: "Flawless. Long diagonals are dangerous attack vectors.",
             mood: MentorMood.encouraging,
           ),
           reactionIllegal: MentorReaction(
-            dialogue: "Bishops move exclusively along diagonal paths. Maintain your color complex.",
+            dialogue: "Diagonals only. Move to h8.",
             mood: MentorMood.correction,
           ),
         ),
         TutorialStep(
           type: TutorialStepType.celebration,
-          dialogue: "Bishop tactics locked in. Coordinate pairs of bishops to slice across the entire board.",
+          dialogue: "Bishop tactics locked in. Slice through the board.",
           mentorMood: MentorMood.celebration,
         ),
       ],
@@ -215,37 +215,37 @@ class TutorialLessonsDatabase {
       steps: [
         TutorialStep(
           type: TutorialStepType.dialogue,
-          dialogue: "Ah, the Knight. The trickster of the royal court, executing maneuvers that defy standard blockades.",
+          dialogue: "The Knight. The trickster. They ignore walls.",
           mentorMood: MentorMood.calm,
         ),
         TutorialStep(
           type: TutorialStepType.demonstrate,
-          dialogue: "Knights move in a distinct 'L-shape': two squares horizontally then one vertically, or two vertically then one horizontally.",
+          dialogue: "The L-shape. Two squares one way, then one square perpendicular.",
           highlightSquares: ['d4'],
           overlayEffect: TutorialOverlayEffect.knightLPath,
         ),
         TutorialStep(
           type: TutorialStepType.dialogue,
-          dialogue: "Crucially, Knights are the only pieces capable of leaping directly over intervening friendly or enemy units.",
+          dialogue: "They are the only units capable of leaping over others. Blockades mean nothing to them.",
           mentorMood: MentorMood.calm,
         ),
         TutorialStep(
           type: TutorialStepType.awaitMove,
-          dialogue: "Execute an L-shaped leap with your Knight from d4 to f5.",
+          dialogue: "Execute an L-leap to f5.",
           highlightSquares: ['d4'],
           expectedMove: 'd4f5',
           reactionCorrect: MentorReaction(
-            dialogue: "Superb. Notice how a Knight always lands on a square of the opposite color.",
+            dialogue: "Superb. Notice the color switch on every landing.",
             mood: MentorMood.encouraging,
           ),
           reactionIllegal: MentorReaction(
-            dialogue: "Trace the L-pattern carefully: two squares right to f4, then one square up to f5.",
+            dialogue: "Two squares right, one square up. Move to f5.",
             mood: MentorMood.correction,
           ),
         ),
         TutorialStep(
           type: TutorialStepType.celebration,
-          dialogue: "Knight mobility verified. Use their unique arc to launch unblockable surprise forks.",
+          dialogue: "Knight mobility verified. Use their arc for unblockable forks.",
           mentorMood: MentorMood.celebration,
         ),
       ],
@@ -259,32 +259,32 @@ class TutorialLessonsDatabase {
       steps: [
         TutorialStep(
           type: TutorialStepType.dialogue,
-          dialogue: "Her Majesty, the Queen. The absolute apex predator of the chessboard.",
+          dialogue: "The Queen. The apex predator. Absolute power.",
           mentorMood: MentorMood.calm,
         ),
         TutorialStep(
           type: TutorialStepType.demonstrate,
-          dialogue: "The Queen combines the straight-line power of the Rook with the diagonal reach of the Bishop.",
+          dialogue: "The Rook's power combined with the Bishop's reach.",
           highlightSquares: ['d4'],
           overlayEffect: TutorialOverlayEffect.glowSquare,
         ),
         TutorialStep(
           type: TutorialStepType.awaitMove,
-          dialogue: "Unleash the Queen across the board: move her straight up to d8.",
+          dialogue: "Unleash her. Move to d8.",
           highlightSquares: ['d4'],
           expectedMove: 'd4d8',
           reactionCorrect: MentorReaction(
-            dialogue: "Devastating presence. Guard her carefully; losing your Queen early is often fatal.",
+            dialogue: "Devastating. Guard her carefully.",
             mood: MentorMood.encouraging,
           ),
           reactionIllegal: MentorReaction(
-            dialogue: "The Queen moves in any straight or diagonal line. Glide straight up the file to d8.",
+            dialogue: "Straight or diagonal. Glide to d8.",
             mood: MentorMood.correction,
           ),
         ),
         TutorialStep(
           type: TutorialStepType.celebration,
-          dialogue: "Queen dominance affirmed. With great power comes immense tactical responsibility.",
+          dialogue: "Queen dominance affirmed. Tactical responsibility is yours.",
           mentorMood: MentorMood.celebration,
         ),
       ],
@@ -298,32 +298,32 @@ class TutorialLessonsDatabase {
       steps: [
         TutorialStep(
           type: TutorialStepType.dialogue,
-          dialogue: "Finally, the King. The single piece that embodies the ultimate win or loss condition of the battle.",
+          dialogue: "The King. The ultimate objective. Lose him, and the battle ends.",
           mentorMood: MentorMood.calm,
         ),
         TutorialStep(
           type: TutorialStepType.demonstrate,
-          dialogue: "The King moves deliberately: exactly one square in any adjacent direction — straight or diagonal.",
+          dialogue: "One square in any direction. Deliberate and vital.",
           highlightSquares: ['d4'],
           overlayEffect: TutorialOverlayEffect.glowSquare,
         ),
         TutorialStep(
           type: TutorialStepType.awaitMove,
-          dialogue: "Step your King cautiously one square diagonally from d4 to e5.",
+          dialogue: "Step cautiously to e5.",
           highlightSquares: ['d4'],
           expectedMove: 'd4e5',
           reactionCorrect: MentorReaction(
-            dialogue: "Steady progression. In the endgame, an active King becomes a vital attacking force.",
+            dialogue: "Steady. An active King is vital in the endgame.",
             mood: MentorMood.encouraging,
           ),
           reactionIllegal: MentorReaction(
-            dialogue: "The King can only move one square per turn. Do not overextend beyond adjacent fields.",
+            dialogue: "One square only. Move to e5.",
             mood: MentorMood.correction,
           ),
         ),
         TutorialStep(
           type: TutorialStepType.celebration,
-          dialogue: "King safety parameters online. Protect him at all costs during the opening and middlegame.",
+          dialogue: "King safety is paramount. Protect him.",
           mentorMood: MentorMood.celebration,
         ),
       ],
@@ -337,22 +337,22 @@ class TutorialLessonsDatabase {
       steps: [
         TutorialStep(
           type: TutorialStepType.dialogue,
-          dialogue: "Unlike checkers, chess pieces do not jump over enemies to capture them.",
+          dialogue: "Capturing. We don't jump; we occupy and remove.",
           mentorMood: MentorMood.calm,
         ),
         TutorialStep(
           type: TutorialStepType.demonstrate,
-          dialogue: "To capture, a piece moves directly onto the square occupied by an opposing unit, removing it from the board.",
+          dialogue: "Move onto the target's square to eliminate them.",
           highlightSquares: ['d4', 'e5'],
           overlayEffect: TutorialOverlayEffect.dangerZone,
         ),
         TutorialStep(
           type: TutorialStepType.awaitMove,
-          dialogue: "Your Rook on d4 cannot capture diagonally. But wait... let us shift position.",
+          dialogue: "The Rook on d4 cannot strike diagonally. Adjust position. Move to d5.",
           highlightSquares: ['d4'],
-          expectedMove: 'd4d5', // Let's setup a valid capture line next
+          expectedMove: 'd4d5',
           reactionIllegal: MentorReaction(
-            dialogue: "Rooks move straight. Move to d5 first.",
+            dialogue: "Straight lines only. Move to d5.",
             mood: MentorMood.correction,
           ),
         ),
@@ -367,32 +367,32 @@ class TutorialLessonsDatabase {
       steps: [
         TutorialStep(
           type: TutorialStepType.dialogue,
-          dialogue: "When a King is directly threatened with capture, he is in 'Check'.",
+          dialogue: "Check. A direct threat to your King. You cannot ignore it.",
           mentorMood: MentorMood.correction,
         ),
         TutorialStep(
           type: TutorialStepType.demonstrate,
-          dialogue: "Notice the enemy Rook aiming straight down the 'e' file at your King. This threat cannot be ignored.",
+          dialogue: "The enemy Rook aims at your King. Resolve this immediately.",
           highlightSquares: ['e1'],
           overlayEffect: TutorialOverlayEffect.checkPulse,
         ),
         TutorialStep(
           type: TutorialStepType.awaitMove,
-          dialogue: "You must resolve the Check immediately. Step your King off the dangerous file to d1.",
+          dialogue: "Step off the dangerous file. Move to d1.",
           highlightSquares: ['e1'],
           expectedMove: 'e1d1',
           reactionCorrect: MentorReaction(
-            dialogue: "Crisis averted. Evading the line of fire is the simplest way out of Check.",
+            dialogue: "Crisis averted. Evading is the simplest solution.",
             mood: MentorMood.encouraging,
           ),
           reactionIllegal: MentorReaction(
-            dialogue: "You cannot remain in Check. Step sideways to d1 or f1 to escape the Rook's line.",
+            dialogue: "You are in check. Step to d1 or f1.",
             mood: MentorMood.correction,
           ),
         ),
         TutorialStep(
           type: TutorialStepType.celebration,
-          dialogue: "Check protocol understood. Never leave your King exposed to immediate capture.",
+          dialogue: "Check protocol understood. Never leave your King exposed.",
           mentorMood: MentorMood.celebration,
         ),
       ],
@@ -406,32 +406,32 @@ class TutorialLessonsDatabase {
       steps: [
         TutorialStep(
           type: TutorialStepType.dialogue,
-          dialogue: "There are exactly three ways to escape Check: Evade, Block, or Capture the attacker.",
+          dialogue: "Escaping Check: Evade, Block, or Capture.",
           mentorMood: MentorMood.calm,
         ),
         TutorialStep(
           type: TutorialStepType.demonstrate,
-          dialogue: "Here, the black Rook attacks from the flank. Moving the King is possible, but let us look closer.",
+          dialogue: "Flank attack. Moving the King is one option. Blocking is another.",
           highlightSquares: ['e1'],
           overlayEffect: TutorialOverlayEffect.checkPulse,
         ),
         TutorialStep(
           type: TutorialStepType.awaitMove,
-          dialogue: "Intercept the threat! Drop your Bishop back from d2 to c1 to block the Rook's assault.",
+          dialogue: "Intercept. Move the Bishop from d2 to c1. Shield the King.",
           highlightSquares: ['d2'],
           expectedMove: 'd2c1',
           reactionCorrect: MentorReaction(
-            dialogue: "Brilliant block. Using minor pieces as shields preserves your King's castling rights.",
+            dialogue: "Brilliant. Minor pieces are excellent shields.",
             mood: MentorMood.encouraging,
           ),
           reactionIllegal: MentorReaction(
-            dialogue: "Your King is under fire from the side. Move the Bishop to c1 to cut the attack line.",
+            dialogue: "Block the line. Move the Bishop to c1.",
             mood: MentorMood.correction,
           ),
         ),
         TutorialStep(
           type: TutorialStepType.celebration,
-          dialogue: "Defense systems optimized. Always evaluate all three escape vectors before panicking.",
+          dialogue: "Defense optimized. Evaluate all escape vectors.",
           mentorMood: MentorMood.celebration,
         ),
       ],
@@ -445,32 +445,32 @@ class TutorialLessonsDatabase {
       steps: [
         TutorialStep(
           type: TutorialStepType.dialogue,
-          dialogue: "The ultimate objective: Checkmate. A position where the King is in Check and has absolutely zero legal escapes.",
+          dialogue: "Checkmate. In check with zero escape. The end.",
           mentorMood: MentorMood.calm,
         ),
         TutorialStep(
           type: TutorialStepType.demonstrate,
-          dialogue: "Your King and Queen work in tandem to trap the black King in the corner. Deliver the final blow.",
+          dialogue: "Coordinated attack. Deliver the final blow.",
           highlightSquares: ['f7'],
           overlayEffect: TutorialOverlayEffect.dangerZone,
         ),
         TutorialStep(
           type: TutorialStepType.awaitMove,
-          dialogue: "Slide the Queen in for the kill: move her from f7 directly to g7.",
+          dialogue: "Slide the Queen to g7. End it.",
           highlightSquares: ['f7'],
           expectedMove: 'f7g7',
           reactionCorrect: MentorReaction(
-            dialogue: "Checkmate! The enemy King is attacked and all escape squares are covered by your King.",
+            dialogue: "Checkmate. Victory is yours.",
             mood: MentorMood.celebration,
           ),
           reactionIllegal: MentorReaction(
-            dialogue: "Look for a square right next to the black King supported by your own King. Move to g7.",
+            dialogue: "Move to g7. Support the kill.",
             mood: MentorMood.correction,
           ),
         ),
         TutorialStep(
           type: TutorialStepType.celebration,
-          dialogue: "Absolute victory achieved. Coordination between pieces is the key to creating mating nets.",
+          dialogue: "Absolute victory. Coordination is the key.",
           mentorMood: MentorMood.celebration,
         ),
       ],
@@ -484,32 +484,32 @@ class TutorialLessonsDatabase {
       steps: [
         TutorialStep(
           type: TutorialStepType.dialogue,
-          dialogue: "Beware the tragedy of Stalemate. A game drawn instantly because the player to move has no legal moves, yet their King is NOT in Check.",
+          dialogue: "Stalemate. No moves, but no check. A tragic draw.",
           mentorMood: MentorMood.correction,
         ),
         TutorialStep(
           type: TutorialStepType.demonstrate,
-          dialogue: "If you carelessly move your Queen to g6, the black King will be trapped with no legal moves, triggering an automatic draw.",
+          dialogue: "Moving to g6 triggers an automatic draw. Avoid the trap.",
           highlightSquares: ['g6'],
           overlayEffect: TutorialOverlayEffect.dangerZone,
         ),
         TutorialStep(
           type: TutorialStepType.awaitMove,
-          dialogue: "Avoid the blunder. Make a constructive move that leaves the King breathing room: move the King from f6 to e6.",
+          dialogue: "Make room. King to e6.",
           highlightSquares: ['f6'],
           expectedMove: 'f6e6',
           reactionCorrect: MentorReaction(
-            dialogue: "Wise restraint. Always ensure your opponent has a legal response when closing in.",
+            dialogue: "Wise. Always leave breathing room.",
             mood: MentorMood.encouraging,
           ),
           reactionIllegal: MentorReaction(
-            dialogue: "Do not crowd the cornered King unnecessarily. Step your own King away to e6.",
+            dialogue: "Step back to e6.",
             mood: MentorMood.correction,
           ),
         ),
         TutorialStep(
           type: TutorialStepType.celebration,
-          dialogue: "Stalemate trap bypassed. Precision in the endgame prevents turning a guaranteed victory into a disappointing draw.",
+          dialogue: "Trap bypassed. Precision prevents draws.",
           mentorMood: MentorMood.celebration,
         ),
       ],
@@ -523,37 +523,37 @@ class TutorialLessonsDatabase {
       steps: [
         TutorialStep(
           type: TutorialStepType.dialogue,
-          dialogue: "Castling is a special dual-piece maneuver that simultaneously safeguards your King and activates your Rook.",
+          dialogue: "Castling. Safeguard the King, activate the Rook. One move, two pieces.",
           mentorMood: MentorMood.calm,
         ),
         TutorialStep(
           type: TutorialStepType.demonstrate,
-          dialogue: "To castle Kingside (annotated as O-O), the squares between the King and the h-file Rook must be entirely vacant.",
+          dialogue: "Kingside (O-O). The path must be clear.",
           highlightSquares: ['e1', 'f1', 'g1', 'h1'],
           overlayEffect: TutorialOverlayEffect.castlingPath,
         ),
         TutorialStep(
           type: TutorialStepType.dialogue,
-          dialogue: "Neither piece can have moved previously, the King cannot be in check, and cannot pass through attacked squares.",
+          dialogue: "No prior moves. Not in check. No threatened squares on the path.",
           mentorMood: MentorMood.calm,
         ),
         TutorialStep(
           type: TutorialStepType.awaitMove,
-          dialogue: "Execute Kingside Castling: drag your King two squares to the right from e1 to g1.",
+          dialogue: "Kingside Castle. Drag the King to g1.",
           highlightSquares: ['e1'],
           expectedMove: 'e1g1',
           reactionCorrect: MentorReaction(
-            dialogue: "Flawless execution. The King is safely tucked away, and the Rook leaps over to f1 ready for action.",
+            dialogue: "Flawless. King safe, Rook ready.",
             mood: MentorMood.encouraging,
           ),
           reactionIllegal: MentorReaction(
-            dialogue: "To castle, move the King exactly two squares toward the target Rook. Ensure paths are clear and unthreatened.",
+            dialogue: "King two squares right. Move to g1.",
             mood: MentorMood.correction,
           ),
         ),
         TutorialStep(
           type: TutorialStepType.celebration,
-          dialogue: "Kingside fortress established. Try to castle early in every game you play.",
+          dialogue: "Kingside fortress established. Castle early.",
           mentorMood: MentorMood.celebration,
         ),
       ],
@@ -567,32 +567,32 @@ class TutorialLessonsDatabase {
       steps: [
         TutorialStep(
           type: TutorialStepType.dialogue,
-          dialogue: "Queenside Castling (annotated as O-O-O) operates on identical logic but spans the wider left flank.",
+          dialogue: "Queenside Castling (O-O-O). Identical logic, wider flank.",
           mentorMood: MentorMood.calm,
         ),
         TutorialStep(
           type: TutorialStepType.demonstrate,
-          dialogue: "Three empty squares must separate the King from the a-file Rook. The King still moves exactly two squares left.",
+          dialogue: "King still moves two squares. Rook transits three.",
           highlightSquares: ['e1', 'd1', 'c1', 'b1', 'a1'],
           overlayEffect: TutorialOverlayEffect.castlingPath,
         ),
         TutorialStep(
           type: TutorialStepType.awaitMove,
-          dialogue: "Perform Queenside Castling: drag your King two squares left from e1 to c1.",
+          dialogue: "Queenside Castle. King to c1.",
           highlightSquares: ['e1'],
           expectedMove: 'e1c1',
           reactionCorrect: MentorReaction(
-            dialogue: "Magnificent. Notice how the Rook transits across three squares to land centrally on d1.",
+            dialogue: "Magnificent. Centralized Rook.",
             mood: MentorMood.encouraging,
           ),
           reactionIllegal: MentorReaction(
-            dialogue: "To castle, move the King exactly two squares toward the target Rook. Ensure paths are clear and unthreatened.",
+            dialogue: "King two squares left. Move to c1.",
             mood: MentorMood.correction,
           ),
         ),
         TutorialStep(
           type: TutorialStepType.celebration,
-          dialogue: "Dual flank castling mastered. Flexibility in your king placement keeps your opponent guessing.",
+          dialogue: "Dual flank castling mastered. Keep them guessing.",
           mentorMood: MentorMood.celebration,
         ),
       ],
@@ -606,37 +606,37 @@ class TutorialLessonsDatabase {
       steps: [
         TutorialStep(
           type: TutorialStepType.dialogue,
-          dialogue: "We arrive at 'En Passant' (in passing) — the most elusive and misunderstood rule in chess.",
+          dialogue: "En Passant. In passing. The elusive strike.",
           mentorMood: MentorMood.calm,
         ),
         TutorialStep(
           type: TutorialStepType.demonstrate,
-          dialogue: "When an enemy pawn leaps two squares forward from its starting rank, landing directly adjacent to your advanced pawn...",
+          dialogue: "An enemy pawn leaps two squares, landing adjacent to yours.",
           highlightSquares: ['e5', 'd5'],
           overlayEffect: TutorialOverlayEffect.enPassantArrow,
         ),
         TutorialStep(
           type: TutorialStepType.dialogue,
-          dialogue: "...you have the fleeting right to capture it diagonally as if it had only advanced a single square. This right lasts for exactly one turn.",
+          dialogue: "Strike diagonally behind it. This right lasts for exactly one turn.",
           mentorMood: MentorMood.correction,
         ),
         TutorialStep(
           type: TutorialStepType.awaitMove,
-          dialogue: "Strike immediately! Move your white pawn diagonally from e5 to d6 to execute En Passant.",
+          dialogue: "Strike. Move e5 to d6.",
           highlightSquares: ['e5'],
           expectedMove: 'e5d6',
           reactionCorrect: MentorReaction(
-            dialogue: "Incredible capture. The bypassed black pawn on d5 is swept from the field.",
+            dialogue: "Incredible. The bypassed unit is swept from the field.",
             mood: MentorMood.celebration,
           ),
           reactionIllegal: MentorReaction(
-            dialogue: "Attack diagonally behind the advanced enemy pawn. Move your pawn to d6.",
+            dialogue: "Diagonal strike. Move to d6.",
             mood: MentorMood.correction,
           ),
         ),
         TutorialStep(
           type: TutorialStepType.celebration,
-          dialogue: "En Passant demystified. You now possess knowledge that eludes many intermediate casual players.",
+          dialogue: "En Passant demystified. You possess rare knowledge.",
           mentorMood: MentorMood.celebration,
         ),
       ],
@@ -650,32 +650,32 @@ class TutorialLessonsDatabase {
       steps: [
         TutorialStep(
           type: TutorialStepType.dialogue,
-          dialogue: "Ascension awaits. When a humble pawn successfully navigates the board to reach the final enemy rank...",
+          dialogue: "Ascension. Reach the final rank and transform.",
           mentorMood: MentorMood.calm,
         ),
         TutorialStep(
           type: TutorialStepType.demonstrate,
-          dialogue: "...it undergoes an instant transformation, promoting into a Queen, Rook, Bishop, or Knight.",
+          dialogue: "Promote to any major or minor piece. Usually, a Queen.",
           highlightSquares: ['e7', 'e8'],
           overlayEffect: TutorialOverlayEffect.glowSquare,
         ),
         TutorialStep(
           type: TutorialStepType.awaitMove,
-          dialogue: "Push your advanced pawn on e7 to the final rank at e8 and claim your new Queen.",
+          dialogue: "Push to e8. Claim your Queen.",
           highlightSquares: ['e7'],
           expectedMove: 'e7e8q',
           reactionCorrect: MentorReaction(
-            dialogue: "A new Queen arises! Promotion converts positional perseverance into massive material advantage.",
+            dialogue: "A new Queen arises. Positional perseverance rewarded.",
             mood: MentorMood.celebration,
           ),
           reactionIllegal: MentorReaction(
-            dialogue: "March straight forward to the back rank square e8 to trigger the ascension sequence.",
+            dialogue: "March forward to e8.",
             mood: MentorMood.correction,
           ),
         ),
         TutorialStep(
           type: TutorialStepType.celebration,
-          dialogue: "Promotion protocols verified. Pushing passed pawns is a primary path to victory.",
+          dialogue: "Promotion verified. Passed pawns win games.",
           mentorMood: MentorMood.celebration,
         ),
       ],
@@ -689,12 +689,12 @@ class TutorialLessonsDatabase {
       steps: [
         TutorialStep(
           type: TutorialStepType.dialogue,
-          dialogue: "Beyond Stalemate, games can end in a draw through Agreement, Threefold Repetition, or the 50-Move Rule without captures or pawn pushes.",
+          dialogue: "Draws. Repetition, Agreement, or the 50-move rule.",
           mentorMood: MentorMood.calm,
         ),
         TutorialStep(
           type: TutorialStepType.celebration,
-          dialogue: "Understanding draw mechanisms allows you to salvage half a point from inferior endgame positions.",
+          dialogue: "Knowledge of draws salvages half a point from the abyss.",
           mentorMood: MentorMood.celebration,
         ),
       ],
@@ -707,16 +707,16 @@ class TutorialLessonsDatabase {
       steps: [
         TutorialStep(
           type: TutorialStepType.dialogue,
-          dialogue: "Three golden rules govern the opening: Control the Center, Develop Minor Pieces rapidly, and Castle early for King safety.",
+          dialogue: "Opening Principles: Center, Develop, Castle.",
           mentorMood: MentorMood.calm,
         ),
         TutorialStep(
           type: TutorialStepType.awaitMove,
-          dialogue: "Stake a perfect opening claim. Play your central King's pawn to e4.",
+          dialogue: "Stake your claim. e2 to e4.",
           highlightSquares: ['e2'],
           expectedMove: 'e2e4',
           reactionCorrect: MentorReaction(
-            dialogue: "Excellent start. Space, development, and safety dictate the flow of the early game.",
+            dialogue: "Excellent. Space and development dictate the flow.",
             mood: MentorMood.encouraging,
           ),
         ),
@@ -730,12 +730,12 @@ class TutorialLessonsDatabase {
       steps: [
         TutorialStep(
           type: TutorialStepType.dialogue,
-          dialogue: "Material evaluation guides trades. Standard scales assign: Queen=9, Rook=5, Bishop=3, Knight=3, and Pawn=1.",
+          dialogue: "Piece Value. Q:9, R:5, B:3, N:3, P:1.",
           mentorMood: MentorMood.calm,
         ),
         TutorialStep(
           type: TutorialStepType.celebration,
-          dialogue: "Never trade a high-value piece for a lesser one unless you calculate an immediate concrete tactical gain.",
+          dialogue: "Calculate every trade. Never lose value.",
           mentorMood: MentorMood.celebration,
         ),
       ],
@@ -748,12 +748,12 @@ class TutorialLessonsDatabase {
       steps: [
         TutorialStep(
           type: TutorialStepType.dialogue,
-          dialogue: "Tactics win material instantly. The most common pattern is the 'Fork' — a simultaneous double-attack launched by a single unit.",
+          dialogue: "Tactics. The Fork. One unit, two targets.",
           mentorMood: MentorMood.calm,
         ),
         TutorialStep(
           type: TutorialStepType.celebration,
-          dialogue: "Look for geometries where one piece threatens two uncoordinated enemy targets at once.",
+          dialogue: "Find the geometries. Strike twice.",
           mentorMood: MentorMood.celebration,
         ),
       ],
@@ -766,12 +766,12 @@ class TutorialLessonsDatabase {
       steps: [
         TutorialStep(
           type: TutorialStepType.dialogue,
-          dialogue: "You have absorbed the theory. Now, visualization must become automatic.",
+          dialogue: "Theory absorbed. Now, visualization must be automatic.",
           mentorMood: MentorMood.calm,
         ),
         TutorialStep(
           type: TutorialStepType.celebration,
-          dialogue: "Your tactical awareness is sharp. Only one challenge remains.",
+          dialogue: "Tactical awareness sharp. One trial remains.",
           mentorMood: MentorMood.celebration,
         ),
       ],
@@ -785,7 +785,7 @@ class TutorialLessonsDatabase {
       steps: [
         TutorialStep(
           type: TutorialStepType.dialogue,
-          dialogue: "The final trial. You will face Sparky in a fully unrestricted chess match. Show me what you have learned.",
+          dialogue: "The final trial. Face Sparky. Show me your mastery.",
           mentorMood: MentorMood.celebration,
         ),
       ],
