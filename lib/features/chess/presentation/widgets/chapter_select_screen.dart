@@ -8,6 +8,9 @@ import '../../domain/models/tutorial_lesson.dart';
 import '../../domain/models/tutorial_progress.dart';
 import '../../data/tutorial_lessons.dart';
 import '../scholarly_theme.dart';
+import 'global_sidebar.dart';
+import 'game_controls.dart';
+
 
 class ChapterSelectScreen extends ConsumerWidget {
   const ChapterSelectScreen({super.key, required this.onSelectChapter});
@@ -23,12 +26,15 @@ class ChapterSelectScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
     final state = ref.watch(tutorialProvider);
     final p = state.progress;
     final lessons = TutorialLessonsDatabase.lessons;
 
     return Scaffold(
+      key: scaffoldKey,
       backgroundColor: ScholarlyTheme.backgroundStart,
+      drawer: const GlobalSidebar(),
       body: Stack(
         children: [
           // 1. Dashboard Content Layer
@@ -36,29 +42,8 @@ class ChapterSelectScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Simplified breadcrumb header matching the new layout request
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 48, 20, 8),
-                  child: Row(
-                    children: [
-                      IconButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        icon: const Icon(Icons.arrow_back_rounded, color: ScholarlyTheme.textPrimary, size: 22),
-                        tooltip: 'Exit Academy',
-                      ),
-                      const Spacer(),
-                      Text(
-                        'TUTORIAL',
-                        style: GoogleFonts.inter(
-                          color: ScholarlyTheme.accentBlue,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 2.0,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                // Top margin since header is gone
+                const SizedBox(height: 60),
 
                 const Divider(height: 1, color: ScholarlyTheme.panelStroke),
 
@@ -135,6 +120,32 @@ class ChapterSelectScreen extends ConsumerWidget {
               onPressed: () => _showSettingsDialog(context, ref),
               icon: const Icon(Icons.settings_rounded, color: ScholarlyTheme.textSubtle, size: 20),
               tooltip: 'Tutorial Settings',
+            ),
+          ),
+
+          // Bottom Action Row for Global Consistency
+          Positioned(
+            bottom: 24,
+            left: 20,
+            right: 20,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                ActionIconButton(
+                  icon: Icons.menu_rounded,
+                  size: 24,
+                  onTap: () => scaffoldKey.currentState?.openDrawer(),
+                ),
+                Text(
+                  'TUTORIAL',
+                  style: GoogleFonts.inter(
+                    color: ScholarlyTheme.textSubtle,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.5,
+                  ),
+                ),
+              ],
             ),
           ),
         ],

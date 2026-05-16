@@ -9,21 +9,28 @@ import 'widgets/commentary_history.dart';
 import 'widgets/board_stage.dart';
 import 'themes/theme_registry.dart';
 import 'settings_page.dart';
-import 'tutorial_page.dart';
+import 'widgets/global_sidebar.dart';
+
 
 class AcademyPage extends ConsumerStatefulWidget {
-  const AcademyPage({super.key});
+  final bool startInPuzzleMode;
+  const AcademyPage({super.key, this.startInPuzzleMode = false});
 
   @override
   ConsumerState<AcademyPage> createState() => _AcademyPageState();
 }
 
 class _AcademyPageState extends ConsumerState<AcademyPage> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(chessProvider.notifier).initializeAcademySession();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await ref.read(chessProvider.notifier).initializeAcademySession();
+      if (widget.startInPuzzleMode) {
+        ref.read(chessProvider.notifier).startPuzzleMode();
+      }
     });
   }
 
@@ -242,7 +249,9 @@ class _AcademyPageState extends ConsumerState<AcademyPage> {
         await _requestExitAcademy();
       },
       child: Scaffold(
+        key: _scaffoldKey,
         backgroundColor: ScholarlyTheme.backgroundStart,
+        drawer: const GlobalSidebar(),
         body: SafeArea(
           top: false,
           left: false, // Allow AI chat box on far left to reach edge-to-edge under notch/notification area
@@ -297,19 +306,9 @@ class _AcademyPageState extends ConsumerState<AcademyPage> {
                         ? Row(
                             children: [
                               _CompactActionIcon(
-                                icon: Icons.exit_to_app_rounded,
-                                customBgColor: Colors.redAccent.withValues(alpha: 0.15),
-                                customIconColor: Colors.redAccent,
-                                tooltip: 'Exit Academy',
-                                onTap: _requestExitAcademy,
-                              ),
-                              const SizedBox(width: 8),
-                              _CompactActionIcon(
-                                icon: Icons.school_rounded,
-                                customBgColor: Colors.orange.withValues(alpha: 0.15),
-                                customIconColor: Colors.orange,
-                                tooltip: 'Free Study Mode',
-                                onTap: () => notifier.exitPuzzleMode(),
+                                icon: Icons.menu_rounded,
+                                tooltip: 'Menu',
+                                onTap: () => _scaffoldKey.currentState?.openDrawer(),
                               ),
                               const SizedBox(width: 8),
                               _CompactActionIcon(
@@ -356,33 +355,9 @@ class _AcademyPageState extends ConsumerState<AcademyPage> {
                         : Row(
                             children: [
                               _CompactActionIcon(
-                                icon: Icons.exit_to_app_rounded,
-                                customBgColor: Colors.redAccent.withValues(alpha: 0.15),
-                                customIconColor: Colors.redAccent,
-                                tooltip: 'Exit Academy',
-                                onTap: _requestExitAcademy,
-                              ),
-                              const SizedBox(width: 8),
-                              _CompactActionIcon(
-                                icon: Icons.extension_rounded,
-                                tooltip: 'Puzzle Training',
-                                customBgColor: ScholarlyTheme.accentBlue.withValues(alpha: 0.15),
-                                customIconColor: ScholarlyTheme.accentBlue,
-                                onTap: () => notifier.startPuzzleMode(),
-                              ),
-                              const SizedBox(width: 8),
-                              _CompactActionIcon(
-                                icon: Icons.menu_book_rounded,
-                                tooltip: 'Interactive Tutorial',
-                                customBgColor: Colors.deepPurple.withValues(alpha: 0.15),
-                                customIconColor: Colors.deepPurpleAccent,
-                                onTap: () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (context) => const TutorialPage(),
-                                    ),
-                                  );
-                                },
+                                icon: Icons.menu_rounded,
+                                tooltip: 'Menu',
+                                onTap: () => _scaffoldKey.currentState?.openDrawer(),
                               ),
                               const SizedBox(width: 8),
                               _CompactActionIcon(
@@ -466,8 +441,6 @@ class _CompactActionIcon extends StatefulWidget {
     this.isActive = false,
     this.activeColor,
     this.activeIconColor,
-    this.customBgColor,
-    this.customIconColor,
   });
 
   final IconData icon;
@@ -477,8 +450,6 @@ class _CompactActionIcon extends StatefulWidget {
   final bool isActive;
   final Color? activeColor;
   final Color? activeIconColor;
-  final Color? customBgColor;
-  final Color? customIconColor;
 
   @override
   State<_CompactActionIcon> createState() => _CompactActionIconState();
@@ -498,7 +469,7 @@ class _CompactActionIconState extends State<_CompactActionIcon> {
       ).copyWith(
         color: (widget.isActive || _isPressed)
             ? (widget.activeColor ?? ScholarlyTheme.accentBlueSoft)
-            : (widget.customBgColor ?? ScholarlyTheme.panelBase),
+            : ScholarlyTheme.panelBase,
         borderRadius: BorderRadius.circular(10),
       ),
       child: Center(
@@ -508,7 +479,7 @@ class _CompactActionIconState extends State<_CompactActionIcon> {
           color: widget.isEnabled
               ? (widget.isActive
                     ? (widget.activeIconColor ?? ScholarlyTheme.accentBlue)
-                    : (widget.customIconColor ?? ScholarlyTheme.textPrimary))
+                    : ScholarlyTheme.textPrimary)
               : ScholarlyTheme.textSubtle,
         ),
       ),

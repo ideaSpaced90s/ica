@@ -13,6 +13,8 @@ import 'widgets/board_stage.dart';
 import 'settings_page.dart';
 import '../domain/models/ai_avatar.dart';
 import 'widgets/opponent_avatar_indicator.dart';
+import 'widgets/global_sidebar.dart';
+
 
 class MainPage extends ConsumerStatefulWidget {
   const MainPage({super.key});
@@ -23,6 +25,8 @@ class MainPage extends ConsumerStatefulWidget {
 
 class _MainPageState extends ConsumerState<MainPage>
     with WidgetsBindingObserver {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
   @override
   void initState() {
     super.initState();
@@ -117,7 +121,9 @@ class _MainPageState extends ConsumerState<MainPage>
         }
       },
       child: Scaffold(
+        key: _scaffoldKey,
         backgroundColor: ScholarlyTheme.backgroundStart,
+        drawer: const GlobalSidebar(),
         body: Stack(
           children: [
             _buildPortraitLayout(context, ref, chessState),
@@ -361,17 +367,13 @@ class _MainPageState extends ConsumerState<MainPage>
         mainAxisSize: MainAxisSize.min,
         children: [
           ActionIconButton(
-            icon: Icons.add_box_rounded,
-            onTap: () => _handleNewGame(context, ref),
+            icon: Icons.menu_rounded,
+            onTap: () => _scaffoldKey.currentState?.openDrawer(),
           ),
           const SizedBox(width: 6),
           ActionIconButton(
-            icon: Icons.tune_rounded,
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (context) => const SettingsPage()),
-              );
-            },
+            icon: Icons.add_box_rounded,
+            onTap: () => _handleNewGame(context, ref),
           ),
           const SizedBox(width: 6),
           ActionIconButton(

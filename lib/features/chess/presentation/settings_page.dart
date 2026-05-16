@@ -9,53 +9,41 @@ import 'package:kingslayer_chess/features/chess/presentation/themes/theme_regist
 import 'package:kingslayer_chess/features/chess/presentation/themes/chess_theme.dart';
 import '../domain/models/ai_avatar.dart';
 import 'academy_page.dart';
+import 'widgets/global_sidebar.dart';
+import 'widgets/game_controls.dart';
 
-class SettingsPage extends ConsumerWidget {
+
+
+class SettingsPage extends ConsumerStatefulWidget {
   final bool isAcademyMode;
 
   const SettingsPage({super.key, this.isAcademyMode = false});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SettingsPage> createState() => _SettingsPageState();
+}
+
+class _SettingsPageState extends ConsumerState<SettingsPage> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(chessProvider);
     final notifier = ref.read(chessProvider.notifier);
 
     return Scaffold(
+      key: _scaffoldKey,
       backgroundColor: ScholarlyTheme.backgroundStart,
-      body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          // Modern App Bar
-          SliverAppBar(
-            pinned: true,
-            backgroundColor: ScholarlyTheme.backgroundStart,
-            surfaceTintColor: ScholarlyTheme.backgroundStart,
-            leading: IconButton(
-              icon: const Icon(
-                Icons.arrow_back_ios_new_rounded,
-                color: ScholarlyTheme.textPrimary,
-                size: 20,
-              ),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-            actions: [
-              Center(
-                child: Padding(
-                  padding: const EdgeInsets.only(right: 20),
-                  child: Text(
-                    'Settings',
-                    style: GoogleFonts.inter(
-                      color: ScholarlyTheme.textPrimary,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
+      drawer: const GlobalSidebar(),
+      body: Stack(
+        children: [
+          CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              // Extra top padding since app bar is gone
+              const SliverToBoxAdapter(child: SizedBox(height: 60)),
 
-          // Game Status Card
+              // Game Status Card
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -67,7 +55,7 @@ class SettingsPage extends ConsumerWidget {
           SliverList(
             delegate: SliverChildListDelegate([
               // MATCH TYPE & COMPETITIVE SYSTEM
-              if (!isAcademyMode)
+              if (!widget.isAcademyMode)
                 _SettingsCategory(
                   title: 'MATCH TYPE',
                   children: [
@@ -325,7 +313,7 @@ class SettingsPage extends ConsumerWidget {
 
 
               // GAMEPLAY
-              if (!isAcademyMode)
+              if (!widget.isAcademyMode)
                 _SettingsCategory(
                   title: 'GAMEPLAY',
                   children: [
@@ -376,7 +364,7 @@ class SettingsPage extends ConsumerWidget {
                 ),
 
               // DATA & MANAGEMENT
-              if (!isAcademyMode)
+              if (!widget.isAcademyMode)
                 _SettingsCategory(
                   title: 'MANAGEMENT',
                   children: [
@@ -409,7 +397,7 @@ class SettingsPage extends ConsumerWidget {
                 ),
 
               // DANGER ZONE
-              if (!isAcademyMode)
+              if (!widget.isAcademyMode)
                 _SettingsCategory(
                   title: 'EXIT',
                   children: [
@@ -423,8 +411,40 @@ class SettingsPage extends ConsumerWidget {
                   ],
                 ),
 
-              const SizedBox(height: 40),
+              const SizedBox(height: 120), // Bottom padding for floating bar
             ]),
+          ),
+        ], // End of slivers
+      ), // End of CustomScrollView
+
+      // Global Consistency Action Row (Floating over the scroll view)
+      _buildActionRow(context),
+        ], // End of Stack.children
+      ), // End of Stack
+    ); // End of Scaffold
+  }
+
+  Widget _buildActionRow(BuildContext context) {
+    return Positioned(
+      bottom: 24,
+      left: 20,
+      right: 20,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          ActionIconButton(
+            icon: Icons.menu_rounded,
+            size: 24,
+            onTap: () => _scaffoldKey.currentState?.openDrawer(),
+          ),
+          Text(
+            'SETTINGS',
+            style: GoogleFonts.inter(
+              color: ScholarlyTheme.textSubtle,
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.5,
+            ),
           ),
         ],
       ),

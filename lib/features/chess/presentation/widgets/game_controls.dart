@@ -12,6 +12,7 @@ class ActionIconButton extends StatefulWidget {
     this.isActive = false,
     this.activeColor,
     this.activeIconColor,
+    this.size,
   });
 
   final IconData icon;
@@ -20,6 +21,7 @@ class ActionIconButton extends StatefulWidget {
   final bool isActive;
   final Color? activeColor;
   final Color? activeIconColor;
+  final double? size;
 
   @override
   State<ActionIconButton> createState() => _ActionIconButtonState();
@@ -35,7 +37,8 @@ class _ActionIconButtonState extends State<ActionIconButton> {
 
     // Cap button size for small height screens
     final double portraitBase = sizeInfo.size.height * 0.12;
-    final size = isPortrait ? portraitBase.clamp(40.0, 80.0) : 40.0;
+    final defaultSize = isPortrait ? portraitBase.clamp(40.0, 80.0) : 40.0;
+    final size = widget.size ?? defaultSize;
 
     return GestureDetector(
       onTapDown: widget.isEnabled

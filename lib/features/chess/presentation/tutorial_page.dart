@@ -10,6 +10,9 @@ import 'widgets/chapter_completion_overlay.dart';
 import 'widgets/chapter_select_screen.dart';
 import 'widgets/illegal_move_feedback.dart';
 import 'widgets/mentor_panel.dart';
+import 'widgets/global_sidebar.dart';
+import 'widgets/game_controls.dart';
+
 
 class TutorialPage extends ConsumerStatefulWidget {
   const TutorialPage({super.key});
@@ -19,6 +22,7 @@ class TutorialPage extends ConsumerStatefulWidget {
 }
 
 class _TutorialPageState extends ConsumerState<TutorialPage> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   bool _isChapterSelectionVisible = true;
 
   @override
@@ -66,7 +70,9 @@ class _TutorialPageState extends ConsumerState<TutorialPage> {
 
     // 3. Main Active Lesson Runtime Surface
     return Scaffold(
+      key: _scaffoldKey,
       backgroundColor: ScholarlyTheme.backgroundStart,
+      drawer: const GlobalSidebar(),
       body: SafeArea(
         top: false,
         child: Column(
@@ -98,6 +104,12 @@ class _TutorialPageState extends ConsumerState<TutorialPage> {
                 ),
                 child: Row(
                   children: [
+                    ActionIconButton(
+                      icon: Icons.menu_rounded,
+                      size: 20,
+                      onTap: () => _scaffoldKey.currentState?.openDrawer(),
+                    ),
+                    const SizedBox(width: 12),
                     IconButton(
                       onPressed: () => setState(() => _isChapterSelectionVisible = true),
                       icon: const Icon(Icons.grid_view_rounded, size: 20, color: ScholarlyTheme.accentBlue),
@@ -105,7 +117,7 @@ class _TutorialPageState extends ConsumerState<TutorialPage> {
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
