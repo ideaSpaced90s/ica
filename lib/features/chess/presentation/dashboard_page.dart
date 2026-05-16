@@ -105,6 +105,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                           state.bulletStreak,
                           state.bulletGamesClassic,
                           state.bulletGames960,
+                          state.bulletDominance,
                         ),
                         _buildTierCard(
                           'BLITZ ARENA',
@@ -113,6 +114,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                           state.blitzStreak,
                           state.blitzGamesClassic,
                           state.blitzGames960,
+                          state.blitzDominance,
                         ),
                         _buildTierCard(
                           'RAPID ARENA',
@@ -121,6 +123,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                           state.rapidStreak,
                           state.rapidGamesClassic,
                           state.rapidGames960,
+                          state.rapidDominance,
                         ),
                       ],
                     ),
@@ -164,6 +167,18 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
   }
 
   Widget _buildMasterCard(ChessState state) {
+    final bulletCount = state.bulletGamesClassic + state.bulletGames960;
+    final blitzCount = state.blitzGamesClassic + state.blitzGames960;
+    final rapidCount = state.rapidGamesClassic + state.rapidGames960;
+    final totalCount = bulletCount + blitzCount + rapidCount;
+    
+    double avgDominance = 0.0;
+    if (totalCount > 0) {
+      avgDominance = (state.bulletDominance * bulletCount + 
+                      state.blitzDominance * blitzCount + 
+                      state.rapidDominance * rapidCount) / totalCount;
+    }
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
@@ -232,12 +247,18 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
             ],
           ),
           const SizedBox(height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildBigStat('CONSOLIDATED ELO', '${state.consolidatedRating}'),
-              _buildBigStat('TOTAL MATCHES', '${state.totalRatedGamesCount}'),
-            ],
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildBigStat('CONSOLIDATED ELO', '${state.consolidatedRating}'),
+                const SizedBox(width: 24),
+                _buildBigStat('TOTAL MATCHES', '${state.totalRatedGamesCount}'),
+                const SizedBox(width: 24),
+                _buildBigStat('AVG. DOMINANCE', '${avgDominance >= 0 ? '+' : ''}${avgDominance.toStringAsFixed(1)}'),
+              ],
+            ),
           ),
         ],
       ),
@@ -269,7 +290,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
     );
   }
 
-  Widget _buildTierCard(String title, IconData icon, int elo, int streak, int classic, int nineSixty) {
+  Widget _buildTierCard(String title, IconData icon, int elo, int streak, int classic, int nineSixty, double dominance) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -321,33 +342,53 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                   ],
                 ),
                 const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Text(
-                      '$elo ELO',
-                      style: GoogleFonts.jetBrainsMono(
-                        color: ScholarlyTheme.accentBlue,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const Spacer(),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: ScholarlyTheme.accentBlue.withValues(alpha: 0.05),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        'C: $classic | 960: $nineSixty',
-                        style: GoogleFonts.inter(
-                          color: ScholarlyTheme.textSubtle,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Row(
+                    children: [
+                      Text(
+                        '$elo ELO',
+                        style: GoogleFonts.jetBrainsMono(
+                          color: ScholarlyTheme.accentBlue,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: (dominance >= 0 ? Colors.green : Colors.red).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          '${dominance >= 0 ? '+' : ''}${dominance.toStringAsFixed(1)}',
+                          style: GoogleFonts.jetBrainsMono(
+                            color: dominance >= 0 ? Colors.greenAccent : Colors.redAccent,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 24),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: ScholarlyTheme.accentBlue.withValues(alpha: 0.05),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          'C: $classic | 960: $nineSixty',
+                          style: GoogleFonts.inter(
+                            color: ScholarlyTheme.textSubtle,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),

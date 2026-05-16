@@ -414,4 +414,38 @@ class ChessGame {
         .map((h) => chess_lib.Piece(h.move.captured!, chess_lib.Color.WHITE))
         .toList();
   }
+
+  double calculateMaterialMargin(chess_lib.Color playerColor) {
+    double score = 0;
+    for (var i = 0; i < 64; i++) {
+      final square = chess_lib.Chess.algebraic(i);
+      final piece = _chess.get(square);
+      if (piece != null) {
+        final value = _getPieceValue(piece.type);
+        if (piece.color == playerColor) {
+          score += value;
+        } else {
+          score -= value;
+        }
+      }
+    }
+    return score;
+  }
+
+  double _getPieceValue(chess_lib.PieceType type) {
+    switch (type) {
+      case chess_lib.PieceType.PAWN:
+        return 1.0;
+      case chess_lib.PieceType.KNIGHT:
+        return 3.0;
+      case chess_lib.PieceType.BISHOP:
+        return 3.0;
+      case chess_lib.PieceType.ROOK:
+        return 5.0;
+      case chess_lib.PieceType.QUEEN:
+        return 9.0;
+      default:
+        return 0.0;
+    }
+  }
 }

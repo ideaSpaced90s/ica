@@ -92,31 +92,37 @@ class _ZenArenaPageState extends ConsumerState<ZenArenaPage> with WidgetsBinding
         // Top Row: Stats & Clocks
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: SizedBox(
+              width: MediaQuery.of(context).size.width - 32,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  ArenaTurnIndicator(isActive: isTurn, isWhite: state.isPlayerWhite),
-                  const SizedBox(width: 8),
-                  EvaluationBar(fillFraction: _getEvalFraction(state, true)),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ArenaTurnIndicator(isActive: isTurn, isWhite: state.isPlayerWhite),
+                      const SizedBox(width: 8),
+                      EvaluationBar(fillFraction: _getEvalFraction(state, true)),
+                    ],
+                  ),
+                  const Spacer(),
+                  ArenaTimeDisplay(isActive: isTurn, timeLeft: state.isPlayerWhite ? state.whiteTimeLeft : state.blackTimeLeft),
+                  const SizedBox(width: 12),
+                  ArenaTimeDisplay(isActive: !isTurn, timeLeft: state.isPlayerWhite ? state.blackTimeLeft : state.whiteTimeLeft),
+                  const Spacer(),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      EvaluationBar(fillFraction: _getEvalFraction(state, false)),
+                      const SizedBox(width: 8),
+                      ArenaTurnIndicator(isActive: !isTurn, isWhite: !state.isPlayerWhite),
+                    ],
+                  ),
                 ],
               ),
-              const Spacer(),
-              ArenaTimeDisplay(isActive: isTurn, timeLeft: state.isPlayerWhite ? state.whiteTimeLeft : state.blackTimeLeft),
-              const SizedBox(width: 12),
-              ArenaTimeDisplay(isActive: !isTurn, timeLeft: state.isPlayerWhite ? state.blackTimeLeft : state.whiteTimeLeft),
-              const Spacer(),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  EvaluationBar(fillFraction: _getEvalFraction(state, false)),
-                  const SizedBox(width: 8),
-                  ArenaTurnIndicator(isActive: !isTurn, isWhite: !state.isPlayerWhite),
-                ],
-              ),
-            ],
+            ),
           ),
         ),
         // Opponent

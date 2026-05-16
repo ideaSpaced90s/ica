@@ -43,6 +43,10 @@ class AppSettings {
   final bool academyHouseBoldEmphasis;
   final bool academyHouseTypingEffect;
 
+  final double bulletDominance;
+  final double blitzDominance;
+  final double rapidDominance;
+
   AppSettings({
     this.boardThemeId = 'classic',
     this.isSoundEnabled = true,
@@ -84,7 +88,88 @@ class AppSettings {
       'themeAmbience': true,
       'kineticImpact': true,
     },
+    this.bulletDominance = 0.0,
+    this.blitzDominance = 0.0,
+    this.rapidDominance = 0.0,
   });
+
+  AppSettings copyWith({
+    String? boardThemeId,
+    bool? isSoundEnabled,
+    bool? isMusicEnabled,
+    bool? isAnimationsEnabled,
+    bool? isHapticsEnabled,
+    bool? showCoordinates,
+    String? engineLevel,
+    String? bottomAvatarId,
+    bool? isAiOperational,
+    int? totalTimeMinutes,
+    int? incrementSeconds,
+    Map<String, bool>? animationSettings,
+    String? gameMode,
+    bool? isRatedMode,
+    int? consolidatedRating,
+    int? bulletElo,
+    int? blitzElo,
+    int? rapidElo,
+    int? totalRatedGamesCount,
+    int? bulletGamesClassic,
+    int? bulletGames960,
+    int? blitzGamesClassic,
+    int? blitzGames960,
+    int? rapidGamesClassic,
+    int? rapidGames960,
+    int? totalWinningStreak,
+    int? bulletStreak,
+    int? blitzStreak,
+    int? rapidStreak,
+    bool? academyHouseAnimations,
+    bool? academyHouseColorFonts,
+    bool? academyHouseBoldEmphasis,
+    bool? academyHouseTypingEffect,
+    double? bulletDominance,
+    double? blitzDominance,
+    double? rapidDominance,
+  }) {
+    return AppSettings(
+      boardThemeId: boardThemeId ?? this.boardThemeId,
+      isSoundEnabled: isSoundEnabled ?? this.isSoundEnabled,
+      isMusicEnabled: isMusicEnabled ?? this.isMusicEnabled,
+      isAnimationsEnabled: isAnimationsEnabled ?? this.isAnimationsEnabled,
+      isHapticsEnabled: isHapticsEnabled ?? this.isHapticsEnabled,
+      showCoordinates: showCoordinates ?? this.showCoordinates,
+      engineLevel: engineLevel ?? this.engineLevel,
+      bottomAvatarId: bottomAvatarId ?? this.bottomAvatarId,
+      isAiOperational: isAiOperational ?? this.isAiOperational,
+      totalTimeMinutes: totalTimeMinutes ?? this.totalTimeMinutes,
+      incrementSeconds: incrementSeconds ?? this.incrementSeconds,
+      animationSettings: animationSettings ?? this.animationSettings,
+      gameMode: gameMode ?? this.gameMode,
+      isRatedMode: isRatedMode ?? this.isRatedMode,
+      consolidatedRating: consolidatedRating ?? this.consolidatedRating,
+      bulletElo: bulletElo ?? this.bulletElo,
+      blitzElo: blitzElo ?? this.blitzElo,
+      rapidElo: rapidElo ?? this.rapidElo,
+      totalRatedGamesCount: totalRatedGamesCount ?? this.totalRatedGamesCount,
+      bulletGamesClassic: bulletGamesClassic ?? this.bulletGamesClassic,
+      bulletGames960: bulletGames960 ?? this.bulletGames960,
+      blitzGamesClassic: blitzGamesClassic ?? this.blitzGamesClassic,
+      blitzGames960: blitzGames960 ?? this.blitzGames960,
+      rapidGamesClassic: rapidGamesClassic ?? this.rapidGamesClassic,
+      rapidGames960: rapidGames960 ?? this.rapidGames960,
+      totalWinningStreak: totalWinningStreak ?? this.totalWinningStreak,
+      bulletStreak: bulletStreak ?? this.bulletStreak,
+      blitzStreak: blitzStreak ?? this.blitzStreak,
+      rapidStreak: rapidStreak ?? this.rapidStreak,
+      academyHouseAnimations: academyHouseAnimations ?? this.academyHouseAnimations,
+      academyHouseColorFonts: academyHouseColorFonts ?? this.academyHouseColorFonts,
+      academyHouseBoldEmphasis: academyHouseBoldEmphasis ?? this.academyHouseBoldEmphasis,
+      academyHouseTypingEffect: academyHouseTypingEffect ?? this.academyHouseTypingEffect,
+      bulletDominance: bulletDominance ?? this.bulletDominance,
+      blitzDominance: blitzDominance ?? this.blitzDominance,
+      rapidDominance: rapidDominance ?? this.rapidDominance,
+    );
+  }
 
   Map<String, dynamic> toJson() => {
     'boardThemeId': boardThemeId,
@@ -120,6 +205,9 @@ class AppSettings {
     'academyHouseColorFonts': academyHouseColorFonts,
     'academyHouseBoldEmphasis': academyHouseBoldEmphasis,
     'academyHouseTypingEffect': academyHouseTypingEffect,
+    'bulletDominance': bulletDominance,
+    'blitzDominance': blitzDominance,
+    'rapidDominance': rapidDominance,
   };
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
@@ -196,6 +284,9 @@ class AppSettings {
               'themeAmbience': true,
               'kineticImpact': true,
             },
+      bulletDominance: (json['bulletDominance'] ?? 0.0).toDouble(),
+      blitzDominance: (json['blitzDominance'] ?? 0.0).toDouble(),
+      rapidDominance: (json['rapidDominance'] ?? 0.0).toDouble(),
     );
   }
 }

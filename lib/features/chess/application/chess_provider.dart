@@ -79,6 +79,9 @@ class _BoardSnapshot {
     required this.bulletStreak,
     required this.blitzStreak,
     required this.rapidStreak,
+    required this.bulletDominance,
+    required this.blitzDominance,
+    required this.rapidDominance,
     required this.isPuzzleMode,
     this.currentPuzzle,
     required this.puzzleMovesRemaining,
@@ -131,6 +134,9 @@ class _BoardSnapshot {
   final int bulletStreak;
   final int blitzStreak;
   final int rapidStreak;
+  final double bulletDominance;
+  final double blitzDominance;
+  final double rapidDominance;
   final bool isPuzzleMode;
   final rust_puzzles.Puzzle? currentPuzzle;
   final List<String> puzzleMovesRemaining;
@@ -246,6 +252,9 @@ class ChessState {
     this.bulletStreak = 0,
     this.blitzStreak = 0,
     this.rapidStreak = 0,
+    this.bulletDominance = 0.0,
+    this.blitzDominance = 0.0,
+    this.rapidDominance = 0.0,
     this.isPuzzleMode = false,
     this.currentPuzzle,
     this.puzzleMovesRemaining = const [],
@@ -337,6 +346,9 @@ class ChessState {
   final int bulletStreak;
   final int blitzStreak;
   final int rapidStreak;
+  final double bulletDominance;
+  final double blitzDominance;
+  final double rapidDominance;
   final bool isPuzzleMode;
   final rust_puzzles.Puzzle? currentPuzzle;
   final List<String> puzzleMovesRemaining;
@@ -441,6 +453,9 @@ class ChessState {
     int? bulletStreak,
     int? blitzStreak,
     int? rapidStreak,
+    double? bulletDominance,
+    double? blitzDominance,
+    double? rapidDominance,
     bool? isPuzzleMode,
     Object? currentPuzzle = _sentinel,
     List<String>? puzzleMovesRemaining,
@@ -560,6 +575,9 @@ class ChessState {
       bulletStreak: bulletStreak ?? this.bulletStreak,
       blitzStreak: blitzStreak ?? this.blitzStreak,
       rapidStreak: rapidStreak ?? this.rapidStreak,
+      bulletDominance: bulletDominance ?? this.bulletDominance,
+      blitzDominance: blitzDominance ?? this.blitzDominance,
+      rapidDominance: rapidDominance ?? this.rapidDominance,
       isPuzzleMode: isPuzzleMode ?? this.isPuzzleMode,
       currentPuzzle: identical(currentPuzzle, _sentinel)
           ? this.currentPuzzle
@@ -664,6 +682,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
         academyHouseColorFonts: s.academyHouseColorFonts,
         academyHouseBoldEmphasis: s.academyHouseBoldEmphasis,
         academyHouseTypingEffect: s.academyHouseTypingEffect,
+        bulletDominance: s.bulletDominance,
+        blitzDominance: s.blitzDominance,
+        rapidDominance: s.rapidDominance,
       );
       await _engine.setChess960Mode(is960);
       final avatar = AiAvatar.getAvatar(s.engineLevel);
@@ -717,6 +738,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
         academyHouseColorFonts: state.academyHouseColorFonts,
         academyHouseBoldEmphasis: state.academyHouseBoldEmphasis,
         academyHouseTypingEffect: state.academyHouseTypingEffect,
+        bulletDominance: state.bulletDominance,
+        blitzDominance: state.blitzDominance,
+        rapidDominance: state.rapidDominance,
       );
       await _settingsRepository.saveSettings(s);
     } catch (e) {
@@ -790,6 +814,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
       bulletStreak: 0,
       blitzStreak: 0,
       rapidStreak: 0,
+      bulletDominance: 0.0,
+      blitzDominance: 0.0,
+      rapidDominance: 0.0,
     );
     _saveSettings();
   }
@@ -1559,6 +1586,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
       bulletStreak: state.bulletStreak,
       blitzStreak: state.blitzStreak,
       rapidStreak: state.rapidStreak,
+      bulletDominance: state.bulletDominance,
+      blitzDominance: state.blitzDominance,
+      rapidDominance: state.rapidDominance,
       isAcademyActive: entry.isAcademyActive,
     );
 
@@ -1638,6 +1668,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
       bulletStreak: state.bulletStreak,
       blitzStreak: state.blitzStreak,
       rapidStreak: state.rapidStreak,
+      bulletDominance: state.bulletDominance,
+      blitzDominance: state.blitzDominance,
+      rapidDominance: state.rapidDominance,
       isPuzzleMode: state.isPuzzleMode,
       currentPuzzle: state.currentPuzzle,
       puzzleMovesRemaining: List<String>.from(state.puzzleMovesRemaining),
@@ -1699,6 +1732,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
       bulletStreak: snapshot.bulletStreak,
       blitzStreak: snapshot.blitzStreak,
       rapidStreak: snapshot.rapidStreak,
+      bulletDominance: snapshot.bulletDominance,
+      blitzDominance: snapshot.blitzDominance,
+      rapidDominance: snapshot.rapidDominance,
       isPuzzleMode: snapshot.isPuzzleMode,
       currentPuzzle: snapshot.currentPuzzle,
       puzzleMovesRemaining: snapshot.puzzleMovesRemaining,
@@ -1765,7 +1801,15 @@ class ChessNotifier extends StateNotifier<ChessState> {
       'promotion': promotion,
     });
     if (moveMade) {
+      final wasClockStarted = state.clockStarted;
       _onMoveCompleted('$from$to');
+
+      if (!wasClockStarted) {
+        state = state.copyWith(clockStarted: true);
+      }
+
+      _setActiveClockSide(_clockSideForTurn());
+      _startClockTicker();
 
       // Always trigger analysis after an engine move to get the score for commentary
       if (!state.game.gameOver) {
@@ -2553,7 +2597,27 @@ class ChessNotifier extends StateNotifier<ChessState> {
     final newConsolidatedEloRaw = state.consolidatedRating + (consolidatedKFactor * (actualScore - expectedConsolidatedScore)).round() + consolidatedStreakBonus;
     final newConsolidatedElo = math.max(400, newConsolidatedEloRaw);
 
-    // 3. Prepare State Update
+    // 3. Update Dominance Index (Material Margin Average)
+    final currentMargin = state.game.calculateMaterialMargin(
+      state.isPlayerWhite ? chess_lib.Color.WHITE : chess_lib.Color.BLACK
+    );
+    
+    double newBulletDom = state.bulletDominance;
+    double newBlitzDom = state.blitzDominance;
+    double newRapidDom = state.rapidDominance;
+    
+    if (category == 'bullet') {
+      final count = state.bulletGamesClassic + state.bulletGames960;
+      newBulletDom = ((state.bulletDominance * count) + currentMargin) / (count + 1);
+    } else if (category == 'blitz') {
+      final count = state.blitzGamesClassic + state.blitzGames960;
+      newBlitzDom = ((state.blitzDominance * count) + currentMargin) / (count + 1);
+    } else {
+      final count = state.rapidGamesClassic + state.rapidGames960;
+      newRapidDom = ((state.rapidDominance * count) + currentMargin) / (count + 1);
+    }
+
+    // 4. Prepare State Update
     final newTotalCount = state.totalRatedGamesCount + 1;
     
     state = state.copyWith(
@@ -2564,16 +2628,19 @@ class ChessNotifier extends StateNotifier<ChessState> {
       bulletStreak: category == 'bullet' ? newSpecificStreak : state.bulletStreak,
       bulletGamesClassic: (category == 'bullet' && !is960) ? state.bulletGamesClassic + 1 : state.bulletGamesClassic,
       bulletGames960: (category == 'bullet' && is960) ? state.bulletGames960 + 1 : state.bulletGames960,
+      bulletDominance: newBulletDom,
       
       blitzElo: category == 'blitz' ? newSpecificElo : state.blitzElo,
       blitzStreak: category == 'blitz' ? newSpecificStreak : state.blitzStreak,
       blitzGamesClassic: (category == 'blitz' && !is960) ? state.blitzGamesClassic + 1 : state.blitzGamesClassic,
       blitzGames960: (category == 'blitz' && is960) ? state.blitzGames960 + 1 : state.blitzGames960,
+      blitzDominance: newBlitzDom,
       
       rapidElo: category == 'rapid' ? newSpecificElo : state.rapidElo,
       rapidStreak: category == 'rapid' ? newSpecificStreak : state.rapidStreak,
       rapidGamesClassic: (category == 'rapid' && !is960) ? state.rapidGamesClassic + 1 : state.rapidGamesClassic,
       rapidGames960: (category == 'rapid' && is960) ? state.rapidGames960 + 1 : state.rapidGames960,
+      rapidDominance: newRapidDom,
     );
 
     _saveSettings();
