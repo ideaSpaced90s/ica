@@ -43,15 +43,15 @@ class _RatedSettingsPageState extends ConsumerState<RatedSettingsPage> {
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          Colors.amber.withValues(alpha: 0.15),
-                          Colors.amber.withValues(alpha: 0.05),
+                          ScholarlyTheme.accentBlue.withValues(alpha: 0.15),
+                          ScholarlyTheme.accentBlue.withValues(alpha: 0.05),
                         ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
                       borderRadius: BorderRadius.circular(24),
                       border: Border.all(
-                        color: Colors.amber.withValues(alpha: 0.3),
+                        color: ScholarlyTheme.accentBlue.withValues(alpha: 0.3),
                         width: 1.5,
                       ),
                     ),
@@ -62,12 +62,12 @@ class _RatedSettingsPageState extends ConsumerState<RatedSettingsPage> {
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: Colors.amber.withValues(alpha: 0.2),
+                                color: ScholarlyTheme.accentBlue.withValues(alpha: 0.2),
                                 shape: BoxShape.circle,
                               ),
                               child: const Icon(
                                 Icons.verified_user_rounded,
-                                color: Colors.amber,
+                                color: ScholarlyTheme.accentBlue,
                                 size: 20,
                               ),
                             ),
@@ -79,7 +79,7 @@ class _RatedSettingsPageState extends ConsumerState<RatedSettingsPage> {
                                   Text(
                                     'RATED ARENA ACTIVE',
                                     style: GoogleFonts.inter(
-                                      color: Colors.amber,
+                                      color: ScholarlyTheme.accentBlue,
                                       fontSize: 12,
                                       fontWeight: FontWeight.w900,
                                       letterSpacing: 1.2,
@@ -157,7 +157,7 @@ class _RatedSettingsPageState extends ConsumerState<RatedSettingsPage> {
                             trailing: Icon(
                               Icons.info_outline_rounded,
                               size: 18,
-                              color: Colors.amber,
+                              color: ScholarlyTheme.accentBlue,
                             ),
                           );
                         },
@@ -246,7 +246,7 @@ class _SettingsCategory extends StatelessWidget {
           child: Text(
             title,
             style: GoogleFonts.inter(
-              color: Colors.amber,
+              color: ScholarlyTheme.accentBlue,
               fontSize: 11,
               fontWeight: FontWeight.w900,
               letterSpacing: 1.5,
@@ -360,13 +360,13 @@ class _SettingsSwitchTile extends StatelessWidget {
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           color: value
-              ? Colors.amber.withValues(alpha: 0.15)
+              ? ScholarlyTheme.accentBlue.withValues(alpha: 0.15)
               : ScholarlyTheme.backgroundStart,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Icon(
           icon,
-          color: value ? Colors.amber : ScholarlyTheme.textPrimary,
+          color: value ? ScholarlyTheme.accentBlue : ScholarlyTheme.textPrimary,
           size: 20,
         ),
       ),
@@ -382,7 +382,8 @@ class _SettingsSwitchTile extends StatelessWidget {
         description,
         style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 11),
       ),
-      activeThumbColor: Colors.amber,
+      activeThumbColor: ScholarlyTheme.accentBlue,
+      activeTrackColor: ScholarlyTheme.accentBlue.withValues(alpha: 0.3),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
     );
   }

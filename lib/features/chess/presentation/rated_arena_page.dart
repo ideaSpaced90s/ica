@@ -223,8 +223,8 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
           const SizedBox(width: 8),
           ActionIconButton(
             icon: Icons.settings_suggest_rounded,
-            activeColor: Colors.amber.withValues(alpha: 0.2),
-            activeIconColor: Colors.amber,
+            activeColor: ScholarlyTheme.accentBlue.withValues(alpha: 0.1),
+            activeIconColor: ScholarlyTheme.accentBlue,
             isActive: true,
             size: 22,
             onTap: () {
@@ -249,10 +249,10 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                   decoration: BoxDecoration(
-                    color: Colors.amber,
+                    color: ScholarlyTheme.accentBlue,
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
-                      BoxShadow(color: Colors.amber.withValues(alpha: 0.4), blurRadius: 15, spreadRadius: 2),
+                      BoxShadow(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.4), blurRadius: 15, spreadRadius: 2),
                     ],
                   ),
                   child: Row(
@@ -286,7 +286,7 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
               children: [
                 Text('Game Over', style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 20)),
                 const SizedBox(height: 16),
-                Icon(state.game.inDraw ? Icons.handshake_rounded : (msg == 'Congratulations' ? Icons.emoji_events_rounded : Icons.sentiment_dissatisfied_rounded), size: 48, color: Colors.amber),
+                Icon(state.game.inDraw ? Icons.handshake_rounded : (msg == 'Congratulations' ? Icons.emoji_events_rounded : Icons.sentiment_dissatisfied_rounded), size: 48, color: ScholarlyTheme.accentBlue),
                 const SizedBox(height: 16),
                 Text('$msg. New game?', style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600), textAlign: TextAlign.center),
                 const SizedBox(height: 24),
@@ -298,7 +298,7 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
                         ref.read(chessProvider.notifier).dismissGameOver();
                         _triggerDiceRoll();
                       },
-                      style: FilledButton.styleFrom(backgroundColor: Colors.amber, foregroundColor: Colors.black),
+                      style: FilledButton.styleFrom(backgroundColor: ScholarlyTheme.accentBlue, foregroundColor: Colors.white),
                       child: const Text('Yes'),
                     ),
                     const SizedBox(width: 16),
@@ -345,10 +345,10 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: ScholarlyTheme.panelBase,
-        surfaceTintColor: Colors.amber,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28), side: BorderSide(color: Colors.amber.withValues(alpha: 0.2), width: 1)),
+        surfaceTintColor: ScholarlyTheme.accentBlue,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28), side: BorderSide(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.2), width: 1)),
         title: Column(mainAxisSize: MainAxisSize.min, children: [
-          Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: Colors.amber.withValues(alpha: 0.1), shape: BoxShape.circle), child: const Icon(Icons.logout_rounded, color: Colors.amber, size: 24)),
+          Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.1), shape: BoxShape.circle), child: const Icon(Icons.logout_rounded, color: ScholarlyTheme.accentBlue, size: 24)),
           const SizedBox(height: 16),
           Text('Resign & Exit?', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary, fontSize: 20)),
         ]),
@@ -361,7 +361,7 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
           Row(children: [
             Expanded(child: TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('STAY & PLAY'))),
             const SizedBox(width: 8),
-            Expanded(child: FilledButton(onPressed: () => Navigator.pop(context, true), style: FilledButton.styleFrom(backgroundColor: Colors.amber, foregroundColor: Colors.black), child: const Text('RESIGN'))),
+            Expanded(child: FilledButton(onPressed: () => Navigator.pop(context, true), style: FilledButton.styleFrom(backgroundColor: ScholarlyTheme.accentBlue, foregroundColor: Colors.white), child: const Text('RESIGN'))),
           ]),
         ],
       ),
@@ -373,10 +373,10 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: ScholarlyTheme.panelBase,
-        surfaceTintColor: Colors.amber,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28), side: BorderSide(color: Colors.amber.withValues(alpha: 0.2), width: 1)),
+        surfaceTintColor: ScholarlyTheme.accentBlue,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28), side: BorderSide(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.2), width: 1)),
         title: Column(mainAxisSize: MainAxisSize.min, children: [
-          Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: Colors.amber.withValues(alpha: 0.1), shape: BoxShape.circle), child: const Icon(Icons.refresh_rounded, color: Colors.amber, size: 24)),
+          Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.1), shape: BoxShape.circle), child: const Icon(Icons.refresh_rounded, color: ScholarlyTheme.accentBlue, size: 24)),
           const SizedBox(height: 16),
           Text('Start New Match?', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary, fontSize: 20)),
         ]),
@@ -389,7 +389,7 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
           Row(children: [
             Expanded(child: TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('CANCEL'))),
             const SizedBox(width: 8),
-            Expanded(child: FilledButton(onPressed: () => Navigator.pop(context, true), style: FilledButton.styleFrom(backgroundColor: Colors.amber, foregroundColor: Colors.black), child: const Text('RESIGN'))),
+            Expanded(child: FilledButton(onPressed: () => Navigator.pop(context, true), style: FilledButton.styleFrom(backgroundColor: ScholarlyTheme.accentBlue, foregroundColor: Colors.white), child: const Text('RESIGN'))),
           ]),
         ],
       ),
@@ -402,10 +402,10 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
       barrierDismissible: false,
       builder: (context) => AlertDialog(
         backgroundColor: ScholarlyTheme.panelBase,
-        surfaceTintColor: Colors.amber,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28), side: BorderSide(color: Colors.amber.withValues(alpha: 0.2), width: 1)),
+        surfaceTintColor: ScholarlyTheme.accentBlue,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28), side: BorderSide(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.2), width: 1)),
         title: Column(mainAxisSize: MainAxisSize.min, children: [
-          Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: Colors.amber.withValues(alpha: 0.1), shape: BoxShape.circle), child: const Icon(Icons.shield_rounded, color: Colors.amber, size: 24)),
+          Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.1), shape: BoxShape.circle), child: const Icon(Icons.shield_rounded, color: ScholarlyTheme.accentBlue, size: 24)),
           const SizedBox(height: 16),
           Text('Rated Arena Entry', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary, fontSize: 20)),
         ]),
@@ -426,8 +426,8 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
                   child: FilledButton(
                     onPressed: () => Navigator.pop(context),
                     style: FilledButton.styleFrom(
-                      backgroundColor: Colors.amber,
-                      foregroundColor: Colors.black,
+                      backgroundColor: ScholarlyTheme.accentBlue,
+                      foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     child: const Text('I AM READY', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -490,14 +490,14 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Sanctioned Time Control', style: GoogleFonts.inter(color: Colors.amber, fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text('Sanctioned Time Control', style: GoogleFonts.inter(color: ScholarlyTheme.accentBlue, fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 16),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
                     children: presets.map((p) {
                       final isSelected = state.whiteTimeLeft.inMinutes == p['min'] && state.incrementDuration.inSeconds == p['inc'];
-                      return ChoiceChip(label: Text(p['label'] as String), selected: isSelected, onSelected: (selected) { if (selected) { notifier.setTimeControl(Duration(minutes: p['min'] as int), Duration(seconds: p['inc'] as int)); Navigator.pop(context); } }, selectedColor: Colors.amber.withValues(alpha: 0.2), labelStyle: GoogleFonts.inter(color: isSelected ? Colors.amber : ScholarlyTheme.textPrimary, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal));
+                      return ChoiceChip(label: Text(p['label'] as String), selected: isSelected, onSelected: (selected) { if (selected) { notifier.setTimeControl(Duration(minutes: p['min'] as int), Duration(seconds: p['inc'] as int)); Navigator.pop(context); } }, selectedColor: ScholarlyTheme.accentBlue.withValues(alpha: 0.2), labelStyle: GoogleFonts.inter(color: isSelected ? ScholarlyTheme.accentBlue : ScholarlyTheme.textPrimary, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal));
                     }).toList(),
                   ),
                   const SizedBox(height: 32),

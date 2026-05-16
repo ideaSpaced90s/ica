@@ -20,8 +20,8 @@ class _UserAvatarIndicatorState extends State<UserAvatarIndicator> {
       builder: (context, ref, child) {
         final state = ref.watch(chessProvider);
         final isRated = state.isRatedMode;
-        final primaryColor = isRated ? Colors.amber : ScholarlyTheme.accentBlue;
-        final bgColor = isRated ? Colors.amber.withValues(alpha: 0.1) : ScholarlyTheme.accentBlue.withValues(alpha: 0.1);
+        final primaryColor = ScholarlyTheme.accentBlue;
+        final bgColor = ScholarlyTheme.accentBlue.withValues(alpha: 0.1);
 
         return GestureDetector(
           onTap: () => setState(() => _isExpanded = !_isExpanded),

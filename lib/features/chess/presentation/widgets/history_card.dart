@@ -189,10 +189,10 @@ class _HistoryCardState extends State<HistoryCard> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: isRated ? Colors.amber.withValues(alpha: 0.15) : ScholarlyTheme.panelBase,
+        color: isRated ? ScholarlyTheme.accentBlue.withValues(alpha: 0.15) : ScholarlyTheme.panelBase,
         borderRadius: BorderRadius.circular(4),
         border: Border.all(
-          color: isRated ? Colors.amber : ScholarlyTheme.panelStroke,
+          color: isRated ? ScholarlyTheme.accentBlue : ScholarlyTheme.panelStroke,
         ),
       ),
       child: Row(
@@ -201,13 +201,13 @@ class _HistoryCardState extends State<HistoryCard> {
           Icon(
             isRated ? Icons.emoji_events_rounded : Icons.spa_rounded,
             size: 10,
-            color: isRated ? Colors.amber : ScholarlyTheme.textSubtle,
+            color: isRated ? ScholarlyTheme.accentBlue : ScholarlyTheme.textSubtle,
           ),
           const SizedBox(width: 4),
           Text(
             isRated ? 'RATED' : 'CASUAL',
             style: GoogleFonts.jetBrainsMono(
-              color: isRated ? Colors.amber : ScholarlyTheme.textSubtle,
+              color: isRated ? ScholarlyTheme.accentBlue : ScholarlyTheme.textSubtle,
               fontSize: 9,
               fontWeight: FontWeight.bold,
             ),

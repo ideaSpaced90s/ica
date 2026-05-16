@@ -55,7 +55,7 @@ void showAvatarSelectionSheet(BuildContext context, WidgetRef ref, {bool isBotto
                 Text(
                   isReadOnly ? 'Competitive profiles are automatically assigned based on your ELO.' : 'Each avatar features a custom simulated playing style and FIDE scale',
                   style: GoogleFonts.inter(
-                    color: isReadOnly ? Colors.amber : ScholarlyTheme.textMuted,
+                    color: isReadOnly ? ScholarlyTheme.accentBlue : ScholarlyTheme.textMuted,
                     fontSize: 12,
                   ),
                   textAlign: TextAlign.center,
