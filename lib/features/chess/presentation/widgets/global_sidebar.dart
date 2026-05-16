@@ -8,6 +8,8 @@ import '../academy_page.dart';
 import '../settings_page.dart';
 import '../tutorial_page.dart';
 import '../dashboard_page.dart';
+import '../history_page.dart';
+
 
 
 
@@ -89,6 +91,16 @@ class GlobalSidebar extends ConsumerWidget {
                           if (context.mounted) {
                             Navigator.of(context).popUntil((route) => route.isFirst);
                           }
+                        },
+                      ),
+                      _SidebarItem(
+                        icon: Icons.history_rounded,
+                        label: 'Analysis',
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (context) => const HistoryPage()),
+                          );
                         },
                       ),
                       const SizedBox(height: 8),
