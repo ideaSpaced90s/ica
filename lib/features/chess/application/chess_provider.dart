@@ -2896,36 +2896,50 @@ class ChessNotifier extends StateNotifier<ChessState> {
     }
 
     _clockTimer?.cancel();
-    _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+    _clockTimer = Timer.periodic(const Duration(milliseconds: 100), (_) {
       if (_isDisposed || !state.clockStarted || state.activeClockSide == null) {
         return;
       }
 
       final side = state.activeClockSide;
       if (side == _clockWhite) {
-        final next = state.whiteTimeLeft - const Duration(seconds: 1);
+        final next = state.whiteTimeLeft - const Duration(milliseconds: 100);
         if (next <= Duration.zero) {
+          state = state.copyWith(
+            whiteTimeLeft: Duration.zero,
+            isTimeOut: true,
+            clockStarted: false,
+          );
           _handleClockTimeout(_clockWhite);
           return;
         }
         state = state.copyWith(whiteTimeLeft: next);
 
-        // Low time heartbeat
-        if (state.isHapticsEnabled && next <= const Duration(seconds: 10)) {
+        // Low time heartbeat (fire once per second when below 10s)
+        if (state.isHapticsEnabled && 
+            next <= const Duration(seconds: 10) && 
+            next.inMilliseconds % 1000 == 0) {
           _hapticsService.heartbeat();
         }
         return;
       }
 
-      final next = state.blackTimeLeft - const Duration(seconds: 1);
+      final next = state.blackTimeLeft - const Duration(milliseconds: 100);
       if (next <= Duration.zero) {
+        state = state.copyWith(
+          blackTimeLeft: Duration.zero,
+          isTimeOut: true,
+          clockStarted: false,
+        );
         _handleClockTimeout(_clockBlack);
         return;
       }
       state = state.copyWith(blackTimeLeft: next);
 
       // Low time heartbeat
-      if (state.isHapticsEnabled && next <= const Duration(seconds: 10)) {
+      if (state.isHapticsEnabled && 
+          next <= const Duration(seconds: 10) && 
+          next.inMilliseconds % 1000 == 0) {
         _hapticsService.heartbeat();
       }
     });

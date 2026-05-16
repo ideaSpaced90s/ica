@@ -378,8 +378,18 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(title.toUpperCase(), style: GoogleFonts.inter(color: didWin ? ScholarlyTheme.accentGold : ScholarlyTheme.textPrimary, fontWeight: FontWeight.w900, fontSize: 24, letterSpacing: 1.5)),
-                const SizedBox(height: 16),
+                if (!(state.isTimeOut && !didWin))
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: Text(title.toUpperCase(), 
+                      style: GoogleFonts.inter(
+                        color: didWin ? ScholarlyTheme.accentGold : ScholarlyTheme.textPrimary, 
+                        fontWeight: FontWeight.w900, 
+                        fontSize: 24, 
+                        letterSpacing: 1.5
+                      )
+                    ),
+                  ),
                 Icon(
                   isDraw ? Icons.handshake_rounded : (didWin ? Icons.emoji_events_rounded : Icons.sentiment_dissatisfied_rounded), 
                   size: 64, 
@@ -423,7 +433,7 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
                           side: BorderSide(color: ScholarlyTheme.panelStroke),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
-                        child: const Text('EXIT ARENA', style: TextStyle(fontWeight: FontWeight.bold)),
+                        child: const Text('EXIT', style: TextStyle(fontWeight: FontWeight.bold)),
                       ),
                     ),
                   ],
