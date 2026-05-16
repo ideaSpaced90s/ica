@@ -26,9 +26,9 @@ class _UserAvatarIndicatorState extends State<UserAvatarIndicator> {
         return GestureDetector(
           onTap: () => setState(() => _isExpanded = !_isExpanded),
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 400),
+            duration: const Duration(milliseconds: 500),
             curve: Curves.elasticOut,
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
             decoration: BoxDecoration(
               color: ScholarlyTheme.panelBase,
               borderRadius: BorderRadius.circular(20),
@@ -48,7 +48,7 @@ class _UserAvatarIndicatorState extends State<UserAvatarIndicator> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Styled Avatar Icon ring
+                // Avatar Icon - Always Visible
                 Container(
                   width: 32,
                   height: 32,
@@ -66,77 +66,63 @@ class _UserAvatarIndicatorState extends State<UserAvatarIndicator> {
                     size: 16,
                   ),
                 ),
-                const SizedBox(width: 8),
-                // Always visible tiny rating/status pill
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: primaryColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(
-                      color: primaryColor.withValues(alpha: 0.3),
-                      width: 1,
-                    ),
-                  ),
-                  child: Text(
-                    isRated ? '${state.userFideRating} ELO' : 'UNRATED',
-                    style: GoogleFonts.jetBrainsMono(
-                      color: primaryColor,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                // Expanding Contents
+                // Horizontal Expansion Content
                 AnimatedSize(
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOutCubic,
-                  child: _isExpanded
-                      ? Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const SizedBox(width: 8),
-                            // Name & Subtitle
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Row(
+                  duration: const Duration(milliseconds: 400),
+                  curve: Curves.fastOutSlowIn,
+                  child: Container(
+                    constraints: _isExpanded ? const BoxConstraints(minWidth: 0) : const BoxConstraints(maxWidth: 0),
+                    child: _isExpanded
+                        ? Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const SizedBox(width: 12),
+                              // Rating Pill
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: primaryColor.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: primaryColor.withValues(alpha: 0.3),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Text(
-                                      isRated ? 'Competitor' : 'Casual Player',
-                                      style: GoogleFonts.inter(
-                                        color: ScholarlyTheme.textPrimary,
-                                        fontWeight: FontWeight.bold,
+                                      isRated ? '${state.consolidatedRating} MASTER' : 'UNRATED',
+                                      style: GoogleFonts.jetBrainsMono(
+                                        color: primaryColor,
                                         fontSize: 12,
+                                        fontWeight: FontWeight.w800,
                                       ),
                                     ),
-                                    if (state.currentWinningStreak > 0 && isRated) ...[
-                                      const SizedBox(width: 4),
+                                    if (state.totalWinningStreak > 0 && isRated) ...[
+                                      const SizedBox(width: 6),
                                       const Icon(
                                         Icons.local_fire_department_rounded,
                                         color: Colors.deepOrangeAccent,
-                                        size: 12,
+                                        size: 14,
+                                      ),
+                                      Text(
+                                        '${state.totalWinningStreak}',
+                                        style: GoogleFonts.jetBrainsMono(
+                                          color: Colors.deepOrangeAccent,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
                                     ],
                                   ],
                                 ),
-                                Text(
-                                  isRated
-                                      ? 'Games: ${state.ratedGamesCount}'
-                                      : 'Stats Disabled',
-                                  style: GoogleFonts.inter(
-                                    color: ScholarlyTheme.textMuted,
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        )
-                      : const SizedBox.shrink(),
+                              ),
+                              const SizedBox(width: 4),
+                            ],
+                          )
+                        : const SizedBox.shrink(),
+                  ),
                 ),
               ],
             ),

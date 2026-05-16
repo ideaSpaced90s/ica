@@ -64,9 +64,21 @@ class _BoardSnapshot {
     required this.isBoardFlipped,
     required this.gameMode,
     required this.isRatedMode,
-    required this.userFideRating,
-    required this.ratedGamesCount,
-    required this.currentWinningStreak,
+    required this.consolidatedRating,
+    required this.bulletElo,
+    required this.blitzElo,
+    required this.rapidElo,
+    required this.totalRatedGamesCount,
+    required this.bulletGamesClassic,
+    required this.bulletGames960,
+    required this.blitzGamesClassic,
+    required this.blitzGames960,
+    required this.rapidGamesClassic,
+    required this.rapidGames960,
+    required this.totalWinningStreak,
+    required this.bulletStreak,
+    required this.blitzStreak,
+    required this.rapidStreak,
     required this.isPuzzleMode,
     this.currentPuzzle,
     required this.puzzleMovesRemaining,
@@ -104,9 +116,21 @@ class _BoardSnapshot {
   final bool isBoardFlipped;
   final String gameMode;
   final bool isRatedMode;
-  final int userFideRating;
-  final int ratedGamesCount;
-  final int currentWinningStreak;
+  final int consolidatedRating;
+  final int bulletElo;
+  final int blitzElo;
+  final int rapidElo;
+  final int totalRatedGamesCount;
+  final int bulletGamesClassic;
+  final int bulletGames960;
+  final int blitzGamesClassic;
+  final int blitzGames960;
+  final int rapidGamesClassic;
+  final int rapidGames960;
+  final int totalWinningStreak;
+  final int bulletStreak;
+  final int blitzStreak;
+  final int rapidStreak;
   final bool isPuzzleMode;
   final rust_puzzles.Puzzle? currentPuzzle;
   final List<String> puzzleMovesRemaining;
@@ -207,9 +231,21 @@ class ChessState {
     this.baseTimeDuration = _initialClock,
     this.gameMode = 'classic',
     this.isRatedMode = true,
-    this.userFideRating = 1200,
-    this.ratedGamesCount = 0,
-    this.currentWinningStreak = 0,
+    this.consolidatedRating = 1200,
+    this.bulletElo = 1200,
+    this.blitzElo = 1200,
+    this.rapidElo = 1200,
+    this.totalRatedGamesCount = 0,
+    this.bulletGamesClassic = 0,
+    this.bulletGames960 = 0,
+    this.blitzGamesClassic = 0,
+    this.blitzGames960 = 0,
+    this.rapidGamesClassic = 0,
+    this.rapidGames960 = 0,
+    this.totalWinningStreak = 0,
+    this.bulletStreak = 0,
+    this.blitzStreak = 0,
+    this.rapidStreak = 0,
     this.isPuzzleMode = false,
     this.currentPuzzle,
     this.puzzleMovesRemaining = const [],
@@ -286,9 +322,21 @@ class ChessState {
   final Duration baseTimeDuration;
   final String gameMode;
   final bool isRatedMode;
-  final int userFideRating;
-  final int ratedGamesCount;
-  final int currentWinningStreak;
+  final int consolidatedRating;
+  final int bulletElo;
+  final int blitzElo;
+  final int rapidElo;
+  final int totalRatedGamesCount;
+  final int bulletGamesClassic;
+  final int bulletGames960;
+  final int blitzGamesClassic;
+  final int blitzGames960;
+  final int rapidGamesClassic;
+  final int rapidGames960;
+  final int totalWinningStreak;
+  final int bulletStreak;
+  final int blitzStreak;
+  final int rapidStreak;
   final bool isPuzzleMode;
   final rust_puzzles.Puzzle? currentPuzzle;
   final List<String> puzzleMovesRemaining;
@@ -378,9 +426,21 @@ class ChessState {
     Duration? baseTimeDuration,
     String? gameMode,
     bool? isRatedMode,
-    int? userFideRating,
-    int? ratedGamesCount,
-    int? currentWinningStreak,
+    int? consolidatedRating,
+    int? bulletElo,
+    int? blitzElo,
+    int? rapidElo,
+    int? totalRatedGamesCount,
+    int? bulletGamesClassic,
+    int? bulletGames960,
+    int? blitzGamesClassic,
+    int? blitzGames960,
+    int? rapidGamesClassic,
+    int? rapidGames960,
+    int? totalWinningStreak,
+    int? bulletStreak,
+    int? blitzStreak,
+    int? rapidStreak,
     bool? isPuzzleMode,
     Object? currentPuzzle = _sentinel,
     List<String>? puzzleMovesRemaining,
@@ -485,9 +545,21 @@ class ChessState {
       baseTimeDuration: baseTimeDuration ?? this.baseTimeDuration,
       gameMode: gameMode ?? this.gameMode,
       isRatedMode: isRatedMode ?? this.isRatedMode,
-      userFideRating: userFideRating ?? this.userFideRating,
-      ratedGamesCount: ratedGamesCount ?? this.ratedGamesCount,
-      currentWinningStreak: currentWinningStreak ?? this.currentWinningStreak,
+      consolidatedRating: consolidatedRating ?? this.consolidatedRating,
+      bulletElo: bulletElo ?? this.bulletElo,
+      blitzElo: blitzElo ?? this.blitzElo,
+      rapidElo: rapidElo ?? this.rapidElo,
+      totalRatedGamesCount: totalRatedGamesCount ?? this.totalRatedGamesCount,
+      bulletGamesClassic: bulletGamesClassic ?? this.bulletGamesClassic,
+      bulletGames960: bulletGames960 ?? this.bulletGames960,
+      blitzGamesClassic: blitzGamesClassic ?? this.blitzGamesClassic,
+      blitzGames960: blitzGames960 ?? this.blitzGames960,
+      rapidGamesClassic: rapidGamesClassic ?? this.rapidGamesClassic,
+      rapidGames960: rapidGames960 ?? this.rapidGames960,
+      totalWinningStreak: totalWinningStreak ?? this.totalWinningStreak,
+      bulletStreak: bulletStreak ?? this.bulletStreak,
+      blitzStreak: blitzStreak ?? this.blitzStreak,
+      rapidStreak: rapidStreak ?? this.rapidStreak,
       isPuzzleMode: isPuzzleMode ?? this.isPuzzleMode,
       currentPuzzle: identical(currentPuzzle, _sentinel)
           ? this.currentPuzzle
@@ -573,9 +645,21 @@ class ChessNotifier extends StateNotifier<ChessState> {
         incrementDuration: Duration(seconds: s.incrementSeconds),
         gameMode: s.gameMode,
         isRatedMode: s.isRatedMode,
-        userFideRating: s.userFideRating,
-        ratedGamesCount: s.ratedGamesCount,
-        currentWinningStreak: s.currentWinningStreak,
+        consolidatedRating: s.consolidatedRating,
+        bulletElo: s.bulletElo,
+        blitzElo: s.blitzElo,
+        rapidElo: s.rapidElo,
+        totalRatedGamesCount: s.totalRatedGamesCount,
+        bulletGamesClassic: s.bulletGamesClassic,
+        bulletGames960: s.bulletGames960,
+        blitzGamesClassic: s.blitzGamesClassic,
+        blitzGames960: s.blitzGames960,
+        rapidGamesClassic: s.rapidGamesClassic,
+        rapidGames960: s.rapidGames960,
+        totalWinningStreak: s.totalWinningStreak,
+        bulletStreak: s.bulletStreak,
+        blitzStreak: s.blitzStreak,
+        rapidStreak: s.rapidStreak,
         academyHouseAnimations: s.academyHouseAnimations,
         academyHouseColorFonts: s.academyHouseColorFonts,
         academyHouseBoldEmphasis: s.academyHouseBoldEmphasis,
@@ -614,9 +698,21 @@ class ChessNotifier extends StateNotifier<ChessState> {
         incrementSeconds: state.incrementDuration.inSeconds,
         gameMode: state.gameMode,
         isRatedMode: state.isRatedMode,
-        userFideRating: state.userFideRating,
-        ratedGamesCount: state.ratedGamesCount,
-        currentWinningStreak: state.currentWinningStreak,
+        consolidatedRating: state.consolidatedRating,
+        bulletElo: state.bulletElo,
+        blitzElo: state.blitzElo,
+        rapidElo: state.rapidElo,
+        totalRatedGamesCount: state.totalRatedGamesCount,
+        bulletGamesClassic: state.bulletGamesClassic,
+        bulletGames960: state.bulletGames960,
+        blitzGamesClassic: state.blitzGamesClassic,
+        blitzGames960: state.blitzGames960,
+        rapidGamesClassic: state.rapidGamesClassic,
+        rapidGames960: state.rapidGames960,
+        totalWinningStreak: state.totalWinningStreak,
+        bulletStreak: state.bulletStreak,
+        blitzStreak: state.blitzStreak,
+        rapidStreak: state.rapidStreak,
         academyHouseAnimations: state.academyHouseAnimations,
         academyHouseColorFonts: state.academyHouseColorFonts,
         academyHouseBoldEmphasis: state.academyHouseBoldEmphasis,
@@ -679,9 +775,21 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
   void resetRatedStats() {
     state = state.copyWith(
-      userFideRating: 1200,
-      ratedGamesCount: 0,
-      currentWinningStreak: 0,
+      consolidatedRating: 1200,
+      bulletElo: 1200,
+      blitzElo: 1200,
+      rapidElo: 1200,
+      totalRatedGamesCount: 0,
+      bulletGamesClassic: 0,
+      bulletGames960: 0,
+      blitzGamesClassic: 0,
+      blitzGames960: 0,
+      rapidGamesClassic: 0,
+      rapidGames960: 0,
+      totalWinningStreak: 0,
+      bulletStreak: 0,
+      blitzStreak: 0,
+      rapidStreak: 0,
     );
     _saveSettings();
   }
@@ -1436,9 +1544,21 @@ class ChessNotifier extends StateNotifier<ChessState> {
       loadedSaveId: entry.id,
       gameMode: entry.gameMode,
       isRatedMode: entry.isRatedMode,
-      userFideRating: state.userFideRating,
-      ratedGamesCount: state.ratedGamesCount,
-      currentWinningStreak: state.currentWinningStreak,
+      consolidatedRating: state.consolidatedRating,
+      bulletElo: state.bulletElo,
+      blitzElo: state.blitzElo,
+      rapidElo: state.rapidElo,
+      totalRatedGamesCount: state.totalRatedGamesCount,
+      bulletGamesClassic: state.bulletGamesClassic,
+      bulletGames960: state.bulletGames960,
+      blitzGamesClassic: state.blitzGamesClassic,
+      blitzGames960: state.blitzGames960,
+      rapidGamesClassic: state.rapidGamesClassic,
+      rapidGames960: state.rapidGames960,
+      totalWinningStreak: state.totalWinningStreak,
+      bulletStreak: state.bulletStreak,
+      blitzStreak: state.blitzStreak,
+      rapidStreak: state.rapidStreak,
       isAcademyActive: entry.isAcademyActive,
     );
 
@@ -1503,9 +1623,21 @@ class ChessNotifier extends StateNotifier<ChessState> {
       isBoardFlipped: state.isBoardFlipped,
       gameMode: state.gameMode,
       isRatedMode: state.isRatedMode,
-      userFideRating: state.userFideRating,
-      ratedGamesCount: state.ratedGamesCount,
-      currentWinningStreak: state.currentWinningStreak,
+      consolidatedRating: state.consolidatedRating,
+      bulletElo: state.bulletElo,
+      blitzElo: state.blitzElo,
+      rapidElo: state.rapidElo,
+      totalRatedGamesCount: state.totalRatedGamesCount,
+      bulletGamesClassic: state.bulletGamesClassic,
+      bulletGames960: state.bulletGames960,
+      blitzGamesClassic: state.blitzGamesClassic,
+      blitzGames960: state.blitzGames960,
+      rapidGamesClassic: state.rapidGamesClassic,
+      rapidGames960: state.rapidGames960,
+      totalWinningStreak: state.totalWinningStreak,
+      bulletStreak: state.bulletStreak,
+      blitzStreak: state.blitzStreak,
+      rapidStreak: state.rapidStreak,
       isPuzzleMode: state.isPuzzleMode,
       currentPuzzle: state.currentPuzzle,
       puzzleMovesRemaining: List<String>.from(state.puzzleMovesRemaining),
@@ -1552,9 +1684,21 @@ class ChessNotifier extends StateNotifier<ChessState> {
       isBoardFlipped: snapshot.isBoardFlipped,
       gameMode: snapshot.gameMode,
       isRatedMode: snapshot.isRatedMode,
-      userFideRating: snapshot.userFideRating,
-      ratedGamesCount: snapshot.ratedGamesCount,
-      currentWinningStreak: snapshot.currentWinningStreak,
+      consolidatedRating: snapshot.consolidatedRating,
+      bulletElo: snapshot.bulletElo,
+      blitzElo: snapshot.blitzElo,
+      rapidElo: snapshot.rapidElo,
+      totalRatedGamesCount: snapshot.totalRatedGamesCount,
+      bulletGamesClassic: snapshot.bulletGamesClassic,
+      bulletGames960: snapshot.bulletGames960,
+      blitzGamesClassic: snapshot.blitzGamesClassic,
+      blitzGames960: snapshot.blitzGames960,
+      rapidGamesClassic: snapshot.rapidGamesClassic,
+      rapidGames960: snapshot.rapidGames960,
+      totalWinningStreak: snapshot.totalWinningStreak,
+      bulletStreak: snapshot.bulletStreak,
+      blitzStreak: snapshot.blitzStreak,
+      rapidStreak: snapshot.rapidStreak,
       isPuzzleMode: snapshot.isPuzzleMode,
       currentPuzzle: snapshot.currentPuzzle,
       puzzleMovesRemaining: snapshot.puzzleMovesRemaining,
@@ -2159,8 +2303,8 @@ class ChessNotifier extends StateNotifier<ChessState> {
   }
 
   void _autoSelectRatedOpponent() {
-    final bestMatch = AiAvatar.getBestMatch(state.userFideRating);
-    debugPrint('Auto-selecting rated opponent for ELO ${state.userFideRating}: ${bestMatch.name} (${bestMatch.id})');
+    final bestMatch = AiAvatar.getBestMatch(state.consolidatedRating);
+    debugPrint('Auto-selecting rated opponent for ELO ${state.consolidatedRating}: ${bestMatch.name} (${bestMatch.id})');
     state = state.copyWith(engineLevel: bestMatch.id);
   }
 
@@ -2359,36 +2503,79 @@ class ChessNotifier extends StateNotifier<ChessState> {
     }
   }
 
+  String _getRatingCategory(Duration total, Duration increment) {
+    final totalSeconds = total.inSeconds + (increment.inSeconds * 40);
+    if (totalSeconds < 180) return 'bullet';
+    if (totalSeconds < 600) return 'blitz';
+    return 'rapid';
+  }
+
   void _updateRating(double actualScore) {
+    final category = _getRatingCategory(state.baseTimeDuration, state.incrementDuration);
+    final is960 = state.gameMode == 'chess960';
     final avatar = AiAvatar.getAvatar(state.engineLevel);
-    final ratingA = state.userFideRating;
-    final ratingB = avatar.rating;
+    
+    // 1. Update Specific Tiered Rating
+    int currentSpecificElo = 1200;
+    int currentSpecificCount = 0;
+    int currentSpecificStreak = 0;
 
-    final expectedScoreA =
-        1.0 / (1.0 + math.pow(10.0, (ratingB - ratingA) / 400.0));
-    final kFactor = state.ratedGamesCount < 10 ? 40 : 20;
-
-    int streak = state.currentWinningStreak;
-    int streakBonus = 0;
-    if (actualScore == 1.0) {
-      streak += 1;
-      if (streak >= 3) {
-        streakBonus = 5;
-      }
+    if (category == 'bullet') {
+      currentSpecificElo = state.bulletElo;
+      currentSpecificCount = state.bulletGamesClassic + state.bulletGames960;
+      currentSpecificStreak = state.bulletStreak;
+    } else if (category == 'blitz') {
+      currentSpecificElo = state.blitzElo;
+      currentSpecificCount = state.blitzGamesClassic + state.blitzGames960;
+      currentSpecificStreak = state.blitzStreak;
     } else {
-      streak = 0;
+      currentSpecificElo = state.rapidElo;
+      currentSpecificCount = state.rapidGamesClassic + state.rapidGames960;
+      currentSpecificStreak = state.rapidStreak;
     }
 
-    final newRatingRaw =
-        ratingA + (kFactor * (actualScore - expectedScoreA)).round() + streakBonus;
-    final newRating = math.max(400, newRatingRaw);
-    final newCount = state.ratedGamesCount + 1;
+    final specificKFactor = currentSpecificCount < 10 ? 40 : 20;
+    final expectedSpecificScore = 1.0 / (1.0 + math.pow(10.0, (avatar.rating - currentSpecificElo) / 400.0));
+    
+    int newSpecificStreak = actualScore == 1.0 ? currentSpecificStreak + 1 : (actualScore == 0.0 ? 0 : currentSpecificStreak);
+    int specificStreakBonus = (actualScore == 1.0 && newSpecificStreak >= 3) ? 5 : 0;
+    
+    final newSpecificEloRaw = currentSpecificElo + (specificKFactor * (actualScore - expectedSpecificScore)).round() + specificStreakBonus;
+    final newSpecificElo = math.max(400, newSpecificEloRaw);
 
+    // 2. Update Consolidated Rating
+    final consolidatedKFactor = state.totalRatedGamesCount < 10 ? 40 : 20;
+    final expectedConsolidatedScore = 1.0 / (1.0 + math.pow(10.0, (avatar.rating - state.consolidatedRating) / 400.0));
+    
+    int newConsolidatedStreak = actualScore == 1.0 ? state.totalWinningStreak + 1 : (actualScore == 0.0 ? 0 : state.totalWinningStreak);
+    int consolidatedStreakBonus = (actualScore == 1.0 && newConsolidatedStreak >= 3) ? 5 : 0;
+    
+    final newConsolidatedEloRaw = state.consolidatedRating + (consolidatedKFactor * (actualScore - expectedConsolidatedScore)).round() + consolidatedStreakBonus;
+    final newConsolidatedElo = math.max(400, newConsolidatedEloRaw);
+
+    // 3. Prepare State Update
+    final newTotalCount = state.totalRatedGamesCount + 1;
+    
     state = state.copyWith(
-      userFideRating: newRating,
-      ratedGamesCount: newCount,
-      currentWinningStreak: streak,
+      consolidatedRating: newConsolidatedElo,
+      totalRatedGamesCount: newTotalCount,
+      totalWinningStreak: newConsolidatedStreak,
+      bulletElo: category == 'bullet' ? newSpecificElo : state.bulletElo,
+      bulletStreak: category == 'bullet' ? newSpecificStreak : state.bulletStreak,
+      bulletGamesClassic: (category == 'bullet' && !is960) ? state.bulletGamesClassic + 1 : state.bulletGamesClassic,
+      bulletGames960: (category == 'bullet' && is960) ? state.bulletGames960 + 1 : state.bulletGames960,
+      
+      blitzElo: category == 'blitz' ? newSpecificElo : state.blitzElo,
+      blitzStreak: category == 'blitz' ? newSpecificStreak : state.blitzStreak,
+      blitzGamesClassic: (category == 'blitz' && !is960) ? state.blitzGamesClassic + 1 : state.blitzGamesClassic,
+      blitzGames960: (category == 'blitz' && is960) ? state.blitzGames960 + 1 : state.blitzGames960,
+      
+      rapidElo: category == 'rapid' ? newSpecificElo : state.rapidElo,
+      rapidStreak: category == 'rapid' ? newSpecificStreak : state.rapidStreak,
+      rapidGamesClassic: (category == 'rapid' && !is960) ? state.rapidGamesClassic + 1 : state.rapidGamesClassic,
+      rapidGames960: (category == 'rapid' && is960) ? state.rapidGames960 + 1 : state.rapidGames960,
     );
+
     _saveSettings();
   }
 
@@ -2815,9 +3002,6 @@ class ChessNotifier extends StateNotifier<ChessState> {
     final preserveIncrement = state.incrementDuration;
     final baseTime = state.baseTimeDuration;
     final preserveMode = state.gameMode;
-    final preserveRating = state.userFideRating;
-    final preserveCount = state.ratedGamesCount;
-    final preserveStreak = state.currentWinningStreak;
 
     final is960 = preserveMode == 'chess960';
     await _engine.setChess960Mode(is960);
@@ -2857,9 +3041,21 @@ class ChessNotifier extends StateNotifier<ChessState> {
       isGameOverDismissed: false,
       gameMode: preserveMode,
       isRatedMode: preserveRated,
-      userFideRating: preserveRating,
-      ratedGamesCount: preserveCount,
-      currentWinningStreak: preserveStreak,
+      consolidatedRating: state.consolidatedRating,
+      bulletElo: state.bulletElo,
+      blitzElo: state.blitzElo,
+      rapidElo: state.rapidElo,
+      totalRatedGamesCount: state.totalRatedGamesCount,
+      bulletGamesClassic: state.bulletGamesClassic,
+      bulletGames960: state.bulletGames960,
+      blitzGamesClassic: state.blitzGamesClassic,
+      blitzGames960: state.blitzGames960,
+      rapidGamesClassic: state.rapidGamesClassic,
+      rapidGames960: state.rapidGames960,
+      totalWinningStreak: state.totalWinningStreak,
+      bulletStreak: state.bulletStreak,
+      blitzStreak: state.blitzStreak,
+      rapidStreak: state.rapidStreak,
       isAcademyActive: false,
     );
 

@@ -104,30 +104,30 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                   decoration: BoxDecoration(
-                                    color: state.ratedGamesCount < 10
+                                    color: state.totalRatedGamesCount < 10
                                         ? ScholarlyTheme.accentBlueSoft
                                         : Colors.amber.withValues(alpha: 0.2),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Text(
-                                    state.ratedGamesCount < 10 ? 'PROVISIONAL' : 'OFFICIAL ELO',
+                                    state.totalRatedGamesCount < 10 ? 'PROVISIONAL' : 'OFFICIAL ELO',
                                     style: GoogleFonts.inter(
                                       fontSize: 10,
                                       fontWeight: FontWeight.bold,
-                                      color: state.ratedGamesCount < 10
+                                      color: state.totalRatedGamesCount < 10
                                           ? ScholarlyTheme.accentBlue
                                           : Colors.amber.shade300,
                                     ),
                                   ),
                                 ),
                                 const Spacer(),
-                                if (state.currentWinningStreak > 0)
+                                if (state.totalWinningStreak > 0)
                                   Row(
                                     children: [
                                       const Icon(Icons.local_fire_department_rounded, color: Colors.deepOrangeAccent, size: 16),
                                       const SizedBox(width: 4),
                                       Text(
-                                        '${state.currentWinningStreak} Streak',
+                                        '${state.totalWinningStreak} Streak',
                                         style: GoogleFonts.inter(
                                           fontSize: 11,
                                           fontWeight: FontWeight.bold,
@@ -144,7 +144,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                               textBaseline: TextBaseline.alphabetic,
                               children: [
                                 Text(
-                                  '${state.userFideRating}',
+                                  '${state.consolidatedRating}',
                                   style: GoogleFonts.outfit(
                                     fontSize: 32,
                                     fontWeight: FontWeight.bold,
@@ -165,7 +165,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
                                     Text(
-                                      '${state.ratedGamesCount}',
+                                      '${state.totalRatedGamesCount}',
                                       style: GoogleFonts.inter(
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,

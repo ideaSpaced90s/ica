@@ -12,6 +12,8 @@ class ActionIconButton extends StatefulWidget {
     this.isActive = false,
     this.activeColor,
     this.activeIconColor,
+    this.iconColor,
+    this.baseColor,
     this.size,
     this.shouldBlink = false,
     this.onBlinkComplete,
@@ -26,6 +28,8 @@ class ActionIconButton extends StatefulWidget {
   final bool isActive;
   final Color? activeColor;
   final Color? activeIconColor;
+  final Color? iconColor;
+  final Color? baseColor;
   final double? size;
 
   @override
@@ -119,7 +123,7 @@ class _ActionIconButtonState extends State<ActionIconButton> with SingleTickerPr
             ).copyWith(
               color: (widget.isActive || _isPressed)
                   ? (widget.activeColor ?? ScholarlyTheme.accentBlueSoft)
-                  : ScholarlyTheme.panelBase,
+                  : (widget.baseColor ?? ScholarlyTheme.panelBase),
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 if (_glowAnimation.value > 0)
@@ -137,7 +141,7 @@ class _ActionIconButtonState extends State<ActionIconButton> with SingleTickerPr
                 color: widget.isEnabled
                     ? (widget.isActive || _glowAnimation.value > 0.4
                         ? (widget.activeIconColor ?? ScholarlyTheme.accentBlue)
-                        : ScholarlyTheme.textPrimary)
+                        : (widget.iconColor ?? ScholarlyTheme.textPrimary))
                     : ScholarlyTheme.textSubtle,
                 size: size,
               ),

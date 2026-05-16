@@ -3,10 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../application/chess_provider.dart';
 import 'scholarly_theme.dart';
-import '../domain/models/ai_avatar.dart';
 import 'widgets/global_sidebar.dart';
 import 'widgets/game_controls.dart';
-import 'widgets/avatar_selection_sheet.dart';
 
 class RatedSettingsPage extends ConsumerStatefulWidget {
   const RatedSettingsPage({super.key});
@@ -34,83 +32,7 @@ class _RatedSettingsPageState extends ConsumerState<RatedSettingsPage> {
             slivers: [
               const SliverToBoxAdapter(child: SizedBox(height: 60)),
 
-              // RATED STATUS HEADER
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                  child: Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          ScholarlyTheme.accentBlue.withValues(alpha: 0.15),
-                          ScholarlyTheme.accentBlue.withValues(alpha: 0.05),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(
-                        color: ScholarlyTheme.accentBlue.withValues(alpha: 0.3),
-                        width: 1.5,
-                      ),
-                    ),
-                    child: Column(
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: ScholarlyTheme.accentBlue.withValues(alpha: 0.2),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.verified_user_rounded,
-                                color: ScholarlyTheme.accentBlue,
-                                size: 20,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'RATED ARENA ACTIVE',
-                                    style: GoogleFonts.inter(
-                                      color: ScholarlyTheme.accentBlue,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w900,
-                                      letterSpacing: 1.2,
-                                    ),
-                                  ),
-                                  Text(
-                                    'Competitive constraints enforced for integrity.',
-                                    style: GoogleFonts.inter(
-                                      color: ScholarlyTheme.textMuted,
-                                      fontSize: 11,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 20),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            _StatItem(label: 'ELO', value: '${state.userFideRating}'),
-                            _StatItem(label: 'GAMES', value: '${state.ratedGamesCount}'),
-                            _StatItem(label: 'STREAK', value: '${state.currentWinningStreak}🔥'),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
               // SETTINGS SECTIONS
               SliverList(
@@ -138,31 +60,6 @@ class _RatedSettingsPageState extends ConsumerState<RatedSettingsPage> {
                         value: state.isHapticsEnabled,
                         onChanged: (v) => notifier.toggleHaptics(),
                       ),
-                    ],
-                  ),
-
-                  // GAMEPLAY
-                  _SettingsCategory(
-                    title: 'GAMEPLAY CONFIGURATION',
-                    children: [
-                      Builder(
-                        builder: (context) {
-                          final currentAvatar = AiAvatar.getAvatar(state.engineLevel);
-                          return _SettingsTile(
-                            label: 'Persona',
-                            description: '${currentAvatar.name} • FIDE ${currentAvatar.fideRatingRange}',
-                            icon: currentAvatar.icon,
-                            imagePath: currentAvatar.imagePath,
-                            onTap: () => showAvatarSelectionSheet(context, ref, isReadOnly: true),
-                            trailing: Icon(
-                              Icons.info_outline_rounded,
-                              size: 18,
-                              color: ScholarlyTheme.accentBlue,
-                            ),
-                          );
-                        },
-                      ),
-
                     ],
                   ),
 
@@ -199,37 +96,6 @@ class _RatedSettingsPageState extends ConsumerState<RatedSettingsPage> {
 
 }
 
-class _StatItem extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _StatItem({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(
-          label,
-          style: GoogleFonts.inter(
-            color: ScholarlyTheme.textMuted,
-            fontSize: 10,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        Text(
-          value,
-          style: GoogleFonts.outfit(
-            color: ScholarlyTheme.textPrimary,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class _SettingsCategory extends StatelessWidget {
   final String title;
   final List<Widget> children;
@@ -264,72 +130,6 @@ class _SettingsCategory extends StatelessWidget {
           child: Column(children: children),
         ),
       ],
-    );
-  }
-}
-
-class _SettingsTile extends StatelessWidget {
-  final String label;
-  final String description;
-  final IconData icon;
-  final VoidCallback onTap;
-  final Widget? trailing;
-  final String? imagePath;
-
-  const _SettingsTile({
-    required this.label,
-    required this.description,
-    required this.icon,
-    required this.onTap,
-    this.trailing,
-    this.imagePath,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      onTap: onTap,
-      leading: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: ScholarlyTheme.backgroundStart,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: imagePath != null
-            ? ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: Image.asset(
-                  imagePath!,
-                  width: 20,
-                  height: 20,
-                  fit: BoxFit.cover,
-                ),
-              )
-            : Icon(
-                icon,
-                color: ScholarlyTheme.textPrimary,
-                size: 20,
-              ),
-      ),
-      title: Text(
-        label,
-        style: GoogleFonts.inter(
-          color: ScholarlyTheme.textPrimary,
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      subtitle: Text(
-        description,
-        style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 11),
-      ),
-      trailing:
-          trailing ??
-          Icon(
-            Icons.chevron_right_rounded,
-            color: ScholarlyTheme.textSubtle,
-            size: 20,
-          ),
     );
   }
 }

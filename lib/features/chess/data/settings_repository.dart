@@ -19,9 +19,23 @@ class AppSettings {
   final Map<String, bool> animationSettings;
   final String gameMode;
   final bool isRatedMode;
-  final int userFideRating;
-  final int ratedGamesCount;
-  final int currentWinningStreak;
+  final int consolidatedRating;
+  final int bulletElo;
+  final int blitzElo;
+  final int rapidElo;
+  
+  final int totalRatedGamesCount;
+  final int bulletGamesClassic;
+  final int bulletGames960;
+  final int blitzGamesClassic;
+  final int blitzGames960;
+  final int rapidGamesClassic;
+  final int rapidGames960;
+  
+  final int totalWinningStreak;
+  final int bulletStreak;
+  final int blitzStreak;
+  final int rapidStreak;
 
   // Academy House Specific Settings
   final bool academyHouseAnimations;
@@ -43,9 +57,21 @@ class AppSettings {
     this.incrementSeconds = 0,
     this.gameMode = 'classic',
     this.isRatedMode = true,
-    this.userFideRating = 1200,
-    this.ratedGamesCount = 0,
-    this.currentWinningStreak = 0,
+    this.consolidatedRating = 1200,
+    this.bulletElo = 1200,
+    this.blitzElo = 1200,
+    this.rapidElo = 1200,
+    this.totalRatedGamesCount = 0,
+    this.bulletGamesClassic = 0,
+    this.bulletGames960 = 0,
+    this.blitzGamesClassic = 0,
+    this.blitzGames960 = 0,
+    this.rapidGamesClassic = 0,
+    this.rapidGames960 = 0,
+    this.totalWinningStreak = 0,
+    this.bulletStreak = 0,
+    this.blitzStreak = 0,
+    this.rapidStreak = 0,
     this.academyHouseAnimations = true,
     this.academyHouseColorFonts = true,
     this.academyHouseBoldEmphasis = true,
@@ -74,9 +100,21 @@ class AppSettings {
     'incrementSeconds': incrementSeconds,
     'gameMode': gameMode,
     'isRatedMode': isRatedMode,
-    'userFideRating': userFideRating,
-    'ratedGamesCount': ratedGamesCount,
-    'currentWinningStreak': currentWinningStreak,
+    'consolidatedRating': consolidatedRating,
+    'bulletElo': bulletElo,
+    'blitzElo': blitzElo,
+    'rapidElo': rapidElo,
+    'totalRatedGamesCount': totalRatedGamesCount,
+    'bulletGamesClassic': bulletGamesClassic,
+    'bulletGames960': bulletGames960,
+    'blitzGamesClassic': blitzGamesClassic,
+    'blitzGames960': blitzGames960,
+    'rapidGamesClassic': rapidGamesClassic,
+    'rapidGames960': rapidGames960,
+    'totalWinningStreak': totalWinningStreak,
+    'bulletStreak': bulletStreak,
+    'blitzStreak': blitzStreak,
+    'rapidStreak': rapidStreak,
     'animationSettings': animationSettings,
     'academyHouseAnimations': academyHouseAnimations,
     'academyHouseColorFonts': academyHouseColorFonts,
@@ -111,6 +149,10 @@ class AppSettings {
       bottomLevel = 'avatar_2';
     }
 
+    final legacyElo = json['userFideRating'] ?? 1200;
+    final legacyCount = json['ratedGamesCount'] ?? 0;
+    final legacyStreak = json['currentWinningStreak'] ?? 0;
+
     return AppSettings(
       boardThemeId: json['boardThemeId'] ?? 'classic',
       isSoundEnabled: json['isSoundEnabled'] ?? true,
@@ -125,9 +167,21 @@ class AppSettings {
       incrementSeconds: json['incrementSeconds'] ?? 0,
       gameMode: json['gameMode'] ?? 'classic',
       isRatedMode: json['isRatedMode'] ?? true,
-      userFideRating: json['userFideRating'] ?? 1200,
-      ratedGamesCount: json['ratedGamesCount'] ?? 0,
-      currentWinningStreak: json['currentWinningStreak'] ?? 0,
+      consolidatedRating: json['consolidatedRating'] ?? legacyElo,
+      bulletElo: json['bulletElo'] ?? legacyElo,
+      blitzElo: json['blitzElo'] ?? legacyElo,
+      rapidElo: json['rapidElo'] ?? legacyElo,
+      totalRatedGamesCount: json['totalRatedGamesCount'] ?? legacyCount,
+      bulletGamesClassic: json['bulletGamesClassic'] ?? 0,
+      bulletGames960: json['bulletGames960'] ?? 0,
+      blitzGamesClassic: json['blitzGamesClassic'] ?? 0,
+      blitzGames960: json['blitzGames960'] ?? 0,
+      rapidGamesClassic: json['rapidGamesClassic'] ?? 0,
+      rapidGames960: json['rapidGames960'] ?? 0,
+      totalWinningStreak: json['totalWinningStreak'] ?? legacyStreak,
+      bulletStreak: json['bulletStreak'] ?? 0,
+      blitzStreak: json['blitzStreak'] ?? 0,
+      rapidStreak: json['rapidStreak'] ?? 0,
       academyHouseAnimations: json['academyHouseAnimations'] ?? true,
       academyHouseColorFonts: json['academyHouseColorFonts'] ?? true,
       academyHouseBoldEmphasis: json['academyHouseBoldEmphasis'] ?? true,
