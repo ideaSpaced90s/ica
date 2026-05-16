@@ -1420,6 +1420,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
   Future<SavedGameEntry?> saveCurrentGame({
     String? customNameOverride,
     String? resultOverride,
+    int? ratingSnapshot,
+    double? dominanceSnapshot,
+    String? ratingCategory,
   }) async {
 
     state = state.copyWith(isSavingGame: true);
@@ -1460,6 +1463,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
         isRatedMode: state.isRatedMode,
         isAcademyActive: state.isAcademyActive,
         result: resultOverride,
+        ratingSnapshot: ratingSnapshot ?? (state.isRatedMode ? _getCurrentCategoryElo() : null),
+        dominanceSnapshot: dominanceSnapshot ?? (state.isRatedMode ? _getCurrentCategoryDominance() : null),
+        ratingCategory: ratingCategory ?? (state.isRatedMode ? _getRatingCategory(state.baseTimeDuration, state.incrementDuration) : null),
       );
 
       final saves = isUpdate
@@ -2681,6 +2687,20 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
     // 3. Reset the game
     await reset();
+  }
+
+  int _getCurrentCategoryElo() {
+    final category = _getRatingCategory(state.baseTimeDuration, state.incrementDuration);
+    if (category == 'bullet') return state.bulletElo;
+    if (category == 'blitz') return state.blitzElo;
+    return state.rapidElo;
+  }
+
+  double _getCurrentCategoryDominance() {
+    final category = _getRatingCategory(state.baseTimeDuration, state.incrementDuration);
+    if (category == 'bullet') return state.bulletDominance;
+    if (category == 'blitz') return state.blitzDominance;
+    return state.rapidDominance;
   }
 
   chess_lib.Move? _lastMoveFromHistory() {

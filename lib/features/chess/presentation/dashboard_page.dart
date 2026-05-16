@@ -5,6 +5,9 @@ import '../application/chess_provider.dart';
 import 'scholarly_theme.dart';
 import 'widgets/global_sidebar.dart';
 import 'widgets/game_controls.dart';
+import 'widgets/progression_charts.dart';
+import 'widgets/mini_board_preview.dart';
+import 'package:intl/intl.dart';
 
 class DashboardPage extends ConsumerStatefulWidget {
   const DashboardPage({super.key});
@@ -79,6 +82,11 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                     _buildMasterCard(state),
 
                     const SizedBox(height: 32),
+                    _buildSectionHeader('ELO PROGRESSION'),
+                    const SizedBox(height: 16),
+                    EloAscentChart(saves: state.savedGames),
+
+                    const SizedBox(height: 32),
                     Text(
                       'ARENA PERFORMANCE',
                       style: GoogleFonts.inter(
@@ -127,6 +135,44 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                         ),
                       ],
                     ),
+                    
+                    const SizedBox(height: 32),
+                    Row(
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildSectionHeader('TACTICAL PERSONA'),
+                              const SizedBox(height: 16),
+                              TacticalRadarChart(saves: state.savedGames),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          flex: 2,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildSectionHeader('MODES'),
+                              const SizedBox(height: 16),
+                              ModeDistributionChart(saves: state.savedGames),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 32),
+                    DominanceHeatmap(saves: state.savedGames),
+
+                    const SizedBox(height: 32),
+                    _buildSectionHeader('RECENT MASTERPIECES'),
+                    const SizedBox(height: 16),
+                    _buildRecentMasterpieces(state),
+
                     const SizedBox(height: 120),
                   ],
                 ),
@@ -394,6 +440,88 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Text(
+      title,
+      style: GoogleFonts.inter(
+        color: ScholarlyTheme.textMuted,
+        fontSize: 11,
+        fontWeight: FontWeight.w800,
+        letterSpacing: 1.5,
+      ),
+    );
+  }
+
+  Widget _buildRecentMasterpieces(ChessState state) {
+    final ratedWins = state.savedGames.where((s) => s.isRatedMode && s.result == 'W').take(5).toList();
+    
+    if (ratedWins.isEmpty) {
+      return Container(
+        height: 100,
+        width: double.infinity,
+        decoration: ScholarlyTheme.modernDecoration(),
+        child: Center(
+          child: Text('No rated victories recorded yet.', 
+            style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 12)
+          ),
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: 180,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        itemCount: ratedWins.length,
+        separatorBuilder: (context, index) => const SizedBox(width: 16),
+        itemBuilder: (context, index) {
+          final game = ratedWins[index];
+          return Container(
+            width: 240,
+            padding: const EdgeInsets.all(16),
+            decoration: ScholarlyTheme.modernDecoration(),
+            child: Row(
+              children: [
+                MiniBoardPreview(fen: game.fen, size: 80, isFlipped: !game.isPlayerWhite),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        game.ratingCategory?.toUpperCase() ?? 'MATCH',
+                        style: GoogleFonts.inter(color: ScholarlyTheme.accentBlue, fontSize: 10, fontWeight: FontWeight.w900),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        DateFormat('MMM d').format(game.savedAt),
+                        style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: ScholarlyTheme.accentGold.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          'DOM: ${game.dominanceSnapshot?.toStringAsFixed(1) ?? "0.0"}',
+                          style: GoogleFonts.jetBrainsMono(color: ScholarlyTheme.accentGold, fontSize: 10, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }

@@ -64,6 +64,9 @@ class SavedGameEntry {
     this.isRatedMode = false,
     this.isAcademyActive = false,
     this.result,
+    this.ratingSnapshot,
+    this.dominanceSnapshot,
+    this.ratingCategory,
   });
 
   final String id;
@@ -84,6 +87,9 @@ class SavedGameEntry {
   final bool isRatedMode;
   final bool isAcademyActive;
   final String? result; // 'W', 'L', 'D'
+  final int? ratingSnapshot;
+  final double? dominanceSnapshot;
+  final String? ratingCategory; // 'bullet', 'blitz', 'rapid'
 
   SavedGameEntry copyWith({
     String? id,
@@ -104,6 +110,9 @@ class SavedGameEntry {
     bool? isRatedMode,
     bool? isAcademyActive,
     Object? result = _sentinel,
+    int? ratingSnapshot,
+    double? dominanceSnapshot,
+    String? ratingCategory,
   }) {
     return SavedGameEntry(
       id: id ?? this.id,
@@ -130,6 +139,9 @@ class SavedGameEntry {
       isRatedMode: isRatedMode ?? this.isRatedMode,
       isAcademyActive: isAcademyActive ?? this.isAcademyActive,
       result: identical(result, _sentinel) ? this.result : result as String?,
+      ratingSnapshot: ratingSnapshot ?? this.ratingSnapshot,
+      dominanceSnapshot: dominanceSnapshot ?? this.dominanceSnapshot,
+      ratingCategory: ratingCategory ?? this.ratingCategory,
     );
   }
 
@@ -158,6 +170,9 @@ class SavedGameEntry {
       isRatedMode: json['isRatedMode'] as bool? ?? false,
       isAcademyActive: json['isAcademyActive'] as bool? ?? false,
       result: json['result'] as String?,
+      ratingSnapshot: json['ratingSnapshot'] as int?,
+      dominanceSnapshot: (json['dominanceSnapshot'] as num?)?.toDouble(),
+      ratingCategory: json['ratingCategory'] as String?,
     );
   }
 
@@ -181,6 +196,9 @@ class SavedGameEntry {
       'isRatedMode': isRatedMode,
       'isAcademyActive': isAcademyActive,
       'result': result,
+      'ratingSnapshot': ratingSnapshot,
+      'dominanceSnapshot': dominanceSnapshot,
+      'ratingCategory': ratingCategory,
     };
   }
 }
