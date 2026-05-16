@@ -121,6 +121,10 @@ class _HistoryCardState extends State<HistoryCard> {
                           ),
                           const SizedBox(width: 8),
                           _buildModeBadge(widget.game.isRatedMode),
+                          if (widget.game.result != null) ...[
+                            const SizedBox(width: 8),
+                            _buildResultBadge(widget.game.result!),
+                          ],
                         ],
                       ),
                     ),
@@ -213,6 +217,43 @@ class _HistoryCardState extends State<HistoryCard> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildResultBadge(String result) {
+    Color color;
+    String text;
+    switch (result) {
+      case 'W':
+        color = Colors.greenAccent;
+        text = 'Won W';
+        break;
+      case 'L':
+        color = Colors.redAccent;
+        text = 'Lost L';
+        break;
+      case 'D':
+      default:
+        color = ScholarlyTheme.textMuted;
+        text = 'Draw D';
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: color),
+      ),
+      child: Text(
+        text,
+        style: GoogleFonts.jetBrainsMono(
+          color: color,
+          fontSize: 9,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }

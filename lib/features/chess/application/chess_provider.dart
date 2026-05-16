@@ -1417,7 +1417,10 @@ class ChessNotifier extends StateNotifier<ChessState> {
     }
   }
 
-  Future<SavedGameEntry?> saveCurrentGame({String? customNameOverride}) async {
+  Future<SavedGameEntry?> saveCurrentGame({
+    String? customNameOverride,
+    String? resultOverride,
+  }) async {
 
     state = state.copyWith(isSavingGame: true);
     try {
@@ -1456,6 +1459,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
         gameMode: state.gameMode,
         isRatedMode: state.isRatedMode,
         isAcademyActive: state.isAcademyActive,
+        result: resultOverride,
       );
 
       final saves = isUpdate
@@ -2536,6 +2540,18 @@ class ChessNotifier extends StateNotifier<ChessState> {
     }
     _playMoveSound();
     _applyRatedRatingAdjustments(player);
+
+    if (state.game.gameOver) {
+      String? result;
+      if (state.game.inCheckmate) {
+        final winnerIsWhite = player == 'White';
+        final humanWon = winnerIsWhite == state.isPlayerWhite;
+        result = humanWon ? 'W' : 'L';
+      } else if (state.game.inDraw || state.game.inStalemate) {
+        result = 'D';
+      }
+      saveCurrentGame(resultOverride: result);
+    }
   }
 
   void _applyRatedRatingAdjustments(String player) {
@@ -2658,7 +2674,10 @@ class ChessNotifier extends StateNotifier<ChessState> {
     _updateRating(0.0); // 0.0 = Loss
 
     // 2. Save game to history as "Resigned"
-    await saveCurrentGame(customNameOverride: 'Rated Loss (Resigned)');
+    await saveCurrentGame(
+      customNameOverride: 'Rated Loss (Resigned)',
+      resultOverride: 'L',
+    );
 
     // 3. Reset the game
     await reset();
@@ -2979,7 +2998,15 @@ class ChessNotifier extends StateNotifier<ChessState> {
           ? 'White ran out of time.'
           : 'Black ran out of time.',
     );
-    saveCurrentGame();
+
+    String? result;
+    if (state.isRatedMode) {
+      final timedOutSideIsWhite = side == _clockWhite;
+      final playerIsWhite = state.isPlayerWhite;
+      result = (playerIsWhite == timedOutSideIsWhite) ? 'L' : 'W';
+    }
+
+    saveCurrentGame(resultOverride: result);
   }
 
   void _stopClock() {

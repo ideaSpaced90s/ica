@@ -10,6 +10,10 @@ import 'package:google_fonts/google_fonts.dart';
 import '../application/chess_provider.dart';
 import 'scholarly_theme.dart';
 import 'widgets/history_card.dart';
+import 'widgets/game_controls.dart';
+import 'widgets/global_sidebar.dart';
+
+enum HistoryFilter { all, favorites, rated, unrated }
 
 class HistoryPage extends ConsumerStatefulWidget {
   const HistoryPage({super.key});
@@ -19,9 +23,9 @@ class HistoryPage extends ConsumerStatefulWidget {
 }
 
 class _HistoryPageState extends ConsumerState<HistoryPage> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final TextEditingController _searchController = TextEditingController();
-  bool _showOnlyFavorites = false;
-  bool _showOnlyRated = false;
+  HistoryFilter _currentFilter = HistoryFilter.all;
 
 
   @override
@@ -56,163 +60,202 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
       }).toList();
     }
 
-    // Favorites filter
-    if (_showOnlyFavorites) {
-      filteredSaves = filteredSaves.where((s) => s.isFavorite).toList();
-    }
-
-    // Rated filter
-    if (_showOnlyRated) {
-      filteredSaves = filteredSaves.where((s) => s.isRatedMode).toList();
+    // Tab filtering
+    switch (_currentFilter) {
+      case HistoryFilter.favorites:
+        filteredSaves = filteredSaves.where((s) => s.isFavorite).toList();
+        break;
+      case HistoryFilter.rated:
+        filteredSaves = filteredSaves.where((s) => s.isRatedMode).toList();
+        break;
+      case HistoryFilter.unrated:
+        filteredSaves = filteredSaves.where((s) => !s.isRatedMode).toList();
+        break;
+      case HistoryFilter.all:
+        // Already assigned
+        break;
     }
 
     return Scaffold(
+      key: _scaffoldKey,
       backgroundColor: ScholarlyTheme.backgroundStart,
-      body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          SliverAppBar.large(
-            backgroundColor: ScholarlyTheme.backgroundStart,
-            surfaceTintColor: ScholarlyTheme.backgroundStart,
-            title: Text(
-              'Game History',
-              style: GoogleFonts.inter(
-                color: ScholarlyTheme.textPrimary,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            leading: IconButton(
-              icon: const Icon(
-                Icons.arrow_back_ios_new_rounded,
-                color: ScholarlyTheme.textPrimary,
-                size: 20,
-              ),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-            actions: [
-              if (state.savedGames.isNotEmpty)
-                IconButton(
-                  icon: const Icon(
-                    Icons.delete_sweep_rounded,
-                    color: Colors.redAccent,
-                  ),
-                  tooltip: 'Clear All',
-                  onPressed: () => _confirmClearAll(context, notifier),
-                ),
-              const SizedBox(width: 8),
-            ],
-          ),
-
-          // Filters and Search
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              child: Column(
-                children: [
-                  _buildSearchBar(),
-                  const SizedBox(height: 12),
-                  Row(
+      drawer: const GlobalSidebar(),
+      body: Stack(
+        children: [
+          SafeArea(
+            child: Column(
+              children: [
+                // Fixed Header: Search + Delete All
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: Row(
                     children: [
-                      FilterChip(
-                        label: const Text('Favorites'),
-                        selected: _showOnlyFavorites,
-                        onSelected: (val) =>
-                            setState(() => _showOnlyFavorites = val),
-                        selectedColor: ScholarlyTheme.accentBlueSoft,
-                        checkmarkColor: ScholarlyTheme.accentBlue,
-                        labelStyle: GoogleFonts.inter(
-                          color: _showOnlyFavorites
-                              ? ScholarlyTheme.accentBlue
-                              : ScholarlyTheme.textPrimary,
-                          fontSize: 12,
-                          fontWeight: _showOnlyFavorites
-                              ? FontWeight.bold
-                              : FontWeight.normal,
+                      Expanded(child: _buildSearchBar()),
+                      if (state.savedGames.isNotEmpty) ...[
+                        const SizedBox(width: 12),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.delete_sweep_rounded,
+                            color: Colors.redAccent,
+                            size: 24,
+                          ),
+                          tooltip: 'Clear All',
+                          onPressed: () => _confirmClearAll(context, notifier),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      FilterChip(
-                        label: const Text('Rated Only'),
-                        selected: _showOnlyRated,
-                        onSelected: (val) => setState(() => _showOnlyRated = val),
-                        selectedColor: Colors.amber.withValues(alpha: 0.2),
-                        checkmarkColor: Colors.amber,
-                        labelStyle: GoogleFonts.inter(
-                          color: _showOnlyRated
-                              ? Colors.amber
-                              : ScholarlyTheme.textPrimary,
-                          fontSize: 12,
-                          fontWeight:
-                              _showOnlyRated ? FontWeight.bold : FontWeight.normal,
-                        ),
-                      ),
-                      const Spacer(),
-                      Text(
-                        '${filteredSaves.length} matches',
-                        style: GoogleFonts.inter(
-                          color: ScholarlyTheme.textMuted,
-                          fontSize: 11,
-                        ),
-                      ),
+                      ],
                     ],
                   ),
-                ],
-              ),
+                ),
+
+                // Fixed Tabs
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      children: [
+                        _buildFilterTab('All', HistoryFilter.all),
+                        const SizedBox(width: 8),
+                        _buildFilterTab('Favorites', HistoryFilter.favorites),
+                        const SizedBox(width: 8),
+                        _buildFilterTab('Rated', HistoryFilter.rated),
+                        const SizedBox(width: 8),
+                        _buildFilterTab('Unrated', HistoryFilter.unrated),
+                        const SizedBox(width: 16),
+                        Text(
+                          '${filteredSaves.length} matches',
+                          style: GoogleFonts.inter(
+                            color: ScholarlyTheme.textMuted,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Scrollable List
+                Expanded(
+                  child: state.isSavedGamesLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : filteredSaves.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.history_rounded,
+                                    size: 64,
+                                    color: ScholarlyTheme.panelStroke,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'No games found',
+                                    style: GoogleFonts.inter(
+                                      color: ScholarlyTheme.textMuted,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : ListView.builder(
+                              physics: const BouncingScrollPhysics(),
+                              padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
+                              itemCount: filteredSaves.length,
+                              itemBuilder: (context, index) {
+                                final game = filteredSaves[index];
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 12),
+                                  child: HistoryCard(
+                                    game: game,
+                                    onTap: () {
+                                      notifier.loadSavedGame(game);
+                                      Navigator.of(context).popUntil(
+                                        (route) => route.isFirst,
+                                      );
+                                    },
+                                    onDelete: () =>
+                                        notifier.deleteSavedGame(game.id),
+                                    onToggleFavorite: () =>
+                                        notifier.toggleFavorite(game.id),
+                                    onRename: (newName) =>
+                                        notifier.renameSavedGame(
+                                      game.id,
+                                      newName,
+                                    ),
+                                    onExport: () =>
+                                        _showExportOptions(context, game),
+                                  ),
+                                );
+                              },
+                            ),
+                ),
+              ],
             ),
           ),
 
-          // List of Games
-          if (state.isSavedGamesLoading)
-            const SliverFillRemaining(
-              child: Center(child: CircularProgressIndicator()),
-            )
-          else if (filteredSaves.isEmpty)
-            SliverFillRemaining(
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.history_rounded,
-                      size: 64,
-                      color: ScholarlyTheme.panelStroke,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'No games found',
-                      style: GoogleFonts.inter(color: ScholarlyTheme.textMuted),
-                    ),
-                  ],
+          // Bottom Persistent Action Row
+          Positioned(
+            bottom: 24,
+            left: 24,
+            right: 24,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                ActionIconButton(
+                  icon: Icons.menu_rounded,
+                  size: 24,
+                  shouldBlink: !state.hasBlinkedMenu,
+                  onBlinkComplete: () => notifier.markMenuAsBlinked(),
+                  onTap: () => _scaffoldKey.currentState?.openDrawer(),
                 ),
-              ),
-            )
-          else
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate((context, index) {
-                  final game = filteredSaves[index];
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: HistoryCard(
-                      game: game,
-                      onTap: () {
-                        notifier.loadSavedGame(game);
-                        Navigator.of(context).popUntil(
-                          (route) => route.isFirst,
-                        ); // Pop both History and Settings pages to return to main dashboard
-                      },
-                      onDelete: () => notifier.deleteSavedGame(game.id),
-                      onToggleFavorite: () => notifier.toggleFavorite(game.id),
-                      onRename: (newName) =>
-                          notifier.renameSavedGame(game.id, newName),
-                      onExport: () => _showExportOptions(context, game),
-                    ),
-                  );
-                }, childCount: filteredSaves.length),
-              ),
+                Text(
+                  'ANALYSIS ARCHIVE',
+                  style: GoogleFonts.inter(
+                    color: ScholarlyTheme.textSubtle,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.5,
+                  ),
+                ),
+              ],
             ),
+          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildFilterTab(String label, HistoryFilter filter) {
+    final isSelected = _currentFilter == filter;
+    Color activeColor = ScholarlyTheme.accentBlue;
+    if (filter == HistoryFilter.rated) activeColor = Colors.amber;
+    if (filter == HistoryFilter.unrated) activeColor = Colors.tealAccent;
+
+    return GestureDetector(
+      onTap: () => setState(() => _currentFilter = filter),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? activeColor.withValues(alpha: 0.15)
+              : ScholarlyTheme.panelBase,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? activeColor : ScholarlyTheme.panelStroke,
+            width: 1,
+          ),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.inter(
+            color: isSelected ? activeColor : ScholarlyTheme.textPrimary,
+            fontSize: 12,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
       ),
     );
   }
