@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -16,6 +17,7 @@ import 'widgets/avatar_selection_sheet.dart';
 import 'widgets/arena_turn_indicator.dart';
 import 'widgets/evaluation_bar.dart';
 import 'widgets/user_avatar_indicator.dart';
+import 'widgets/dice_rolling_overlay.dart';
 
 class RatedArenaPage extends ConsumerStatefulWidget {
   const RatedArenaPage({super.key});
@@ -27,6 +29,8 @@ class RatedArenaPage extends ConsumerStatefulWidget {
 class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBindingObserver {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   bool _hasShownRatedCaution = false;
+  bool _isDiceRolling = false;
+  bool _assignedWhite = true;
 
   @override
   void initState() {
@@ -46,10 +50,11 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
 
     // One-time Rated Caution Popup
     if (!_hasShownRatedCaution) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (mounted && !_hasShownRatedCaution) {
-          _showRatedCautionDialog(context);
           setState(() => _hasShownRatedCaution = true);
+          await _showRatedCautionDialog(context);
+          _triggerDiceRoll();
         }
       });
     }
@@ -78,6 +83,11 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
             _buildPortraitLayout(context, ref, state),
             if (state.game.gameOver && !state.isGameOverDismissed)
               _buildGameOverOverlay(context, ref, state),
+            if (_isDiceRolling)
+              DiceRollingOverlay(
+                isWhite: _assignedWhite,
+                onComplete: _onDiceRollComplete,
+              ),
           ],
         ),
       ),
@@ -198,9 +208,10 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
                 final resigned = await _showRatedNewGameDialog(context);
                 if (resigned == true) {
                   await ref.read(chessProvider.notifier).resignRatedGame();
+                  _triggerDiceRoll();
                 }
               } else {
-                await ref.read(chessProvider.notifier).reset();
+                _triggerDiceRoll();
               }
             },
           ),
@@ -284,7 +295,14 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    FilledButton(onPressed: () => ref.read(chessProvider.notifier).reset(), style: FilledButton.styleFrom(backgroundColor: Colors.amber, foregroundColor: Colors.black), child: const Text('Yes')),
+                    FilledButton(
+                      onPressed: () {
+                        ref.read(chessProvider.notifier).dismissGameOver();
+                        _triggerDiceRoll();
+                      },
+                      style: FilledButton.styleFrom(backgroundColor: Colors.amber, foregroundColor: Colors.black),
+                      child: const Text('Yes'),
+                    ),
                     const SizedBox(width: 16),
                     TextButton(onPressed: () => ref.read(chessProvider.notifier).dismissGameOver(), child: Text('No', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted))),
                   ],
@@ -295,6 +313,20 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
         ),
       ),
     );
+  }
+
+  void _triggerDiceRoll() {
+    setState(() {
+      _isDiceRolling = true;
+      _assignedWhite = math.Random().nextBool();
+    });
+  }
+
+  void _onDiceRollComplete() {
+    if (mounted) {
+      ref.read(chessProvider.notifier).reset(forcedPlayerWhite: _assignedWhite);
+      setState(() => _isDiceRolling = false);
+    }
   }
 
   bool _isPlayerTurn(ChessState state) {
@@ -366,9 +398,10 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
     );
   }
 
-  void _showRatedCautionDialog(BuildContext context) {
-    showDialog(
+  Future<void> _showRatedCautionDialog(BuildContext context) async {
+    await showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) => AlertDialog(
         backgroundColor: ScholarlyTheme.panelBase,
         surfaceTintColor: Colors.amber,

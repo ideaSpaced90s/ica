@@ -2775,14 +2775,14 @@ class ChessNotifier extends StateNotifier<ChessState> {
     _syncUndoRedoFlags();
   }
 
-  Future<void> reset() async {
+  Future<void> reset({bool? forcedPlayerWhite}) async {
     // Auto-save current game before resetting if there is progress
     if (state.recentMoves.isNotEmpty) {
       await saveCurrentGame();
     }
 
-    final preservePlayerWhite = state.isPlayerWhite;
-    final preserveBoardFlipped = state.isBoardFlipped;
+    final preservePlayerWhite = forcedPlayerWhite ?? state.isPlayerWhite;
+    final preserveBoardFlipped = forcedPlayerWhite != null ? !forcedPlayerWhite : state.isBoardFlipped;
     final preserveRated = state.isRatedMode;
     final preserveEvE = preserveRated ? false : state.isEngineVsEngine;
     final preserveLevel = state.engineLevel;
