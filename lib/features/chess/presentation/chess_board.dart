@@ -736,19 +736,6 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
           _triggerToyConfetti(squareName);
         }
       }
-      if (chessState.boardThemeId == 'theme5' &&
-          ref
-              .read(chessProvider.notifier)
-              .isAnimationTypeEnabled('themeEffects')) {
-        _triggerGreaseTrail(_selectedSquare!, squareName);
-      }
-      if (chessState.boardThemeId == 'theme10' &&
-          sourcePiece?.type != chess_lib.PieceType.PAWN &&
-          ref
-              .read(chessProvider.notifier)
-              .isAnimationTypeEnabled('themeEffects')) {
-        _triggerThunderTrail(_selectedSquare!, squareName);
-      }
       ref.read(chessProvider.notifier).makeMove(_selectedSquare!, squareName);
       _clearSelection();
       return;
@@ -1182,6 +1169,20 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
         case 'R':
           _triggerRookImpact(from, to, boardSize);
           break;
+      }
+    }
+
+    // 3. Theme-specific Signature Effects
+    if (ref.read(chessProvider.notifier).isAnimationTypeEnabled('themeEffects')) {
+      final themeId = ref.read(chessProvider).boardThemeId;
+      final type = pieceCode.length > 1
+          ? pieceCode[1].toUpperCase()
+          : pieceCode.toUpperCase();
+
+      if (themeId == 'theme10' && type != 'P') {
+        _triggerThunderTrail(from, to);
+      } else if (themeId == 'theme5') {
+        _triggerGreaseTrail(from, to);
       }
     }
   }
