@@ -641,10 +641,34 @@ class ChessNotifier extends StateNotifier<ChessState> {
     if (state.recentMoves.isNotEmpty) {
       await saveCurrentGame();
     }
+    
+    final newBoardThemeId = isRated ? 'classic' : state.boardThemeId;
+    final newIsMusicEnabled = isRated ? false : state.isMusicEnabled;
+    
     state = state.copyWith(
       isRatedMode: isRated,
       isEngineVsEngine: isRated ? false : state.isEngineVsEngine,
+      boardThemeId: newBoardThemeId,
+      isMusicEnabled: newIsMusicEnabled,
+      // Force snappy animations for rated mode
+      animationSettings: isRated 
+        ? {
+            'pieceMotion': true,
+            'feedback': false,
+            'indicators': false,
+            'themeEffects': false,
+            'themeAmbience': false,
+            'kineticImpact': false,
+          }
+        : state.animationSettings,
     );
+    
+    // Update sound service state
+    _soundService.updateSettings(
+      sfxEnabled: state.isSoundEnabled,
+      bgmEnabled: newIsMusicEnabled,
+    );
+    
     await _saveSettings();
     await reset();
   }
@@ -1250,7 +1274,8 @@ class ChessNotifier extends StateNotifier<ChessState> {
     }
   }
 
-  Future<SavedGameEntry?> saveCurrentGame() async {
+  Future<SavedGameEntry?> saveCurrentGame({String? customNameOverride}) async {
+
     state = state.copyWith(isSavingGame: true);
     try {
       final isUpdate = state.loadedSaveId != null;
@@ -1282,8 +1307,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
         activeClockSide: state.activeClockSide,
         lastMove: state.lastMove,
         commentaryHistory: state.commentaryHistory,
-        customName: customName,
+        customName: customNameOverride ?? customName,
         isFavorite: isFavorite,
+
         gameMode: state.gameMode,
         isRatedMode: state.isRatedMode,
         isAcademyActive: state.isAcademyActive,
@@ -2305,7 +2331,10 @@ class ChessNotifier extends StateNotifier<ChessState> {
       unawaited(_soundService.duckBgmTemporarily());
     }
     _playMoveSound();
+    _applyRatedRatingAdjustments(player);
+  }
 
+  void _applyRatedRatingAdjustments(String player) {
     // Perform Elo rating adjustments if match concluded in Rated Mode
     if (state.isRatedMode && !state.isEngineVsEngine && state.game.gameOver) {
       double actualScore = 0.5; // Draw
@@ -2315,35 +2344,54 @@ class ChessNotifier extends StateNotifier<ChessState> {
         actualScore = humanWon ? 1.0 : 0.0;
       }
 
-      final avatar = AiAvatar.getAvatar(state.engineLevel);
-      final ratingA = state.userFideRating;
-      final ratingB = avatar.rating;
-
-      final expectedScoreA = 1.0 / (1.0 + math.pow(10.0, (ratingB - ratingA) / 400.0));
-      final kFactor = state.ratedGamesCount < 10 ? 40 : 20;
-
-      int streak = state.currentWinningStreak;
-      int streakBonus = 0;
-      if (actualScore == 1.0) {
-        streak += 1;
-        if (streak >= 3) {
-          streakBonus = 5;
-        }
-      } else {
-        streak = 0;
-      }
-
-      final newRatingRaw = ratingA + (kFactor * (actualScore - expectedScoreA)).round() + streakBonus;
-      final newRating = math.max(400, newRatingRaw);
-      final newCount = state.ratedGamesCount + 1;
-
-      state = state.copyWith(
-        userFideRating: newRating,
-        ratedGamesCount: newCount,
-        currentWinningStreak: streak,
-      );
-      _saveSettings();
+      _updateRating(actualScore);
     }
+  }
+
+  void _updateRating(double actualScore) {
+    final avatar = AiAvatar.getAvatar(state.engineLevel);
+    final ratingA = state.userFideRating;
+    final ratingB = avatar.rating;
+
+    final expectedScoreA =
+        1.0 / (1.0 + math.pow(10.0, (ratingB - ratingA) / 400.0));
+    final kFactor = state.ratedGamesCount < 10 ? 40 : 20;
+
+    int streak = state.currentWinningStreak;
+    int streakBonus = 0;
+    if (actualScore == 1.0) {
+      streak += 1;
+      if (streak >= 3) {
+        streakBonus = 5;
+      }
+    } else {
+      streak = 0;
+    }
+
+    final newRatingRaw =
+        ratingA + (kFactor * (actualScore - expectedScoreA)).round() + streakBonus;
+    final newRating = math.max(400, newRatingRaw);
+    final newCount = state.ratedGamesCount + 1;
+
+    state = state.copyWith(
+      userFideRating: newRating,
+      ratedGamesCount: newCount,
+      currentWinningStreak: streak,
+    );
+    _saveSettings();
+  }
+
+  Future<void> resignRatedGame() async {
+    if (!state.isRatedMode) return;
+
+    // 1. Mark as Loss in rating
+    _updateRating(0.0); // 0.0 = Loss
+
+    // 2. Save game to history as "Resigned"
+    await saveCurrentGame(customNameOverride: 'Rated Loss (Resigned)');
+
+    // 3. Reset the game
+    await reset();
   }
 
   chess_lib.Move? _lastMoveFromHistory() {

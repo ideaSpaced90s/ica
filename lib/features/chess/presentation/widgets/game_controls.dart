@@ -93,9 +93,10 @@ class _ActionIconButtonState extends State<ActionIconButton> with SingleTickerPr
     final isPortrait = sizeInfo.orientation == Orientation.portrait;
 
     // Cap button size for small height screens
-    final double portraitBase = sizeInfo.size.height * 0.12;
-    final defaultSize = isPortrait ? portraitBase.clamp(40.0, 80.0) : 40.0;
+    final double portraitBase = sizeInfo.size.height * 0.07; // Reduced from 0.12
+    final defaultSize = isPortrait ? portraitBase.clamp(32.0, 56.0) : 32.0; // Reduced from 40.0, 80.0
     final size = widget.size ?? defaultSize;
+
 
     return GestureDetector(
       onTapDown: widget.isEnabled

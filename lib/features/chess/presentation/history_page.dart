@@ -21,6 +21,8 @@ class HistoryPage extends ConsumerStatefulWidget {
 class _HistoryPageState extends ConsumerState<HistoryPage> {
   final TextEditingController _searchController = TextEditingController();
   bool _showOnlyFavorites = false;
+  bool _showOnlyRated = false;
+
 
   @override
   void initState() {
@@ -57,6 +59,11 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
     // Favorites filter
     if (_showOnlyFavorites) {
       filteredSaves = filteredSaves.where((s) => s.isFavorite).toList();
+    }
+
+    // Rated filter
+    if (_showOnlyRated) {
+      filteredSaves = filteredSaves.where((s) => s.isRatedMode).toList();
     }
 
     return Scaffold(
@@ -107,7 +114,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
                   Row(
                     children: [
                       FilterChip(
-                        label: Text('Favorites'),
+                        label: const Text('Favorites'),
                         selected: _showOnlyFavorites,
                         onSelected: (val) =>
                             setState(() => _showOnlyFavorites = val),
@@ -123,9 +130,25 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
                               : FontWeight.normal,
                         ),
                       ),
+                      const SizedBox(width: 8),
+                      FilterChip(
+                        label: const Text('Rated Only'),
+                        selected: _showOnlyRated,
+                        onSelected: (val) => setState(() => _showOnlyRated = val),
+                        selectedColor: Colors.amber.withValues(alpha: 0.2),
+                        checkmarkColor: Colors.amber,
+                        labelStyle: GoogleFonts.inter(
+                          color: _showOnlyRated
+                              ? Colors.amber
+                              : ScholarlyTheme.textPrimary,
+                          fontSize: 12,
+                          fontWeight:
+                              _showOnlyRated ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
                       const Spacer(),
                       Text(
-                        '${filteredSaves.length} games found',
+                        '${filteredSaves.length} matches',
                         style: GoogleFonts.inter(
                           color: ScholarlyTheme.textMuted,
                           fontSize: 11,
