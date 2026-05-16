@@ -4,11 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../scholarly_theme.dart';
 import '../../application/chess_provider.dart';
+import '../main_page.dart';
 import '../academy_page.dart';
 import '../settings_page.dart';
 import '../tutorial_page.dart';
 import '../dashboard_page.dart';
 import '../history_page.dart';
+import '../about_us_page.dart';
 
 
 
@@ -20,6 +22,15 @@ class GlobalSidebar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(chessProvider);
     final notifier = ref.read(chessProvider.notifier);
+
+    final isDashboard = context.findAncestorWidgetOfExactType<DashboardPage>() != null;
+    final isMain = context.findAncestorWidgetOfExactType<MainPage>() != null;
+    final isAnalysis = context.findAncestorWidgetOfExactType<HistoryPage>() != null;
+    final isAcademy = context.findAncestorWidgetOfExactType<AcademyPage>() != null && state.isAcademyActive && !state.isPuzzleMode;
+    final isPuzzles = context.findAncestorWidgetOfExactType<AcademyPage>() != null && state.isPuzzleMode;
+    final isTutorial = context.findAncestorWidgetOfExactType<TutorialPage>() != null;
+    final isSettings = context.findAncestorWidgetOfExactType<SettingsPage>() != null;
+    final isAbout = context.findAncestorWidgetOfExactType<AboutUsPage>() != null;
 
     return Drawer(
       backgroundColor: Colors.transparent,
@@ -61,92 +72,125 @@ class GlobalSidebar extends ConsumerWidget {
                       _SidebarItem(
                         icon: Icons.dashboard_rounded,
                         label: 'Dashboard',
+                        isSelected: isDashboard,
                         onTap: () {
                           Navigator.pop(context);
-                          Navigator.of(context).push(
-                            MaterialPageRoute(builder: (context) => const DashboardPage()),
-                          );
+                          if (!isDashboard) {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(builder: (context) => const DashboardPage()),
+                            );
+                          }
                         },
                       ),
                       const Divider(height: 24, color: ScholarlyTheme.panelStroke),
                       _SidebarItem(
                         icon: Icons.grid_view_rounded,
                         label: 'UnRated Arena',
-                        isSelected: !state.isRatedMode && !state.isAcademyActive && !state.isPuzzleMode,
+                        isSelected: isMain && !state.isRatedMode && !state.isAcademyActive && !state.isPuzzleMode,
                         onTap: () async {
                           Navigator.pop(context);
                           await notifier.setRatedMode(false);
-                          if (context.mounted) {
-                            Navigator.of(context).popUntil((route) => route.isFirst);
+                          if (context.mounted && !isMain) {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(builder: (context) => const MainPage()),
+                            );
                           }
                         },
                       ),
                       _SidebarItem(
                         icon: Icons.emoji_events_rounded,
                         label: 'Rated Arena',
-                        isSelected: state.isRatedMode && !state.isAcademyActive && !state.isPuzzleMode,
+                        isSelected: isMain && state.isRatedMode && !state.isAcademyActive && !state.isPuzzleMode,
                         onTap: () async {
                           Navigator.pop(context);
                           await notifier.setRatedMode(true);
-                          if (context.mounted) {
-                            Navigator.of(context).popUntil((route) => route.isFirst);
+                          if (context.mounted && !isMain) {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(builder: (context) => const MainPage()),
+                            );
                           }
                         },
                       ),
                       _SidebarItem(
                         icon: Icons.history_rounded,
                         label: 'Analysis',
+                        isSelected: isAnalysis,
                         onTap: () {
                           Navigator.pop(context);
-                          Navigator.of(context).push(
-                            MaterialPageRoute(builder: (context) => const HistoryPage()),
-                          );
+                          if (!isAnalysis) {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(builder: (context) => const HistoryPage()),
+                            );
+                          }
                         },
                       ),
                       const SizedBox(height: 8),
                       _SidebarItem(
                         icon: Icons.school_rounded,
                         label: 'Academy',
-                        isSelected: state.isAcademyActive && !state.isPuzzleMode,
+                        isSelected: isAcademy,
                         onTap: () {
                           Navigator.pop(context);
-                          Navigator.of(context).push(
-                            MaterialPageRoute(builder: (context) => const AcademyPage()),
-                          );
+                          if (!isAcademy || state.isPuzzleMode) {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(builder: (context) => const AcademyPage()),
+                            );
+                          }
                         },
                       ),
                       _SidebarItem(
                         icon: Icons.extension_rounded,
                         label: 'Puzzles',
-                        isSelected: state.isPuzzleMode,
+                        isSelected: isPuzzles,
                         onTap: () {
                           Navigator.pop(context);
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => const AcademyPage(startInPuzzleMode: true),
-                            ),
-                          );
+                          if (!isPuzzles || !state.isPuzzleMode) {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => const AcademyPage(startInPuzzleMode: true),
+                              ),
+                            );
+                          }
                         },
                       ),
                       _SidebarItem(
                         icon: Icons.menu_book_rounded,
                         label: 'Tutorial',
+                        isSelected: isTutorial,
                         onTap: () {
                           Navigator.pop(context);
-                          Navigator.of(context).push(
-                            MaterialPageRoute(builder: (context) => const TutorialPage()),
-                          );
+                          if (!isTutorial) {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(builder: (context) => const TutorialPage()),
+                            );
+                          }
                         },
                       ),
                       const Divider(height: 24, color: ScholarlyTheme.panelStroke),
                       _SidebarItem(
                         icon: Icons.settings_rounded,
                         label: 'Settings',
+                        isSelected: isSettings,
                         onTap: () {
                           Navigator.pop(context);
-                          Navigator.of(context).push(
-                            MaterialPageRoute(builder: (context) => const SettingsPage()),
-                          );
+                          if (!isSettings) {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(builder: (context) => const SettingsPage()),
+                            );
+                          }
+                        },
+                      ),
+                      _SidebarItem(
+                        icon: Icons.info_outline_rounded,
+                        label: 'About Us',
+                        isSelected: isAbout,
+                        onTap: () {
+                          Navigator.pop(context);
+                          if (!isAbout) {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(builder: (context) => const AboutUsPage()),
+                            );
+                          }
                         },
                       ),
                     ],
@@ -210,7 +254,7 @@ class GlobalSidebar extends ConsumerWidget {
     return Padding(
       padding: const EdgeInsets.all(24.0),
       child: Text(
-        'v1.0.0 • Alpha Build',
+        'v1.0.0 • KINGSLAYER ©',
         style: GoogleFonts.inter(
           fontSize: 11,
           color: ScholarlyTheme.textSubtle,

@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../application/chess_provider.dart';
 import 'scholarly_theme.dart';
-import 'history_page.dart';
 import 'package:kingslayer_chess/features/chess/presentation/themes/theme_registry.dart';
 import 'package:kingslayer_chess/features/chess/presentation/themes/chess_theme.dart';
 import '../domain/models/ai_avatar.dart';
-import 'academy_page.dart';
 import 'widgets/global_sidebar.dart';
 import 'widgets/game_controls.dart';
 
@@ -42,14 +39,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             slivers: [
               // Extra top padding since app bar is gone
               const SliverToBoxAdapter(child: SizedBox(height: 60)),
-
-              // Game Status Card
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: _GameStatusHeader(state: state),
-            ),
-          ),
 
           // Settings Sections
           SliverList(
@@ -363,53 +352,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   ],
                 ),
 
-              // DATA & MANAGEMENT
-              if (!widget.isAcademyMode)
-                _SettingsCategory(
-                  title: 'MANAGEMENT',
-                  children: [
-                    _SettingsTile(
-                      label: 'Game History',
-                      description: 'View, resume, and manage your matches',
-                      icon: Icons.history_rounded,
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => const HistoryPage(),
-                          ),
-                        );
-                      },
-                    ),
-                    _SettingsTile(
-                      label: 'Academy',
-                      description: "GM Bard's Chess Academy",
-                      icon: Icons.school_rounded,
-                      iconColor: ScholarlyTheme.accentBlue,
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => const AcademyPage(),
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
 
-              // DANGER ZONE
-              if (!widget.isAcademyMode)
-                _SettingsCategory(
-                  title: 'EXIT',
-                  children: [
-                    _SettingsTile(
-                      label: 'Exit Game',
-                      description: 'Save and return to system',
-                      icon: Icons.exit_to_app_rounded,
-                      iconColor: Colors.red.shade600,
-                      onTap: () => _confirmSaveAndExit(context, ref),
-                    ),
-                  ],
-                ),
 
               const SizedBox(height: 120), // Bottom padding for floating bar
             ]),
@@ -714,52 +657,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
   }
 
-  Future<void> _confirmSaveAndExit(BuildContext context, WidgetRef ref) async {
-    final shouldExit = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: ScholarlyTheme.panelBase,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: Text(
-            'Save the game and exit?',
-            style: GoogleFonts.inter(fontWeight: FontWeight.w600),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: Text(
-                'No',
-                style: GoogleFonts.inter(color: ScholarlyTheme.textMuted),
-              ),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              style: FilledButton.styleFrom(
-                backgroundColor: ScholarlyTheme.accentBlue,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: Text(
-                'Yes',
-                style: GoogleFonts.inter(fontWeight: FontWeight.w600),
-              ),
-            ),
-          ],
-        );
-      },
-    );
 
-    if (shouldExit != true) return;
-
-    final notifier = ref.read(chessProvider.notifier);
-    await notifier.saveCurrentGame();
-    await notifier.shutdown();
-    SystemNavigator.pop();
-  }
 
   Future<void> _confirmResetRatedStats(BuildContext context, WidgetRef ref) async {
     final proceed = await showDialog<bool>(
@@ -1286,87 +1184,6 @@ void showAvatarSelectionSheet(BuildContext context, WidgetRef ref, {bool isBotto
 
 // --- NEW HELPER WIDGETS ---
 
-class _GameStatusHeader extends StatelessWidget {
-  final dynamic state; // ChessState
-
-  const _GameStatusHeader({required this.state});
-
-  @override
-  Widget build(BuildContext context) {
-    return GlassPanel(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 10,
-                      height: 10,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: state.game.gameOver
-                            ? ScholarlyTheme.textMuted
-                            : (state.isPaused ? Colors.red : Colors.green),
-                        boxShadow: [
-                          BoxShadow(
-                            color:
-                                (state.game.gameOver
-                                        ? ScholarlyTheme.textMuted
-                                        : (state.isPaused
-                                              ? Colors.red
-                                              : Colors.green))
-                                    .withValues(alpha: 0.4),
-                            blurRadius: 4,
-                            spreadRadius: 1,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      state.game.gameOver
-                          ? 'GAME OVER'
-                          : (state.isPaused ? 'PAUSED' : 'LIVE'),
-                      style: GoogleFonts.inter(
-                        color: ScholarlyTheme.textPrimary,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 12,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  state.game.gameOver ? 'Results ready' : 'Match in progress',
-                  style: GoogleFonts.inter(
-                    color: ScholarlyTheme.textMuted,
-                    fontSize: 11,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          _StatusClock(
-            label: 'W',
-            timeLeft: state.whiteTimeLeft,
-            isActive: state.clockStarted && state.activeClockSide == 'white',
-          ),
-          const SizedBox(width: 8),
-          _StatusClock(
-            label: 'B',
-            timeLeft: state.blackTimeLeft,
-            isActive: state.clockStarted && state.activeClockSide == 'black',
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class _SettingsCategory extends StatelessWidget {
   final String title;
@@ -1691,66 +1508,6 @@ class _AnimationToggle extends StatelessWidget {
   }
 }
 
-class _StatusClock extends StatelessWidget {
-  final String label;
-  final Duration timeLeft;
-  final bool isActive;
-
-  const _StatusClock({
-    required this.label,
-    required this.timeLeft,
-    required this.isActive,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    String formatTime(Duration d) {
-      final mins = d.inMinutes.toString().padLeft(2, '0');
-      final secs = (d.inSeconds % 60).toString().padLeft(2, '0');
-      return '$mins:$secs';
-    }
-
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: ScholarlyTheme.modernDecoration().copyWith(
-        color: isActive
-            ? ScholarlyTheme.accentBlueSoft
-            : ScholarlyTheme.panelBase,
-        border: Border.all(
-          color: isActive
-              ? ScholarlyTheme.accentBlue
-              : ScholarlyTheme.panelStroke,
-        ),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        children: [
-          Text(
-            label,
-            style: GoogleFonts.inter(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: isActive
-                  ? ScholarlyTheme.accentBlue
-                  : ScholarlyTheme.textMuted,
-            ),
-          ),
-          Text(
-            formatTime(timeLeft),
-            style: GoogleFonts.jetBrainsMono(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: isActive
-                  ? ScholarlyTheme.accentBlue
-                  : ScholarlyTheme.textPrimary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class _TimeSliderRow extends StatelessWidget {
   final String label;

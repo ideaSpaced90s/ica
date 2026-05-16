@@ -221,6 +221,7 @@ class ChessState {
     this.isAcademyActive = false,
     this.glowingSquare,
     this.academyAnimationTrigger = 0,
+    this.hasBlinkedMenu = false,
   });
 
   final ChessGame game;
@@ -299,6 +300,7 @@ class ChessState {
   final bool isAcademyActive;
   final String? glowingSquare;
   final int academyAnimationTrigger;
+  final bool hasBlinkedMenu;
 
   bool get isChess960 => gameMode == 'chess960';
 
@@ -390,6 +392,7 @@ class ChessState {
     bool? isAcademyActive,
     Object? glowingSquare = _sentinel,
     int? academyAnimationTrigger,
+    bool? hasBlinkedMenu,
   }) {
     return ChessState(
       game: game ?? this.game,
@@ -507,6 +510,7 @@ class ChessState {
           : glowingSquare as String?,
       academyAnimationTrigger:
           academyAnimationTrigger ?? this.academyAnimationTrigger,
+      hasBlinkedMenu: hasBlinkedMenu ?? this.hasBlinkedMenu,
     );
   }
 }
@@ -781,6 +785,10 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
   void dismissGameOver() {
     state = state.copyWith(isGameOverDismissed: true);
+  }
+
+  void markMenuAsBlinked() {
+    state = state.copyWith(hasBlinkedMenu: true);
   }
 
   void jumpToMove(int index) {

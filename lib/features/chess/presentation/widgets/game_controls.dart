@@ -13,7 +13,12 @@ class ActionIconButton extends StatefulWidget {
     this.activeColor,
     this.activeIconColor,
     this.size,
+    this.shouldBlink = false,
+    this.onBlinkComplete,
   });
+
+  final bool shouldBlink;
+  final VoidCallback? onBlinkComplete;
 
   final IconData icon;
   final VoidCallback? onTap;
@@ -27,8 +32,60 @@ class ActionIconButton extends StatefulWidget {
   State<ActionIconButton> createState() => _ActionIconButtonState();
 }
 
-class _ActionIconButtonState extends State<ActionIconButton> {
+class _ActionIconButtonState extends State<ActionIconButton> with SingleTickerProviderStateMixin {
   bool _isPressed = false;
+  late AnimationController _blinkController;
+  late Animation<double> _glowAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _blinkController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+
+    _glowAnimation = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween<double>(begin: 0.0, end: 1.0), weight: 50),
+      TweenSequenceItem(tween: Tween<double>(begin: 1.0, end: 0.0), weight: 50),
+    ]).animate(CurvedAnimation(parent: _blinkController, curve: Curves.easeInOut));
+
+    if (widget.shouldBlink) {
+      _startBlink();
+    }
+  }
+
+  @override
+  void didUpdateWidget(ActionIconButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.shouldBlink && !oldWidget.shouldBlink) {
+      _startBlink();
+    }
+  }
+
+  Future<void> _startBlink() async {
+    await Future.delayed(const Duration(milliseconds: 500));
+    if (!mounted) return;
+    
+    for (int i = 0; i < 5; i++) {
+      if (!mounted) break;
+      await _blinkController.forward();
+      if (!mounted) break;
+      _blinkController.reset();
+      
+      if (i < 4) { // Don't wait after the last blink
+        await Future.delayed(const Duration(milliseconds: 600));
+      }
+    }
+    
+    widget.onBlinkComplete?.call();
+  }
+
+  @override
+  void dispose() {
+    _blinkController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -49,31 +106,43 @@ class _ActionIconButtonState extends State<ActionIconButton> {
           : null,
       onTapCancel: () => setState(() => _isPressed = false),
       onTap: widget.isEnabled ? widget.onTap : null,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 100),
-        width: size + 16,
-        height: size + 16,
-        decoration:
-            ScholarlyTheme.modernDecoration(
+      child: AnimatedBuilder(
+        animation: _glowAnimation,
+        builder: (context, child) {
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 100),
+            width: size + 16,
+            height: size + 16,
+            decoration: ScholarlyTheme.modernDecoration(
               sunken: _isPressed || widget.isActive,
             ).copyWith(
               color: (widget.isActive || _isPressed)
                   ? (widget.activeColor ?? ScholarlyTheme.accentBlueSoft)
                   : ScholarlyTheme.panelBase,
               borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                if (_glowAnimation.value > 0)
+                  BoxShadow(
+                    color: ScholarlyTheme.accentBlue.withValues(alpha: 0.5 * _glowAnimation.value),
+                    blurRadius: 25 * _glowAnimation.value,
+                    spreadRadius: 8 * _glowAnimation.value,
+                  ),
+              ],
             ),
-        padding: const EdgeInsets.all(4),
-        child: Center(
-          child: Icon(
-            widget.icon,
-            color: widget.isEnabled
-                ? (widget.isActive
-                      ? (widget.activeIconColor ?? ScholarlyTheme.accentBlue)
-                      : ScholarlyTheme.textPrimary)
-                : ScholarlyTheme.textSubtle,
-            size: size,
-          ),
-        ),
+            padding: const EdgeInsets.all(4),
+            child: Center(
+              child: Icon(
+                widget.icon,
+                color: widget.isEnabled
+                    ? (widget.isActive || _glowAnimation.value > 0.4
+                        ? (widget.activeIconColor ?? ScholarlyTheme.accentBlue)
+                        : ScholarlyTheme.textPrimary)
+                    : ScholarlyTheme.textSubtle,
+                size: size,
+              ),
+            ),
+          );
+        },
       ),
     );
   }

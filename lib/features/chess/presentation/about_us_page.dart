@@ -1,26 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../application/chess_provider.dart';
 import 'scholarly_theme.dart';
 import 'widgets/global_sidebar.dart';
 import 'widgets/game_controls.dart';
 
-class DashboardPage extends ConsumerStatefulWidget {
-  const DashboardPage({super.key});
+class AboutUsPage extends StatefulWidget {
+  const AboutUsPage({super.key});
 
   @override
-  ConsumerState<DashboardPage> createState() => _DashboardPageState();
+  State<AboutUsPage> createState() => _AboutUsPageState();
 }
 
-class _DashboardPageState extends ConsumerState<DashboardPage> {
+class _AboutUsPageState extends State<AboutUsPage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(chessProvider);
-    final notifier = ref.read(chessProvider.notifier);
-
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: ScholarlyTheme.backgroundStart,
@@ -34,13 +29,32 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 20),
+                  Text(
+                    'ABOUT US',
+                    style: GoogleFonts.outfit(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 2,
+                      color: ScholarlyTheme.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Kingslayer Chess Team',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: ScholarlyTheme.accentBlue,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 1,
+                    ),
+                  ),
                   const Spacer(),
                   Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          Icons.analytics_rounded,
+                          Icons.info_outline_rounded,
                           size: 64,
                           color: ScholarlyTheme.accentBlue.withValues(alpha: 0.2),
                         ),
@@ -55,7 +69,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Detailed match analysis and Elo tracking\nwill be available in the next update.',
+                          'Our story and mission will be\navailable in the next update.',
                           textAlign: TextAlign.center,
                           style: GoogleFonts.inter(
                             fontSize: 12,
@@ -83,12 +97,10 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                 ActionIconButton(
                   icon: Icons.menu_rounded,
                   size: 24,
-                  shouldBlink: !state.hasBlinkedMenu,
-                  onBlinkComplete: () => notifier.markMenuAsBlinked(),
                   onTap: () => _scaffoldKey.currentState?.openDrawer(),
                 ),
                 Text(
-                  'DASHBOARD',
+                  'ABOUT',
                   style: GoogleFonts.inter(
                     color: ScholarlyTheme.textSubtle,
                     fontSize: 12,
