@@ -52,8 +52,11 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (mounted && !_hasShownRatedCaution) {
           setState(() => _hasShownRatedCaution = true);
-          await _showRatedCautionDialog(context);
-          _triggerDiceRoll();
+          final isReady = await _showRatedCautionDialog(context);
+          if (isReady && context.mounted) {
+            await _showModeSelectionDialog(context);
+            _triggerDiceRoll();
+          }
         }
       });
     }
@@ -189,6 +192,16 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
               } else {
                 _scaffoldKey.currentState?.openDrawer();
               }
+            },
+          ),
+          const SizedBox(width: 8),
+          ActionIconButton(
+            icon: state.gameMode == 'chess960' ? Icons.grid_view_rounded : Icons.shuffle_rounded,
+            size: 22,
+            isEnabled: state.recentMoves.isEmpty || state.game.gameOver,
+            onTap: () {
+              final newMode = state.gameMode == 'chess960' ? 'classic' : 'chess960';
+              _showModeChangeConfirmation(context, newMode);
             },
           ),
           const SizedBox(width: 8),
@@ -358,11 +371,8 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
           Text('As this is a sanctioned Rated Arena game, exiting now will result in an automatic Loss and a deduction from your competitive ELO rating.', textAlign: TextAlign.center, style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 12, height: 1.5)),
         ]),
         actions: [
-          Row(children: [
-            Expanded(child: TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('STAY & PLAY'))),
-            const SizedBox(width: 8),
-            Expanded(child: FilledButton(onPressed: () => Navigator.pop(context, true), style: FilledButton.styleFrom(backgroundColor: ScholarlyTheme.accentBlue, foregroundColor: Colors.white), child: const Text('RESIGN'))),
-          ]),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('STAY & PLAY')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), style: FilledButton.styleFrom(backgroundColor: ScholarlyTheme.accentBlue, foregroundColor: Colors.white), child: const Text('RESIGN')),
         ],
       ),
     );
@@ -386,18 +396,15 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
           Text('Starting a new match now requires you to formally Resign from the present game. This will be recorded as a loss and will affect your competitive rating.', textAlign: TextAlign.center, style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 12, height: 1.5)),
         ]),
         actions: [
-          Row(children: [
-            Expanded(child: TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('CANCEL'))),
-            const SizedBox(width: 8),
-            Expanded(child: FilledButton(onPressed: () => Navigator.pop(context, true), style: FilledButton.styleFrom(backgroundColor: ScholarlyTheme.accentBlue, foregroundColor: Colors.white), child: const Text('RESIGN'))),
-          ]),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('CANCEL')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), style: FilledButton.styleFrom(backgroundColor: ScholarlyTheme.accentBlue, foregroundColor: Colors.white), child: const Text('RESIGN')),
         ],
       ),
     );
   }
 
-  Future<void> _showRatedCautionDialog(BuildContext context) async {
-    await showDialog(
+  Future<bool> _showRatedCautionDialog(BuildContext context) async {
+    final bool? result = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
@@ -424,7 +431,7 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
                   width: double.infinity,
                   height: 48,
                   child: FilledButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () => Navigator.pop(context, true),
                     style: FilledButton.styleFrom(
                       backgroundColor: ScholarlyTheme.accentBlue,
                       foregroundColor: Colors.white,
@@ -439,7 +446,7 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
                   height: 48,
                   child: OutlinedButton(
                     onPressed: () {
-                      Navigator.pop(context); // Close dialog
+                      Navigator.pop(context, false); // Close dialog
                       Navigator.pop(context); // Exit page
                     },
                     style: OutlinedButton.styleFrom(
@@ -454,6 +461,67 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
                         letterSpacing: 1.2,
                       ),
                     ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
+
+  Future<void> _showModeSelectionDialog(BuildContext context) async {
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: ScholarlyTheme.panelBase,
+        surfaceTintColor: ScholarlyTheme.accentBlue,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28), side: BorderSide(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.2), width: 1)),
+        title: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.1), shape: BoxShape.circle), child: const Icon(Icons.settings_suggest_rounded, color: ScholarlyTheme.accentBlue, size: 24)),
+          const SizedBox(height: 16),
+          Text('Select Arena Mode', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary, fontSize: 20)),
+        ]),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: FilledButton(
+                    onPressed: () {
+                      ref.read(chessProvider.notifier).setGameMode('classic');
+                      Navigator.pop(context);
+                    },
+                    style: FilledButton.styleFrom(
+                      backgroundColor: ScholarlyTheme.accentBlue,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text('CLASSIC CHESS', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: OutlinedButton(
+                    onPressed: () {
+                      ref.read(chessProvider.notifier).setGameMode('chess960');
+                      Navigator.pop(context);
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: ScholarlyTheme.accentBlue,
+                      side: BorderSide(color: ScholarlyTheme.accentBlue, width: 1),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text('CHESS 960', style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
                 ),
               ],
@@ -508,5 +576,31 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
         );
       },
     );
+  }
+
+  Future<void> _showModeChangeConfirmation(BuildContext context, String targetMode) async {
+    final is960 = targetMode == 'chess960';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: ScholarlyTheme.panelBase,
+        surfaceTintColor: ScholarlyTheme.accentBlue,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28), side: BorderSide(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.2), width: 1)),
+        title: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.1), shape: BoxShape.circle), child: Icon(is960 ? Icons.shuffle_rounded : Icons.grid_view_rounded, color: ScholarlyTheme.accentBlue, size: 24)),
+          const SizedBox(height: 16),
+          Text(is960 ? 'Switch to Chess 960?' : 'Switch to Classic?', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary, fontSize: 20)),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('CANCEL')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), style: FilledButton.styleFrom(backgroundColor: ScholarlyTheme.accentBlue, foregroundColor: Colors.white), child: const Text('CONFIRM')),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      await ref.read(chessProvider.notifier).setGameMode(targetMode);
+      _triggerDiceRoll();
+    }
   }
 }

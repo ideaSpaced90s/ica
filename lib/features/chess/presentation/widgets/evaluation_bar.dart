@@ -24,7 +24,9 @@ class EvaluationBar extends StatelessWidget {
               width: 4,
               height: 32 * fillFraction,
               decoration: BoxDecoration(
-                color: ScholarlyTheme.accentBlue,
+                color: fillFraction > 0.65 
+                    ? Colors.greenAccent.shade700 
+                    : (fillFraction < 0.35 ? Colors.redAccent : ScholarlyTheme.accentBlue),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),

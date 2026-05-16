@@ -43,25 +43,28 @@ class _ArenaTurnIndicatorState extends State<ArenaTurnIndicator>
             shape: BoxShape.circle,
             border: Border.all(
               color: widget.isActive
-                  ? ScholarlyTheme.accentBlue.withValues(alpha: 0.5 + (_pulseController.value * 0.5))
+                  ? Colors.greenAccent.shade700.withValues(alpha: 0.8 + (_pulseController.value * 0.2))
                   : ScholarlyTheme.panelStroke,
               width: widget.isActive ? 2.5 : 1,
             ),
             boxShadow: widget.isActive
                 ? [
                     BoxShadow(
-                      color: ScholarlyTheme.accentBlue.withValues(alpha: 0.3 * _pulseController.value),
-                      blurRadius: 8 * _pulseController.value,
-                      spreadRadius: 2 * _pulseController.value,
+                      color: Colors.greenAccent.shade700.withValues(alpha: 0.4 * _pulseController.value),
+                      blurRadius: 10 * _pulseController.value,
+                      spreadRadius: 3 * _pulseController.value,
                     )
                   ]
                 : [],
           ),
           child: Center(
-            child: Icon(
-              widget.isWhite ? Icons.wb_sunny_rounded : Icons.nightlight_round,
-              size: 14,
-              color: widget.isWhite ? Colors.orange : Colors.blueGrey[200],
+            child: Text(
+              widget.isWhite ? '♘' : '♞',
+              style: TextStyle(
+                fontSize: 20,
+                height: 1,
+                color: widget.isWhite ? Colors.black87 : Colors.white,
+              ),
             ),
           ),
         );
