@@ -13,7 +13,6 @@ import 'widgets/opponent_avatar_indicator.dart';
 import 'widgets/global_sidebar.dart';
 import 'rated_settings_page.dart';
 import 'widgets/arena_time_display.dart';
-import 'widgets/avatar_selection_sheet.dart';
 import 'widgets/arena_turn_indicator.dart';
 import 'widgets/evaluation_bar.dart';
 import 'widgets/user_avatar_indicator.dart';
@@ -139,7 +138,6 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
             alignment: Alignment.centerLeft,
             child: OpponentAvatarIndicator(
               avatar: AiAvatar.getAvatar(state.engineLevel),
-              onTap: () => showAvatarSelectionSheet(context, ref, isBottomSlot: false),
             ),
           ),
         ),
@@ -391,7 +389,7 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
           Row(children: [
             Expanded(child: TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('CANCEL'))),
             const SizedBox(width: 8),
-            Expanded(child: FilledButton(onPressed: () => Navigator.pop(context, true), style: FilledButton.styleFrom(backgroundColor: Colors.amber, foregroundColor: Colors.black), child: const Text('RESIGN & START'))),
+            Expanded(child: FilledButton(onPressed: () => Navigator.pop(context, true), style: FilledButton.styleFrom(backgroundColor: Colors.amber, foregroundColor: Colors.black), child: const Text('RESIGN'))),
           ]),
         ],
       ),
@@ -417,7 +415,7 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
           Text('Every match played here is recorded for your professional standing. Resigning or abandoning a game prematurely will negatively impact your ELO rating.', textAlign: TextAlign.center, style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 12, height: 1.6)),
         ]),
         actions: [
-          SizedBox(width: double.infinity, child: FilledButton(onPressed: () => Navigator.pop(context), style: FilledButton.styleFrom(backgroundColor: Colors.amber, foregroundColor: Colors.black), child: const Text('I AM PREPARED'))),
+          SizedBox(width: double.infinity, child: FilledButton(onPressed: () => Navigator.pop(context), style: FilledButton.styleFrom(backgroundColor: Colors.amber, foregroundColor: Colors.black), child: const Text('I AM READY'))),
         ],
       ),
     );

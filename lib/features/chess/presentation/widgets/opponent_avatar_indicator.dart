@@ -4,7 +4,6 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../domain/models/ai_avatar.dart';
 import '../scholarly_theme.dart';
-import '../settings_page.dart';
 
 class OpponentAvatarIndicator extends StatefulWidget {
   final AiAvatar avatar;
@@ -47,10 +46,6 @@ class _OpponentAvatarIndicatorState extends State<OpponentAvatarIndicator> {
       // If already expanded, trigger action or open Settings Page
       if (widget.onTap != null) {
         widget.onTap!();
-      } else {
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (context) => const SettingsPage()),
-        );
       }
     }
   }

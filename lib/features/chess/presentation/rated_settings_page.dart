@@ -149,13 +149,13 @@ class _RatedSettingsPageState extends ConsumerState<RatedSettingsPage> {
                         builder: (context) {
                           final currentAvatar = AiAvatar.getAvatar(state.engineLevel);
                           return _SettingsTile(
-                            label: 'Opponent Persona',
+                            label: 'Persona',
                             description: '${currentAvatar.name} • FIDE ${currentAvatar.fideRatingRange}',
                             icon: currentAvatar.icon,
                             imagePath: currentAvatar.imagePath,
-                            onTap: () => _showStrengthOverlay(context, ref),
+                            onTap: () => showAvatarSelectionSheet(context, ref, isReadOnly: true),
                             trailing: Icon(
-                              Icons.person_search_rounded,
+                              Icons.info_outline_rounded,
                               size: 18,
                               color: Colors.amber,
                             ),
@@ -191,24 +191,11 @@ class _RatedSettingsPageState extends ConsumerState<RatedSettingsPage> {
             size: 24,
             onTap: () => Navigator.of(context).pop(),
           ),
-          Text(
-            'RATED SETTINGS',
-            style: GoogleFonts.inter(
-              color: Colors.amber,
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 1.5,
-            ),
-          ),
-          const SizedBox(width: 48), // Spacer to balance
         ],
       ),
     );
   }
 
-  void _showStrengthOverlay(BuildContext context, WidgetRef ref) {
-    showAvatarSelectionSheet(context, ref, isBottomSlot: false);
-  }
 
 }
 

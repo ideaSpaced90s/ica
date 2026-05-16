@@ -662,6 +662,10 @@ class ChessNotifier extends StateNotifier<ChessState> {
           }
         : state.animationSettings,
     );
+
+    if (isRated) {
+      _autoSelectRatedOpponent();
+    }
     
     // Update sound service state
     _soundService.updateSettings(
@@ -2139,6 +2143,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
   }
 
   Future<void> setEngineLevel(String level) async {
+    if (state.isRatedMode) return; // Prevent manual change in rated mode
     final avatar = AiAvatar.getAvatar(level);
     state = state.copyWith(engineLevel: level);
 
@@ -2151,6 +2156,12 @@ class ChessNotifier extends StateNotifier<ChessState> {
       _currentCandidates.clear();
       _engine.analyzePosition(state.game.fen, depth: avatar.depth);
     }
+  }
+
+  void _autoSelectRatedOpponent() {
+    final bestMatch = AiAvatar.getBestMatch(state.userFideRating);
+    debugPrint('Auto-selecting rated opponent for ELO ${state.userFideRating}: ${bestMatch.name} (${bestMatch.id})');
+    state = state.copyWith(engineLevel: bestMatch.id);
   }
 
   Future<void> setBottomAvatarId(String level) async {
@@ -2851,6 +2862,10 @@ class ChessNotifier extends StateNotifier<ChessState> {
       currentWinningStreak: preserveStreak,
       isAcademyActive: false,
     );
+
+    if (preserveRated) {
+      _autoSelectRatedOpponent();
+    }
 
     _syncUndoRedoFlags();
 

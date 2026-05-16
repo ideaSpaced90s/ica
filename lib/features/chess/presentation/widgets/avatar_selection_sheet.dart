@@ -5,7 +5,7 @@ import '../../application/chess_provider.dart';
 import '../../domain/models/ai_avatar.dart';
 import '../scholarly_theme.dart';
 
-void showAvatarSelectionSheet(BuildContext context, WidgetRef ref, {bool isBottomSlot = false}) {
+void showAvatarSelectionSheet(BuildContext context, WidgetRef ref, {bool isBottomSlot = false, bool isReadOnly = false}) {
   showModalBottomSheet<void>(
     context: context,
     backgroundColor: Colors.transparent,
@@ -43,7 +43,7 @@ void showAvatarSelectionSheet(BuildContext context, WidgetRef ref, {bool isBotto
                 ),
                 // Title
                 Text(
-                  isBottomSlot ? 'Select Bottom Avatar' : 'Select Persona',
+                  isReadOnly ? 'Tactical Personas' : (isBottomSlot ? 'Select Bottom Avatar' : 'Select Persona'),
                   style: GoogleFonts.inter(
                     color: ScholarlyTheme.textPrimary,
                     fontSize: 18,
@@ -53,9 +53,9 @@ void showAvatarSelectionSheet(BuildContext context, WidgetRef ref, {bool isBotto
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Each avatar features a custom simulated playing style and FIDE scale',
+                  isReadOnly ? 'Competitive profiles are automatically assigned based on your ELO.' : 'Each avatar features a custom simulated playing style and FIDE scale',
                   style: GoogleFonts.inter(
-                    color: ScholarlyTheme.textMuted,
+                    color: isReadOnly ? Colors.amber : ScholarlyTheme.textMuted,
                     fontSize: 12,
                   ),
                   textAlign: TextAlign.center,
@@ -73,7 +73,7 @@ void showAvatarSelectionSheet(BuildContext context, WidgetRef ref, {bool isBotto
                       final isLightColor = avatar.color.computeLuminance() > 0.6;
 
                       return InkWell(
-                        onTap: () {
+                        onTap: isReadOnly ? null : () {
                           if (isBottomSlot) {
                             ref.read(chessProvider.notifier).setBottomAvatarId(avatar.id);
                           } else {

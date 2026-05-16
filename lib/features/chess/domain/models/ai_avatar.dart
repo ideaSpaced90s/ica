@@ -173,4 +173,18 @@ class AiAvatar {
   static AiAvatar getAvatar(String id) {
     return avatars.firstWhere((a) => a.id == id, orElse: () => avatars[6]); // Default to Vanguard
   }
+
+  static AiAvatar getBestMatch(int rating) {
+    AiAvatar best = avatars[0];
+    int minDiff = (rating - best.rating).abs();
+
+    for (final avatar in avatars) {
+      final diff = (rating - avatar.rating).abs();
+      if (diff < minDiff) {
+        minDiff = diff;
+        best = avatar;
+      }
+    }
+    return best;
+  }
 }
