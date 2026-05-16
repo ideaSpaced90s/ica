@@ -17,6 +17,7 @@ import 'widgets/arena_turn_indicator.dart';
 import 'widgets/evaluation_bar.dart';
 import 'widgets/user_avatar_indicator.dart';
 import 'widgets/dice_rolling_overlay.dart';
+import 'package:confetti/confetti.dart';
 
 class RatedArenaPage extends ConsumerStatefulWidget {
   const RatedArenaPage({super.key});
@@ -30,16 +31,20 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
   bool _hasShownRatedCaution = false;
   bool _isDiceRolling = false;
   bool _assignedWhite = true;
+  late ConfettiController _confettiController;
+  bool _hasTriggeredConfetti = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _confettiController = ConfettiController(duration: const Duration(seconds: 3));
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _confettiController.dispose();
     super.dispose();
   }
 
@@ -86,13 +91,30 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
         body: Stack(
           children: [
             _buildPortraitLayout(context, ref, state),
-            if (state.game.gameOver && !state.isGameOverDismissed)
+            if ((state.game.gameOver || state.isTimeOut) && !state.isGameOverDismissed)
               _buildGameOverOverlay(context, ref, state),
             if (_isDiceRolling)
               DiceRollingOverlay(
                 isWhite: _assignedWhite,
                 onComplete: _onDiceRollComplete,
               ),
+            Align(
+              alignment: Alignment.topCenter,
+              child: ConfettiWidget(
+                confettiController: _confettiController,
+                blastDirectionality: BlastDirectionality.explosive,
+                shouldLoop: false,
+                colors: const [
+                  ScholarlyTheme.accentBlue,
+                  ScholarlyTheme.accentGold,
+                  Colors.white,
+                  Colors.blueAccent,
+                  Colors.orangeAccent,
+                ],
+                numberOfParticles: 20,
+                gravity: 0.2,
+              ),
+            ),
           ],
         ),
       ),
@@ -325,36 +347,85 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
   }
 
   Widget _buildGameOverOverlay(BuildContext context, WidgetRef ref, ChessState state) {
-    final msg = state.game.inDraw ? 'Game Draw' : (_isPlayerTurn(state) ? 'Try again' : 'Congratulations');
+    final isDraw = state.game.inDraw;
+    final didWin = _didPlayerWin(state);
+    
+    if (didWin && !_hasTriggeredConfetti) {
+      _hasTriggeredConfetti = true;
+      _confettiController.play();
+    }
+
+    String title = isDraw ? 'Match Draw' : (didWin ? 'Victory!' : 'Match Lost');
+    String msg = isDraw 
+        ? 'A well-fought strategic stalemate.' 
+        : (didWin ? 'Congratulations, you have dominated the arena!' : 'Defeat is but a stepping stone to mastery.');
+    
+    if (state.isTimeOut) {
+      title = didWin ? 'Victory (Time)' : 'Loss (Time)';
+      msg = didWin ? 'Opponent ran out of time!' : 'You ran out of time!';
+    }
+
     return Positioned.fill(
       child: Container(
-        color: Colors.black54,
+        color: Colors.black.withValues(alpha: 0.7),
         child: Center(
           child: Container(
-            padding: const EdgeInsets.all(24),
-            decoration: ScholarlyTheme.modernDecoration(),
+            width: MediaQuery.of(context).size.width * 0.85,
+            padding: const EdgeInsets.all(32),
+            decoration: ScholarlyTheme.modernDecoration().copyWith(
+              border: Border.all(color: didWin ? ScholarlyTheme.accentGold : ScholarlyTheme.accentBlue, width: 2),
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('Game Over', style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 20)),
+                Text(title.toUpperCase(), style: GoogleFonts.inter(color: didWin ? ScholarlyTheme.accentGold : ScholarlyTheme.textPrimary, fontWeight: FontWeight.w900, fontSize: 24, letterSpacing: 1.5)),
                 const SizedBox(height: 16),
-                Icon(state.game.inDraw ? Icons.handshake_rounded : (msg == 'Congratulations' ? Icons.emoji_events_rounded : Icons.sentiment_dissatisfied_rounded), size: 48, color: ScholarlyTheme.accentBlue),
-                const SizedBox(height: 16),
-                Text('$msg. New game?', style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600), textAlign: TextAlign.center),
-                const SizedBox(height: 24),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
+                Icon(
+                  isDraw ? Icons.handshake_rounded : (didWin ? Icons.emoji_events_rounded : Icons.sentiment_dissatisfied_rounded), 
+                  size: 64, 
+                  color: didWin ? ScholarlyTheme.accentGold : ScholarlyTheme.accentBlue
+                ),
+                const SizedBox(height: 20),
+                Text(msg, style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 15, fontWeight: FontWeight.w500), textAlign: TextAlign.center),
+                const SizedBox(height: 32),
+                Column(
                   children: [
-                    FilledButton(
-                      onPressed: () {
-                        ref.read(chessProvider.notifier).dismissGameOver();
-                        _triggerDiceRoll();
-                      },
-                      style: FilledButton.styleFrom(backgroundColor: ScholarlyTheme.accentBlue, foregroundColor: Colors.white),
-                      child: const Text('Yes'),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: FilledButton(
+                        onPressed: () {
+                          setState(() {
+                            _hasTriggeredConfetti = false;
+                          });
+                          ref.read(chessProvider.notifier).dismissGameOver();
+                          _triggerDiceRoll();
+                        },
+                        style: FilledButton.styleFrom(
+                          backgroundColor: didWin ? ScholarlyTheme.accentGold : ScholarlyTheme.accentBlue,
+                          foregroundColor: didWin ? Colors.black : Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: Text(didWin ? 'PLAY NEW MATCH' : 'TRY AGAIN', style: const TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1)),
+                      ),
                     ),
-                    const SizedBox(width: 16),
-                    TextButton(onPressed: () => ref.read(chessProvider.notifier).dismissGameOver(), child: Text('No', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted))),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: OutlinedButton(
+                        onPressed: () {
+                          ref.read(chessProvider.notifier).dismissGameOver();
+                          Navigator.pop(context);
+                        },
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: ScholarlyTheme.textMuted,
+                          side: BorderSide(color: ScholarlyTheme.panelStroke),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: const Text('EXIT ARENA', style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                    ),
                   ],
                 ),
               ],
@@ -363,6 +434,24 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
         ),
       ),
     );
+  }
+
+  bool _didPlayerWin(ChessState state) {
+    if (state.game.inDraw) return false;
+    
+    if (state.isTimeOut) {
+      final playerTimedOut = state.isPlayerWhite 
+          ? state.whiteTimeLeft <= Duration.zero 
+          : state.blackTimeLeft <= Duration.zero;
+      return !playerTimedOut;
+    }
+    
+    if (state.game.gameOver) {
+      // If game is over and not a draw, and it's NOT the player's turn, the player won.
+      return !_isPlayerTurn(state);
+    }
+    
+    return false;
   }
 
   void _triggerDiceRoll() {

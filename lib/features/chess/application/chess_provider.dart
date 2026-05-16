@@ -267,6 +267,7 @@ class ChessState {
     this.glowingSquare,
     this.academyAnimationTrigger = 0,
     this.hasBlinkedMenu = false,
+    this.isTimeOut = false,
   });
 
   final ChessGame game;
@@ -361,6 +362,7 @@ class ChessState {
   final String? glowingSquare;
   final int academyAnimationTrigger;
   final bool hasBlinkedMenu;
+  final bool isTimeOut;
 
   bool get isChess960 => gameMode == 'chess960';
 
@@ -468,6 +470,7 @@ class ChessState {
     Object? glowingSquare = _sentinel,
     int? academyAnimationTrigger,
     bool? hasBlinkedMenu,
+    bool? isTimeOut,
   }) {
     return ChessState(
       game: game ?? this.game,
@@ -601,6 +604,7 @@ class ChessState {
       academyAnimationTrigger:
           academyAnimationTrigger ?? this.academyAnimationTrigger,
       hasBlinkedMenu: hasBlinkedMenu ?? this.hasBlinkedMenu,
+      isTimeOut: isTimeOut ?? this.isTimeOut,
     );
   }
 }
@@ -2282,6 +2286,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
       savedGames: state.savedGames,
       threatenedSquares: const [],
       isPromoting: false,
+      isTimeOut: false,
     );
 
     _syncUndoRedoFlags();
@@ -2937,12 +2942,25 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
   void _handleClockTimeout(String side) {
     _stopClock();
+    
+    // Determine the result for the player
+    double actualScore = 0.5; // Default to draw (unlikely in timeout but safe)
+    if (state.isRatedMode) {
+      final timedOutSideIsWhite = side == _clockWhite;
+      final playerIsWhite = state.isPlayerWhite;
+      
+      // If player is the side that timed out, they lose. If opponent timed out, player wins.
+      actualScore = (playerIsWhite == timedOutSideIsWhite) ? 0.0 : 1.0;
+      _updateRating(actualScore);
+    }
+
     state = state.copyWith(
       whiteTimeLeft: side == _clockWhite ? Duration.zero : state.whiteTimeLeft,
       blackTimeLeft: side == _clockBlack ? Duration.zero : state.blackTimeLeft,
       clockStarted: false,
       activeClockSide: null,
       isEngineThinking: false,
+      isTimeOut: true,
       commentaryError: side == _clockWhite
           ? 'White ran out of time.'
           : 'Black ran out of time.',
@@ -3124,6 +3142,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
       blitzStreak: state.blitzStreak,
       rapidStreak: state.rapidStreak,
       isAcademyActive: false,
+      isTimeOut: false,
     );
 
     if (preserveRated) {
