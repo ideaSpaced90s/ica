@@ -402,10 +402,12 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
       final file = File(path);
       await file.writeAsString(pgnText);
 
-      await Share.shareXFiles(
-        [XFile(path)],
-        text: 'Here is my chess game notation from Kingslayer!',
-        subject: 'Kingslayer Chess Game',
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(path)],
+          text: 'Here is my chess game notation from Kingslayer!',
+          subject: 'Kingslayer Chess Game',
+        ),
       );
     } catch (e) {
       debugPrint('PGN Share failed: $e');

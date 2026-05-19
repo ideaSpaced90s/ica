@@ -1,6 +1,6 @@
 import 'dart:async';
-import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_soloud/flutter_soloud.dart';
 
 enum SoundEffect {
   move,
@@ -12,121 +12,79 @@ enum SoundEffect {
 }
 
 class ChessSoundService {
-  final Map<String, AudioPlayer> _players = {};
-  final AudioPlayer _bgmPlayer1 = AudioPlayer();
-  final AudioPlayer _bgmPlayer2 = AudioPlayer();
-  AudioPlayer? _activePlayer;
-  String? _currentTrack;
-  Duration? _activeDuration;
-  bool _transitionTriggered = false;
-  double _bgmVolumeScale = 1.0;
-  int _duckToken = 0;
-
-  final List<StreamSubscription> _subscriptions = [];
-
   final List<String> _bgmTracks = [
-    '01_The_Grandmaster_s_Ascent.mp3',
-    '02_The_King_s_Gambit_Deferred.mp3',
-    '03_The_Strategist_s_Soliloquy.mp3',
-    '04_The_Grandmaster_s_Gambit.mp3',
-    '05_The_Grandmaster_s_Silence.mp3',
-    'The_Kingslayer_s_Overture.mp3',
+    'assets/bgm/01_The_Grandmaster_s_Ascent.mp3',
+    'assets/bgm/02_The_King_s_Gambit_Deferred.mp3',
+    'assets/bgm/03_The_Strategist_s_Soliloquy.mp3',
+    'assets/bgm/04_The_Grandmaster_s_Gambit.mp3',
+    'assets/bgm/05_The_Grandmaster_s_Silence.mp3',
+    'assets/bgm/The_Kingslayer_s_Overture.mp3',
   ];
 
+  final Map<String, String> _sfxTracks = {
+    'move': 'assets/sfx/move-self.mp3',
+    'capture': 'assets/sfx/capture.mp3',
+    'notify': 'assets/sfx/notify.mp3',
+    'whoosh': 'assets/sfx/whoosh.mp3',
+    'piecemove': 'assets/sfx/piecemove.mp3',
+    'thud': 'assets/sfx/thud.mp3',
+  };
+
+  final List<AudioSource> _bgmSources = [];
+  final Map<String, AudioSource> _sfxSources = {};
+
+  SoundHandle? _bgmHandle;
+  AudioSource? _currentBgmSource;
   bool isSfxEnabled = true;
   bool isBgmEnabled = false;
+  bool _isInitialized = false;
+
+  final double _bgmVolumeScale = 0.5;
+  final double _sfxVolumeScale = 0.7;
 
   ChessSoundService() {
     _initAudio();
   }
 
   Future<void> _initAudio() async {
-    try {
-      // Configure global audio context strictly to prevent threading conflicts on Android/Windows
-      await AudioPlayer.global.setAudioContext(
-        AudioContext(
-          android: const AudioContextAndroid(
-            usageType: AndroidUsageType.game,
-            contentType: AndroidContentType.music,
-            audioFocus: AndroidAudioFocus.none,
-            stayAwake: true,
-          ),
-          iOS: AudioContextIOS(
-            category: AVAudioSessionCategory.playback,
-            options: {
-              AVAudioSessionOptions.mixWithOthers,
-              AVAudioSessionOptions.duckOthers,
-            },
-          ),
-        ),
-      );
+    if (_isInitialized) return;
 
-      // Set release mode to stop so we can manually trigger the next track
-      await _bgmPlayer1.setReleaseMode(ReleaseMode.stop);
-      await _bgmPlayer2.setReleaseMode(ReleaseMode.stop);
+    unawaited(() async {
+      try {
+        if (!SoLoud.instance.isInitialized) {
+          await SoLoud.instance.init();
+        }
 
-      _cancelSubscriptions();
+        // Load BGM tracks into memory buffers
+        for (final track in _bgmTracks) {
+          try {
+            final source = await SoLoud.instance.loadAsset(track);
+            _bgmSources.add(source);
+          } catch (e) {
+            debugPrint('Error loading BGM $track: $e');
+          }
+        }
 
-      // Listen for duration and position to trigger overlapping transitions with subscription safety
-      _subscriptions.add(
-        _bgmPlayer1.onDurationChanged.listen((d) {
-          if (_activePlayer == _bgmPlayer1) _activeDuration = d;
-        }),
-      );
-      _subscriptions.add(
-        _bgmPlayer2.onDurationChanged.listen((d) {
-          if (_activePlayer == _bgmPlayer2) _activeDuration = d;
-        }),
-      );
+        // Load SFX tracks into memory buffers
+        for (final entry in _sfxTracks.entries) {
+          try {
+            final source = await SoLoud.instance.loadAsset(entry.value);
+            _sfxSources[entry.key] = source;
+          } catch (e) {
+            debugPrint('Error loading SFX ${entry.key}: $e');
+          }
+        }
 
-      _subscriptions.add(
-        _bgmPlayer1.onPositionChanged.listen(
-          (p) => _checkTransition(_bgmPlayer1, p),
-        ),
-      );
-      _subscriptions.add(
-        _bgmPlayer2.onPositionChanged.listen(
-          (p) => _checkTransition(_bgmPlayer2, p),
-        ),
-      );
+        _isInitialized = true;
 
-      // Safety fallback for completion
-      _subscriptions.add(
-        _bgmPlayer1.onPlayerComplete.listen((_) => _onTrackFinish(_bgmPlayer1)),
-      );
-      _subscriptions.add(
-        _bgmPlayer2.onPlayerComplete.listen((_) => _onTrackFinish(_bgmPlayer2)),
-      );
-    } catch (e) {
-      debugPrint('ChessSoundService Init Error: $e');
-    }
-  }
-
-  void _cancelSubscriptions() {
-    for (var sub in _subscriptions) {
-      sub.cancel();
-    }
-    _subscriptions.clear();
-  }
-
-  void _checkTransition(AudioPlayer player, Duration position) {
-    if (player != _activePlayer ||
-        _transitionTriggered ||
-        _activeDuration == null) {
-      return;
-    }
-
-    final remaining = _activeDuration! - position;
-    if (remaining <= const Duration(seconds: 5)) {
-      _transitionTriggered = true;
-      _playRandomBgm();
-    }
-  }
-
-  void _onTrackFinish(AudioPlayer player) {
-    if (player == _activePlayer && !_transitionTriggered) {
-      _playRandomBgm();
-    }
+        // Start BGM if enabled during initialization
+        if (isBgmEnabled) {
+          _playRandomBgm();
+        }
+      } catch (e) {
+        debugPrint('ChessSoundService Init Error: $e');
+      }
+    }());
   }
 
   void updateSettings({required bool sfxEnabled, required bool bgmEnabled}) {
@@ -143,114 +101,75 @@ class ChessSoundService {
   }
 
   Future<void> _playRandomBgm() async {
-    if (!isBgmEnabled) return;
-
-    // Reset transition flag for the new track
-    _transitionTriggered = false;
-    _activeDuration = null;
-
-    // Select a random track different from the current one if possible
-    final tracks = List<String>.from(_bgmTracks)..shuffle();
-    String nextTrack = tracks.first;
-    if (nextTrack == _currentTrack && tracks.length > 1) {
-      nextTrack = tracks[1];
-    }
-    _currentTrack = nextTrack;
-
-    final prevPlayer = _activePlayer;
-    final nextPlayer = (_activePlayer == _bgmPlayer1)
-        ? _bgmPlayer2
-        : _bgmPlayer1;
-
-    _activePlayer = nextPlayer;
+    if (!isBgmEnabled || _bgmSources.isEmpty || !SoLoud.instance.isInitialized) return;
 
     try {
-      // Prepare the next player
-      await nextPlayer.setSource(AssetSource('bgm/$nextTrack'));
-      await nextPlayer.setVolume(0);
-      await nextPlayer.resume();
+      final sources = List<AudioSource>.from(_bgmSources)..shuffle();
+      AudioSource nextSource = sources.first;
+      if (nextSource == _currentBgmSource && sources.length > 1) {
+        nextSource = sources[1];
+      }
 
-      // Perform crossfade
-      _crossfade(prevPlayer, nextPlayer);
+      final prevHandle = _bgmHandle;
+      _currentBgmSource = nextSource;
+
+      // Start playing the new BGM at volume 0
+      _bgmHandle = await SoLoud.instance.play(
+        nextSource,
+        looping: true,
+        volume: 0.0,
+      );
+
+      // Smooth C++ hardware-accelerated crossfade
+      SoLoud.instance.fadeVolume(_bgmHandle!, _bgmVolumeScale, const Duration(seconds: 5));
+
+      if (prevHandle != null) {
+        SoLoud.instance.fadeVolume(prevHandle, 0.0, const Duration(seconds: 5));
+        // Defer stopping to allow the fade out to complete
+        Timer(const Duration(seconds: 5), () {
+          try {
+            if (SoLoud.instance.isInitialized) {
+              SoLoud.instance.stop(prevHandle);
+            }
+          } catch (_) {}
+        });
+      }
     } catch (e) {
       debugPrint('Error playing random BGM: $e');
     }
   }
 
-  void _crossfade(AudioPlayer? from, AudioPlayer to) async {
-    const duration = Duration(milliseconds: 5000); // 5 seconds crossfade
-    const steps = 50;
-    final stepDuration = Duration(
-      milliseconds: duration.inMilliseconds ~/ steps,
-    );
-
-    for (int i = 1; i <= steps; i++) {
-      if (!isBgmEnabled || to != _activePlayer) return;
-
-      final volume = i / steps;
-      try {
-        await to.setVolume(volume * _bgmVolumeScale);
-        if (from != null) {
-          await from.setVolume((1.0 - volume) * _bgmVolumeScale);
-        }
-      } catch (e) {
-        // Stop fade on error
-        break;
-      }
-      await Future.delayed(stepDuration);
-    }
-
-    if (from != null && from != _activePlayer) {
-      try {
-        await from.stop();
-      } catch (e) {
-        // Native thread errors on stop are ignored as the intent is achieved
-      }
-    }
-  }
-
   void _stopBgm() {
-    _bgmPlayer1.stop();
-    _bgmPlayer2.stop();
-    _activePlayer = null;
-    _currentTrack = null;
-    _activeDuration = null;
-    _transitionTriggered = false;
-    _bgmVolumeScale = 1.0;
-    _duckToken++;
-  }
-
-  Future<void> _playSound(String fileName) async {
-    if (!isSfxEnabled) return;
-
-    try {
-      if (!_players.containsKey(fileName)) {
-        final newPlayer = AudioPlayer();
-        await newPlayer.setReleaseMode(ReleaseMode.stop);
-        // Pre-set the source on first use
-        await newPlayer.setSource(AssetSource('sfx/$fileName'));
-        _players[fileName] = newPlayer;
+    if (_bgmHandle != null && SoLoud.instance.isInitialized) {
+      try {
+        SoLoud.instance.stop(_bgmHandle!);
+        _bgmHandle = null;
+        _currentBgmSource = null;
+      } catch (e) {
+        debugPrint('Error stopping BGM: $e');
       }
-
-      final player = _players[fileName]!;
-      if (player.state == PlayerState.playing) {
-        await player.stop();
-      }
-
-      // We seek to zero and resume since the source is already mapped
-      await player.seek(Duration.zero);
-      await player.resume();
-    } catch (e) {
-      debugPrint('Error playing sound $fileName: $e');
     }
   }
 
-  Future<void> playMove() async => _playSound('move-self.mp3');
-  Future<void> playCapture() async => _playSound('capture.mp3');
-  Future<void> playNotify() async => _playSound('notify.mp3');
-  Future<void> playWhoosh() async => _playSound('whoosh.mp3');
-  Future<void> playPawnMove() async => _playSound('piecemove.mp3');
-  Future<void> playKingMove() async => _playSound('move-self.mp3');
+  Future<void> _playSound(String key) async {
+    if (!isSfxEnabled || !_isInitialized || !SoLoud.instance.isInitialized) return;
+
+    final source = _sfxSources[key];
+    if (source != null) {
+      try {
+        await SoLoud.instance.play(source, volume: _sfxVolumeScale);
+      } catch (e) {
+        debugPrint('Error playing sound $key: $e');
+      }
+    }
+  }
+
+  Future<void> playMove() async => _playSound('move');
+  Future<void> playCapture() async => _playSound('capture');
+  Future<void> playNotify() async => _playSound('notify');
+  Future<void> playWhoosh() async => _playSound('whoosh');
+  Future<void> playPawnMove() async => _playSound('piecemove');
+  Future<void> playKingMove() async => _playSound('move');
 
   void playSfx(SoundEffect effect) {
     switch (effect) {
@@ -261,11 +180,9 @@ class ChessSoundService {
         playCapture();
         break;
       case SoundEffect.illegal:
-        _playSound('illegal.mp3'); // Dedicated correction tone mapping
+        _playSound('thud');
         break;
       case SoundEffect.click:
-        playNotify();
-        break;
       case SoundEffect.check:
         playNotify();
         break;
@@ -278,44 +195,28 @@ class ChessSoundService {
   Future<void> duckBgmTemporarily({
     Duration hold = const Duration(milliseconds: 900),
   }) async {
-    if (!isBgmEnabled || _activePlayer == null) return;
+    if (!isBgmEnabled || _bgmHandle == null || !SoLoud.instance.isInitialized) return;
 
-    final token = ++_duckToken;
-    await _fadeBgmScale(to: 0.32, duration: const Duration(milliseconds: 180));
-    await Future.delayed(hold);
-    if (token != _duckToken || !isBgmEnabled || _activePlayer == null) return;
-    await _fadeBgmScale(to: 1.0, duration: const Duration(milliseconds: 420));
-  }
-
-  Future<void> _fadeBgmScale({
-    required double to,
-    required Duration duration,
-  }) async {
-    final from = _bgmVolumeScale;
-    const steps = 18;
-    final stepDuration = Duration(
-      milliseconds: duration.inMilliseconds ~/ steps,
-    );
-
-    for (int i = 1; i <= steps; i++) {
-      if (!isBgmEnabled || _activePlayer == null) return;
-      _bgmVolumeScale = from + ((to - from) * (i / steps));
-      try {
-        await _activePlayer?.setVolume(_bgmVolumeScale);
-      } catch (e) {
-        break;
-      }
-      await Future.delayed(stepDuration);
+    try {
+      SoLoud.instance.fadeVolume(_bgmHandle!, _bgmVolumeScale * 0.32, const Duration(milliseconds: 180));
+      
+      await Future.delayed(hold);
+      
+      if (!isBgmEnabled || _bgmHandle == null || !SoLoud.instance.isInitialized) return;
+      SoLoud.instance.fadeVolume(_bgmHandle!, _bgmVolumeScale, const Duration(milliseconds: 420));
+    } catch (e) {
+      debugPrint('Error ducking BGM: $e');
     }
   }
 
   void dispose() {
-    _cancelSubscriptions();
-    _bgmPlayer1.dispose();
-    _bgmPlayer2.dispose();
-    for (final player in _players.values) {
-      player.dispose();
+    if (SoLoud.instance.isInitialized) {
+      try {
+        SoLoud.instance.deinit();
+        _isInitialized = false;
+      } catch (e) {
+        debugPrint('Error deinitializing SoLoud: $e');
+      }
     }
-    _players.clear();
   }
 }
