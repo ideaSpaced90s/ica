@@ -8,6 +8,7 @@ import '../data/saved_game.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../application/chess_provider.dart';
+import '../services/chess_sound_service.dart';
 import 'scholarly_theme.dart';
 import 'widgets/history_card.dart';
 import 'widgets/game_controls.dart';
@@ -100,7 +101,10 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
                             size: 24,
                           ),
                           tooltip: 'Clear All',
-                          onPressed: () => _confirmClearAll(context, notifier),
+                          onPressed: () {
+                            ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                            _confirmClearAll(context, notifier);
+                          },
                         ),
                       ],
                     ],
@@ -171,22 +175,31 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
                                   child: HistoryCard(
                                     game: game,
                                     onTap: () {
+                                      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
                                       notifier.loadSavedGame(game);
                                       Navigator.of(context).popUntil(
                                         (route) => route.isFirst,
                                       );
                                     },
-                                    onDelete: () =>
-                                        notifier.deleteSavedGame(game.id),
-                                    onToggleFavorite: () =>
-                                        notifier.toggleFavorite(game.id),
-                                    onRename: (newName) =>
-                                        notifier.renameSavedGame(
-                                      game.id,
-                                      newName,
-                                    ),
-                                    onExport: () =>
-                                        _showExportOptions(context, game),
+                                    onDelete: () {
+                                      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                                      notifier.deleteSavedGame(game.id);
+                                    },
+                                    onToggleFavorite: () {
+                                      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                                      notifier.toggleFavorite(game.id);
+                                    },
+                                    onRename: (newName) {
+                                      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                                      notifier.renameSavedGame(
+                                        game.id,
+                                        newName,
+                                      );
+                                    },
+                                    onExport: () {
+                                      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                                      _showExportOptions(context, game);
+                                    },
                                   ),
                                 );
                               },
@@ -235,7 +248,10 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
     if (filter == HistoryFilter.unrated) activeColor = Colors.tealAccent;
 
     return GestureDetector(
-      onTap: () => setState(() => _currentFilter = filter),
+      onTap: () {
+        ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+        setState(() => _currentFilter = filter);
+      },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
@@ -514,6 +530,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
                     icon: const Icon(Icons.save_alt_rounded, size: 18),
                     label: const Text('Save .PGN'),
                     onPressed: () {
+                      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
                       Navigator.pop(context);
                       _exportToPgnFile(context, game, pgnText);
                     },
@@ -530,6 +547,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
                     icon: const Icon(Icons.share_rounded, size: 18),
                     label: const Text('Share .PGN'),
                     onPressed: () {
+                      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
                       Navigator.pop(context);
                       _sharePgnFile(context, game, pgnText);
                     },

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../scholarly_theme.dart';
 import '../../application/chess_provider.dart';
+import '../../services/chess_sound_service.dart';
 import '../main_page.dart';
 import '../academy_page.dart';
 import '../settings_page.dart';
@@ -265,7 +266,7 @@ class GlobalSidebar extends ConsumerWidget {
   }
 }
 
-class _SidebarItem extends StatelessWidget {
+class _SidebarItem extends ConsumerWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
@@ -279,7 +280,7 @@ class _SidebarItem extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       margin: const EdgeInsets.only(bottom: 6),
@@ -288,7 +289,10 @@ class _SidebarItem extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
       ),
       child: ListTile(
-        onTap: onTap,
+        onTap: () {
+          ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
+          onTap();
+        },
         leading: Icon(
           icon,
           color: isSelected ? ScholarlyTheme.accentBlue : ScholarlyTheme.textMuted,

@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../application/tutorial_provider.dart';
+import '../../application/chess_provider.dart';
+import '../../services/chess_sound_service.dart';
 // Constants mapped locally or internally via progress state objects
 import '../../domain/models/tutorial_lesson.dart';
 import '../../domain/models/tutorial_progress.dart';
@@ -71,7 +73,10 @@ class ChapterSelectScreen extends ConsumerWidget {
                         isCompleted: isCompleted,
                         stars: stars,
                         isActiveCheckpoint: isActiveCheckpoint,
-                        onTap: () => onSelectChapter(lesson.chapterId),
+                        onTap: () {
+                          ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
+                          onSelectChapter(lesson.chapterId);
+                        },
                       );
                     },
                   ),
@@ -171,6 +176,59 @@ class _ChapterCard extends StatelessWidget {
   final bool isActiveCheckpoint;
   final VoidCallback onTap;
 
+  IconData _getChapterIcon(int chapterId) {
+    switch (chapterId) {
+      case 1:
+        return Icons.grid_on_rounded;
+      case 2:
+        return Icons.pin_drop_rounded;
+      case 3:
+        return Icons.arrow_upward_rounded;
+      case 4:
+        return Icons.unfold_more_rounded;
+      case 5:
+        return Icons.open_in_full_rounded;
+      case 6:
+        return Icons.shortcut_rounded;
+      case 7:
+        return Icons.workspace_premium_rounded;
+      case 8:
+        return Icons.emoji_people_rounded;
+      case 9:
+        return Icons.gavel_rounded;
+      case 10:
+        return Icons.warning_amber_rounded;
+      case 11:
+        return Icons.security_rounded;
+      case 12:
+        return Icons.dangerous_rounded;
+      case 13:
+        return Icons.balance_rounded;
+      case 14:
+        return Icons.castle_rounded;
+      case 15:
+        return Icons.fort_rounded;
+      case 16:
+        return Icons.bolt_rounded;
+      case 17:
+        return Icons.upgrade_rounded;
+      case 18:
+        return Icons.compare_arrows_rounded;
+      case 19:
+        return Icons.rocket_launch_rounded;
+      case 20:
+        return Icons.calculate_rounded;
+      case 21:
+        return Icons.psychology_rounded;
+      case 22:
+        return Icons.fitness_center_rounded;
+      case 23:
+        return Icons.school_rounded;
+      default:
+        return Icons.help_outline_rounded;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final borderColor = isActiveCheckpoint
@@ -238,40 +296,74 @@ class _ChapterCard extends StatelessWidget {
               
               const Spacer(),
 
-              Text(
-                lesson.title,
-                style: GoogleFonts.inter(
-                  color: ScholarlyTheme.textPrimary,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  height: 1.2,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-
-              const SizedBox(height: 6),
-
-              // Bottom star tally strip
-              if (isCompleted)
-                Row(
-                  children: List.generate(3, (idx) {
-                    final earned = idx < stars;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 2),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          lesson.title,
+                          style: GoogleFonts.inter(
+                            color: ScholarlyTheme.textPrimary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            height: 1.2,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 6),
+                        if (isCompleted)
+                          Row(
+                            children: List.generate(3, (idx) {
+                              final earned = idx < stars;
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 2),
+                                child: Icon(
+                                  earned ? Icons.star_rounded : Icons.star_outline_rounded,
+                                  size: 12,
+                                  color: earned ? ScholarlyTheme.accentGold : ScholarlyTheme.panelStroke,
+                                ),
+                              );
+                            }),
+                          )
+                        else
+                          Text(
+                            '${lesson.steps.length} Steps',
+                            style: GoogleFonts.inter(color: ScholarlyTheme.textSubtle, fontSize: 10),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: isCompleted
+                          ? ScholarlyTheme.accentBlueSoft
+                          : (isUnlocked
+                              ? ScholarlyTheme.accentBlueSoft.withValues(alpha: 0.5)
+                              : ScholarlyTheme.panelStroke.withValues(alpha: 0.3)),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Center(
                       child: Icon(
-                        earned ? Icons.star_rounded : Icons.star_outline_rounded,
-                        size: 12,
-                        color: earned ? ScholarlyTheme.accentGold : ScholarlyTheme.panelStroke,
+                        _getChapterIcon(lesson.chapterId),
+                        size: 18,
+                        color: isCompleted
+                            ? ScholarlyTheme.accentBlue
+                            : (isUnlocked
+                                ? ScholarlyTheme.accentBlue.withValues(alpha: 0.8)
+                                : ScholarlyTheme.textSubtle),
                       ),
-                    );
-                  }),
-                )
-              else
-                Text(
-                  '${lesson.steps.length} Steps',
-                  style: GoogleFonts.inter(color: ScholarlyTheme.textSubtle, fontSize: 10),
-                ),
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         ),
@@ -360,14 +452,20 @@ class _TutorialSettingsModalState extends ConsumerState<_TutorialSettingsModal> 
               value: skipAnimations,
               activeThumbColor: ScholarlyTheme.accentGold,
               contentPadding: EdgeInsets.zero,
-              onChanged: (val) => setState(() => skipAnimations = val),
+              onChanged: (val) {
+                ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiToggle);
+                setState(() => skipAnimations = val);
+              },
             ),
             SwitchListTile(
               title: Text('Show Subtitles', style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 13)),
               value: showSubtitles,
               activeThumbColor: ScholarlyTheme.accentGold,
               contentPadding: EdgeInsets.zero,
-              onChanged: (val) => setState(() => showSubtitles = val),
+              onChanged: (val) {
+                ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiToggle);
+                setState(() => showSubtitles = val);
+              },
             ),
             const SizedBox(height: 12),
             Text('Hesitation Hint Delay: ${timerVal.toInt()}s', style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 13)),

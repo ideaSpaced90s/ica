@@ -2541,10 +2541,16 @@ class ChessNotifier extends StateNotifier<ChessState> {
       bardSuggestion: null,
     );
 
-    if (state.game.inCheckmate) {
-      unawaited(_soundService.duckBgmTemporarily());
+    if (state.game.gameOver) {
+      if (state.game.inCheckmate) {
+        unawaited(_soundService.duckBgmTemporarily());
+      }
+      _soundService.playSfx(SoundEffect.gameover);
+    } else if (state.game.inCheck) {
+      _soundService.playSfx(SoundEffect.check);
+    } else {
+      _playMoveSound();
     }
-    _playMoveSound();
     _applyRatedRatingAdjustments(player);
 
     if (state.game.gameOver) {

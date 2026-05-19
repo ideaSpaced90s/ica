@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../application/chess_provider.dart';
+import '../../services/chess_sound_service.dart';
 import '../../domain/models/ai_avatar.dart';
 import '../scholarly_theme.dart';
 
@@ -74,6 +75,7 @@ void showAvatarSelectionSheet(BuildContext context, WidgetRef ref, {bool isBotto
 
                       return InkWell(
                         onTap: isReadOnly ? null : () {
+                          ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
                           if (isBottomSlot) {
                             ref.read(chessProvider.notifier).setBottomAvatarId(avatar.id);
                           } else {

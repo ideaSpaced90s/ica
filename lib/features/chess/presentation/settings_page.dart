@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../application/chess_provider.dart';
+import '../services/chess_sound_service.dart';
 import 'scholarly_theme.dart';
 import 'package:kingslayer_chess/features/chess/presentation/themes/theme_registry.dart';
 import 'package:kingslayer_chess/features/chess/presentation/themes/chess_theme.dart';
@@ -635,6 +636,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               width: double.infinity,
               child: FilledButton(
                 onPressed: () {
+                  ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
                   ref
                       .read(chessProvider.notifier)
                       .setTimeControl(
@@ -1032,7 +1034,7 @@ class _SettingsCategory extends StatelessWidget {
   }
 }
 
-class _SettingsTile extends StatelessWidget {
+class _SettingsTile extends ConsumerWidget {
   final String label;
   final String description;
   final IconData icon;
@@ -1052,9 +1054,12 @@ class _SettingsTile extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return ListTile(
-      onTap: onTap,
+      onTap: () {
+        ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+        onTap();
+      },
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
@@ -1100,7 +1105,7 @@ class _SettingsTile extends StatelessWidget {
   }
 }
 
-class _SettingsSwitchTile extends StatelessWidget {
+class _SettingsSwitchTile extends ConsumerWidget {
   final String label;
   final String description;
   final IconData icon;
@@ -1118,7 +1123,7 @@ class _SettingsSwitchTile extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Opacity(
       opacity: enabled ? 1.0 : 0.4,
       child: SwitchListTile(
@@ -1133,6 +1138,7 @@ class _SettingsSwitchTile extends StatelessWidget {
             );
             return;
           }
+          ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiToggle);
           onChanged(v);
         },
         secondary: Container(
@@ -1200,7 +1206,7 @@ class _ThemeMiniPreview extends StatelessWidget {
 
 // --- KEEPING EXISTING UTILITY WIDGETS ---
 
-class _AnimationToggle extends StatelessWidget {
+class _AnimationToggle extends ConsumerWidget {
   final IconData icon;
   final String label;
   final String description;
@@ -1218,7 +1224,7 @@ class _AnimationToggle extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Opacity(
       opacity: enabled ? 1.0 : 0.4,
       child: Padding(
@@ -1234,6 +1240,7 @@ class _AnimationToggle extends StatelessWidget {
               );
               return;
             }
+            ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiToggle);
             onChanged(!value);
           },
           borderRadius: BorderRadius.circular(12),
@@ -1301,6 +1308,7 @@ class _AnimationToggle extends StatelessWidget {
                       );
                       return;
                     }
+                    ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiToggle);
                     onChanged(v);
                   },
                   activeThumbColor: ScholarlyTheme.accentBlue,

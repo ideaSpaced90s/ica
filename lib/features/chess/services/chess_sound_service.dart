@@ -9,6 +9,9 @@ enum SoundEffect {
   click,
   check,
   gameover,
+  uiClick,
+  uiNavigate,
+  uiToggle,
 }
 
 class ChessSoundService {
@@ -28,6 +31,9 @@ class ChessSoundService {
     'whoosh': 'assets/sfx/whoosh.mp3',
     'piecemove': 'assets/sfx/piecemove.mp3',
     'thud': 'assets/sfx/thud.mp3',
+    'ui_click': 'assets/sfx/ui_click.ogg',
+    'ui_navigate': 'assets/sfx/ui_navigate.ogg',
+    'ui_toggle': 'assets/sfx/ui_toggle.ogg',
   };
 
   final List<AudioSource> _bgmSources = [];
@@ -183,6 +189,15 @@ class ChessSoundService {
         _playSound('thud');
         break;
       case SoundEffect.click:
+      case SoundEffect.uiClick:
+        _playSound('ui_click');
+        break;
+      case SoundEffect.uiNavigate:
+        _playSound('ui_navigate');
+        break;
+      case SoundEffect.uiToggle:
+        _playSound('ui_toggle');
+        break;
       case SoundEffect.check:
         playNotify();
         break;

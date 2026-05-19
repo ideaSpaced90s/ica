@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../application/chess_provider.dart';
+import '../../services/chess_sound_service.dart';
 import '../scholarly_theme.dart';
 
 class _JuicyTheme {
@@ -123,7 +124,7 @@ _JuicyTheme _getJuicyTheme(IconData icon, {Color? baseColor, Color? activeColor,
   );
 }
 
-class ActionIconButton extends StatefulWidget {
+class ActionIconButton extends ConsumerStatefulWidget {
   const ActionIconButton({
     super.key,
     required this.icon,
@@ -153,10 +154,10 @@ class ActionIconButton extends StatefulWidget {
   final double? size;
 
   @override
-  State<ActionIconButton> createState() => _ActionIconButtonState();
+  ConsumerState<ActionIconButton> createState() => _ActionIconButtonState();
 }
 
-class _ActionIconButtonState extends State<ActionIconButton> with TickerProviderStateMixin {
+class _ActionIconButtonState extends ConsumerState<ActionIconButton> with TickerProviderStateMixin {
   bool _isPressed = false;
   late AnimationController _blinkController;
   late Animation<double> _glowAnimation;
@@ -261,7 +262,12 @@ class _ActionIconButtonState extends State<ActionIconButton> with TickerProvider
           ? (_) => setState(() => _isPressed = false)
           : null,
       onTapCancel: () => setState(() => _isPressed = false),
-      onTap: widget.isEnabled ? widget.onTap : null,
+      onTap: widget.isEnabled && widget.onTap != null
+          ? () {
+              ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+              widget.onTap!();
+            }
+          : null,
       child: AnimatedScale(
         scale: _isPressed ? 0.88 : 1.0,
         duration: const Duration(milliseconds: 100),
@@ -377,7 +383,10 @@ class TimePresetChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () => ref.read(chessProvider.notifier).setTimeControl(total, inc),
+      onTap: () {
+        ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+        ref.read(chessProvider.notifier).setTimeControl(total, inc);
+      },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
