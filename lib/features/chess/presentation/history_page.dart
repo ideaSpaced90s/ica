@@ -212,7 +212,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
                   onTap: () => _scaffoldKey.currentState?.openDrawer(),
                 ),
                 Text(
-                  'ANALYSIS ARCHIVE',
+                  'SAVED GAMES',
                   style: GoogleFonts.inter(
                     color: ScholarlyTheme.textSubtle,
                     fontSize: 12,

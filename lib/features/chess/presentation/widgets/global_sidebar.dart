@@ -113,7 +113,7 @@ class GlobalSidebar extends ConsumerWidget {
                       ),
                       _SidebarItem(
                         icon: Icons.history_rounded,
-                        label: 'Analysis',
+                        label: 'History',
                         isSelected: isAnalysis,
                         onTap: () {
                           Navigator.pop(context);
