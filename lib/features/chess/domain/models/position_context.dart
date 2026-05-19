@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'candidate_move.dart';
 
 /// Represents the structured context of a chess position for the AI to interpret.
 @immutable
@@ -14,6 +15,7 @@ class PositionContext {
   final String threatLevel;
   final String positionStyle;
   final List<String> pvLine;
+  final List<CandidateMove> candidates;
 
   const PositionContext({
     required this.move,
@@ -27,6 +29,7 @@ class PositionContext {
     required this.threatLevel,
     required this.positionStyle,
     this.pvLine = const [],
+    this.candidates = const [],
   });
 
   @override
@@ -53,6 +56,12 @@ class PositionContext {
     }
     buffer.write('- Threat Level: $threatLevel\n');
     buffer.write('- Position Style: $positionStyle\n');
+    if (candidates.isNotEmpty) {
+      buffer.write('- CANDIDATE_MOVES:\n');
+      for (final c in candidates) {
+        buffer.write('  * Move ${c.multipvIndex}: ${c.uciMove} (Eval: ${c.evaluation.toStringAsFixed(1)}), PV Path: ${c.fullPv.take(4).join(" -> ")}\n');
+      }
+    }
     return buffer.toString();
   }
 }

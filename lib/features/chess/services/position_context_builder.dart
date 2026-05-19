@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:kingslayer_chess/src/rust/api/context.dart';
 import '../domain/chess_game.dart';
 import '../domain/models/position_context.dart';
+import '../domain/models/candidate_move.dart';
 
 class PositionContextBuilder {
   static PositionContext build({
@@ -11,6 +12,7 @@ class PositionContextBuilder {
     required ChessGame game,
     String? bestMove,
     List<String> pvLine = const [],
+    List<CandidateMove> candidates = const [],
   }) {
     final evalDiff = currentEval - previousEval;
     final quality = _classifyQuality(evalDiff);
@@ -32,6 +34,7 @@ class PositionContextBuilder {
       threatLevel: threatLevel,
       positionStyle: positionStyle,
       pvLine: pvLine,
+      candidates: candidates,
     );
   }
 

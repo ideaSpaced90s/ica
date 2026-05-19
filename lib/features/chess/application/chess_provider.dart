@@ -1141,7 +1141,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
       final avatar = AiAvatar.getAvatar(state.engineLevel);
       await _engine.setSkillLevel(
         avatar.skillLevel,
-        multiPV: avatar.name == 'Kingslayer' ? 1 : 4,
+        multiPV: state.isAcademyActive ? 3 : (avatar.name == 'Kingslayer' ? 1 : 4),
       );
 
       state = state.copyWith(
@@ -2242,7 +2242,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
     _currentCandidates.clear();
     _engine.setSkillLevel(
       avatar.skillLevel,
-      multiPV: avatar.name == 'Kingslayer' ? 1 : 4,
+      multiPV: state.isAcademyActive ? 3 : (avatar.name == 'Kingslayer' ? 1 : 4),
     );
 
     // Record start time for the 2s minimum delay logic
@@ -2835,6 +2835,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
           bestMove: bestMove,
           pvLine: pv,
           chatHistory: state.commentaryHistory,
+          candidates: _currentCandidates,
         );
       } catch (e) {
         debugPrint('KingSlayer: Context injection failed: $e');
@@ -3286,7 +3287,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
     // Start analysis which will trigger the engine move
     await ensureGameServicesStarted(analyzeCurrentPosition: true);
     await _engine.setSkillLevel(AiAvatar.getAvatar(preserveLevel).skillLevel,
-        multiPV: 10); // Variety for openings
+        multiPV: 3); // Academy uses MultiPV=3
     state = state.copyWith(isEngineThinking: state.engineReady);
   }
 

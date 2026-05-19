@@ -109,29 +109,41 @@ TOOL USAGE: If the Apprentice asks for a puzzle, use your tools to find one and 
     try {
       String fullPrompt;
       final query = userQuery?.toLowerCase() ?? '';
-      final isAskingForAdvice =
-          query.contains('what') ||
-          query.contains('play') ||
-          query.contains('do') ||
-          query.contains('advice') ||
-          query.contains('should');
-
+      
       if (userQuery != null && userQuery.isNotEmpty) {
-        if (isAskingForAdvice) {
-          fullPrompt =
-              "Query: $userQuery\n\n[SITUATION]\n$structuredPrompt\n\nTask: Provide point-to-point tactical advice. Recommend the best continuation and explain the direct strategic benefit. Keep it concise.";
+        String customTask;
+        if (query == 'analyze' || query == 'analyze position') {
+          customTask = "Start your response with a brief, natural introductory sentence in the voice of GM Bard stating that you are performing a deep positional analysis of the board. Then, perform a deep positional analysis of the current board state, detailing pawn structures, active/passive pieces, and key strategic themes.";
+        } else if (query == 'why' || query == "why did my opponent play that?" || query == "opponent's last move") {
+          customTask = "Start your response with a brief, natural introductory sentence in the voice of GM Bard explaining that you are analyzing the opponent's last move and why it was played. Then, explain the tactical and strategic goal of the opponent's last move, what they are threatening, and if they left any weaknesses behind.";
+        } else if (query == 'candidates' || query == 'candidate moves') {
+          customTask = "Start your response with a brief, natural introductory sentence in the voice of GM Bard stating that you have calculated candidate moves for the Apprentice. Then, review the top candidate moves provided in the context, recommend the best options, and explain the pros, cons, and strategic ideas behind each in plain English.";
+        } else if (query == 'tactics' || query == 'tactics check') {
+          customTask = "Start your response with a brief, natural introductory sentence in the voice of GM Bard stating that you are scanning the board for tactical opportunities and threats. Then, identify all tactical threats, pins, forks, double-attacks, or mating patterns currently present on the board for either side.";
+        } else if (query == 'plan' || query == 'middlegame plan') {
+          customTask = "Start your response with a brief, natural introductory sentence in the voice of GM Bard stating that you are outlining a strategic middlegame plan based on the active pawn structures. Then, evaluate the pawn structures and minor piece coordination, and outline a clear mid-term strategic plan or goals for the Apprentice.";
+        } else if (query == 'defend' || query == 'how to defend') {
+          customTask = "Start your response with a brief, natural introductory sentence in the voice of GM Bard warning the Apprentice about their weaknesses and explaining how to secure their position. Then, evaluate the weaknesses and active threats against the Apprentice, suggesting the safest way to defend, neutralize threats, and consolidate their position.";
         } else {
-          fullPrompt =
-              "Query: $userQuery\n\n[CONTEXT]\n$structuredPrompt\n\nTask: Answer the Apprentice's query directly and concisely using the provided context.";
+          final isAskingForAdvice =
+              query.contains('what') ||
+              query.contains('play') ||
+              query.contains('do') ||
+              query.contains('advice') ||
+              query.contains('should');
+          if (isAskingForAdvice) {
+            customTask = "Provide point-to-point tactical advice. Recommend the best continuation and explain the direct strategic benefit. Keep it concise.";
+          } else {
+            customTask = "Answer the Apprentice's query directly and concisely using the provided context.";
+          }
         }
+        fullPrompt = "Query: $userQuery\n\n[CONTEXT]\n$structuredPrompt\n\nTask: $customTask";
       } else {
         fullPrompt =
             "Current State: $move (Evaluation Shift: $evalScore)\n\n[SITUATION]\n$structuredPrompt\n\nTask: React to this move with a brief, instructional comment. Max 1-2 sentences. No fluff.";
       }
 
-      final content = [Content.text(fullPrompt)];
-
-      // Collect the response stream to inspect for tool requests
+      final content = [Content.text(fullPrompt)];      // Collect the response stream to inspect for tool requests
       final responseChunks = await _model!.generateContentStream(content).toList();
       
       final functionCalls = responseChunks.expand((c) => c.functionCalls).toList();
