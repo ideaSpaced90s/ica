@@ -13,6 +13,7 @@ import 'scholarly_theme.dart';
 import 'widgets/history_card.dart';
 import 'widgets/game_controls.dart';
 import 'widgets/global_sidebar.dart';
+import 'widgets/ambient_scaffold.dart';
 
 enum HistoryFilter { all, favorites, rated, unrated }
 
@@ -77,62 +78,69 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
         break;
     }
 
-    return Scaffold(
-      key: _scaffoldKey,
-      backgroundColor: ScholarlyTheme.backgroundStart,
+    return AmbientScaffold(
+      scaffoldKey: _scaffoldKey,
       drawer: const GlobalSidebar(),
+      blob1Color: const Color(0xFFCCFBF1), // Soft Teal
+      blob2Color: const Color(0xFFDBEAFE), // Soft Blue
+      blob3Color: const Color(0xFFFCE7F3), // Soft Pink
       body: Stack(
         children: [
           SafeArea(
             child: Column(
               children: [
-                // Fixed Header: Search + Delete All
+                // Integrated Glass Header: Search + Filters
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                  child: Row(
-                    children: [
-                      Expanded(child: _buildSearchBar()),
-                      if (state.savedGames.isNotEmpty) ...[
-                        const SizedBox(width: 12),
-                        IconButton(
-                          icon: const Icon(
-                            Icons.delete_sweep_rounded,
-                            color: Colors.redAccent,
-                            size: 24,
-                          ),
-                          tooltip: 'Clear All',
-                          onPressed: () {
-                            ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                            _confirmClearAll(context, notifier);
-                          },
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-
-                // Fixed Tabs
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Row(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                  child: JuicyGlassCard(
+                    padding: const EdgeInsets.all(12),
+                    borderRadius: 20,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        _buildFilterTab('All', HistoryFilter.all),
-                        const SizedBox(width: 8),
-                        _buildFilterTab('Favorites', HistoryFilter.favorites),
-                        const SizedBox(width: 8),
-                        _buildFilterTab('Rated', HistoryFilter.rated),
-                        const SizedBox(width: 8),
-                        _buildFilterTab('Unrated', HistoryFilter.unrated),
-                        const SizedBox(width: 16),
-                        Text(
-                          '${filteredSaves.length} matches',
-                          style: GoogleFonts.inter(
-                            color: ScholarlyTheme.textMuted,
-                            fontSize: 11,
+                        Row(
+                          children: [
+                            Expanded(child: _buildSearchBar()),
+                            if (state.savedGames.isNotEmpty) ...[
+                              const SizedBox(width: 12),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.delete_sweep_rounded,
+                                  color: Colors.redAccent,
+                                  size: 24,
+                                ),
+                                tooltip: 'Clear All',
+                                onPressed: () {
+                                  ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                                  _confirmClearAll(context, notifier);
+                                },
+                              ),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          physics: const BouncingScrollPhysics(),
+                          child: Row(
+                            children: [
+                              _buildFilterTab('All', HistoryFilter.all),
+                              const SizedBox(width: 8),
+                              _buildFilterTab('Favorites', HistoryFilter.favorites),
+                              const SizedBox(width: 8),
+                              _buildFilterTab('Rated', HistoryFilter.rated),
+                              const SizedBox(width: 8),
+                              _buildFilterTab('Unrated', HistoryFilter.unrated),
+                              const SizedBox(width: 16),
+                              Text(
+                                '${filteredSaves.length} matches',
+                                style: GoogleFonts.inter(
+                                  color: ScholarlyTheme.textMuted,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
@@ -244,32 +252,42 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
   Widget _buildFilterTab(String label, HistoryFilter filter) {
     final isSelected = _currentFilter == filter;
     Color activeColor = ScholarlyTheme.accentBlue;
-    if (filter == HistoryFilter.rated) activeColor = Colors.amber;
-    if (filter == HistoryFilter.unrated) activeColor = Colors.tealAccent;
+    if (filter == HistoryFilter.rated) activeColor = ScholarlyTheme.realGold; // Real gold from theme
+    if (filter == HistoryFilter.unrated) activeColor = const Color(0xFF0D9488); // Modern teal
 
     return GestureDetector(
       onTap: () {
         ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
         setState(() => _currentFilter = filter);
       },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected
               ? activeColor.withValues(alpha: 0.15)
-              : ScholarlyTheme.panelBase,
+              : Colors.white.withValues(alpha: 0.35),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? activeColor : ScholarlyTheme.panelStroke,
-            width: 1,
+            color: isSelected ? activeColor : Colors.white.withValues(alpha: 0.5),
+            width: 1.5,
           ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: activeColor.withValues(alpha: 0.2),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  )
+                ]
+              : null,
         ),
         child: Text(
           label,
           style: GoogleFonts.inter(
-            color: isSelected ? activeColor : ScholarlyTheme.textPrimary,
+            color: isSelected ? activeColor : ScholarlyTheme.textPrimary.withValues(alpha: 0.8),
             fontSize: 12,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
           ),
         ),
       ),
@@ -278,9 +296,15 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
 
   Widget _buildSearchBar() {
     return Container(
-      decoration: ScholarlyTheme.modernDecoration().copyWith(
-        color: ScholarlyTheme.panelBase,
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.55),
+          width: 1,
+        ),
       ),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       child: TextField(
         controller: _searchController,
         onChanged: (_) => setState(() {}),
@@ -300,7 +324,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
             size: 20,
           ),
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 12),
+          contentPadding: const EdgeInsets.symmetric(vertical: 10),
         ),
       ),
     );

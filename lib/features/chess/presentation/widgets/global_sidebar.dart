@@ -13,6 +13,7 @@ import '../tutorial_page.dart';
 import '../dashboard_page.dart';
 import '../history_page.dart';
 import '../about_us_page.dart';
+import 'ambient_flow_backdrop.dart';
 
 
 
@@ -40,18 +41,26 @@ class GlobalSidebar extends ConsumerWidget {
       width: MediaQuery.of(context).size.width * 0.75,
       child: Stack(
         children: [
+          // Ambient aurora glow background
+          const Positioned.fill(
+            child: AmbientFlowBackdrop(
+              blob1Color: Color(0xFFDBEAFE), // Soft Blue
+              blob2Color: Color(0xFFFEF3C7), // Soft Amber
+              blob3Color: Color(0xFFF3E8FF), // Soft Purple
+            ),
+          ),
           // Blurry Glass Background
           Positioned.fill(
             child: ClipRRect(
               child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
                 child: Container(
                   decoration: BoxDecoration(
-                    color: ScholarlyTheme.panelBase.withValues(alpha: 0.7),
+                    color: Colors.white.withValues(alpha: 0.40),
                     border: const Border(
                       right: BorderSide(
-                        color: ScholarlyTheme.panelStroke,
-                        width: 1,
+                        color: Colors.white54,
+                        width: 1.5,
                       ),
                     ),
                   ),
@@ -126,7 +135,6 @@ class GlobalSidebar extends ConsumerWidget {
                           }
                         },
                       ),
-                      const SizedBox(height: 8),
                       _SidebarItem(
                         icon: Icons.school_rounded,
                         label: 'Academy',
@@ -296,30 +304,58 @@ class _SidebarItem extends ConsumerWidget {
       duration: const Duration(milliseconds: 200),
       margin: const EdgeInsets.only(bottom: 6),
       decoration: BoxDecoration(
-        color: isSelected ? ScholarlyTheme.accentBlueSoft : Colors.transparent,
+        color: isSelected ? ScholarlyTheme.accentBlue.withValues(alpha: 0.12) : Colors.transparent,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isSelected ? ScholarlyTheme.accentBlue.withValues(alpha: 0.25) : Colors.transparent,
+          width: 1.2,
+        ),
       ),
-      child: ListTile(
-        onTap: () {
-          ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
-          onTap();
-        },
-        leading: Icon(
-          icon,
-          color: isSelected ? ScholarlyTheme.accentBlue : ScholarlyTheme.textMuted,
-          size: 22,
-        ),
-        title: Text(
-          label,
-          style: GoogleFonts.inter(
-            fontSize: 15,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-            color: isSelected ? ScholarlyTheme.accentBlue : ScholarlyTheme.textPrimary,
+      child: Stack(
+        children: [
+          ListTile(
+            onTap: () {
+              ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
+              onTap();
+            },
+            leading: Icon(
+              icon,
+              color: isSelected ? ScholarlyTheme.accentBlue : ScholarlyTheme.textPrimary.withValues(alpha: 0.7),
+              size: 22,
+            ),
+            title: Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                color: isSelected ? ScholarlyTheme.accentBlue : ScholarlyTheme.textPrimary,
+              ),
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+          if (isSelected)
+            Positioned(
+              left: 4,
+              top: 14,
+              bottom: 14,
+              child: Container(
+                width: 3.5,
+                decoration: BoxDecoration(
+                  color: ScholarlyTheme.accentBlue,
+                  borderRadius: BorderRadius.circular(2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: ScholarlyTheme.accentBlue.withValues(alpha: 0.5),
+                      blurRadius: 4,
+                      offset: const Offset(1, 0),
+                    )
+                  ],
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

@@ -10,6 +10,8 @@ import '../domain/models/ai_avatar.dart';
 import 'widgets/global_sidebar.dart';
 import 'widgets/game_controls.dart';
 import 'widgets/avatar_selection_sheet.dart';
+import 'widgets/ambient_scaffold.dart';
+import 'dart:ui';
 
 
 
@@ -30,10 +32,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final state = ref.watch(chessProvider);
     final notifier = ref.read(chessProvider.notifier);
 
-    return Scaffold(
-      key: _scaffoldKey,
-      backgroundColor: ScholarlyTheme.backgroundStart,
+    return AmbientScaffold(
+      scaffoldKey: _scaffoldKey,
       drawer: const GlobalSidebar(),
+      blob1Color: const Color(0xFFE2E8F0),
+      blob2Color: const Color(0xFFDBEAFE),
+      blob3Color: const Color(0xFFD1FAE5),
       body: Stack(
         children: [
           CustomScrollView(
@@ -81,20 +85,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
                       child: Container(
                         padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              ScholarlyTheme.panelBase.withValues(alpha: 0.6),
-                              ScholarlyTheme.panelBase,
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(16),
+                        decoration: ScholarlyTheme.gradientCard(radius: 16).copyWith(
                           border: Border.all(
-                            color: state.isRatedMode
-                                ? Colors.amber.withValues(alpha: 0.3)
-                                : ScholarlyTheme.panelStroke,
+                            color: Colors.white.withValues(alpha: 0.25),
+                            width: 1.5,
                           ),
                         ),
                         child: Column(
@@ -144,12 +138,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                               crossAxisAlignment: CrossAxisAlignment.baseline,
                               textBaseline: TextBaseline.alphabetic,
                               children: [
-                                Text(
+                                 Text(
                                   '${state.consolidatedRating}',
                                   style: GoogleFonts.outfit(
                                     fontSize: 32,
                                     fontWeight: FontWeight.bold,
-                                    color: ScholarlyTheme.textPrimary,
+                                    color: Colors.white,
                                   ),
                                 ),
                                 const SizedBox(width: 8),
@@ -158,7 +152,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                                   style: GoogleFonts.inter(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
-                                    color: ScholarlyTheme.textMuted,
+                                    color: Colors.white.withValues(alpha: 0.7),
                                   ),
                                 ),
                                 const Spacer(),
@@ -170,14 +164,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                                       style: GoogleFonts.inter(
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,
-                                        color: ScholarlyTheme.textPrimary,
+                                        color: Colors.white,
                                       ),
                                     ),
                                     Text(
                                       'Games Played',
                                       style: GoogleFonts.inter(
                                         fontSize: 10,
-                                        color: ScholarlyTheme.textSubtle,
+                                        color: Colors.white.withValues(alpha: 0.6),
                                       ),
                                     ),
                                   ],
@@ -408,14 +402,27 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             final state = ref.watch(chessProvider);
             final notifier = ref.read(chessProvider.notifier);
 
-            return GlassPanel(
-              padding: const EdgeInsets.all(20),
+            return ClipRRect(
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(32),
               ),
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                child: Column(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.45),
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(32),
+                    ),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.6),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -512,9 +519,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   ],
                 ),
               ),
-            );
-          },
+            ),
+          ),
         );
+      },
+    );
       },
     );
   }
@@ -539,12 +548,25 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               {'label': '5+25', 'min': 5, 'inc': 25},
             ];
 
-            return GlassPanel(
-              padding: const EdgeInsets.all(24),
+            return ClipRRect(
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(32),
               ),
-              child: Column(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                child: Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.45),
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(32),
+                    ),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.6),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -601,9 +623,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   const SizedBox(height: 32),
                 ],
               ),
-            );
-          },
+            ),
+          ),
         );
+      },
+    );
       },
     );
   }
@@ -824,9 +848,21 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: GlassPanel(
-                    padding: const EdgeInsets.all(20),
-                    child: ConstrainedBox(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(24),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                      child: Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.45),
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.6),
+                            width: 1.5,
+                          ),
+                        ),
+                        child: ConstrainedBox(
                       constraints: BoxConstraints(
                         maxHeight: MediaQuery.of(context).size.height * 0.85,
                       ),
@@ -973,13 +1009,15 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                       ),
                     ),
                   ),
-                );
-              },
-            ),
-          ),
-        );
-      },
-      transitionBuilder: (context, a1, a2, child) {
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  },
+  transitionBuilder: (context, a1, a2, child) {
         return Transform.scale(
           scale: Curves.easeOutBack.transform(a1.value),
           child: FadeTransition(opacity: a1, child: child),
@@ -1010,25 +1048,18 @@ class _SettingsCategory extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
-          child: Text(
-            title,
-            style: GoogleFonts.inter(
-              color: ScholarlyTheme.accentBlue,
-              fontSize: 11,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 1.5,
-            ),
+          child: JuicySectionHeader(
+            title: title,
+            color: ScholarlyTheme.accentBlue,
           ),
         ),
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16),
-          decoration: BoxDecoration(
-            color: ScholarlyTheme.panelBase,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: ScholarlyTheme.panelStroke),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: JuicyGlassCard(
+            padding: EdgeInsets.zero,
+            borderRadius: 24,
+            child: Column(children: children),
           ),
-          clipBehavior: Clip.antiAlias,
-          child: Column(children: children),
         ),
       ],
     );
@@ -1064,8 +1095,12 @@ class _SettingsTile extends ConsumerWidget {
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: ScholarlyTheme.backgroundStart,
+          color: Colors.white.withValues(alpha: 0.35),
           borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.5),
+            width: 1,
+          ),
         ),
         child: imagePath != null
             ? ClipRRect(
@@ -1146,9 +1181,15 @@ class _SettingsSwitchTile extends ConsumerWidget {
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
             color: value
-                ? ScholarlyTheme.accentBlueSoft
-                : ScholarlyTheme.backgroundStart,
+                ? ScholarlyTheme.accentBlueSoft.withValues(alpha: 0.5)
+                : Colors.white.withValues(alpha: 0.35),
             borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: value
+                  ? ScholarlyTheme.accentBlue.withValues(alpha: 0.25)
+                  : Colors.white.withValues(alpha: 0.5),
+              width: 1,
+            ),
           ),
           child: Icon(
             icon,
@@ -1263,7 +1304,7 @@ class _AnimationToggle extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: ScholarlyTheme.panelBase,
+                    color: Colors.white.withValues(alpha: 0.4),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(

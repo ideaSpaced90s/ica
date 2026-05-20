@@ -5,6 +5,7 @@ import '../application/chess_provider.dart';
 import 'scholarly_theme.dart';
 import 'widgets/global_sidebar.dart';
 import 'widgets/game_controls.dart';
+import 'widgets/ambient_scaffold.dart';
 
 class RatedSettingsPage extends ConsumerStatefulWidget {
   const RatedSettingsPage({super.key});
@@ -21,10 +22,12 @@ class _RatedSettingsPageState extends ConsumerState<RatedSettingsPage> {
     final state = ref.watch(chessProvider);
     final notifier = ref.read(chessProvider.notifier);
 
-    return Scaffold(
-      key: _scaffoldKey,
-      backgroundColor: ScholarlyTheme.backgroundStart,
+    return AmbientScaffold(
+      scaffoldKey: _scaffoldKey,
       drawer: const GlobalSidebar(),
+      blob1Color: const Color(0xFFE2E8F0),
+      blob2Color: const Color(0xFFDBEAFE),
+      blob3Color: const Color(0xFFD1FAE5),
       body: Stack(
         children: [
           CustomScrollView(
@@ -109,25 +112,18 @@ class _SettingsCategory extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
-          child: Text(
-            title,
-            style: GoogleFonts.inter(
-              color: ScholarlyTheme.accentBlue,
-              fontSize: 11,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 1.5,
-            ),
+          child: JuicySectionHeader(
+            title: title,
+            color: ScholarlyTheme.accentBlue,
           ),
         ),
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16),
-          decoration: BoxDecoration(
-            color: ScholarlyTheme.panelBase,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: ScholarlyTheme.panelStroke),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: JuicyGlassCard(
+            padding: EdgeInsets.zero,
+            borderRadius: 24,
+            child: Column(children: children),
           ),
-          clipBehavior: Clip.antiAlias,
-          child: Column(children: children),
         ),
       ],
     );
@@ -161,8 +157,14 @@ class _SettingsSwitchTile extends StatelessWidget {
         decoration: BoxDecoration(
           color: value
               ? ScholarlyTheme.accentBlue.withValues(alpha: 0.15)
-              : ScholarlyTheme.backgroundStart,
+              : Colors.white.withValues(alpha: 0.35),
           borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: value
+                ? ScholarlyTheme.accentBlue.withValues(alpha: 0.25)
+                : Colors.white.withValues(alpha: 0.5),
+            width: 1,
+          ),
         ),
         child: Icon(
           icon,

@@ -9,13 +9,20 @@ class ScholarlyTheme {
   static const Color panelGlass = Color(0xFFFFFFFF);
   static const Color panelStroke = Color(0xFFDEE2E6); // Subtle border
   static const Color boardFrame = Color(0xFFCED4DA);
-  static const Color accentGold = Color(0xFF0056B3); // Professional Cobalt Blue
+  static const Color accentGold = Color(0xFF0056B3); // Professional Cobalt Blue (kept for compatibility)
+  static const Color accentCobalt = Color(0xFF0056B3); // Cobalt Blue
+  static const Color realGold = Color(0xFFF59E0B); // Real warm gold
   static const Color accentBlue = Color(0xFF0D6EFD); // Primary Blue
   static const Color accentBlueSoft = Color(0xFFE7F1FF); // Soft Blue Background
   static const Color accentYellow = Color(0xFFFFD700); // Gold/Yellow for hints
   static const Color accentYellowSoft = Color(
     0xFFFFF9E6,
   ); // Soft Yellow Background
+
+  // Glass utilities
+  static Color get glassWhite => Colors.white.withValues(alpha: 0.40);
+  static Color get glassBorder => Colors.white.withValues(alpha: 0.55);
+  static const double glassBlur = 12.0;
 
   // Kept original board colors as requested
   static const Color lightSquare = Color(0xFFC0C0C0);
@@ -129,11 +136,37 @@ class ScholarlyTheme {
     );
   }
 
-  static BoxDecoration get glassPanelDecoration => BoxDecoration(
-    color: panelBase,
-    borderRadius: BorderRadius.circular(radiusMedium),
-    border: Border.all(color: panelStroke),
-    boxShadow: cardShadow,
+  static BoxDecoration glassPanelDecoration({double radius = radiusMedium}) => BoxDecoration(
+    color: Colors.white.withValues(alpha: 0.40),
+    borderRadius: BorderRadius.circular(radius),
+    border: Border.all(color: Colors.white.withValues(alpha: 0.55), width: 1.5),
+    boxShadow: [
+      BoxShadow(
+        color: Colors.black.withValues(alpha: 0.04),
+        blurRadius: 12,
+        offset: const Offset(0, 4),
+      ),
+    ],
+  );
+
+  static BoxDecoration gradientCard({double radius = 28}) => BoxDecoration(
+    gradient: const LinearGradient(
+      colors: [
+        Color(0xFF0D6EFD), // accentBlue
+        Color(0xFF5B21B6), // deep indigo
+      ],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    ),
+    borderRadius: BorderRadius.circular(radius),
+    boxShadow: [
+      BoxShadow(
+        color: const Color(0xFF0D6EFD).withValues(alpha: 0.35),
+        blurRadius: 24,
+        offset: const Offset(0, 8),
+        spreadRadius: 2,
+      ),
+    ],
   );
 }
 

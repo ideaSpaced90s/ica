@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../application/chess_provider.dart';
 import 'dashboard_page.dart';
 import 'scholarly_theme.dart';
+import 'widgets/ambient_flow_backdrop.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -17,6 +18,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     with TickerProviderStateMixin {
   late AnimationController _progressController;
   late Animation<double> _progressAnimation;
+  late AnimationController _shimmerController;
+  late AnimationController _pulseController;
   double _loadingValue = 0;
 
   @override
@@ -41,6 +44,16 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
             _loadingValue = _progressAnimation.value;
           });
         });
+
+    _shimmerController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    )..repeat();
+
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2500),
+    )..repeat(reverse: true);
 
     _initFlow();
   }
@@ -113,6 +126,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   @override
   void dispose() {
     _progressController.dispose();
+    _shimmerController.dispose();
+    _pulseController.dispose();
     super.dispose();
   }
 
@@ -130,21 +145,13 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     return Stack(
       fit: StackFit.expand,
       children: [
-        // Ambient background glow
-        Center(
-          child: Container(
-            width: MediaQuery.of(context).size.width * 0.8,
-            height: MediaQuery.of(context).size.width * 0.8,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(
-                colors: [
-                  ScholarlyTheme.accentBlue.withValues(alpha: 0.08),
-                  ScholarlyTheme.backgroundStart.withValues(alpha: 0),
-                ],
-              ),
-            ),
-          ),
+        // Ambient animated background glow
+        AmbientFlowBackdrop(
+          backgroundColor: const Color(0xFF0F172A),
+          blob1Color: const Color(0xFF1E3A8A).withValues(alpha: 0.15), // Deep navy
+          blob2Color: const Color(0xFF312E81).withValues(alpha: 0.15), // Deep indigo
+          blob3Color: const Color(0xFF4C1D95).withValues(alpha: 0.12), // Deep purple
+          overlayColor: Colors.black.withValues(alpha: 0.25),
         ),
 
         // Background Logo (Centered and maximized) moved 20% up
@@ -163,27 +170,52 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                 ),
               );
             },
-            child: Container(
-              margin: const EdgeInsets.symmetric(vertical: 60),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(40),
-                boxShadow: [
-                  BoxShadow(
-                    color: ScholarlyTheme.shadowColor.withValues(alpha: 0.12),
-                    blurRadius: 50,
-                    spreadRadius: 2,
-                    offset: const Offset(0, 25),
-                  ),
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(20), // Subtle rounding
-                child: Image.asset(
-                  'assets/splash/splash.png',
-                  height: MediaQuery.of(context).size.height * 0.52,
-                  fit: BoxFit.contain,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // Pulsing radial glow ring behind logo
+                AnimatedBuilder(
+                  animation: _pulseController,
+                  builder: (context, child) {
+                    return Container(
+                      width: MediaQuery.of(context).size.width * 0.72,
+                      height: MediaQuery.of(context).size.width * 0.72,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.white.withValues(alpha: 0.03 + 0.04 * _pulseController.value),
+                            blurRadius: 45 + 15 * _pulseController.value,
+                            spreadRadius: 8 + 12 * _pulseController.value,
+                          ),
+                        ],
+                      ),
+                    );
+                  },
                 ),
-              ),
+                Container(
+                  margin: const EdgeInsets.symmetric(vertical: 60),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(40),
+                    boxShadow: [
+                      BoxShadow(
+                        color: ScholarlyTheme.shadowColor.withValues(alpha: 0.15),
+                        blurRadius: 50,
+                        spreadRadius: 2,
+                        offset: const Offset(0, 25),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(20), // Subtle rounding
+                    child: Image.asset(
+                      'assets/splash/splash.png',
+                      height: MediaQuery.of(context).size.height * 0.52,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -222,10 +254,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
         const SizedBox(height: 12),
         Container(
           width: 240,
-          height: 4,
+          height: 6,
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(2),
+            borderRadius: BorderRadius.circular(3),
           ),
           child: FractionallySizedBox(
             alignment: Alignment.centerLeft,
@@ -233,14 +265,54 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
             child: Container(
               decoration: BoxDecoration(
                 color: ScholarlyTheme.accentBlue,
-                borderRadius: BorderRadius.circular(2),
+                borderRadius: BorderRadius.circular(3),
                 boxShadow: [
                   BoxShadow(
-                    color: ScholarlyTheme.accentBlue.withValues(alpha: 0.3),
-                    blurRadius: 6,
+                    color: ScholarlyTheme.accentBlue.withValues(alpha: 0.45),
+                    blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
                 ],
+              ),
+              child: AnimatedBuilder(
+                animation: _shimmerController,
+                builder: (context, child) {
+                  final barWidth = 240 * (_loadingValue / 100);
+                  return ClipRRect(
+                    borderRadius: BorderRadius.circular(3),
+                    child: Stack(
+                      children: [
+                        const SizedBox.expand(),
+                        // Shimmer sweep overlay
+                        Positioned.fill(
+                          child: FractionallySizedBox(
+                            alignment: Alignment.centerLeft,
+                            widthFactor: 0.4,
+                            child: Transform.translate(
+                              offset: Offset(
+                                barWidth * (_shimmerController.value * 2.5 - 1.25),
+                                0,
+                              ),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      Colors.white.withValues(alpha: 0),
+                                      Colors.white.withValues(alpha: 0.45),
+                                      Colors.white.withValues(alpha: 0),
+                                    ],
+                                    begin: Alignment.centerLeft,
+                                    end: Alignment.centerRight,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
             ),
           ),

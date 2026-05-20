@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -16,16 +17,32 @@ void showAvatarSelectionSheet(BuildContext context, WidgetRef ref, {bool isBotto
         builder: (context, ref, _) {
           final state = ref.watch(chessProvider);
           final currentLevel = isBottomSlot ? state.bottomAvatarId : state.engineLevel;
-          return Container(
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.height * 0.8,
-            ),
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-            decoration: BoxDecoration(
-              color: ScholarlyTheme.backgroundStart,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-              boxShadow: ScholarlyTheme.boardShadow,
-            ),
+          return ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+              child: Container(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.8,
+                ),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.65),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                  border: Border(
+                    top: BorderSide(
+                      color: Colors.white.withValues(alpha: 0.7),
+                      width: 1.5,
+                    ),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.08),
+                      blurRadius: 20,
+                      offset: const Offset(0, -4),
+                    ),
+                  ],
+                ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -89,16 +106,29 @@ void showAvatarSelectionSheet(BuildContext context, WidgetRef ref, {bool isBotto
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             color: isSelected 
-                                ? avatar.color.withValues(alpha: 0.12) 
-                                : ScholarlyTheme.panelBase,
+                                ? avatar.color.withValues(alpha: 0.15) 
+                                : Colors.white.withValues(alpha: 0.45),
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
                               color: isSelected 
                                   ? avatar.color 
-                                  : ScholarlyTheme.panelStroke.withValues(alpha: 0.6),
-                              width: isSelected ? 2.0 : 1.0,
+                                  : Colors.white.withValues(alpha: 0.6),
+                              width: isSelected ? 2.0 : 1.2,
                             ),
-                            boxShadow: isSelected ? [] : ScholarlyTheme.cardShadow,
+                            boxShadow: [
+                              if (isSelected)
+                                BoxShadow(
+                                  color: avatar.color.withValues(alpha: 0.25),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 4),
+                                )
+                              else
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.03),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                            ],
                           ),
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -192,9 +222,11 @@ void showAvatarSelectionSheet(BuildContext context, WidgetRef ref, {bool isBotto
                 ),
               ],
             ),
-          );
-        },
+          ),
+        ),
       );
+    },
+  );
     },
   );
 }

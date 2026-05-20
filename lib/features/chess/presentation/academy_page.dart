@@ -10,6 +10,8 @@ import 'widgets/board_stage.dart';
 import 'themes/theme_registry.dart';
 import 'settings_page.dart';
 import 'widgets/global_sidebar.dart';
+import 'widgets/ambient_scaffold.dart';
+import 'dart:ui';
 
 
 class AcademyPage extends ConsumerStatefulWidget {
@@ -248,10 +250,12 @@ class _AcademyPageState extends ConsumerState<AcademyPage> {
         if (didPop) return;
         await _requestExitAcademy();
       },
-      child: Scaffold(
-        key: _scaffoldKey,
-        backgroundColor: ScholarlyTheme.backgroundStart,
+      child: AmbientScaffold(
+        scaffoldKey: _scaffoldKey,
         drawer: const GlobalSidebar(),
+        blob1Color: const Color(0xFFDBEAFE),
+        blob2Color: const Color(0xFFD1FAE5),
+        blob3Color: const Color(0xFFFEF3C7),
         body: SafeArea(
           top: false,
           left: false, // Allow AI chat box on far left to reach edge-to-edge under notch/notification area
@@ -297,130 +301,134 @@ class _AcademyPageState extends ConsumerState<AcademyPage> {
                 ),
                 const SizedBox(height: 8),
                 // 3. Horizontal action bar at the bottom
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  physics: const BouncingScrollPhysics(),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
-                    child: state.isPuzzleMode
-                        ? Row(
-                            children: [
-                              _CompactActionIcon(
-                                icon: Icons.menu_rounded,
-                                tooltip: 'Menu',
-                                onTap: () => _scaffoldKey.currentState?.openDrawer(),
-                              ),
-                              const SizedBox(width: 8),
-                              _CompactActionIcon(
-                                icon: Icons.skip_next_rounded,
-                                tooltip: 'Next Puzzle',
-                                onTap: () => notifier.nextPuzzle(),
-                              ),
-                              const SizedBox(width: 8),
-                              _CompactActionIcon(
-                                icon: Icons.refresh_rounded,
-                                tooltip: 'Reset Line',
-                                onTap: () => notifier.resetPuzzleLine(),
-                              ),
-                              const SizedBox(width: 8),
-                              _CompactActionIcon(
-                                icon: Icons.flip_camera_android_outlined,
-                                tooltip: 'Flip Board',
-                                isActive: state.isBoardFlipped,
-                                onTap: () => notifier.toggleBoardOrientation(),
-                              ),
-                              const SizedBox(width: 8),
-                              _CompactActionIcon(
-                                icon: state.isBulbGlowing
-                                    ? Icons.lightbulb_rounded
-                                    : Icons.lightbulb_outline_rounded,
-                                tooltip: 'Hint',
-                                isEnabled: !state.isHintLoading,
-                                isActive: state.isBulbGlowing,
-                                activeColor: ScholarlyTheme.accentYellowSoft,
-                                activeIconColor: ScholarlyTheme.accentYellow,
-                                onTap: () => notifier.requestHint(),
-                              ),
-                              const SizedBox(width: 8),
-                              _CompactActionIcon(
-                                icon: state.showLog
-                                    ? Icons.chat_bubble_outline_rounded
-                                    : Icons.history_edu_rounded,
-                                tooltip: 'Toggle Log',
-                                isActive: state.showLog,
-                                onTap: () => notifier.toggleLog(),
-                              ),
-                            ],
-                          )
-                        : Row(
-                            children: [
-                              _CompactActionIcon(
-                                icon: Icons.menu_rounded,
-                                tooltip: 'Menu',
-                                onTap: () => _scaffoldKey.currentState?.openDrawer(),
-                              ),
-                              const SizedBox(width: 8),
-                              _CompactActionIcon(
-                                icon: Icons.add_box_rounded,
-                                tooltip: 'New Game',
-                                onTap: () => _handleNewGame(context, ref),
-                              ),
-                              const SizedBox(width: 8),
-                              _CompactActionIcon(
-                                icon: Icons.tune_rounded,
-                                tooltip: 'Settings',
-                                onTap: () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (context) => const SettingsPage(isAcademyMode: true),
-                                    ),
-                                  );
-                                },
-                              ),
-                              const SizedBox(width: 8),
-                              _CompactActionIcon(
-                                icon: Icons.undo_rounded,
-                                tooltip: 'Undo',
-                                isEnabled: state.canUndo,
-                                onTap: state.canUndo ? () => notifier.undo() : null,
-                              ),
-                              const SizedBox(width: 8),
-                              _CompactActionIcon(
-                                icon: Icons.redo_rounded,
-                                tooltip: 'Redo',
-                                isEnabled: state.canRedo,
-                                onTap: state.canRedo ? () => notifier.redo() : null,
-                              ),
-                              const SizedBox(width: 8),
-                              _CompactActionIcon(
-                                icon: Icons.flip_camera_android_outlined,
-                                tooltip: 'Flip Board',
-                                isActive: state.isBoardFlipped,
-                                onTap: () => notifier.toggleBoardOrientation(),
-                              ),
-                              const SizedBox(width: 8),
-                              _CompactActionIcon(
-                                icon: state.isBulbGlowing
-                                    ? Icons.lightbulb_rounded
-                                    : Icons.lightbulb_outline_rounded,
-                                tooltip: 'Hint',
-                                isEnabled: !state.isHintLoading,
-                                isActive: state.isBulbGlowing,
-                                activeColor: ScholarlyTheme.accentYellowSoft,
-                                activeIconColor: ScholarlyTheme.accentYellow,
-                                onTap: () => notifier.requestHint(),
-                              ),
-                              const SizedBox(width: 8),
-                              _CompactActionIcon(
-                                icon: state.showLog
-                                    ? Icons.chat_bubble_outline_rounded
-                                    : Icons.history_edu_rounded,
-                                tooltip: 'Toggle Log',
-                                isActive: state.showLog,
-                                onTap: () => notifier.toggleLog(),
-                              ),
-                            ],
-                          ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+                  child: JuicyGlassCard(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    borderRadius: 20,
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      child: state.isPuzzleMode
+                          ? Row(
+                              children: [
+                                _CompactActionIcon(
+                                  icon: Icons.menu_rounded,
+                                  tooltip: 'Menu',
+                                  onTap: () => _scaffoldKey.currentState?.openDrawer(),
+                                ),
+                                const SizedBox(width: 8),
+                                _CompactActionIcon(
+                                  icon: Icons.skip_next_rounded,
+                                  tooltip: 'Next Puzzle',
+                                  onTap: () => notifier.nextPuzzle(),
+                                ),
+                                const SizedBox(width: 8),
+                                _CompactActionIcon(
+                                  icon: Icons.refresh_rounded,
+                                  tooltip: 'Reset Line',
+                                  onTap: () => notifier.resetPuzzleLine(),
+                                ),
+                                const SizedBox(width: 8),
+                                _CompactActionIcon(
+                                  icon: Icons.flip_camera_android_outlined,
+                                  tooltip: 'Flip Board',
+                                  isActive: state.isBoardFlipped,
+                                  onTap: () => notifier.toggleBoardOrientation(),
+                                ),
+                                const SizedBox(width: 8),
+                                _CompactActionIcon(
+                                  icon: state.isBulbGlowing
+                                      ? Icons.lightbulb_rounded
+                                      : Icons.lightbulb_outline_rounded,
+                                  tooltip: 'Hint',
+                                  isEnabled: !state.isHintLoading,
+                                  isActive: state.isBulbGlowing,
+                                  activeColor: ScholarlyTheme.accentYellowSoft,
+                                  activeIconColor: ScholarlyTheme.accentYellow,
+                                  onTap: () => notifier.requestHint(),
+                                ),
+                                const SizedBox(width: 8),
+                                _CompactActionIcon(
+                                  icon: state.showLog
+                                      ? Icons.chat_bubble_outline_rounded
+                                      : Icons.history_edu_rounded,
+                                  tooltip: 'Toggle Log',
+                                  isActive: state.showLog,
+                                  onTap: () => notifier.toggleLog(),
+                                ),
+                              ],
+                            )
+                          : Row(
+                              children: [
+                                _CompactActionIcon(
+                                  icon: Icons.menu_rounded,
+                                  tooltip: 'Menu',
+                                  onTap: () => _scaffoldKey.currentState?.openDrawer(),
+                                ),
+                                const SizedBox(width: 8),
+                                _CompactActionIcon(
+                                  icon: Icons.add_box_rounded,
+                                  tooltip: 'New Game',
+                                  onTap: () => _handleNewGame(context, ref),
+                                ),
+                                const SizedBox(width: 8),
+                                _CompactActionIcon(
+                                  icon: Icons.tune_rounded,
+                                  tooltip: 'Settings',
+                                  onTap: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (context) => const SettingsPage(isAcademyMode: true),
+                                      ),
+                                    );
+                                  },
+                                ),
+                                const SizedBox(width: 8),
+                                _CompactActionIcon(
+                                  icon: Icons.undo_rounded,
+                                  tooltip: 'Undo',
+                                  isEnabled: state.canUndo,
+                                  onTap: state.canUndo ? () => notifier.undo() : null,
+                                ),
+                                const SizedBox(width: 8),
+                                _CompactActionIcon(
+                                  icon: Icons.redo_rounded,
+                                  tooltip: 'Redo',
+                                  isEnabled: state.canRedo,
+                                  onTap: state.canRedo ? () => notifier.redo() : null,
+                                ),
+                                const SizedBox(width: 8),
+                                _CompactActionIcon(
+                                  icon: Icons.flip_camera_android_outlined,
+                                  tooltip: 'Flip Board',
+                                  isActive: state.isBoardFlipped,
+                                  onTap: () => notifier.toggleBoardOrientation(),
+                                ),
+                                const SizedBox(width: 8),
+                                _CompactActionIcon(
+                                  icon: state.isBulbGlowing
+                                      ? Icons.lightbulb_rounded
+                                      : Icons.lightbulb_outline_rounded,
+                                  tooltip: 'Hint',
+                                  isEnabled: !state.isHintLoading,
+                                  isActive: state.isBulbGlowing,
+                                  activeColor: ScholarlyTheme.accentYellowSoft,
+                                  activeIconColor: ScholarlyTheme.accentYellow,
+                                  onTap: () => notifier.requestHint(),
+                                ),
+                                const SizedBox(width: 8),
+                                _CompactActionIcon(
+                                  icon: state.showLog
+                                      ? Icons.chat_bubble_outline_rounded
+                                      : Icons.history_edu_rounded,
+                                  tooltip: 'Toggle Log',
+                                  isActive: state.showLog,
+                                  onTap: () => notifier.toggleLog(),
+                                ),
+                              ],
+                            ),
+                    ),
                   ),
                 ),
               ],
@@ -464,13 +472,17 @@ class _CompactActionIconState extends State<_CompactActionIcon> {
       duration: const Duration(milliseconds: 100),
       width: 34,
       height: 34,
-      decoration: ScholarlyTheme.modernDecoration(
-        sunken: _isPressed || widget.isActive,
-      ).copyWith(
+      decoration: BoxDecoration(
         color: (widget.isActive || _isPressed)
-            ? (widget.activeColor ?? ScholarlyTheme.accentBlueSoft)
-            : ScholarlyTheme.panelBase,
+            ? (widget.activeColor?.withValues(alpha: 0.3) ?? ScholarlyTheme.accentBlue.withValues(alpha: 0.25))
+            : Colors.white.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: (widget.isActive || _isPressed)
+              ? (widget.activeIconColor ?? ScholarlyTheme.accentBlue).withValues(alpha: 0.5)
+              : Colors.white.withValues(alpha: 0.45),
+          width: 1.2,
+        ),
       ),
       child: Center(
         child: Icon(
@@ -508,16 +520,27 @@ class _CompactCapturedPiecesHeader extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     if (state.isPuzzleMode) {
       final p = state.currentPuzzle;
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: ScholarlyTheme.accentBlue.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: ScholarlyTheme.accentBlue.withValues(alpha: 0.3),
-            width: 1,
-          ),
-        ),
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: ScholarlyTheme.accentBlue.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: ScholarlyTheme.accentBlue.withValues(alpha: 0.35),
+                width: 1.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: ScholarlyTheme.accentBlue.withValues(alpha: 0.08),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
         child: Row(
           children: [
             Icon(Icons.extension_rounded, size: 14, color: ScholarlyTheme.accentBlue),
@@ -567,8 +590,10 @@ class _CompactCapturedPiecesHeader extends ConsumerWidget {
             ),
           ],
         ),
-      );
-    }
+      ),
+    ),
+  );
+}
 
     final whiteCaptures = state.game.capturedByWhite;
     final blackCaptures = state.game.capturedByBlack;
@@ -577,16 +602,20 @@ class _CompactCapturedPiecesHeader extends ConsumerWidget {
       return const SizedBox.shrink();
     }
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: ScholarlyTheme.panelBase.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: ScholarlyTheme.panelStroke.withValues(alpha: 0.5),
-          width: 0.5,
-        ),
-      ),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(10),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.45),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.65),
+              width: 1.2,
+            ),
+          ),
       child: Row(
         children: [
           Icon(Icons.auto_awesome_rounded, size: 12, color: ScholarlyTheme.accentGold),
@@ -609,7 +638,9 @@ class _CompactCapturedPiecesHeader extends ConsumerWidget {
             _InlineCapturedGroup(pieces: blackCaptures, isWhiteTeam: false),
         ],
       ),
-    );
+    ),
+  ),
+);
   }
 }
 

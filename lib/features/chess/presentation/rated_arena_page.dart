@@ -16,6 +16,8 @@ import 'widgets/arena_turn_indicator.dart';
 import 'widgets/evaluation_bar.dart';
 import 'widgets/user_avatar_indicator.dart';
 import 'widgets/dice_rolling_overlay.dart';
+import 'widgets/ambient_flow_backdrop.dart';
+import 'widgets/ambient_scaffold.dart';
 import 'package:confetti/confetti.dart';
 
 class RatedArenaPage extends ConsumerStatefulWidget {
@@ -95,6 +97,7 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
         drawer: const GlobalSidebar(),
         body: Stack(
           children: [
+            const AmbientFlowBackdrop(),
             _buildPortraitLayout(context, ref, state),
             if ((state.game.gameOver || state.isTimeOut) && !state.isGameOverDismissed)
               _buildGameOverOverlay(context, ref, state),
@@ -136,36 +139,40 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
         const SizedBox(height: 16),
         // Stats
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: SizedBox(
-              width: MediaQuery.of(context).size.width - 32,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      ArenaTurnIndicator(isActive: isTurn, isWhite: state.isPlayerWhite),
-                      const SizedBox(width: 8),
-                      EvaluationBar(fillFraction: _getEvalFraction(state, true)),
-                    ],
-                  ),
-                  const Spacer(),
-                  ArenaTimeDisplay(isActive: isTurn, timeLeft: state.isPlayerWhite ? state.whiteTimeLeft : state.blackTimeLeft),
-                  const SizedBox(width: 12),
-                  ArenaTimeDisplay(isActive: !isTurn, timeLeft: state.isPlayerWhite ? state.blackTimeLeft : state.whiteTimeLeft),
-                  const Spacer(),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      EvaluationBar(fillFraction: _getEvalFraction(state, false)),
-                      const SizedBox(width: 8),
-                      ArenaTurnIndicator(isActive: !isTurn, isWhite: !state.isPlayerWhite),
-                    ],
-                  ),
-                ],
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          child: JuicyGlassCard(
+            borderRadius: 16,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: SizedBox(
+                width: MediaQuery.of(context).size.width - 60,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ArenaTurnIndicator(isActive: isTurn, isWhite: state.isPlayerWhite),
+                        const SizedBox(width: 8),
+                        EvaluationBar(fillFraction: _getEvalFraction(state, true)),
+                      ],
+                    ),
+                    const Spacer(),
+                    ArenaTimeDisplay(isActive: isTurn, timeLeft: state.isPlayerWhite ? state.whiteTimeLeft : state.blackTimeLeft),
+                    const SizedBox(width: 12),
+                    ArenaTimeDisplay(isActive: !isTurn, timeLeft: state.isPlayerWhite ? state.blackTimeLeft : state.whiteTimeLeft),
+                    const Spacer(),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        EvaluationBar(fillFraction: _getEvalFraction(state, false)),
+                        const SizedBox(width: 8),
+                        ArenaTurnIndicator(isActive: !isTurn, isWhite: !state.isPlayerWhite),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -175,8 +182,11 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: Align(
             alignment: Alignment.centerLeft,
-            child: OpponentAvatarIndicator(
-              avatar: AiAvatar.getAvatar(state.engineLevel),
+            child: ActiveAvatarWrapper(
+              isActive: !isTurn,
+              child: OpponentAvatarIndicator(
+                avatar: AiAvatar.getAvatar(state.engineLevel),
+              ),
             ),
           ),
         ),
@@ -194,15 +204,22 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           child: Align(
             alignment: Alignment.centerRight,
-            child: const UserAvatarIndicator(),
+            child: ActiveAvatarWrapper(
+              isActive: isTurn,
+              child: const UserAvatarIndicator(),
+            ),
           ),
         ),
         // Rated Actions (5 icons, Dice in middle, special sizes)
         if (!isKeyboardOpen) ...[
           const SizedBox(height: 8),
           Padding(
-            padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
-            child: _buildRatedActionRow(context, ref, state),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: JuicyGlassCard(
+              borderRadius: 24,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: _buildRatedActionRow(context, ref, state),
+            ),
           ),
         ],
       ],
@@ -373,83 +390,156 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
       msg = didWin ? 'Opponent ran out of time!' : 'You ran out of time!';
     }
 
+    final accentColor = isDraw
+        ? ScholarlyTheme.accentBlue
+        : (didWin ? ScholarlyTheme.realGold : const Color(0xFFFC8181));
+
     return Positioned.fill(
-      child: Container(
-        color: Colors.black.withValues(alpha: 0.7),
-        child: Center(
+      child: ClipRRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
           child: Container(
-            width: MediaQuery.of(context).size.width * 0.85,
-            padding: const EdgeInsets.all(32),
-            decoration: ScholarlyTheme.modernDecoration().copyWith(
-              border: Border.all(color: didWin ? ScholarlyTheme.accentGold : ScholarlyTheme.accentBlue, width: 2),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (!(state.isTimeOut && !didWin))
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: Text(title.toUpperCase(), 
-                      style: GoogleFonts.inter(
-                        color: didWin ? ScholarlyTheme.accentGold : ScholarlyTheme.textPrimary, 
-                        fontWeight: FontWeight.w900, 
-                        fontSize: 24, 
-                        letterSpacing: 1.5
-                      )
+            color: Colors.black.withValues(alpha: 0.55),
+            child: Center(
+              child: _SpringEntrance(
+                child: Container(
+                  width: MediaQuery.of(context).size.width * 0.85,
+                  padding: const EdgeInsets.all(28),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Colors.white.withValues(alpha: 0.92),
+                        Colors.white.withValues(alpha: 0.80),
+                      ],
                     ),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: accentColor.withValues(alpha: 0.4),
+                      width: 2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: accentColor.withValues(alpha: 0.15),
+                        blurRadius: 24,
+                        spreadRadius: 4,
+                      ),
+                    ],
                   ),
-                Icon(
-                  isDraw ? Icons.handshake_rounded : (didWin ? Icons.emoji_events_rounded : Icons.sentiment_dissatisfied_rounded), 
-                  size: 64, 
-                  color: didWin ? ScholarlyTheme.accentGold : ScholarlyTheme.accentBlue
-                ),
-                const SizedBox(height: 20),
-                Text(msg, style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 15, fontWeight: FontWeight.w500), textAlign: TextAlign.center),
-                const SizedBox(height: 32),
-                Column(
-                  children: [
-                    SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: FilledButton(
-                        onPressed: () {
-                          setState(() {
-                            _hasTriggeredConfetti = false;
-                          });
-                          ref.read(chessProvider.notifier).dismissGameOver();
-                          _triggerDiceRoll();
-                        },
-                        style: FilledButton.styleFrom(
-                          backgroundColor: didWin ? ScholarlyTheme.accentGold : ScholarlyTheme.accentBlue,
-                          foregroundColor: didWin ? Colors.black : Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (!(state.isTimeOut && !didWin))
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Text(
+                            title.toUpperCase(),
+                            style: GoogleFonts.inter(
+                              color: accentColor,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 24,
+                              letterSpacing: 1.5,
+                            ),
+                          ),
                         ),
-                        child: Text(didWin ? 'PLAY NEW MATCH' : 'TRY AGAIN', style: const TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1)),
+                      Icon(
+                        isDraw
+                            ? Icons.handshake_rounded
+                            : (didWin
+                                ? Icons.emoji_events_rounded
+                                : Icons.sentiment_dissatisfied_rounded),
+                        size: 64,
+                        color: accentColor,
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: OutlinedButton(
-                        onPressed: () async {
-                          ref.read(chessProvider.notifier).dismissGameOver();
-                          await ref.read(chessProvider.notifier).setRatedMode(false);
-                          if (context.mounted && Navigator.of(context).canPop()) {
-                            Navigator.of(context).pop();
-                          }
-                        },
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: ScholarlyTheme.textMuted,
-                          side: BorderSide(color: ScholarlyTheme.panelStroke),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      const SizedBox(height: 20),
+                      Text(
+                        msg,
+                        style: GoogleFonts.inter(
+                          color: ScholarlyTheme.textPrimary,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
                         ),
-                        child: const Text('EXIT', style: TextStyle(fontWeight: FontWeight.bold)),
+                        textAlign: TextAlign.center,
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 32),
+                      Column(
+                        children: [
+                          SizedBox(
+                            width: double.infinity,
+                            height: 50,
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    accentColor,
+                                    accentColor.withValues(alpha: 0.8),
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(14),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: accentColor.withValues(alpha: 0.4),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: FilledButton(
+                                onPressed: () {
+                                  setState(() {
+                                    _hasTriggeredConfetti = false;
+                                  });
+                                  ref.read(chessProvider.notifier).dismissGameOver();
+                                  _triggerDiceRoll();
+                                },
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: Colors.transparent,
+                                  foregroundColor: didWin ? Colors.black : Colors.white,
+                                  shadowColor: Colors.transparent,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                ),
+                                child: Text(
+                                  didWin ? 'PLAY NEW MATCH' : 'TRY AGAIN',
+                                  style: GoogleFonts.inter(
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 1.2,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 46,
+                            child: OutlinedButton(
+                              onPressed: () async {
+                                ref.read(chessProvider.notifier).dismissGameOver();
+                                await ref.read(chessProvider.notifier).setRatedMode(false);
+                                if (context.mounted && Navigator.of(context).canPop()) {
+                                  Navigator.of(context).pop();
+                                }
+                              },
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: ScholarlyTheme.textMuted,
+                                side: BorderSide(
+                                  color: ScholarlyTheme.panelStroke.withValues(alpha: 0.6),
+                                ),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                              ),
+                              child: Text(
+                                'EXIT',
+                                style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ],
+              ),
             ),
           ),
         ),
@@ -928,5 +1018,145 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
       await ref.read(chessProvider.notifier).setGameMode(targetMode);
       _triggerDiceRoll();
     }
+  }
+}
+
+class ActiveAvatarWrapper extends StatefulWidget {
+  final Widget child;
+  final bool isActive;
+
+  const ActiveAvatarWrapper({
+    super.key,
+    required this.child,
+    required this.isActive,
+  });
+
+  @override
+  State<ActiveAvatarWrapper> createState() => _ActiveAvatarWrapperState();
+}
+
+class _ActiveAvatarWrapperState extends State<ActiveAvatarWrapper>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    final curved = CurvedAnimation(parent: _controller, curve: Curves.linear);
+    _scaleAnimation = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.0, end: 1.06)
+            .chain(CurveTween(curve: Curves.easeOutCubic)),
+        weight: 30,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.06, end: 1.0)
+            .chain(CurveTween(curve: Curves.elasticOut)),
+        weight: 70,
+      ),
+    ]).animate(curved);
+
+    if (widget.isActive) {
+      _controller.forward();
+    }
+  }
+
+  @override
+  void didUpdateWidget(ActiveAvatarWrapper oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isActive && !oldWidget.isActive) {
+      _controller.reset();
+      _controller.forward();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ScaleTransition(
+      scale: _scaleAnimation,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 350),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: widget.isActive
+              ? [
+                  BoxShadow(
+                    color: ScholarlyTheme.accentBlue.withValues(alpha: 0.20),
+                    blurRadius: 14,
+                    spreadRadius: 3,
+                  )
+                ]
+              : [],
+        ),
+        child: widget.child,
+      ),
+    );
+  }
+}
+
+class _SpringEntrance extends StatefulWidget {
+  final Widget child;
+  const _SpringEntrance({required this.child});
+
+  @override
+  State<_SpringEntrance> createState() => _SpringEntranceState();
+}
+
+class _SpringEntranceState extends State<_SpringEntrance>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnim;
+  late Animation<double> _opacityAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 550),
+    );
+    _scaleAnim = Tween<double>(begin: 0.75, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
+    );
+    _opacityAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.4, curve: Curves.easeOut),
+      ),
+    );
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Opacity(
+          opacity: _opacityAnim.value.clamp(0.0, 1.0),
+          child: Transform.scale(
+            scale: _scaleAnim.value,
+            child: widget.child,
+          ),
+        );
+      },
+    );
   }
 }

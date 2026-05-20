@@ -26,8 +26,8 @@ class _UserAvatarIndicatorState extends State<UserAvatarIndicator> {
         return GestureDetector(
           onTap: () => setState(() => _isExpanded = !_isExpanded),
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 500),
-            curve: Curves.elasticOut,
+            duration: const Duration(milliseconds: 350),
+            curve: Curves.easeOutCubic,
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
             decoration: BoxDecoration(
               color: ScholarlyTheme.panelBase,

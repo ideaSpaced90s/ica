@@ -268,6 +268,8 @@ class ChessState {
     this.academyAnimationTrigger = 0,
     this.hasBlinkedMenu = false,
     this.isTimeOut = false,
+    this.userName = 'Apprentice',
+    this.userAvatarPath = 'assets/persona/gm_bard.png',
   });
 
   final ChessGame game;
@@ -363,6 +365,8 @@ class ChessState {
   final int academyAnimationTrigger;
   final bool hasBlinkedMenu;
   final bool isTimeOut;
+  final String userName;
+  final String userAvatarPath;
 
   bool get isChess960 => gameMode == 'chess960';
 
@@ -471,6 +475,8 @@ class ChessState {
     int? academyAnimationTrigger,
     bool? hasBlinkedMenu,
     bool? isTimeOut,
+    String? userName,
+    String? userAvatarPath,
   }) {
     return ChessState(
       game: game ?? this.game,
@@ -605,6 +611,8 @@ class ChessState {
           academyAnimationTrigger ?? this.academyAnimationTrigger,
       hasBlinkedMenu: hasBlinkedMenu ?? this.hasBlinkedMenu,
       isTimeOut: isTimeOut ?? this.isTimeOut,
+      userName: userName ?? this.userName,
+      userAvatarPath: userAvatarPath ?? this.userAvatarPath,
     );
   }
 }
@@ -689,6 +697,8 @@ class ChessNotifier extends StateNotifier<ChessState> {
         bulletDominance: s.bulletDominance,
         blitzDominance: s.blitzDominance,
         rapidDominance: s.rapidDominance,
+        userName: s.userName,
+        userAvatarPath: s.userAvatarPath,
       );
       await _engine.setChess960Mode(is960);
       final avatar = AiAvatar.getAvatar(s.engineLevel);
@@ -745,6 +755,8 @@ class ChessNotifier extends StateNotifier<ChessState> {
         bulletDominance: state.bulletDominance,
         blitzDominance: state.blitzDominance,
         rapidDominance: state.rapidDominance,
+        userName: state.userName,
+        userAvatarPath: state.userAvatarPath,
       );
       await _settingsRepository.saveSettings(s);
     } catch (e) {
@@ -2389,6 +2401,14 @@ class ChessNotifier extends StateNotifier<ChessState> {
         _engine.analyzePosition(state.game.fen, depth: avatar.depth);
       }
     }
+  }
+
+  Future<void> updateProfile({required String name, required String avatarPath}) async {
+    state = state.copyWith(
+      userName: name,
+      userAvatarPath: avatarPath,
+    );
+    await _saveSettings();
   }
 
   Future<void> requestHint() async {

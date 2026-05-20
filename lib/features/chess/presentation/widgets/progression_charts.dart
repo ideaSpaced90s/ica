@@ -149,7 +149,7 @@ class TacticalRadarChart extends StatelessWidget {
     final speed = 0.7; 
 
     return Container(
-      height: 250,
+      height: 320,
       padding: const EdgeInsets.all(16),
       decoration: ScholarlyTheme.modernDecoration(),
       child: RadarChart(
@@ -203,27 +203,27 @@ class ModeDistributionChart extends StatelessWidget {
     if (total == 0) return const SizedBox.shrink();
 
     return Container(
-      height: 180,
+      height: 300,
       padding: const EdgeInsets.all(16),
       decoration: ScholarlyTheme.modernDecoration(),
       child: PieChart(
         PieChartData(
-          sectionsSpace: 4,
-          centerSpaceRadius: 40,
+          sectionsSpace: 6,
+          centerSpaceRadius: 60,
           sections: [
             PieChartSectionData(
               color: ScholarlyTheme.accentBlue,
               value: classic.toDouble(),
-              title: '${(classic / total * 100).toInt()}%',
-              radius: 50,
-              titleStyle: GoogleFonts.jetBrainsMono(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+              title: 'Classic\n${(classic / total * 100).toInt()}%',
+              radius: 70,
+              titleStyle: GoogleFonts.jetBrainsMono(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
             ),
             PieChartSectionData(
               color: Colors.orangeAccent,
               value: nineSixty.toDouble(),
-              title: '${(nineSixty / total * 100).toInt()}%',
-              radius: 50,
-              titleStyle: GoogleFonts.jetBrainsMono(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+              title: '960\n${(nineSixty / total * 100).toInt()}%',
+              radius: 70,
+              titleStyle: GoogleFonts.jetBrainsMono(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
             ),
           ],
         ),

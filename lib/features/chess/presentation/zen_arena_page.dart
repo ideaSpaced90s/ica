@@ -16,6 +16,7 @@ import 'widgets/avatar_selection_sheet.dart';
 import 'widgets/arena_turn_indicator.dart';
 import 'widgets/evaluation_bar.dart';
 import 'widgets/user_avatar_indicator.dart';
+import 'widgets/ambient_flow_backdrop.dart';
 
 class ZenArenaPage extends ConsumerStatefulWidget {
   const ZenArenaPage({super.key});
@@ -77,6 +78,7 @@ class _ZenArenaPageState extends ConsumerState<ZenArenaPage> with WidgetsBinding
         drawer: const GlobalSidebar(),
         body: Stack(
           children: [
+            const AmbientFlowBackdrop(),
             _buildPortraitLayout(context, ref, state),
             if ((state.game.gameOver || state.isTimeOut) && !state.isGameOverDismissed)
               _buildGameOverOverlay(context, ref, state),
@@ -115,50 +117,77 @@ class _ZenArenaPageState extends ConsumerState<ZenArenaPage> with WidgetsBinding
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const SizedBox(height: 16),
-        // Top Row: Stats & Clocks
+        // Top Row: Stats & Clocks wrapped in glass
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: SizedBox(
-              width: MediaQuery.of(context).size.width - 32,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      ArenaTurnIndicator(isActive: isTurn, isWhite: state.isPlayerWhite),
-                      const SizedBox(width: 8),
-                      EvaluationBar(fillFraction: _getEvalFraction(state, true)),
-                    ],
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.35),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.5),
+                    width: 1.5,
                   ),
-                  const Spacer(),
-                  ArenaTimeDisplay(isActive: isTurn, timeLeft: state.isPlayerWhite ? state.whiteTimeLeft : state.blackTimeLeft),
-                  const SizedBox(width: 12),
-                  ArenaTimeDisplay(isActive: !isTurn, timeLeft: state.isPlayerWhite ? state.blackTimeLeft : state.whiteTimeLeft),
-                  const Spacer(),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      EvaluationBar(fillFraction: _getEvalFraction(state, false)),
-                      const SizedBox(width: 8),
-                      ArenaTurnIndicator(isActive: !isTurn, isWhite: !state.isPlayerWhite),
-                    ],
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.03),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: SizedBox(
+                    width: MediaQuery.of(context).size.width - 60,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            ArenaTurnIndicator(isActive: isTurn, isWhite: state.isPlayerWhite),
+                            const SizedBox(width: 8),
+                            EvaluationBar(fillFraction: _getEvalFraction(state, true)),
+                          ],
+                        ),
+                        const Spacer(),
+                        ArenaTimeDisplay(isActive: isTurn, timeLeft: state.isPlayerWhite ? state.whiteTimeLeft : state.blackTimeLeft),
+                        const SizedBox(width: 12),
+                        ArenaTimeDisplay(isActive: !isTurn, timeLeft: state.isPlayerWhite ? state.blackTimeLeft : state.whiteTimeLeft),
+                        const Spacer(),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            EvaluationBar(fillFraction: _getEvalFraction(state, false)),
+                            const SizedBox(width: 8),
+                            ArenaTurnIndicator(isActive: !isTurn, isWhite: !state.isPlayerWhite),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                ],
+                ),
               ),
             ),
           ),
         ),
-        // Opponent
+        // Opponent with active wrapper
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: Align(
             alignment: Alignment.centerLeft,
-            child: OpponentAvatarIndicator(
-              avatar: AiAvatar.getAvatar(state.engineLevel),
-              onTap: () => showAvatarSelectionSheet(context, ref, isBottomSlot: false),
+            child: ActiveAvatarWrapper(
+              isActive: !isTurn,
+              child: OpponentAvatarIndicator(
+                avatar: AiAvatar.getAvatar(state.engineLevel),
+                onTap: () => showAvatarSelectionSheet(context, ref, isBottomSlot: false),
+              ),
             ),
           ),
         ),
@@ -171,24 +200,27 @@ class _ZenArenaPageState extends ConsumerState<ZenArenaPage> with WidgetsBinding
             ],
           ),
         ),
-        // User
+        // User with active wrapper
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           child: Align(
             alignment: Alignment.centerRight,
-            child: state.isEngineVsEngine
-                ? OpponentAvatarIndicator(
-                    avatar: AiAvatar.getAvatar(state.bottomAvatarId),
-                    onTap: () => showAvatarSelectionSheet(context, ref, isBottomSlot: true),
-                  )
-                : const UserAvatarIndicator(),
+            child: ActiveAvatarWrapper(
+              isActive: isTurn,
+              child: state.isEngineVsEngine
+                  ? OpponentAvatarIndicator(
+                      avatar: AiAvatar.getAvatar(state.bottomAvatarId),
+                      onTap: () => showAvatarSelectionSheet(context, ref, isBottomSlot: true),
+                    )
+                  : const UserAvatarIndicator(),
+            ),
           ),
         ),
-        // Actions
+        // Actions wrapped in glass dock
         if (!isKeyboardOpen) ...[
           const SizedBox(height: 8),
           Padding(
-            padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
             child: _buildActionRow(context, ref, state),
           ),
         ],
@@ -197,65 +229,89 @@ class _ZenArenaPageState extends ConsumerState<ZenArenaPage> with WidgetsBinding
   }
 
   Widget _buildActionRow(BuildContext context, WidgetRef ref, ChessState state) {
-    return FittedBox(
-      fit: BoxFit.scaleDown,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ActionIconButton(
-            icon: Icons.menu_rounded,
-            onTap: () => _scaffoldKey.currentState?.openDrawer(),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(24),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.35),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.5),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-          const SizedBox(width: 8),
-          ActionIconButton(
-            icon: Icons.add_box_rounded, // UNRATED uses +
-            onTap: () => _handleNewGame(context, ref),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ActionIconButton(
+                  icon: Icons.menu_rounded,
+                  onTap: () => _scaffoldKey.currentState?.openDrawer(),
+                ),
+                const SizedBox(width: 8),
+                ActionIconButton(
+                  icon: Icons.add_box_rounded, // UNRATED uses +
+                  onTap: () => _handleNewGame(context, ref),
+                ),
+                const SizedBox(width: 8),
+                ActionIconButton(
+                  icon: Icons.undo_rounded,
+                  isEnabled: state.canUndo,
+                  onTap: state.canUndo ? () => ref.read(chessProvider.notifier).undo() : null,
+                ),
+                const SizedBox(width: 8),
+                ActionIconButton(
+                  icon: Icons.redo_rounded,
+                  isEnabled: state.canRedo,
+                  onTap: state.canRedo ? () => ref.read(chessProvider.notifier).redo() : null,
+                ),
+                const SizedBox(width: 8),
+                ActionIconButton(
+                  icon: Icons.flip_camera_android_outlined,
+                  isActive: state.isBoardFlipped,
+                  onTap: () => ref.read(chessProvider.notifier).toggleBoardOrientation(),
+                ),
+                const SizedBox(width: 8),
+                ActionIconButton(
+                  icon: state.isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
+                  isActive: state.isPaused,
+                  onTap: () => ref.read(chessProvider.notifier).togglePause(),
+                ),
+                const SizedBox(width: 8),
+                ActionIconButton(
+                  icon: state.isEngineVsEngine ? Icons.smart_toy_rounded : Icons.smart_toy_outlined,
+                  isActive: state.isEngineVsEngine,
+                  onTap: () => ref.read(chessProvider.notifier).toggleEngineVsEngine(),
+                ),
+                const SizedBox(width: 8),
+                ActionIconButton(
+                  icon: Icons.save_rounded,
+                  onTap: () => _handleSaveGame(context, ref),
+                ),
+                const SizedBox(width: 8),
+                ActionIconButton(
+                  icon: state.isBulbGlowing ? Icons.lightbulb_rounded : Icons.lightbulb_outline_rounded,
+                  isEnabled: !state.isHintLoading,
+                  isActive: state.isBulbGlowing,
+                  activeColor: ScholarlyTheme.accentYellowSoft,
+                  activeIconColor: ScholarlyTheme.accentYellow,
+                  onTap: () => ref.read(chessProvider.notifier).requestHint(),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(width: 8),
-          ActionIconButton(
-            icon: Icons.undo_rounded,
-            isEnabled: state.canUndo,
-            onTap: state.canUndo ? () => ref.read(chessProvider.notifier).undo() : null,
-          ),
-          const SizedBox(width: 8),
-          ActionIconButton(
-            icon: Icons.redo_rounded,
-            isEnabled: state.canRedo,
-            onTap: state.canRedo ? () => ref.read(chessProvider.notifier).redo() : null,
-          ),
-          const SizedBox(width: 8),
-          ActionIconButton(
-            icon: Icons.flip_camera_android_outlined,
-            isActive: state.isBoardFlipped,
-            onTap: () => ref.read(chessProvider.notifier).toggleBoardOrientation(),
-          ),
-          const SizedBox(width: 8),
-          ActionIconButton(
-            icon: state.isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
-            isActive: state.isPaused,
-            onTap: () => ref.read(chessProvider.notifier).togglePause(),
-          ),
-          const SizedBox(width: 8),
-          ActionIconButton(
-            icon: state.isEngineVsEngine ? Icons.smart_toy_rounded : Icons.smart_toy_outlined,
-            isActive: state.isEngineVsEngine,
-            onTap: () => ref.read(chessProvider.notifier).toggleEngineVsEngine(),
-          ),
-          const SizedBox(width: 8),
-          ActionIconButton(
-            icon: Icons.save_rounded,
-            onTap: () => _handleSaveGame(context, ref),
-          ),
-          const SizedBox(width: 8),
-          ActionIconButton(
-            icon: state.isBulbGlowing ? Icons.lightbulb_rounded : Icons.lightbulb_outline_rounded,
-            isEnabled: !state.isHintLoading,
-            isActive: state.isBulbGlowing,
-            activeColor: ScholarlyTheme.accentYellowSoft,
-            activeIconColor: ScholarlyTheme.accentYellow,
-            onTap: () => ref.read(chessProvider.notifier).requestHint(),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -327,84 +383,182 @@ class _ZenArenaPageState extends ConsumerState<ZenArenaPage> with WidgetsBinding
       msg = didWin ? 'Opponent ran out of time!' : 'You ran out of time!';
     }
 
+    final accentColor = isDraw
+        ? ScholarlyTheme.accentBlue
+        : (didWin ? ScholarlyTheme.accentGold : const Color(0xFFFC8181));
+
     return Positioned.fill(
-      child: Container(
-        color: Colors.black.withValues(alpha: 0.7),
-        child: Center(
+      child: ClipRRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
           child: Container(
-            width: MediaQuery.of(context).size.width * 0.85,
-            padding: const EdgeInsets.all(32),
-            decoration: ScholarlyTheme.modernDecoration().copyWith(
-              border: Border.all(color: didWin ? ScholarlyTheme.accentGold : ScholarlyTheme.accentBlue, width: 2),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (!(state.isTimeOut && !didWin))
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: Text(title.toUpperCase(), 
-                      style: GoogleFonts.inter(
-                        color: didWin ? ScholarlyTheme.accentGold : ScholarlyTheme.textPrimary, 
-                        fontWeight: FontWeight.w900, 
-                        fontSize: 24, 
-                        letterSpacing: 1.5
-                      )
+            color: Colors.black.withValues(alpha: 0.55),
+            child: Center(
+              child: _SpringEntrance(
+                child: Container(
+                  width: MediaQuery.of(context).size.width * 0.85,
+                  padding: const EdgeInsets.all(28),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Colors.white.withValues(alpha: 0.92),
+                        Colors.white.withValues(alpha: 0.80),
+                      ],
                     ),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: accentColor.withValues(alpha: 0.6),
+                      width: 2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: accentColor.withValues(alpha: 0.25),
+                        blurRadius: 30,
+                        spreadRadius: 4,
+                        offset: const Offset(0, 8),
+                      ),
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.1),
+                        blurRadius: 20,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
                   ),
-                Icon(
-                  isDraw ? Icons.handshake_rounded : (didWin ? Icons.emoji_events_rounded : Icons.sentiment_dissatisfied_rounded), 
-                  size: 64, 
-                  color: didWin ? ScholarlyTheme.accentGold : ScholarlyTheme.accentBlue
-                ),
-                const SizedBox(height: 20),
-                Text(msg, style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 15, fontWeight: FontWeight.w500), textAlign: TextAlign.center),
-                const SizedBox(height: 32),
-                Column(
-                  children: [
-                    SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: FilledButton(
-                        onPressed: () {
-                          setState(() {
-                            _hasTriggeredConfetti = false;
-                          });
-                          ref.read(chessProvider.notifier).reset();
-                        },
-                        style: FilledButton.styleFrom(
-                          backgroundColor: didWin ? ScholarlyTheme.accentGold : ScholarlyTheme.accentBlue,
-                          foregroundColor: didWin ? Colors.black : Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Icon with glow
+                      Container(
+                        width: 72,
+                        height: 72,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: accentColor.withValues(alpha: 0.12),
+                          border: Border.all(color: accentColor.withValues(alpha: 0.4), width: 2),
+                          boxShadow: [
+                            BoxShadow(
+                              color: accentColor.withValues(alpha: 0.3),
+                              blurRadius: 16,
+                              spreadRadius: 2,
+                            ),
+                          ],
                         ),
-                        child: const Text('PLAY NEW MATCH', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1)),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: OutlinedButton(
-                        onPressed: () {
-                          ref.read(chessProvider.notifier).dismissGameOver();
-                        },
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: ScholarlyTheme.textMuted,
-                          side: BorderSide(color: ScholarlyTheme.panelStroke),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        child: Icon(
+                          isDraw
+                              ? Icons.handshake_rounded
+                              : (didWin ? Icons.emoji_events_rounded : Icons.sentiment_dissatisfied_rounded),
+                          size: 36,
+                          color: accentColor,
                         ),
-                        child: const Text('REVIEW BOARD', style: TextStyle(fontWeight: FontWeight.bold)),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 18),
+                      // Title
+                      Text(
+                        title.toUpperCase(),
+                        style: GoogleFonts.inter(
+                          color: accentColor,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 22,
+                          letterSpacing: 2.0,
+                          shadows: [
+                            Shadow(
+                              color: accentColor.withValues(alpha: 0.3),
+                              blurRadius: 8,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        msg,
+                        style: GoogleFonts.inter(
+                          color: ScholarlyTheme.textMuted,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          height: 1.5,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 28),
+                      // Buttons
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                accentColor,
+                                accentColor.withValues(alpha: 0.8),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(14),
+                            boxShadow: [
+                              BoxShadow(
+                                color: accentColor.withValues(alpha: 0.4),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: FilledButton(
+                            onPressed: () {
+                              setState(() {
+                                _hasTriggeredConfetti = false;
+                              });
+                              ref.read(chessProvider.notifier).reset();
+                            },
+                            style: FilledButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              foregroundColor: didWin ? Colors.black : Colors.white,
+                              shadowColor: Colors.transparent,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            ),
+                            child: Text(
+                              'PLAY NEW MATCH',
+                              style: GoogleFonts.inter(
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 1.2,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 46,
+                        child: OutlinedButton(
+                          onPressed: () {
+                            ref.read(chessProvider.notifier).dismissGameOver();
+                          },
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: ScholarlyTheme.textMuted,
+                            side: BorderSide(
+                              color: ScholarlyTheme.panelStroke.withValues(alpha: 0.6),
+                            ),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14)),
+                          ),
+                          child: Text(
+                            'REVIEW BOARD',
+                            style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ],
+              ),
             ),
           ),
         ),
       ),
     );
   }
+
 
   bool _didPlayerWin(ChessState state) {
     if (state.game.inDraw) return false;
@@ -471,6 +625,146 @@ class _ZenArenaPageState extends ConsumerState<ZenArenaPage> with WidgetsBinding
           FilledButton(onPressed: () => Navigator.pop(context, true), style: FilledButton.styleFrom(backgroundColor: Colors.redAccent), child: const Text('Quit')),
         ],
       ),
+    );
+  }
+}
+
+class ActiveAvatarWrapper extends StatefulWidget {
+  final Widget child;
+  final bool isActive;
+
+  const ActiveAvatarWrapper({
+    super.key,
+    required this.child,
+    required this.isActive,
+  });
+
+  @override
+  State<ActiveAvatarWrapper> createState() => _ActiveAvatarWrapperState();
+}
+
+class _ActiveAvatarWrapperState extends State<ActiveAvatarWrapper>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    final curved = CurvedAnimation(parent: _controller, curve: Curves.linear);
+    _scaleAnimation = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.0, end: 1.06)
+            .chain(CurveTween(curve: Curves.easeOutCubic)),
+        weight: 30,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.06, end: 1.0)
+            .chain(CurveTween(curve: Curves.elasticOut)),
+        weight: 70,
+      ),
+    ]).animate(curved);
+
+    if (widget.isActive) {
+      _controller.forward();
+    }
+  }
+
+  @override
+  void didUpdateWidget(ActiveAvatarWrapper oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isActive && !oldWidget.isActive) {
+      _controller.reset();
+      _controller.forward();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ScaleTransition(
+      scale: _scaleAnimation,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 350),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: widget.isActive
+              ? [
+                  BoxShadow(
+                    color: ScholarlyTheme.accentBlue.withValues(alpha: 0.20),
+                    blurRadius: 14,
+                    spreadRadius: 3,
+                  )
+                ]
+              : [],
+        ),
+        child: widget.child,
+      ),
+    );
+  }
+}
+
+class _SpringEntrance extends StatefulWidget {
+  final Widget child;
+  const _SpringEntrance({required this.child});
+
+  @override
+  State<_SpringEntrance> createState() => _SpringEntranceState();
+}
+
+class _SpringEntranceState extends State<_SpringEntrance>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnim;
+  late Animation<double> _opacityAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 550),
+    );
+    _scaleAnim = Tween<double>(begin: 0.75, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
+    );
+    _opacityAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.4, curve: Curves.easeOut),
+      ),
+    );
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Opacity(
+          opacity: _opacityAnim.value.clamp(0.0, 1.0),
+          child: Transform.scale(
+            scale: _scaleAnim.value,
+            child: widget.child,
+          ),
+        );
+      },
     );
   }
 }

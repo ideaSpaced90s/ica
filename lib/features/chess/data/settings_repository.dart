@@ -47,6 +47,9 @@ class AppSettings {
   final double blitzDominance;
   final double rapidDominance;
 
+  final String userName;
+  final String userAvatarPath;
+
   AppSettings({
     this.boardThemeId = 'classic',
     this.isSoundEnabled = true,
@@ -91,6 +94,8 @@ class AppSettings {
     this.bulletDominance = 0.0,
     this.blitzDominance = 0.0,
     this.rapidDominance = 0.0,
+    this.userName = 'Apprentice',
+    this.userAvatarPath = 'assets/persona/gm_bard.png',
   });
 
   AppSettings copyWith({
@@ -130,6 +135,8 @@ class AppSettings {
     double? bulletDominance,
     double? blitzDominance,
     double? rapidDominance,
+    String? userName,
+    String? userAvatarPath,
   }) {
     return AppSettings(
       boardThemeId: boardThemeId ?? this.boardThemeId,
@@ -168,6 +175,8 @@ class AppSettings {
       bulletDominance: bulletDominance ?? this.bulletDominance,
       blitzDominance: blitzDominance ?? this.blitzDominance,
       rapidDominance: rapidDominance ?? this.rapidDominance,
+      userName: userName ?? this.userName,
+      userAvatarPath: userAvatarPath ?? this.userAvatarPath,
     );
   }
 
@@ -208,6 +217,8 @@ class AppSettings {
     'bulletDominance': bulletDominance,
     'blitzDominance': blitzDominance,
     'rapidDominance': rapidDominance,
+    'userName': userName,
+    'userAvatarPath': userAvatarPath,
   };
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
@@ -287,6 +298,8 @@ class AppSettings {
       bulletDominance: (json['bulletDominance'] ?? 0.0).toDouble(),
       blitzDominance: (json['blitzDominance'] ?? 0.0).toDouble(),
       rapidDominance: (json['rapidDominance'] ?? 0.0).toDouble(),
+      userName: json['userName'] ?? 'Apprentice',
+      userAvatarPath: json['userAvatarPath'] ?? 'assets/persona/gm_bard.png',
     );
   }
 }

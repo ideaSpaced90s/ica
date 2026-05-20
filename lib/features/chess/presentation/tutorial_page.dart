@@ -12,6 +12,7 @@ import 'widgets/illegal_move_feedback.dart';
 import 'widgets/mentor_panel.dart';
 import 'widgets/global_sidebar.dart';
 import 'widgets/game_controls.dart';
+import 'widgets/ambient_scaffold.dart';
 
 
 class TutorialPage extends ConsumerStatefulWidget {
@@ -69,10 +70,12 @@ class _TutorialPageState extends ConsumerState<TutorialPage> {
     }
 
     // 3. Main Active Lesson Runtime Surface
-    return Scaffold(
-      key: _scaffoldKey,
-      backgroundColor: ScholarlyTheme.backgroundStart,
+    return AmbientScaffold(
+      scaffoldKey: _scaffoldKey,
       drawer: const GlobalSidebar(),
+      blob1Color: const Color(0xFFFEF9C3), // Soft Gold
+      blob2Color: const Color(0xFFDBEAFE), // Soft Blue
+      blob3Color: const Color(0xFFF3E8FF), // Soft Purple
       body: SafeArea(
         top: false,
         child: Column(
@@ -97,11 +100,9 @@ class _TutorialPageState extends ConsumerState<TutorialPage> {
             // 3. Bottom Action / Breadcrumb Header Strip (now at bottom)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-              child: Container(
+              child: JuicyGlassCard(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: ScholarlyTheme.modernDecoration().copyWith(
-                  borderRadius: BorderRadius.circular(16),
-                ),
+                borderRadius: 16,
                 child: Row(
                   children: [
                     ActionIconButton(

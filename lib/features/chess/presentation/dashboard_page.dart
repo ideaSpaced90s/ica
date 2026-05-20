@@ -7,6 +7,8 @@ import 'widgets/global_sidebar.dart';
 import 'widgets/game_controls.dart';
 import 'widgets/progression_charts.dart';
 import 'widgets/mini_board_preview.dart';
+import 'widgets/ambient_scaffold.dart';
+import 'widgets/profile_customization_overlay.dart';
 import 'package:intl/intl.dart';
 
 class DashboardPage extends ConsumerStatefulWidget {
@@ -24,187 +26,150 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
     final state = ref.watch(chessProvider);
     final notifier = ref.read(chessProvider.notifier);
 
-    return Scaffold(
-      key: _scaffoldKey,
-      backgroundColor: ScholarlyTheme.backgroundStart,
+    return AmbientScaffold(
+      scaffoldKey: _scaffoldKey,
       drawer: const GlobalSidebar(),
+      blob1Color: const Color(0xFFDBEAFE),
+      blob2Color: const Color(0xFFFEF3C7),
+      blob3Color: const Color(0xFFF3E8FF),
       body: Stack(
         children: [
-          SafeArea(
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 12),
-                    // HEADER
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'TACTICAL COMMAND',
-                              style: GoogleFonts.inter(
-                                color: ScholarlyTheme.accentBlue,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 2.0,
-                              ),
-                            ),
-                            Text(
-                              'Center',
-                              style: GoogleFonts.outfit(
-                                color: ScholarlyTheme.textPrimary,
-                                fontSize: 28,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
+          SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Stack(
+              alignment: Alignment.topCenter,
+              clipBehavior: Clip.none,
+              children: [
+                // Glowing Profile Image (The "Sun")
+                Positioned(
+                  top: MediaQuery.of(context).padding.top + 16,
+                  child: GestureDetector(
+                    onTap: () => showProfileCustomizationOverlay(context, ref),
+                    child: Container(
+                      width: 180,
+                      height: 180,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: ScholarlyTheme.accentBlue.withValues(alpha: 0.8),
+                          width: 4,
                         ),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: ScholarlyTheme.panelBase,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: ScholarlyTheme.panelStroke),
+                        boxShadow: [
+                          BoxShadow(
+                            color: ScholarlyTheme.accentBlue.withValues(alpha: 0.25),
+                            blurRadius: 24,
+                            spreadRadius: 4,
                           ),
-                          child: const Icon(Icons.person_rounded, color: ScholarlyTheme.accentBlue, size: 24),
+                        ],
+                      ),
+                      child: ClipOval(
+                        child: Image.asset(
+                          state.userAvatarPath,
+                          fit: BoxFit.cover,
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 32),
-
-                    // MASTER STANDING CARD
-                    _buildMasterCard(state),
-
-                    const SizedBox(height: 32),
-                    _buildSectionHeader('ELO PROGRESSION'),
-                    const SizedBox(height: 16),
-                    EloAscentChart(saves: state.savedGames),
-
-                    const SizedBox(height: 32),
-                    Text(
-                      'ARENA PERFORMANCE',
-                      style: GoogleFonts.inter(
-                        color: ScholarlyTheme.textMuted,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 1.5,
                       ),
                     ),
-                    const SizedBox(height: 16),
-
-                    // TIERED ARENA GRID
-                    GridView.count(
-                      crossAxisCount: 1,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      childAspectRatio: 2.5,
-                      mainAxisSpacing: 16,
-                      children: [
-                        _buildTierCard(
-                          'BULLET ARENA',
-                          Icons.bolt_rounded,
-                          state.bulletElo,
-                          state.bulletStreak,
-                          state.bulletGamesClassic,
-                          state.bulletGames960,
-                          state.bulletDominance,
-                        ),
-                        _buildTierCard(
-                          'BLITZ ARENA',
-                          Icons.local_fire_department_rounded,
-                          state.blitzElo,
-                          state.blitzStreak,
-                          state.blitzGamesClassic,
-                          state.blitzGames960,
-                          state.blitzDominance,
-                        ),
-                        _buildTierCard(
-                          'RAPID ARENA',
-                          Icons.timer_rounded,
-                          state.rapidElo,
-                          state.rapidStreak,
-                          state.rapidGamesClassic,
-                          state.rapidGames960,
-                          state.rapidDominance,
-                        ),
-                      ],
-                    ),
-                    
-                    const SizedBox(height: 32),
-                    Row(
-                      children: [
-                        Expanded(
-                          flex: 3,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildSectionHeader('TACTICAL PERSONA'),
-                              const SizedBox(height: 16),
-                              TacticalRadarChart(saves: state.savedGames),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          flex: 2,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildSectionHeader('MODES'),
-                              const SizedBox(height: 16),
-                              ModeDistributionChart(saves: state.savedGames),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 32),
-                    DominanceHeatmap(saves: state.savedGames),
-
-                    const SizedBox(height: 32),
-                    _buildSectionHeader('RECENT MASTERPIECES'),
-                    const SizedBox(height: 16),
-                    _buildRecentMasterpieces(state),
-
-                    const SizedBox(height: 120),
-                  ],
+                  ),
                 ),
-              ),
-            ),
-          ),
-          
-          // Action Row
-          Positioned(
-            bottom: 24,
-            left: 24,
-            right: 24,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                ActionIconButton(
-                  icon: Icons.menu_rounded,
-                  size: 24,
-                  shouldBlink: !state.hasBlinkedMenu,
-                  onBlinkComplete: () => notifier.markMenuAsBlinked(),
-                  onTap: () => _scaffoldKey.currentState?.openDrawer(),
-                ),
-                Text(
-                  'DASHBOARD',
-                  style: GoogleFonts.inter(
-                    color: ScholarlyTheme.textSubtle,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.5,
+                // Main Content Column
+                Padding(
+                  padding: const EdgeInsets.only(left: 24.0, right: 24.0, bottom: 24.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Submerge 20% of circle (180 * 0.2 = 36).
+                      // Top of circle is at MediaQuery.of(context).padding.top + 16.
+                      // Bottom of circle is at MediaQuery.of(context).padding.top + 16 + 180.
+                      // We want MasterCard's top to be 36px higher than the bottom of the circle,
+                      // i.e., at MediaQuery.of(context).padding.top + 16 + 144 = MediaQuery.of(context).padding.top + 160.
+                      SizedBox(height: MediaQuery.of(context).padding.top + 160),
+
+                      // MASTER STANDING CARD
+                      _buildMasterCard(state),
+
+                      const SizedBox(height: 32),
+                      _buildSectionHeader('ELO PROGRESSION', icon: Icons.show_chart_rounded),
+                      const SizedBox(height: 16),
+                      EloAscentChart(saves: state.savedGames),
+
+                      const SizedBox(height: 32),
+                      _buildSectionHeader('ARENA PERFORMANCE', icon: Icons.workspace_premium_rounded),
+                      const SizedBox(height: 16),
+
+                      // TIERED ARENA GRID
+                      GridView.count(
+                        crossAxisCount: 1,
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        childAspectRatio: 2.5,
+                        mainAxisSpacing: 16,
+                        children: [
+                          _buildTierCard(
+                            'BULLET ARENA',
+                            Icons.bolt_rounded,
+                            state.bulletElo,
+                            state.bulletStreak,
+                            state.bulletGamesClassic,
+                            state.bulletGames960,
+                            state.bulletDominance,
+                          ),
+                          _buildTierCard(
+                            'BLITZ ARENA',
+                            Icons.local_fire_department_rounded,
+                            state.blitzElo,
+                            state.blitzStreak,
+                            state.blitzGamesClassic,
+                            state.blitzGames960,
+                            state.blitzDominance,
+                          ),
+                          _buildTierCard(
+                            'RAPID ARENA',
+                            Icons.timer_rounded,
+                            state.rapidElo,
+                            state.rapidStreak,
+                            state.rapidGamesClassic,
+                            state.rapidGames960,
+                            state.rapidDominance,
+                          ),
+                        ],
+                      ),
+                      
+                      const SizedBox(height: 32),
+                      _buildSectionHeader('TACTICAL PERSONA', icon: Icons.radar_rounded),
+                      const SizedBox(height: 16),
+                      TacticalRadarChart(saves: state.savedGames),
+
+                      const SizedBox(height: 32),
+                      _buildSectionHeader('MODES', icon: Icons.pie_chart_rounded),
+                      const SizedBox(height: 16),
+                      ModeDistributionChart(saves: state.savedGames),
+
+                      const SizedBox(height: 32),
+                      DominanceHeatmap(saves: state.savedGames),
+
+                      const SizedBox(height: 32),
+                      _buildSectionHeader('RECENT MASTERPIECES', icon: Icons.workspace_premium_rounded),
+                      const SizedBox(height: 16),
+                      _buildRecentMasterpieces(state),
+
+                      const SizedBox(height: 32),
+                    ],
                   ),
                 ),
               ],
+            ),
+          ),
+
+          // Floating 3-bar drawer menu button (fixed at top-left)
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 12,
+            left: 16,
+            child: ActionIconButton(
+              icon: Icons.menu_rounded,
+              size: 24,
+              shouldBlink: !state.hasBlinkedMenu,
+              onBlinkComplete: () => notifier.markMenuAsBlinked(),
+              onTap: () => _scaffoldKey.currentState?.openDrawer(),
             ),
           ),
         ],
@@ -228,18 +193,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            ScholarlyTheme.accentBlue.withValues(alpha: 0.15),
-            ScholarlyTheme.accentBlue.withValues(alpha: 0.05),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.3), width: 1.5),
-      ),
+      decoration: ScholarlyTheme.gradientCard(radius: 28),
       child: Column(
         children: [
           Row(
@@ -249,20 +203,21 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'MASTER STANDING',
-                    style: GoogleFonts.inter(
-                      color: ScholarlyTheme.accentBlue,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.5,
+                    state.userName.toUpperCase(),
+                    style: GoogleFonts.outfit(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
                     ),
                   ),
                   Text(
-                    'Level VIII',
+                    'Master Standing (Level VIII)',
                     style: GoogleFonts.inter(
-                      color: ScholarlyTheme.textPrimary,
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
+                      color: Colors.white.withValues(alpha: 0.8),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: 0.2,
                     ),
                   ),
                 ],
@@ -271,9 +226,9 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.deepOrangeAccent.withValues(alpha: 0.1),
+                    color: Colors.white.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.deepOrangeAccent.withValues(alpha: 0.3)),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
                   ),
                   child: Row(
                     children: [
@@ -282,7 +237,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                       Text(
                         'STREAK: ${state.totalWinningStreak}',
                         style: GoogleFonts.jetBrainsMono(
-                          color: Colors.deepOrangeAccent,
+                          color: Colors.white,
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
                         ),
@@ -317,7 +272,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
         Text(
           label,
           style: GoogleFonts.inter(
-            color: ScholarlyTheme.textMuted,
+            color: Colors.white.withValues(alpha: 0.65),
             fontSize: 9,
             fontWeight: FontWeight.bold,
             letterSpacing: 0.5,
@@ -327,7 +282,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
         Text(
           value,
           style: GoogleFonts.outfit(
-            color: ScholarlyTheme.textPrimary,
+            color: Colors.white,
             fontSize: 32,
             fontWeight: FontWeight.bold,
           ),
@@ -337,22 +292,39 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
   }
 
   Widget _buildTierCard(String title, IconData icon, int elo, int streak, int classic, int nineSixty, double dominance) {
-    return Container(
+    final Color accentColor = title.contains('BULLET')
+        ? Colors.cyan
+        : title.contains('BLITZ')
+            ? Colors.orangeAccent
+            : ScholarlyTheme.accentBlue;
+
+    return JuicyGlassCard(
+      borderRadius: 24,
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: ScholarlyTheme.panelBase,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: ScholarlyTheme.panelStroke),
-      ),
       child: Row(
         children: [
           Container(
+            width: 3,
+            height: 40,
+            margin: const EdgeInsets.only(right: 16),
+            decoration: BoxDecoration(
+              color: accentColor,
+              borderRadius: BorderRadius.circular(2),
+              boxShadow: [
+                BoxShadow(
+                  color: accentColor.withValues(alpha: 0.4),
+                  blurRadius: 6,
+                ),
+              ],
+            ),
+          ),
+          Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: ScholarlyTheme.accentBlue.withValues(alpha: 0.1),
+              color: accentColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Icon(icon, color: ScholarlyTheme.accentBlue, size: 24),
+            child: Icon(icon, color: accentColor, size: 24),
           ),
           const SizedBox(width: 20),
           Expanded(
@@ -396,7 +368,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                       Text(
                         '$elo ELO',
                         style: GoogleFonts.jetBrainsMono(
-                          color: ScholarlyTheme.accentBlue,
+                          color: accentColor,
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
@@ -411,7 +383,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                         child: Text(
                           '${dominance >= 0 ? '+' : ''}${dominance.toStringAsFixed(1)}',
                           style: GoogleFonts.jetBrainsMono(
-                            color: dominance >= 0 ? Colors.greenAccent : Colors.redAccent,
+                            color: dominance >= 0 ? Colors.green : Colors.red,
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
                           ),
@@ -421,7 +393,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
-                          color: ScholarlyTheme.accentBlue.withValues(alpha: 0.05),
+                          color: accentColor.withValues(alpha: 0.05),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
@@ -444,26 +416,17 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
     );
   }
 
-  Widget _buildSectionHeader(String title) {
-    return Text(
-      title,
-      style: GoogleFonts.inter(
-        color: ScholarlyTheme.textMuted,
-        fontSize: 11,
-        fontWeight: FontWeight.w800,
-        letterSpacing: 1.5,
-      ),
-    );
+  Widget _buildSectionHeader(String title, {IconData? icon}) {
+    return JuicySectionHeader(title: title, icon: icon);
   }
 
   Widget _buildRecentMasterpieces(ChessState state) {
     final ratedWins = state.savedGames.where((s) => s.isRatedMode && s.result == 'W').take(5).toList();
     
     if (ratedWins.isEmpty) {
-      return Container(
-        height: 100,
-        width: double.infinity,
-        decoration: ScholarlyTheme.modernDecoration(),
+      return JuicyGlassCard(
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        borderRadius: 16,
         child: Center(
           child: Text('No rated victories recorded yet.', 
             style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 12)
@@ -481,44 +444,46 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
         separatorBuilder: (context, index) => const SizedBox(width: 16),
         itemBuilder: (context, index) {
           final game = ratedWins[index];
-          return Container(
+          return SizedBox(
             width: 240,
-            padding: const EdgeInsets.all(16),
-            decoration: ScholarlyTheme.modernDecoration(),
-            child: Row(
-              children: [
-                MiniBoardPreview(fen: game.fen, size: 80, isFlipped: !game.isPlayerWhite),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        game.ratingCategory?.toUpperCase() ?? 'MATCH',
-                        style: GoogleFonts.inter(color: ScholarlyTheme.accentBlue, fontSize: 10, fontWeight: FontWeight.w900),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        DateFormat('MMM d').format(game.savedAt),
-                        style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: ScholarlyTheme.accentGold.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(4),
+            child: JuicyGlassCard(
+              padding: const EdgeInsets.all(16),
+              borderRadius: 16,
+              child: Row(
+                children: [
+                  MiniBoardPreview(fen: game.fen, size: 80, isFlipped: !game.isPlayerWhite),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          game.ratingCategory?.toUpperCase() ?? 'MATCH',
+                          style: GoogleFonts.inter(color: ScholarlyTheme.accentBlue, fontSize: 10, fontWeight: FontWeight.w900),
                         ),
-                        child: Text(
-                          'DOM: ${game.dominanceSnapshot?.toStringAsFixed(1) ?? "0.0"}',
-                          style: GoogleFonts.jetBrainsMono(color: ScholarlyTheme.accentGold, fontSize: 10, fontWeight: FontWeight.bold),
+                        const SizedBox(height: 4),
+                        Text(
+                          DateFormat('MMM d').format(game.savedAt),
+                          style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.bold),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: ScholarlyTheme.accentGold.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            'DOM: ${game.dominanceSnapshot?.toStringAsFixed(1) ?? "0.0"}',
+                            style: GoogleFonts.jetBrainsMono(color: ScholarlyTheme.accentGold, fontSize: 10, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           );
         },
