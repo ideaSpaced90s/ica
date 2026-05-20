@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:kingslayer_chess/src/rust/api/context.dart';
+import 'package:kingslayer_chess/src/rust/api/humanizer.dart';
+import 'package:kingslayer_chess/src/rust/api/threats.dart';
 import '../domain/chess_game.dart';
 import '../domain/models/position_context.dart';
 import '../domain/models/candidate_move.dart';
@@ -17,20 +19,48 @@ class PositionContextBuilder {
     final evalDiff = currentEval - previousEval;
     final quality = _classifyQuality(evalDiff);
     final gamePhase = _detectGamePhase(game);
-    final moveTypes = _detectMoveTypes(game);
+
+    // Compute FEN before the move
+    String fenBefore = game.fen;
+    if (game.history.isNotEmpty) {
+      try {
+        final temp = ChessGame(fen: game.fen, isChess960: game.isChess960);
+        temp.undo();
+        fenBefore = temp.fen;
+      } catch (e) {
+        debugPrint('ContextBuilder: Error calculating FEN before move: $e');
+      }
+    }
+
+    // Call Rust humanizer and tactical scan
+    String moveDescription = move;
+    try {
+      moveDescription = humanizeMoveRust(fenBefore: fenBefore, moveUci: move);
+    } catch (e) {
+      debugPrint('ContextBuilder: Error calling humanizeMoveRust: $e');
+    }
+
+    List<String> tacticalThreats = [];
+    try {
+      tacticalThreats = analyzeTacticalThreats(fen: game.fen);
+    } catch (e) {
+      debugPrint('ContextBuilder: Error calling analyzeTacticalThreats: $e');
+    }
+
     final isBestMove = _compareMoves(move, bestMove);
     final threatLevel = _calculateThreatLevel(evalDiff, pvLine);
-    final positionStyle = _determinePositionStyle(move, moveTypes, evalDiff);
+    final positionStyle = _determinePositionStyle(move, tacticalThreats, evalDiff);
 
     return PositionContext(
       move: move,
+      moveDescription: moveDescription,
       evaluation: currentEval,
       evalDiff: evalDiff,
       quality: quality,
       bestMove: bestMove,
       isBestMove: isBestMove,
       gamePhase: gamePhase,
-      moveTypes: moveTypes,
+      tacticalThreats: tacticalThreats,
       threatLevel: threatLevel,
       positionStyle: positionStyle,
       pvLine: pvLine,
@@ -63,35 +93,6 @@ class PositionContextBuilder {
     return 'Middlegame';
   }
 
-  static List<String> _detectMoveTypes(ChessGame game) {
-    final types = <String>[];
-    if (game.history.isEmpty) return types;
-
-    try {
-      final lastMove = game.history.last.move;
-      if (lastMove == null) return types;
-
-      // Access flags safely - they should be a String in chess package
-      final dynamic flagsRaw = (lastMove as dynamic).flags;
-      final String flags = flagsRaw?.toString() ?? '';
-
-      if (flags.contains('c') || flags.contains('e')) types.add('Capture');
-      if (flags.contains('k') || flags.contains('q')) types.add('Castling');
-      if (flags.contains('p')) types.add('Promotion');
-
-      // Check if the resulting position is a check
-      if (game.inCheckmate) {
-        types.add('Checkmate');
-      } else if (game.inCheck) {
-        types.add('Check');
-      }
-    } catch (e) {
-      debugPrint('PositionContextBuilder: Error detecting move types: $e');
-    }
-
-    return types;
-  }
-
   static bool _compareMoves(String played, String? best) {
     if (best == null) return false;
     // Normalize both to uci if they aren't already
@@ -109,10 +110,10 @@ class PositionContextBuilder {
 
   static String _determinePositionStyle(
     String move,
-    List<String> types,
+    List<String> threats,
     double diff,
   ) {
-    if (types.contains('Capture') || types.contains('Check') || diff > 0.8) {
+    if (threats.isNotEmpty || diff > 0.8) {
       return 'Attacking';
     }
     if (move.contains('k') || move.contains('g1') || move.contains('g8')) {

@@ -5,13 +5,14 @@ import 'candidate_move.dart';
 @immutable
 class PositionContext {
   final String move;
+  final String moveDescription;
   final double evaluation;
   final double evalDiff;
   final String quality;
   final String? bestMove;
   final bool isBestMove;
   final String gamePhase;
-  final List<String> moveTypes; // e.g., Capture, Check, Castling
+  final List<String> tacticalThreats; // e.g. Pinned pieces, forks, hanging pieces
   final String threatLevel;
   final String positionStyle;
   final List<String> pvLine;
@@ -19,13 +20,14 @@ class PositionContext {
 
   const PositionContext({
     required this.move,
+    required this.moveDescription,
     required this.evaluation,
     required this.evalDiff,
     required this.quality,
     this.bestMove,
     required this.isBestMove,
     required this.gamePhase,
-    this.moveTypes = const [],
+    this.tacticalThreats = const [],
     required this.threatLevel,
     required this.positionStyle,
     this.pvLine = const [],
@@ -41,25 +43,32 @@ class PositionContext {
   String toPromptString() {
     final buffer = StringBuffer();
     buffer.write('[BOARD INTEL]\n');
-    buffer.write('- Last Move: $move\n');
-    buffer.write('- Evaluation: ${evaluation.toStringAsFixed(1)}\n');
-    buffer.write('- Quality: $quality\n');
+    buffer.write('- Last Move Played: $moveDescription\n');
+    buffer.write('- Strategic Analysis: White played a $quality move. The evaluation changed by ${evalDiff.toStringAsFixed(1)} points (Current: ${evaluation.toStringAsFixed(1)}).\n');
     if (bestMove != null) {
-      buffer.write('- ENGINE_RECOMMENDATION: $bestMove\n');
+      buffer.write('- Engine Recommendation: Block or counter by playing $bestMove.\n');
     }
     buffer.write('- Game Phase: $gamePhase\n');
-    if (moveTypes.isNotEmpty) {
-      buffer.write('- Events: ${moveTypes.join(", ")}\n');
+    
+    if (tacticalThreats.isNotEmpty) {
+      buffer.write('- Tactical Scan Alerts:\n');
+      for (final threat in tacticalThreats) {
+        buffer.write('  * $threat\n');
+      }
+    } else {
+      buffer.write('- Tactical Scan Alerts: None detected.\n');
     }
+
     if (pvLine.isNotEmpty) {
-      buffer.write('- ENGINE_PLAN (PV): ${pvLine.take(5).join(", ")}\n');
+      buffer.write('- Engine Continuation Plan: ${pvLine.take(5).join(", ")}\n');
     }
     buffer.write('- Threat Level: $threatLevel\n');
     buffer.write('- Position Style: $positionStyle\n');
+    
     if (candidates.isNotEmpty) {
-      buffer.write('- CANDIDATE_MOVES:\n');
+      buffer.write('- Candidate Moves to Consider:\n');
       for (final c in candidates) {
-        buffer.write('  * Move ${c.multipvIndex}: ${c.uciMove} (Eval: ${c.evaluation.toStringAsFixed(1)}), PV Path: ${c.fullPv.take(4).join(" -> ")}\n');
+        buffer.write('  * Option ${c.multipvIndex}: Move ${c.uciMove} (Engine Eval: ${c.evaluation.toStringAsFixed(1)}), PV path: ${c.fullPv.take(4).join(" -> ")}\n');
       }
     }
     return buffer.toString();

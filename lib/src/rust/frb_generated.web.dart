@@ -8,6 +8,7 @@
 
 import 'api/context.dart';
 import 'api/history.dart';
+import 'api/humanizer.dart';
 import 'api/moves.dart';
 import 'api/puzzles.dart';
 import 'api/simple.dart';

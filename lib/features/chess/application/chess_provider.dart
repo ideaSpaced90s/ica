@@ -2836,6 +2836,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
           pvLine: pv,
           chatHistory: state.commentaryHistory,
           candidates: _currentCandidates,
+          userQuery: userQuery,
         );
       } catch (e) {
         debugPrint('KingSlayer: Context injection failed: $e');

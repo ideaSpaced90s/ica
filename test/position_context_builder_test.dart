@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kingslayer_chess/features/chess/domain/chess_game.dart';
 import 'package:kingslayer_chess/features/chess/services/position_context_builder.dart';
+import 'package:kingslayer_chess/features/chess/services/prompt_builder.dart';
 
 void main() {
   group('PositionContextBuilder Tests', () {
@@ -41,6 +42,28 @@ void main() {
         game: game,
       );
       expect(contextOpening.gamePhase, 'Opening');
+    });
+
+    test('PromptBuilder ChatML construction', () {
+      final game = ChessGame();
+      final context = PositionContextBuilder.build(
+        move: 'e2e4',
+        currentEval: 0.4,
+        previousEval: 0.2,
+        game: game,
+      );
+
+      final prompt = context.toPromptString();
+      expect(prompt, contains('[BOARD INTEL]'));
+      expect(prompt, contains('Last Move Played:'));
+      expect(prompt, contains('Strategic Analysis:'));
+
+      // Let's test PromptBuilder itself
+      final chatmlPrompt = PromptBuilder.buildCommentaryPrompt(context: context);
+      expect(chatmlPrompt, contains('<|im_start|>system'));
+      expect(chatmlPrompt, contains('Identity: You are GM Bard'));
+      expect(chatmlPrompt, contains('<|im_start|>user'));
+      expect(chatmlPrompt, contains('<|im_start|>assistant'));
     });
   });
 }

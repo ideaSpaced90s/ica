@@ -20,6 +20,7 @@ class AiContextService {
     List<String> pvLine = const [],
     List<CommentaryEntry> chatHistory = const [],
     List<CandidateMove> candidates = const [],
+    String? userQuery,
   }) {
     _lastContext = PositionContextBuilder.build(
       move: move,
@@ -31,21 +32,11 @@ class AiContextService {
       candidates: candidates,
     );
 
-    final basePrompt = PromptBuilder.buildCommentaryPrompt(_lastContext!);
-
-    if (chatHistory.isEmpty) return basePrompt;
-
-    final historyStr = chatHistory.reversed
-        .take(6)
-        .toList()
-        .reversed
-        .map((e) {
-          final role = e.isUser ? 'User' : 'Assistant';
-          return '$role: ${e.text}';
-        })
-        .join('\n');
-
-    return '$basePrompt\n\nRecent Conversation:\n$historyStr';
+    return PromptBuilder.buildCommentaryPrompt(
+      context: _lastContext!,
+      chatHistory: chatHistory,
+      userQuery: userQuery,
+    );
   }
 }
 
