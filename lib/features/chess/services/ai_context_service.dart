@@ -21,6 +21,7 @@ class AiContextService {
     List<CommentaryEntry> chatHistory = const [],
     List<CandidateMove> candidates = const [],
     String? userQuery,
+    String? systemInstructionOverride,
   }) {
     _lastContext = PositionContextBuilder.build(
       move: move,
@@ -36,6 +37,7 @@ class AiContextService {
       context: _lastContext!,
       chatHistory: chatHistory,
       userQuery: userQuery,
+      systemInstructionOverride: systemInstructionOverride,
     );
   }
 }

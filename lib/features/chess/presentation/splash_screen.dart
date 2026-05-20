@@ -46,6 +46,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   }
 
   Future<void> _initFlow() async {
+    await Future.delayed(Duration.zero);
     final startTime = DateTime.now();
     // debugPrint('SplashScreen: Starting _initFlow...');
     final notifier = ref.read(chessProvider.notifier);

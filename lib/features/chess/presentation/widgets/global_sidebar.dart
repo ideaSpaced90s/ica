@@ -8,6 +8,7 @@ import '../../services/chess_sound_service.dart';
 import '../main_page.dart';
 import '../academy_page.dart';
 import '../settings_page.dart';
+import '../rated_settings_page.dart';
 import '../tutorial_page.dart';
 import '../dashboard_page.dart';
 import '../history_page.dart';
@@ -175,9 +176,19 @@ class GlobalSidebar extends ConsumerWidget {
                         onTap: () {
                           Navigator.pop(context);
                           if (!isSettings) {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(builder: (context) => const SettingsPage()),
-                            );
+                            if (state.isRatedMode) {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(builder: (context) => const RatedSettingsPage()),
+                              );
+                            } else if (state.isAcademyActive || state.isPuzzleMode) {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(builder: (context) => const SettingsPage(isAcademyMode: true)),
+                              );
+                            } else {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(builder: (context) => const SettingsPage()),
+                              );
+                            }
                           }
                         },
                       ),

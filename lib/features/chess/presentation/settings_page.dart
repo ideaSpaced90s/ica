@@ -265,41 +265,42 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               ),
 
               // VISUALS
-              _SettingsCategory(
-                title: 'VISUALS',
-                children: [
-                  _SettingsTile(
-                    label: 'Board Theme',
-                    description:
-                        'Current: ${ThemeRegistry.getTheme(state.boardThemeId).name}',
-                    icon: Icons.palette_rounded,
-                    onTap: () => _showThemeSelector(context, ref),
-                    trailing: _ThemeMiniPreview(
-                      theme: ThemeRegistry.getTheme(state.boardThemeId),
+              if (!widget.isAcademyMode)
+                _SettingsCategory(
+                  title: 'VISUALS',
+                  children: [
+                    _SettingsTile(
+                      label: 'Board Theme',
+                      description:
+                          'Current: ${ThemeRegistry.getTheme(state.boardThemeId).name}',
+                      icon: Icons.palette_rounded,
+                      onTap: () => _showThemeSelector(context, ref),
+                      trailing: _ThemeMiniPreview(
+                        theme: ThemeRegistry.getTheme(state.boardThemeId),
+                      ),
                     ),
-                  ),
-                  _SettingsTile(
-                    label: 'Animation Engine',
-                    description: 'Fine-tune movement and effects',
-                    icon: Icons.movie_filter_rounded,
-                    onTap: () => _showAnimationSettingsOverlay(context, ref),
-                    trailing: Icon(
-                      Icons.chevron_right_rounded,
-                      color: ScholarlyTheme.textMuted,
+                    _SettingsTile(
+                      label: 'Animation Engine',
+                      description: 'Fine-tune movement and effects',
+                      icon: Icons.movie_filter_rounded,
+                      onTap: () => _showAnimationSettingsOverlay(context, ref),
+                      trailing: Icon(
+                        Icons.chevron_right_rounded,
+                        color: ScholarlyTheme.textMuted,
+                      ),
                     ),
-                  ),
-                  _SettingsSwitchTile(
-                    label: 'Master Animations',
-                    description: 'Enable or disable all visual effects',
-                    icon: state.isAnimationsEnabled
-                        ? Icons.auto_awesome_rounded
-                        : Icons.auto_awesome_outlined,
-                    value: state.isAnimationsEnabled,
-                    onChanged: (v) => notifier.toggleAnimations(),
-                    enabled: !state.isRatedMode,
-                  ),
-                ],
-              ),
+                    _SettingsSwitchTile(
+                      label: 'Master Animations',
+                      description: 'Enable or disable all visual effects',
+                      icon: state.isAnimationsEnabled
+                          ? Icons.auto_awesome_rounded
+                          : Icons.auto_awesome_outlined,
+                      value: state.isAnimationsEnabled,
+                      onChanged: (v) => notifier.toggleAnimations(),
+                      enabled: !state.isRatedMode,
+                    ),
+                  ],
+                ),
 
 
 

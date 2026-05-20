@@ -892,7 +892,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
   }
 
   bool isAnimationTypeEnabled(String key) {
-    if (state.isRatedMode) {
+    if (state.isRatedMode || state.isAcademyActive || state.isPuzzleMode) {
       return key == 'pieceMotion';
     }
     return state.isAnimationsEnabled && (state.animationSettings[key] ?? true);
@@ -2837,6 +2837,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
           chatHistory: state.commentaryHistory,
           candidates: _currentCandidates,
           userQuery: userQuery,
+          systemInstructionOverride: _commentaryEngine.systemInstruction,
         );
       } catch (e) {
         debugPrint('KingSlayer: Context injection failed: $e');

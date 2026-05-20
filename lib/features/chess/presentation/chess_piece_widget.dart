@@ -83,7 +83,7 @@ class _ChessPieceWidgetState extends ConsumerState<ChessPieceWidget>
   @override
   Widget build(BuildContext context) {
     final chessState = ref.watch(chessProvider);
-    final boardThemeId = chessState.boardThemeId;
+    final themeId = ThemeRegistry.resolveThemeId(chessState);
 
     var code = widget.pieceCode;
 
@@ -100,7 +100,7 @@ class _ChessPieceWidgetState extends ConsumerState<ChessPieceWidget>
     final isWhite = code.startsWith('w');
     final type = code.substring(1).toUpperCase();
 
-    final theme = ThemeRegistry.getTheme(boardThemeId);
+    final theme = ThemeRegistry.getTheme(themeId);
 
     // Render piece based on theme
     Widget pieceWidget = theme.buildPiece(
@@ -118,9 +118,9 @@ class _ChessPieceWidgetState extends ConsumerState<ChessPieceWidget>
     // Apply selection enlargement (108% with elastic spring) — unchanged
     pieceWidget = AnimatedScale(
       scale: widget.isMoving
-          ? (boardThemeId == 'theme8' || boardThemeId == 'theme4' ? 1.05 : 1.08)
+          ? (themeId == 'theme8' || themeId == 'theme4' ? 1.05 : 1.08)
           : (widget.highlighted
-                ? (boardThemeId == 'theme8' || boardThemeId == 'theme4'
+                ? (themeId == 'theme8' || themeId == 'theme4'
                       ? 1.03
                       : 1.15)
                 : 1.0),
@@ -129,10 +129,10 @@ class _ChessPieceWidgetState extends ConsumerState<ChessPieceWidget>
               .read(chessProvider.notifier)
               .isAnimationTypeEnabled('pieceMotion'))
           ? Duration.zero
-          : (boardThemeId == 'theme8' || boardThemeId == 'theme4'
+          : (themeId == 'theme8' || themeId == 'theme4'
                 ? const Duration(milliseconds: 400)
                 : const Duration(milliseconds: 200)),
-      curve: boardThemeId == 'theme8' || boardThemeId == 'theme4'
+      curve: themeId == 'theme8' || themeId == 'theme4'
           ? Curves.easeInOut
           : Curves.easeOutBack,
       child: AnimatedContainer(
@@ -141,24 +141,24 @@ class _ChessPieceWidgetState extends ConsumerState<ChessPieceWidget>
                 .read(chessProvider.notifier)
                 .isAnimationTypeEnabled('pieceMotion'))
             ? Duration.zero
-            : (boardThemeId == 'theme8' || boardThemeId == 'theme4'
+            : (themeId == 'theme8' || themeId == 'theme4'
                   ? const Duration(milliseconds: 500)
                   : const Duration(milliseconds: 300)),
-        curve: boardThemeId == 'theme9'
+        curve: themeId == 'theme9'
             ? Curves.bounceOut
-            : (boardThemeId == 'theme8' || boardThemeId == 'theme4'
+            : (themeId == 'theme8' || themeId == 'theme4'
                   ? Curves.linear
                   : Curves.elasticOut),
         transform: Matrix4.diagonal3Values(
           widget.isMoving
-              ? (boardThemeId == 'theme8' || boardThemeId == 'theme4'
+              ? (themeId == 'theme8' || themeId == 'theme4'
                     ? 1.0
                     : 0.85)
               : 1.0,
           widget.isMoving
-              ? (boardThemeId == 'theme9'
+              ? (themeId == 'theme9'
                     ? 1.4
-                    : (boardThemeId == 'theme8' || boardThemeId == 'theme4'
+                    : (themeId == 'theme8' || themeId == 'theme4'
                           ? 1.0
                           : 1.25))
               : 1.0,
@@ -188,7 +188,7 @@ class _ChessPieceWidgetState extends ConsumerState<ChessPieceWidget>
 
     if (widget.highlighted &&
         ref.read(chessProvider.notifier).isAnimationTypeEnabled('feedback')) {
-      final glowColor = boardThemeId == 'theme10'
+      final glowColor = themeId == 'theme10'
           ? ContrastUtility.selectionGlow
           : ScholarlyTheme.selectedGlow;
 

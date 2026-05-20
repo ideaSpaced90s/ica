@@ -109,7 +109,8 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
   @override
   Widget build(BuildContext context) {
     final chessState = ref.watch(chessProvider);
-    final chessTheme = ThemeRegistry.getTheme(chessState.boardThemeId);
+    final themeId = ThemeRegistry.resolveThemeId(chessState);
+    final chessTheme = ThemeRegistry.getTheme(themeId);
 
     // Use currentBoardFen for display during analysis/history viewing
     final displayGame = ChessGame(fen: chessState.currentBoardFen);

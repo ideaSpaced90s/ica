@@ -42,33 +42,33 @@ class PositionContext {
   /// Converts the context into a compact string format for the LLM.
   String toPromptString() {
     final buffer = StringBuffer();
-    buffer.write('[BOARD INTEL]\n');
+    buffer.write('Board State:\n');
     buffer.write('- Last Move Played: $moveDescription\n');
-    buffer.write('- Strategic Analysis: White played a $quality move. The evaluation changed by ${evalDiff.toStringAsFixed(1)} points (Current: ${evaluation.toStringAsFixed(1)}).\n');
+    buffer.write('- Analysis: The last move was a $quality move.\n');
     if (bestMove != null) {
-      buffer.write('- Engine Recommendation: Block or counter by playing $bestMove.\n');
+      buffer.write('- Recommendation: Consider playing $bestMove.\n');
     }
     buffer.write('- Game Phase: $gamePhase\n');
     
     if (tacticalThreats.isNotEmpty) {
-      buffer.write('- Tactical Scan Alerts:\n');
+      buffer.write('- Tactical Alerts:\n');
       for (final threat in tacticalThreats) {
         buffer.write('  * $threat\n');
       }
     } else {
-      buffer.write('- Tactical Scan Alerts: None detected.\n');
+      buffer.write('- Tactical Alerts: None detected.\n');
     }
 
     if (pvLine.isNotEmpty) {
-      buffer.write('- Engine Continuation Plan: ${pvLine.take(5).join(", ")}\n');
+      buffer.write('- Recommended Plan: ${pvLine.take(5).join(", ")}\n');
     }
     buffer.write('- Threat Level: $threatLevel\n');
     buffer.write('- Position Style: $positionStyle\n');
     
     if (candidates.isNotEmpty) {
-      buffer.write('- Candidate Moves to Consider:\n');
+      buffer.write('- Candidate Moves:\n');
       for (final c in candidates) {
-        buffer.write('  * Option ${c.multipvIndex}: Move ${c.uciMove} (Engine Eval: ${c.evaluation.toStringAsFixed(1)}), PV path: ${c.fullPv.take(4).join(" -> ")}\n');
+        buffer.write('  * Option ${c.multipvIndex}: Move ${c.uciMove}, continuation: ${c.fullPv.take(4).join(" -> ")}\n');
       }
     }
     return buffer.toString();

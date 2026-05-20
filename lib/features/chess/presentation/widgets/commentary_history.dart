@@ -36,23 +36,31 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
   @override
   void didUpdateWidget(CommentaryHistory oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.state.commentaryHistory.length !=
-            oldWidget.state.commentaryHistory.length ||
-        (widget.state.commentaryHistory.isNotEmpty &&
-            widget.state.commentaryHistory.last.text !=
-                oldWidget.state.commentaryHistory.last.text)) {
+    final history = widget.state.commentaryHistory;
+    final oldHistory = oldWidget.state.commentaryHistory;
+
+    if (history.length != oldHistory.length ||
+        widget.state.isCommentaryStreaming ||
+        widget.state.isCommentaryLoading ||
+        (history.isNotEmpty && oldHistory.isNotEmpty && history.last.text != oldHistory.last.text)) {
       _scrollToBottom();
     }
   }
 
   void _scrollToBottom() {
+    if (!mounted) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
+        final maxScroll = _scrollController.position.maxScrollExtent;
+        if (widget.state.isCommentaryStreaming || widget.state.isCommentaryLoading) {
+          _scrollController.jumpTo(maxScroll);
+        } else {
+          _scrollController.animateTo(
+            maxScroll,
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOut,
+          );
+        }
       }
     });
   }
@@ -386,7 +394,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
                                 ),
                               if (isStreaming)
                                 TextSpan(
-                                  text: ' ┃',
+                                  text: _pulse % 2 == 0 ? ' ┃' : '  ',
                                   style: GoogleFonts.fraunces(
                                     color: ScholarlyTheme.accentBlue,
                                     fontSize: 14,

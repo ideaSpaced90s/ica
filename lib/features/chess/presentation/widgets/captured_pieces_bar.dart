@@ -26,8 +26,9 @@ class CapturedPiecesBar extends ConsumerWidget {
       return const SizedBox(height: 48);
     }
 
-    final boardThemeId = ref.watch(chessProvider.select((s) => s.boardThemeId));
-    final theme = ThemeRegistry.getTheme(boardThemeId);
+    final chessState = ref.watch(chessProvider);
+    final themeId = ThemeRegistry.resolveThemeId(chessState);
+    final theme = ThemeRegistry.getTheme(themeId);
 
     // Sort pieces by value
     final sortedPieces = List<chess_lib.Piece>.from(

@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'features/chess/presentation/scholarly_theme.dart';
 import 'features/chess/presentation/splash_screen.dart';
 import 'src/rust/frb_generated.dart';
@@ -22,11 +21,7 @@ void main() {
     } catch (e) {
       debugPrint('RUST LIB INIT ERROR: $e');
     }
-    try {
-      await dotenv.load(fileName: ".env");
-    } catch (e) {
-      debugPrint('DOTENV LOAD ERROR: $e');
-    }
+
 
     FlutterError.onError = (details) {
       FlutterError.presentError(details);

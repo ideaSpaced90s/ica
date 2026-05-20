@@ -630,8 +630,9 @@ class _InlineCapturedGroup extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final boardThemeId = ref.watch(chessProvider.select((s) => s.boardThemeId));
-    final theme = ThemeRegistry.getTheme(boardThemeId);
+    final chessState = ref.watch(chessProvider);
+    final themeId = ThemeRegistry.resolveThemeId(chessState);
+    final theme = ThemeRegistry.getTheme(themeId);
 
     final sortedPieces = List<chess_lib.Piece>.from(pieces)
       ..sort((a, b) => _getPieceValue(a.type).compareTo(_getPieceValue(b.type)));
