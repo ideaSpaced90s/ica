@@ -69,7 +69,7 @@ Rules: Mention specific piece names and squares (e.g., "Pawn to e4"). Spot pins,
 
     // 3. Conversation History (if present)
     if (chatHistory.isNotEmpty) {
-      final relevantHistory = chatHistory.reversed.take(6).toList().reversed;
+      final relevantHistory = chatHistory.reversed.take(2).toList().reversed;
       for (final entry in relevantHistory) {
         final role = entry.isUser ? 'user' : 'assistant';
         buffer.write('<|im_start|>$role\n${entry.text}<|im_end|>\n');
