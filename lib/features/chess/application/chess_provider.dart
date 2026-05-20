@@ -798,7 +798,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
     );
     
     await _saveSettings();
-    await reset();
+    await reset(skipAutoSave: true);
   }
 
   void resetRatedStats() {
@@ -2587,7 +2587,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
     return 'rapid';
   }
 
-  void _updateRating(double actualScore) {
+  Future<void> _updateRating(double actualScore) async {
     final category = _getRatingCategory(state.baseTimeDuration, state.incrementDuration);
     final is960 = state.gameMode == 'chess960';
     final avatar = AiAvatar.getAvatar(state.engineLevel);
@@ -2676,14 +2676,14 @@ class ChessNotifier extends StateNotifier<ChessState> {
       rapidDominance: newRapidDom,
     );
 
-    _saveSettings();
+    await _saveSettings();
   }
 
   Future<void> resignRatedGame() async {
     if (!state.isRatedMode) return;
 
     // 1. Mark as Loss in rating
-    _updateRating(0.0); // 0.0 = Loss
+    await _updateRating(0.0); // 0.0 = Loss
 
     // 2. Save game to history as "Resigned"
     await saveCurrentGame(
@@ -2692,7 +2692,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
     );
 
     // 3. Reset the game
-    await reset();
+    await reset(skipAutoSave: true);
   }
 
   int _getCurrentCategoryElo() {
@@ -3128,9 +3128,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
     _syncUndoRedoFlags();
   }
 
-  Future<void> reset({bool? forcedPlayerWhite}) async {
+  Future<void> reset({bool? forcedPlayerWhite, bool skipAutoSave = false}) async {
     // Auto-save current game before resetting if there is progress
-    if (state.recentMoves.isNotEmpty) {
+    if (!skipAutoSave && state.recentMoves.isNotEmpty) {
       await saveCurrentGame();
     }
 

@@ -417,15 +417,17 @@ class ChessGame {
 
   double calculateMaterialMargin(chess_lib.Color playerColor) {
     double score = 0;
-    for (var i = 0; i < 64; i++) {
-      final square = chess_lib.Chess.algebraic(i);
-      final piece = _chess.get(square);
-      if (piece != null) {
-        final value = _getPieceValue(piece.type);
-        if (piece.color == playerColor) {
-          score += value;
-        } else {
-          score -= value;
+    for (final file in files) {
+      for (final rank in ranks) {
+        final square = '$file$rank';
+        final piece = _chess.get(square);
+        if (piece != null) {
+          final value = _getPieceValue(piece.type);
+          if (piece.color == playerColor) {
+            score += value;
+          } else {
+            score -= value;
+          }
         }
       }
     }

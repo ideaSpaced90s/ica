@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../application/chess_provider.dart';
@@ -78,10 +77,16 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
           final resigned = await _showRatedExitDialog(context);
           if (resigned == true) {
             await ref.read(chessProvider.notifier).resignRatedGame();
-            SystemNavigator.pop();
+            await ref.read(chessProvider.notifier).setRatedMode(false);
+            if (context.mounted && Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            }
           }
         } else {
-          SystemNavigator.pop();
+          await ref.read(chessProvider.notifier).setRatedMode(false);
+          if (context.mounted && Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+          }
         }
       },
       child: Scaffold(
@@ -220,7 +225,10 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
                 final resigned = await _showRatedExitDialog(context);
                 if (resigned == true) {
                   await ref.read(chessProvider.notifier).resignRatedGame();
-                  _scaffoldKey.currentState?.openDrawer();
+                  await ref.read(chessProvider.notifier).setRatedMode(false);
+                  if (context.mounted && Navigator.of(context).canPop()) {
+                    Navigator.of(context).pop();
+                  }
                 }
               } else {
                 _scaffoldKey.currentState?.openDrawer();
@@ -424,9 +432,12 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
                       width: double.infinity,
                       height: 50,
                       child: OutlinedButton(
-                        onPressed: () {
+                        onPressed: () async {
                           ref.read(chessProvider.notifier).dismissGameOver();
-                          Navigator.pop(context);
+                          await ref.read(chessProvider.notifier).setRatedMode(false);
+                          if (context.mounted && Navigator.of(context).canPop()) {
+                            Navigator.of(context).pop();
+                          }
                         },
                         style: OutlinedButton.styleFrom(
                           foregroundColor: ScholarlyTheme.textMuted,
