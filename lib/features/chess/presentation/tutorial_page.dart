@@ -13,6 +13,7 @@ import 'widgets/mentor_panel.dart';
 import 'widgets/global_sidebar.dart';
 import 'widgets/game_controls.dart';
 import 'widgets/ambient_scaffold.dart';
+import 'dashboard_page.dart';
 
 
 class TutorialPage extends ConsumerStatefulWidget {
@@ -47,10 +48,11 @@ class _TutorialPageState extends ConsumerState<TutorialPage> {
   Widget build(BuildContext context) {
     final state = ref.watch(tutorialProvider);
 
+    Widget content;
 
     // 1. Chapter Graduation Intercept Overlay
     if (state.isChapterComplete) {
-      return ChapterCompletionOverlay(
+      content = ChapterCompletionOverlay(
         onNextChapter: () {
           final nextChap = state.currentChapterIndex + 1;
           // Determine if target next chapter falls within active bounds
@@ -63,109 +65,129 @@ class _TutorialPageState extends ConsumerState<TutorialPage> {
         },
       );
     }
-
     // 2. Main Module Browser / Dashboard
-    if (_isChapterSelectionVisible) {
-      return ChapterSelectScreen(onSelectChapter: _handleChapterSelected);
+    else if (_isChapterSelectionVisible) {
+      content = ChapterSelectScreen(onSelectChapter: _handleChapterSelected);
     }
-
     // 3. Main Active Lesson Runtime Surface
-    return AmbientScaffold(
-      scaffoldKey: _scaffoldKey,
-      drawer: const GlobalSidebar(),
-      blob1Color: const Color(0xFFFEF9C3), // Soft Gold
-      blob2Color: const Color(0xFFDBEAFE), // Soft Blue
-      blob3Color: const Color(0xFFF3E8FF), // Soft Purple
-      body: SafeArea(
-        top: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // 1. Top side chessboard taking exact square space, extending edge-to-edge
-            const AspectRatio(
-              aspectRatio: 1.0,
-              child: TutorialIllegalMoveFeedback(
-                child: TutorialBoardStage(),
-              ),
-            ),
-
-            // 2. Base adaptive advisor panel claiming remaining space
-            const Expanded(
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(16, 12, 16, 4),
-                child: TutorialMentorPanel(),
-              ),
-            ),
-
-            // 3. Bottom Action / Breadcrumb Header Strip (now at bottom)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-              child: JuicyGlassCard(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                borderRadius: 16,
-                child: Row(
-                  children: [
-                    ActionIconButton(
-                      icon: Icons.menu_rounded,
-                      size: 20,
-                      onTap: () => _scaffoldKey.currentState?.openDrawer(),
-                    ),
-                    const SizedBox(width: 12),
-                    IconButton(
-                      onPressed: () => setState(() => _isChapterSelectionVisible = true),
-                      icon: const Icon(Icons.grid_view_rounded, size: 20, color: ScholarlyTheme.accentBlue),
-                      tooltip: 'Chapter Selection',
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Text(
-                                'CHAPTER ${state.currentLesson.chapterId}',
-                                style: GoogleFonts.inter(
-                                  color: ScholarlyTheme.accentBlue,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 1.0,
-                                ),
-                              ),
-                              const Spacer(),
-                              Text(
-                                'STEP ${state.currentStepIndex + 1} OF ${state.currentLesson.steps.length}',
-                                style: GoogleFonts.inter(
-                                  color: ScholarlyTheme.textMuted,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(4),
-                            child: LinearProgressIndicator(
-                              value: (state.currentStepIndex + 1) / state.currentLesson.steps.length,
-                              backgroundColor: ScholarlyTheme.panelStroke.withValues(alpha: 0.5),
-                              color: ScholarlyTheme.accentBlue,
-                              minHeight: 6,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+    else {
+      content = AmbientScaffold(
+        scaffoldKey: _scaffoldKey,
+        drawer: const GlobalSidebar(),
+        blob1Color: const Color(0xFFFEF9C3), // Soft Gold
+        blob2Color: const Color(0xFFDBEAFE), // Soft Blue
+        blob3Color: const Color(0xFFF3E8FF), // Soft Purple
+        body: SafeArea(
+          top: false,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // 1. Top side chessboard taking exact square space, extending edge-to-edge
+              const AspectRatio(
+                aspectRatio: 1.0,
+                child: TutorialIllegalMoveFeedback(
+                  child: TutorialBoardStage(),
                 ),
               ),
-            ),
-          ],
+
+              // 2. Base adaptive advisor panel claiming remaining space
+              const Expanded(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(16, 12, 16, 4),
+                  child: TutorialMentorPanel(),
+                ),
+              ),
+
+              // 3. Bottom Action / Breadcrumb Header Strip (now at bottom)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                child: JuicyGlassCard(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  borderRadius: 16,
+                  child: Row(
+                    children: [
+                      ActionIconButton(
+                        icon: Icons.menu_rounded,
+                        size: 20,
+                        onTap: () => _scaffoldKey.currentState?.openDrawer(),
+                      ),
+                      const SizedBox(width: 12),
+                      IconButton(
+                        onPressed: () => setState(() => _isChapterSelectionVisible = true),
+                        icon: const Icon(Icons.grid_view_rounded, size: 20, color: ScholarlyTheme.accentBlue),
+                        tooltip: 'Chapter Selection',
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  'CHAPTER ${state.currentLesson.chapterId}',
+                                  style: GoogleFonts.inter(
+                                    color: ScholarlyTheme.accentBlue,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 1.0,
+                                  ),
+                                ),
+                                const Spacer(),
+                                Text(
+                                  'STEP ${state.currentStepIndex + 1} OF ${state.currentLesson.steps.length}',
+                                  style: GoogleFonts.inter(
+                                    color: ScholarlyTheme.textMuted,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: LinearProgressIndicator(
+                                value: (state.currentStepIndex + 1) / state.currentLesson.steps.length,
+                                backgroundColor: ScholarlyTheme.panelStroke.withValues(alpha: 0.5),
+                                color: ScholarlyTheme.accentBlue,
+                                minHeight: 6,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
+      );
+    }
+
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (bool didPop, Object? result) async {
+        if (didPop) return;
+        if (state.isChapterComplete) {
+          ref.read(tutorialProvider.notifier).loadChapter(state.currentChapterIndex);
+          setState(() {
+            _isChapterSelectionVisible = true;
+          });
+        } else if (!_isChapterSelectionVisible) {
+          setState(() {
+            _isChapterSelectionVisible = true;
+          });
+        } else {
+          exitToDashboardWithSidebar(context, ref);
+        }
+      },
+      child: content,
     );
   }
 }

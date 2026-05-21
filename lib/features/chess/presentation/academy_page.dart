@@ -11,6 +11,7 @@ import 'themes/theme_registry.dart';
 import 'unrated_settings_page.dart';
 import 'widgets/global_sidebar.dart';
 import 'widgets/ambient_scaffold.dart';
+import 'dashboard_page.dart';
 import 'dart:ui';
 
 
@@ -96,7 +97,7 @@ class _AcademyPageState extends ConsumerState<AcademyPage> {
 
     if (confirm == true) {
       if (!mounted) return;
-      Navigator.of(context).pop();
+      exitToDashboardWithSidebar(context, ref);
     }
   }
 

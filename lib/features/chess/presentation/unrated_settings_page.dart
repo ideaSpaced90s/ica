@@ -12,6 +12,7 @@ import 'widgets/game_controls.dart';
 import 'widgets/avatar_selection_sheet.dart';
 import 'widgets/ambient_scaffold.dart';
 import 'dart:ui';
+import 'dashboard_page.dart';
 
 class UnratedSettingsPage extends ConsumerStatefulWidget {
   final bool isAcademyMode;
@@ -30,14 +31,21 @@ class _UnratedSettingsPageState extends ConsumerState<UnratedSettingsPage> {
     final state = ref.watch(chessProvider);
     final notifier = ref.read(chessProvider.notifier);
 
-    return AmbientScaffold(
-      scaffoldKey: _scaffoldKey,
-      drawer: const GlobalSidebar(),
-      blob1Color: const Color(0xFFE2E8F0),
-      blob2Color: const Color(0xFFDBEAFE),
-      blob3Color: const Color(0xFFD1FAE5),
-      body: Stack(
-        children: [
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          exitToDashboardWithSidebar(context, ref);
+        }
+      },
+      child: AmbientScaffold(
+        scaffoldKey: _scaffoldKey,
+        drawer: const GlobalSidebar(),
+        blob1Color: const Color(0xFFE2E8F0),
+        blob2Color: const Color(0xFFDBEAFE),
+        blob3Color: const Color(0xFFD1FAE5),
+        body: Stack(
+          children: [
           CustomScrollView(
             physics: const BouncingScrollPhysics(),
             slivers: [
@@ -209,7 +217,8 @@ class _UnratedSettingsPageState extends ConsumerState<UnratedSettingsPage> {
           _buildActionRow(context),
         ], // End of Stack.children
       ), // End of Stack
-    ); // End of Scaffold
+    ), // End of AmbientScaffold
+   ); // End of PopScope
   }
 
   Widget _buildActionRow(BuildContext context) {

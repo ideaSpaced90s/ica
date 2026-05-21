@@ -1,28 +1,36 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'scholarly_theme.dart';
 import 'widgets/global_sidebar.dart';
 import 'widgets/game_controls.dart';
 import 'widgets/ambient_scaffold.dart';
+import 'dashboard_page.dart';
 
-class AboutUsPage extends StatefulWidget {
+class AboutUsPage extends ConsumerStatefulWidget {
   const AboutUsPage({super.key});
 
   @override
-  State<AboutUsPage> createState() => _AboutUsPageState();
+  ConsumerState<AboutUsPage> createState() => _AboutUsPageState();
 }
 
-class _AboutUsPageState extends State<AboutUsPage> {
+class _AboutUsPageState extends ConsumerState<AboutUsPage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   Widget build(BuildContext context) {
-    return AmbientScaffold(
-      scaffoldKey: _scaffoldKey,
-      drawer: const GlobalSidebar(),
-      blob1Color: const Color(0xFFDBEAFE), // Soft Blue
-      blob2Color: const Color(0xFFFCE7F3), // Soft Pink
-      blob3Color: const Color(0xFFF3E8FF), // Soft Purple
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (bool didPop, Object? result) async {
+        if (didPop) return;
+        exitToDashboardWithSidebar(context, ref);
+      },
+      child: AmbientScaffold(
+        scaffoldKey: _scaffoldKey,
+        drawer: const GlobalSidebar(),
+        blob1Color: const Color(0xFFDBEAFE), // Soft Blue
+        blob2Color: const Color(0xFFFCE7F3), // Soft Pink
+        blob3Color: const Color(0xFFF3E8FF), // Soft Purple
       body: Stack(
         children: [
           SafeArea(
@@ -264,7 +272,8 @@ class _AboutUsPageState extends State<AboutUsPage> {
           ),
         ],
       ),
-    );
+    ), // End of AmbientScaffold
+   ); // End of PopScope
   }
 
   Widget _buildPillarCard({

@@ -14,6 +14,7 @@ import 'widgets/history_card.dart';
 import 'widgets/game_controls.dart';
 import 'widgets/global_sidebar.dart';
 import 'widgets/ambient_scaffold.dart';
+import 'dashboard_page.dart';
 
 enum HistoryFilter { all, favorites, rated, unrated }
 
@@ -78,13 +79,19 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
         break;
     }
 
-    return AmbientScaffold(
-      scaffoldKey: _scaffoldKey,
-      drawer: const GlobalSidebar(),
-      blob1Color: const Color(0xFFCCFBF1), // Soft Teal
-      blob2Color: const Color(0xFFDBEAFE), // Soft Blue
-      blob3Color: const Color(0xFFFCE7F3), // Soft Pink
-      body: Stack(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (bool didPop, Object? result) async {
+        if (didPop) return;
+        exitToDashboardWithSidebar(context, ref);
+      },
+      child: AmbientScaffold(
+        scaffoldKey: _scaffoldKey,
+        drawer: const GlobalSidebar(),
+        blob1Color: const Color(0xFFCCFBF1), // Soft Teal
+        blob2Color: const Color(0xFFDBEAFE), // Soft Blue
+        blob3Color: const Color(0xFFFCE7F3), // Soft Pink
+        body: Stack(
         children: [
           SafeArea(
             child: Column(
@@ -246,7 +253,8 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
           ),
         ],
       ),
-    );
+    ), // End of AmbientScaffold
+   ); // End of PopScope
   }
 
   Widget _buildFilterTab(String label, HistoryFilter filter) {

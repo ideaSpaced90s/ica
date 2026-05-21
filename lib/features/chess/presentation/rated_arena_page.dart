@@ -19,6 +19,7 @@ import 'widgets/dice_rolling_overlay.dart';
 import 'widgets/ambient_flow_backdrop.dart';
 import 'widgets/ambient_scaffold.dart';
 import 'package:confetti/confetti.dart';
+import 'dashboard_page.dart';
 
 class RatedArenaPage extends ConsumerStatefulWidget {
   const RatedArenaPage({super.key});
@@ -80,14 +81,14 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
           if (resigned == true) {
             await ref.read(chessProvider.notifier).resignRatedGame();
             await ref.read(chessProvider.notifier).setRatedMode(false);
-            if (context.mounted && Navigator.of(context).canPop()) {
-              Navigator.of(context).pop();
+            if (context.mounted) {
+              exitToDashboardWithSidebar(context, ref);
             }
           }
         } else {
           await ref.read(chessProvider.notifier).setRatedMode(false);
-          if (context.mounted && Navigator.of(context).canPop()) {
-            Navigator.of(context).pop();
+          if (context.mounted) {
+            exitToDashboardWithSidebar(context, ref);
           }
         }
       },
@@ -243,8 +244,8 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
                 if (resigned == true) {
                   await ref.read(chessProvider.notifier).resignRatedGame();
                   await ref.read(chessProvider.notifier).setRatedMode(false);
-                  if (context.mounted && Navigator.of(context).canPop()) {
-                    Navigator.of(context).pop();
+                  if (context.mounted) {
+                    exitToDashboardWithSidebar(context, ref);
                   }
                 }
               } else {
@@ -517,8 +518,8 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
                               onPressed: () async {
                                 ref.read(chessProvider.notifier).dismissGameOver();
                                 await ref.read(chessProvider.notifier).setRatedMode(false);
-                                if (context.mounted && Navigator.of(context).canPop()) {
-                                  Navigator.of(context).pop();
+                                if (context.mounted) {
+                                  exitToDashboardWithSidebar(context, ref);
                                 }
                               },
                               style: OutlinedButton.styleFrom(
@@ -686,7 +687,9 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
                   child: OutlinedButton(
                     onPressed: () {
                       Navigator.pop(context, false); // Close dialog
-                      Navigator.pop(context); // Exit page
+                      if (context.mounted) {
+                        exitToDashboardWithSidebar(context, ref); // Exit page
+                      }
                     },
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.redAccent,

@@ -12,6 +12,16 @@ import 'widgets/ambient_scaffold.dart';
 import 'widgets/profile_customization_overlay.dart';
 import 'package:intl/intl.dart';
 
+final openSidebarOnDashboardProvider = StateProvider<bool>((ref) => false);
+
+void exitToDashboardWithSidebar(BuildContext context, WidgetRef ref) {
+  ref.read(openSidebarOnDashboardProvider.notifier).state = true;
+  Navigator.of(context).pushAndRemoveUntil(
+    MaterialPageRoute(builder: (context) => const DashboardPage()),
+    (route) => false,
+  );
+}
+
 class DashboardPage extends ConsumerStatefulWidget {
   const DashboardPage({super.key});
 
@@ -26,6 +36,16 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
   Widget build(BuildContext context) {
     final state = ref.watch(chessProvider);
     final notifier = ref.read(chessProvider.notifier);
+
+    final shouldOpenSidebar = ref.watch(openSidebarOnDashboardProvider);
+    if (shouldOpenSidebar) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_scaffoldKey.currentState != null && !_scaffoldKey.currentState!.isDrawerOpen) {
+          _scaffoldKey.currentState!.openDrawer();
+          ref.read(openSidebarOnDashboardProvider.notifier).state = false;
+        }
+      });
+    }
 
     return AmbientScaffold(
       scaffoldKey: _scaffoldKey,

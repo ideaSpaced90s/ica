@@ -1,7 +1,6 @@
 import 'dart:ui';
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../application/chess_provider.dart';
@@ -17,6 +16,7 @@ import 'widgets/arena_turn_indicator.dart';
 import 'widgets/evaluation_bar.dart';
 import 'widgets/user_avatar_indicator.dart';
 import 'widgets/ambient_flow_backdrop.dart';
+import 'dashboard_page.dart';
 
 class ZenArenaPage extends ConsumerStatefulWidget {
   const ZenArenaPage({super.key});
@@ -69,7 +69,9 @@ class _ZenArenaPageState extends ConsumerState<ZenArenaPage> with WidgetsBinding
           if (state.recentMoves.isNotEmpty) {
             await ref.read(chessProvider.notifier).saveCurrentGame();
           }
-          SystemNavigator.pop();
+          if (context.mounted) {
+            exitToDashboardWithSidebar(context, ref);
+          }
         }
       },
       child: Scaffold(
