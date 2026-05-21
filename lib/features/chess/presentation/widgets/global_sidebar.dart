@@ -184,15 +184,9 @@ class GlobalSidebar extends ConsumerWidget {
                         onTap: () {
                           Navigator.pop(context);
                           if (!isSettings) {
-                            if (state.isAcademyActive || state.isPuzzleMode) {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(builder: (context) => const UnratedSettingsPage(isAcademyMode: true)),
-                              );
-                            } else {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(builder: (context) => const UnratedSettingsPage()),
-                              );
-                            }
+                            Navigator.of(context).push(
+                              MaterialPageRoute(builder: (context) => const UnratedSettingsPage()),
+                            );
                           }
                         },
                       ),

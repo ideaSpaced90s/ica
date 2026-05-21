@@ -15,9 +15,7 @@ import 'dart:ui';
 import 'dashboard_page.dart';
 
 class UnratedSettingsPage extends ConsumerStatefulWidget {
-  final bool isAcademyMode;
-
-  const UnratedSettingsPage({super.key, this.isAcademyMode = false});
+  const UnratedSettingsPage({super.key});
 
   @override
   ConsumerState<UnratedSettingsPage> createState() => _UnratedSettingsPageState();
@@ -139,8 +137,7 @@ class _UnratedSettingsPageState extends ConsumerState<UnratedSettingsPage> {
                   ),
 
                   // VISUALS
-                  if (!widget.isAcademyMode)
-                    _SettingsCategory(
+                  _SettingsCategory(
                       title: 'VISUALS',
                       children: [
                         _SettingsTile(
@@ -176,8 +173,7 @@ class _UnratedSettingsPageState extends ConsumerState<UnratedSettingsPage> {
                     ),
 
                   // GAMEPLAY
-                  if (!widget.isAcademyMode)
-                    _SettingsCategory(
+                  _SettingsCategory(
                       title: 'GAMEPLAY',
                       children: [
                         _SettingsTile(

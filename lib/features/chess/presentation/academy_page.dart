@@ -326,7 +326,7 @@ class _AcademyPageState extends ConsumerState<AcademyPage> {
                             onTap: () {
                               Navigator.of(context).push(
                                 MaterialPageRoute(
-                                  builder: (context) => const UnratedSettingsPage(isAcademyMode: true),
+                                  builder: (context) => const UnratedSettingsPage(),
                                 ),
                               );
                             },
