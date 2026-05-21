@@ -115,59 +115,7 @@ class _ChessPieceWidgetState extends ConsumerState<ChessPieceWidget>
     // code is guaranteed non-null here (resolved above)
     final profile = PieceMotionProfile.forCode(code);
 
-    // Apply selection enlargement (108% with elastic spring) — unchanged
-    pieceWidget = AnimatedScale(
-      scale: widget.isMoving
-          ? (themeId == 'theme8' || themeId == 'theme4' ? 1.05 : 1.08)
-          : (widget.highlighted
-                ? (themeId == 'theme8' || themeId == 'theme4'
-                      ? 1.03
-                      : 1.15)
-                : 1.0),
-      duration:
-          (!ref
-              .read(chessProvider.notifier)
-              .isAnimationTypeEnabled('pieceMotion'))
-          ? Duration.zero
-          : (themeId == 'theme8' || themeId == 'theme4'
-                ? const Duration(milliseconds: 400)
-                : const Duration(milliseconds: 200)),
-      curve: themeId == 'theme8' || themeId == 'theme4'
-          ? Curves.easeInOut
-          : Curves.easeOutBack,
-      child: AnimatedContainer(
-        duration:
-            (!ref
-                .read(chessProvider.notifier)
-                .isAnimationTypeEnabled('pieceMotion'))
-            ? Duration.zero
-            : (themeId == 'theme8' || themeId == 'theme4'
-                  ? const Duration(milliseconds: 500)
-                  : const Duration(milliseconds: 300)),
-        curve: themeId == 'theme9'
-            ? Curves.bounceOut
-            : (themeId == 'theme8' || themeId == 'theme4'
-                  ? Curves.linear
-                  : Curves.elasticOut),
-        transform: Matrix4.diagonal3Values(
-          widget.isMoving
-              ? (themeId == 'theme8' || themeId == 'theme4'
-                    ? 1.0
-                    : 0.85)
-              : 1.0,
-          widget.isMoving
-              ? (themeId == 'theme9'
-                    ? 1.4
-                    : (themeId == 'theme8' || themeId == 'theme4'
-                          ? 1.0
-                          : 1.25))
-              : 1.0,
-          1.0,
-        ),
-        transformAlignment: Alignment.bottomCenter,
-        child: pieceWidget,
-      ),
-    );
+    // Note: Global piece selection enlargement and movement stretch animations have been disabled/removed.
 
     // ── Breathing selection scale (Option B: always running, applied when highlighted) ──
     if (ref.read(chessProvider.notifier).isAnimationTypeEnabled('feedback') &&
@@ -253,21 +201,6 @@ class _ChessPieceWidgetState extends ConsumerState<ChessPieceWidget>
         ? Opacity(opacity: 0.0, child: pieceWidget)
         : pieceWidget;
 
-    if (widget.pieceCode != null) return interactivePiece;
-
-    return Draggable<String>(
-      data: widget.squareName,
-      onDragStarted: widget.onDragStarted,
-      onDragEnd: (_) => widget.onDragEnd?.call(),
-      feedback: Transform.translate(
-        offset: const Offset(2.0, 2.0),
-        child: Transform.scale(
-          scale: 1.15,
-          child: SizedBox(width: 70, height: 70, child: pieceWidget),
-        ),
-      ),
-      childWhenDragging: Opacity(opacity: 0.35, child: interactivePiece),
-      child: interactivePiece,
-    );
+    return interactivePiece;
   }
 }

@@ -60,7 +60,6 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
   // Castling support
   late List<Offset>? _rookPath;
   late PieceMotionProfile? _rookProfile;
-  bool _hasTriggeredDust = false;
 
   @override
   void initState() {
@@ -79,7 +78,6 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
 
     _controller =
         AnimationController(vsync: this, duration: _effectiveMoveDuration)
-          ..addListener(_handleAnimationTick)
           ..addStatusListener((status) {
             if (status == AnimationStatus.completed) {
               // Fire landing callback before completing
@@ -176,7 +174,6 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
         _rookProfile = null;
       }
 
-      _hasTriggeredDust = false;
       _controller.duration = _effectiveMoveDuration;
 
       final boardThemeId = ref.read(chessProvider).boardThemeId;
@@ -192,27 +189,6 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
         _controller.value < 1.0) {
       _controller.duration = _effectiveMoveDuration;
       _controller.forward(from: _controller.value);
-    }
-  }
-
-  void _handleAnimationTick() {
-    if ((widget.data.isCastle || _profile.isInfantry) &&
-        !_hasTriggeredDust &&
-        _controller.value >= 0.5) {
-      _hasTriggeredDust = true;
-
-      // Calculate mid-point position for dust puff
-      final fromOffset = _coordsToOffset(
-        widget.data.from.codeUnitAt(0) - 'a'.codeUnitAt(0),
-        8 - int.parse(widget.data.from[1]),
-      );
-      final toOffset = _coordsToOffset(
-        widget.data.to.codeUnitAt(0) - 'a'.codeUnitAt(0),
-        8 - int.parse(widget.data.to[1]),
-      );
-
-      final midPos = Offset.lerp(fromOffset, toOffset, 0.5)!;
-      widget.onActionTrigger?.call('dust_puff', midPos);
     }
   }
 
@@ -304,8 +280,8 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
     final boardThemeId = ref.watch(chessProvider.select((s) => s.boardThemeId));
 
     // ── Theme-specific special modes (preserved from original overlay) ──
-    final isElectricTheme = boardThemeId == 'theme9';
-    final isToyTheme = boardThemeId == 'theme4';
+    final isElectricTheme = boardThemeId == 'theme4';
+    final isToyTheme = boardThemeId == 'theme9';
     final isSteampunkTheme = boardThemeId == 'theme5';
 
     return AnimatedBuilder(

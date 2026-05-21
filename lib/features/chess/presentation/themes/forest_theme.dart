@@ -26,8 +26,7 @@ class ForestTheme extends ChessTheme {
 
   @override
   Widget buildBackground(BuildContext context, bool animationsEnabled) {
-    if (!animationsEnabled) return const SizedBox.shrink();
-    return const ForestDustOverlay();
+    return const SizedBox.shrink();
   }
 
   @override

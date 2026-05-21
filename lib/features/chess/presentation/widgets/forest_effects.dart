@@ -78,7 +78,9 @@ class _DustPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _DustPainter oldDelegate) => true;
+  bool shouldRepaint(covariant _DustPainter oldDelegate) =>
+      animationValue != oldDelegate.animationValue ||
+      particles != oldDelegate.particles;
 }
 
 class LeafScatterEffect extends StatefulWidget {
@@ -181,7 +183,10 @@ class _LeafPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _LeafPainter oldDelegate) => true;
+  bool shouldRepaint(covariant _LeafPainter oldDelegate) =>
+      progress != oldDelegate.progress ||
+      center != oldDelegate.center ||
+      leaves != oldDelegate.leaves;
 }
 
 class SelectionGlowRing extends StatefulWidget {
@@ -257,7 +262,8 @@ class _RingPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _RingPainter oldDelegate) => true;
+  bool shouldRepaint(covariant _RingPainter oldDelegate) =>
+      progress != oldDelegate.progress;
 }
 
 class LeafTexturePainter extends CustomPainter {

@@ -74,7 +74,9 @@ class _SteamPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _SteamPainter oldDelegate) => true;
+  bool shouldRepaint(covariant _SteamPainter oldDelegate) =>
+      animationValue != oldDelegate.animationValue ||
+      clouds != oldDelegate.clouds;
 }
 
 class MetalShatterEffect extends StatefulWidget {
@@ -177,7 +179,11 @@ class _MetalShatterPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _MetalShatterPainter oldDelegate) => true;
+  bool shouldRepaint(covariant _MetalShatterPainter oldDelegate) =>
+      progress != oldDelegate.progress ||
+      center != oldDelegate.center ||
+      isWhite != oldDelegate.isWhite ||
+      shards != oldDelegate.shards;
 }
 
 class GearMoveIndicator extends StatefulWidget {
@@ -332,7 +338,8 @@ class _SteamPuffPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _SteamPuffPainter oldDelegate) => true;
+  bool shouldRepaint(covariant _SteamPuffPainter oldDelegate) =>
+      progress != oldDelegate.progress;
 }
 
 class GearSquarePainter extends CustomPainter {

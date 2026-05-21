@@ -253,13 +253,13 @@ class ChessSoundService {
   }
 
   void dispose() {
-    if (SoLoud.instance.isInitialized) {
-      try {
+    try {
+      if (SoLoud.instance.isInitialized) {
         SoLoud.instance.deinit();
         _isInitialized = false;
-      } catch (e) {
-        debugPrint('Error deinitializing SoLoud: $e');
       }
+    } catch (e) {
+      debugPrint('Error deinitializing SoLoud: $e');
     }
   }
 }

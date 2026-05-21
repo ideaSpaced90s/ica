@@ -10,12 +10,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'features/chess/application/tutorial_provider.dart';
 import 'features/chess/data/tutorial_progress_repository.dart';
 
-late SharedPreferences _sharedPrefs;
+late SharedPreferences sharedPrefs;
 
 void main() {
   runZonedGuarded(() async {
     WidgetsFlutterBinding.ensureInitialized();
-    _sharedPrefs = await SharedPreferences.getInstance();
+    sharedPrefs = await SharedPreferences.getInstance();
     try {
       await RustLib.init();
     } catch (e) {
@@ -56,7 +56,7 @@ class KingslayerChessApp extends StatelessWidget {
     return ProviderScope(
       overrides: [
         tutorialProgressRepositoryProvider.overrideWithValue(
-          TutorialProgressRepository(_sharedPrefs),
+          TutorialProgressRepository(sharedPrefs),
         ),
       ],
       child: const _KingslayerAppView(),

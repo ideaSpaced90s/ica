@@ -9,12 +9,14 @@ class ArcadeCaptureBurst extends StatefulWidget {
   final Offset center;
   final double squareSize;
   final VoidCallback onComplete;
+  final bool reduced;
 
   const ArcadeCaptureBurst({
     super.key,
     required this.center,
     required this.squareSize,
     required this.onComplete,
+    this.reduced = false,
   });
 
   /// Inserts a self-removing overlay entry for the burst.
@@ -25,6 +27,7 @@ class ArcadeCaptureBurst extends StatefulWidget {
     required OverlayState overlay,
     required Offset globalCenter,
     required double squareSize,
+    bool reduced = false,
   }) {
     late OverlayEntry entry;
     entry = OverlayEntry(
@@ -36,6 +39,7 @@ class ArcadeCaptureBurst extends StatefulWidget {
         child: ArcadeCaptureBurst(
           center: Offset(squareSize, squareSize),
           squareSize: squareSize,
+          reduced: reduced,
           onComplete: () {
             if (entry.mounted) entry.remove();
           },
@@ -78,11 +82,13 @@ class _ArcadeCaptureBurstState extends State<ArcadeCaptureBurst>
         }
       });
 
-    // Generate 16 particles in two "shells": inner fast, outer slow
+    // Generate particles in two "shells": inner fast, outer slow.
+    // If reduced mode is active, generate 6 particles instead of 16.
+    final count = widget.reduced ? 6 : 16;
     _particles = [];
-    for (int i = 0; i < 16; i++) {
-      final angle = (i / 16.0) * 2 * math.pi + (_random.nextDouble() * 0.3);
-      final isInner = i < 8;
+    for (int i = 0; i < count; i++) {
+      final angle = (i / count.toDouble()) * 2 * math.pi + (_random.nextDouble() * 0.3);
+      final isInner = widget.reduced ? i < 3 : i < 8;
       final speed = isInner
           ? 1.6 + _random.nextDouble() * 1.2
           : 2.8 + _random.nextDouble() * 1.8;

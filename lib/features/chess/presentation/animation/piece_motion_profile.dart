@@ -73,12 +73,12 @@ class PieceMotionProfile {
   /// Snappy, flat stride. Persistent forward lean during transit. No stretch.
   static const PieceMotionProfile pawn = PieceMotionProfile(
     moveDuration: Duration(milliseconds: 320),
-    moveCurve: Curves.easeOutQuad,
+    moveCurve: Curves.easeOutCubic,
     verticalArcFactor: 0.0, // perfectly flat diagonal/forward march
     midRotationDeg: 0.0, // dynamic forward tilt is driven by overlay
     hasGhostTrail: false,
     isTeleport: false,
-    landingCompression: 0.015, // crisp settle thud
+    landingCompression: 0.010, // crisp settle thud
     hasBreathingSelection: true,
     selectionBreathScale: 0.012,
     breathingPeriod: Duration(milliseconds: 1200),
@@ -89,9 +89,9 @@ class PieceMotionProfile {
   /// ♞ Knight — Agile & Tactical
   /// Slight arc feel, micro rotation mid-move, firm stop.
   static const PieceMotionProfile knight = PieceMotionProfile(
-    moveDuration: Duration(milliseconds: 500),
-    moveCurve: Curves.easeInOutBack,
-    verticalArcFactor: 0.3, // noticeable arc (knight jumps)
+    moveDuration: Duration(milliseconds: 320),
+    moveCurve: Curves.easeOutCubic,
+    verticalArcFactor: 0.2, // noticeable arc (knight jumps)
     midRotationDeg: 2.5, // degree tilt mid-air
     hasGhostTrail: false,
     isTeleport: false,
@@ -106,8 +106,8 @@ class PieceMotionProfile {
   /// ♝ Bishop — Smooth & Continuous
   /// Ultra-smooth glide, ghost opacity trail, clean stop.
   static const PieceMotionProfile bishop = PieceMotionProfile(
-    moveDuration: Duration(milliseconds: 550),
-    moveCurve: Curves.easeInOutSine,
+    moveDuration: Duration(milliseconds: 280),
+    moveCurve: Curves.easeOutCubic,
     verticalArcFactor: 0.0, // perfectly flat diagonal glide
     midRotationDeg: 0.0,
     hasGhostTrail: true, // ← Bishop signature
@@ -123,13 +123,13 @@ class PieceMotionProfile {
   /// ♜ Rook — Heavy & Grounded
   /// Slow to start (strong ease-in), heavier deceleration, micro compress on land.
   static const PieceMotionProfile rook = PieceMotionProfile(
-    moveDuration: Duration(milliseconds: 600),
-    moveCurve: Curves.easeInOutQuart, // strong in, gradual out = heavy feel
+    moveDuration: Duration(milliseconds: 300),
+    moveCurve: Curves.easeOutCubic, // strong in, gradual out = heavy feel
     verticalArcFactor: 0.0, // strictly horizontal/vertical — no drift
     midRotationDeg: 0.0,
     hasGhostTrail: false,
     isTeleport: false,
-    landingCompression: 0.015, // 1.5% compress — feels heavy landing
+    landingCompression: 0.005, // 0.5% compress — feels heavy landing
     hasBreathingSelection: true,
     selectionBreathScale: 0.008, // barely breathes — stable presence
     breathingPeriod: Duration(milliseconds: 1400),
@@ -160,13 +160,13 @@ class PieceMotionProfile {
   /// ♚ King — Deliberate & Fragile
   /// Slowest. Noticeable ease-in (anticipation feel via curve). Gentle settle.
   static const PieceMotionProfile king = PieceMotionProfile(
-    moveDuration: Duration(milliseconds: 900), // increased from 700ms
-    moveCurve: Curves.easeInOutQuad, // gentle, cautious acceleration
-    verticalArcFactor: 0.05,
+    moveDuration: Duration(milliseconds: 350), // increased from 700ms
+    moveCurve: Curves.easeOutCubic, // gentle, cautious acceleration
+    verticalArcFactor: 0.02,
     midRotationDeg: 0.0,
     hasGhostTrail: false,
     isTeleport: false,
-    landingCompression: 0.020, // increased from 0.003 — heavy settle
+    landingCompression: 0.005, // increased from 0.003 — heavy settle
     hasBreathingSelection: true,
     selectionBreathScale: 0.020, // most visible — signals importance
     breathingPeriod: Duration(milliseconds: 1300),

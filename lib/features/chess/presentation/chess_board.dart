@@ -163,19 +163,22 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
                   clipBehavior: Clip.none,
                   children: [
                       // 1. Background Effects
-                      chessTheme.buildBackground(
-                        context,
-                        ref
-                            .read(chessProvider.notifier)
-                            .isAnimationTypeEnabled('themeAmbience'),
+                      RepaintBoundary(
+                        child: chessTheme.buildBackground(
+                          context,
+                          ref
+                              .read(chessProvider.notifier)
+                              .isAnimationTypeEnabled('themeAmbience'),
+                        ),
                       ),
 
                       if (chessState.game.inCheck)
                         chessTheme.buildCheckEffect(context),
                       if (chessState.academyHouseAnimations)
                         const AcademyPaperOverlay(),
-                      GridView.builder(
-                        gridDelegate:
+                      RepaintBoundary(
+                        child: GridView.builder(
+                          gridDelegate:
                             const SliverGridDelegateWithFixedCrossAxisCount(
                               crossAxisCount: 8,
                             ),
@@ -527,6 +530,7 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
                           );
                         },
                       ),
+                    ),
                       if (chessState.moveAnimation != null)
                         SignatureMoveOverlay(
                           data: chessState.moveAnimation!,
@@ -749,6 +753,7 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
           _triggerPlatinumCapture(squareName);
         } else if (themeId == 'theme5') {
           _triggerOilSplash(squareName);
+          _triggerMetalShatter(squareName, targetPiece.color == chess_lib.Color.WHITE);
         } else if (themeId == 'theme8') {
           _triggerLiquidSplash(squareName);
         } else if (themeId == 'theme10') {
@@ -767,7 +772,12 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
           ref
               .read(chessProvider.notifier)
               .isAnimationTypeEnabled('arcadeMode')) {
-        _triggerArcadeCaptureBurst(squareName);
+        final themeId = chessState.boardThemeId;
+        final hasThemeEffect = ref
+                .read(chessProvider.notifier)
+                .isAnimationTypeEnabled('themeEffects') &&
+            ['theme2', 'theme3', 'theme4', 'theme5', 'theme7', 'theme8', 'theme9', 'theme10'].contains(themeId);
+        _triggerArcadeCaptureBurst(squareName, reduced: hasThemeEffect);
         ref.read(chessSoundServiceProvider).playSfx(SoundEffect.captureImpact);
       }
       ref.read(chessProvider.notifier).makeMove(_selectedSquare!, squareName);
@@ -970,6 +980,33 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
 
       setState(() {
         _oilSplashes.add(Offset(x, y));
+      });
+    });
+  }
+
+  void _triggerMetalShatter(String squareName, bool isWhite) {
+    final col = squareName.codeUnitAt(0) - 'a'.codeUnitAt(0);
+    final row = 8 - int.parse(squareName[1]);
+    final isFlipped = ref.read(chessProvider).isBoardFlipped;
+
+    final effectiveCol = isFlipped ? 7 - col : col;
+    final effectiveRow = isFlipped ? 7 - row : row;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final box = context.findRenderObject() as RenderBox?;
+      if (box == null) return;
+
+      final boardSize = box.size.width;
+      final squareSize = boardSize / 8;
+      final x = effectiveCol * squareSize + squareSize / 2;
+      final y = effectiveRow * squareSize + squareSize / 2;
+
+      setState(() {
+        _metalShatters.add({
+          'pos': Offset(x, y),
+          'isWhite': isWhite,
+        });
       });
     });
   }
@@ -1256,7 +1293,7 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
   }
 
   /// Triggers the blue arcade particle burst on a captured square via Overlay.
-  void _triggerArcadeCaptureBurst(String squareName) {
+  void _triggerArcadeCaptureBurst(String squareName, {bool reduced = false}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final overlay = Overlay.of(context);
@@ -1278,6 +1315,7 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
         overlay: overlay,
         globalCenter: globalCenter,
         squareSize: squareSize,
+        reduced: reduced,
       );
     });
   }

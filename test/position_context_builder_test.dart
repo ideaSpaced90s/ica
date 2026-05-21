@@ -54,9 +54,9 @@ void main() {
       );
 
       final prompt = context.toPromptString();
-      expect(prompt, contains('[BOARD INTEL]'));
+      expect(prompt, contains('Board State:'));
       expect(prompt, contains('Last Move Played:'));
-      expect(prompt, contains('Strategic Analysis:'));
+      expect(prompt, contains('Analysis:'));
 
       // Let's test PromptBuilder itself
       final chatmlPrompt = PromptBuilder.buildCommentaryPrompt(context: context);
