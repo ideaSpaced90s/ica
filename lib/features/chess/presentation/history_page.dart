@@ -95,10 +95,24 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
         children: [
           SafeArea(
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const SizedBox(height: 60),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                  child: Text(
+                    'HISTORY',
+                    style: GoogleFonts.outfit(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 2,
+                      color: ScholarlyTheme.textPrimary,
+                    ),
+                  ),
+                ),
                 // Integrated Glass Header: Search + Filters
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
                   child: JuicyGlassCard(
                     padding: const EdgeInsets.all(12),
                     borderRadius: 20,
@@ -140,20 +154,20 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
                               _buildFilterTab('Unrated', HistoryFilter.unrated),
                               const SizedBox(width: 16),
                               Text(
-                                '${filteredSaves.length} matches',
-                                style: GoogleFonts.inter(
-                                  color: ScholarlyTheme.textMuted,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
+                                  '${filteredSaves.length} matches',
+                                  style: GoogleFonts.inter(
+                                    color: ScholarlyTheme.textMuted,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                ),
 
                 // Scrollable List
                 Expanded(
@@ -181,7 +195,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
                             )
                           : ListView.builder(
                               physics: const BouncingScrollPhysics(),
-                              padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
+                              padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
                               itemCount: filteredSaves.length,
                               itemBuilder: (context, index) {
                                 final game = filteredSaves[index];
@@ -224,31 +238,16 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
             ),
           ),
 
-          // Bottom Persistent Action Row
+          // Floating 3-bar drawer menu button (fixed at top-left)
           Positioned(
-            bottom: 24,
-            left: 24,
-            right: 24,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                ActionIconButton(
-                  icon: Icons.menu_rounded,
-                  size: 24,
-                  shouldBlink: !state.hasBlinkedMenu,
-                  onBlinkComplete: () => notifier.markMenuAsBlinked(),
-                  onTap: () => _scaffoldKey.currentState?.openDrawer(),
-                ),
-                Text(
-                  'SAVED GAMES',
-                  style: GoogleFonts.inter(
-                    color: ScholarlyTheme.textSubtle,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.5,
-                  ),
-                ),
-              ],
+            top: MediaQuery.of(context).padding.top + 12,
+            left: 16,
+            child: ActionIconButton(
+              icon: Icons.menu_rounded,
+              size: 24,
+              shouldBlink: !state.hasBlinkedMenu,
+              onBlinkComplete: () => notifier.markMenuAsBlinked(),
+              onTap: () => _scaffoldKey.currentState?.openDrawer(),
             ),
           ),
         ],

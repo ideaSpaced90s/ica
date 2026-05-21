@@ -122,19 +122,6 @@ class GlobalSidebar extends ConsumerWidget {
                         },
                       ),
                       _SidebarItem(
-                        icon: Icons.history_rounded,
-                        label: 'History',
-                        isSelected: isAnalysis,
-                        onTap: () {
-                          Navigator.pop(context);
-                          if (!isAnalysis) {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(builder: (context) => const HistoryPage()),
-                            );
-                          }
-                        },
-                      ),
-                      _SidebarItem(
                         icon: Icons.school_rounded,
                         label: 'Academy',
                         isSelected: isAcademy,
@@ -171,6 +158,19 @@ class GlobalSidebar extends ConsumerWidget {
                           if (!isTutorial) {
                             Navigator.of(context).push(
                               MaterialPageRoute(builder: (context) => const TutorialPage()),
+                            );
+                          }
+                        },
+                      ),
+                      _SidebarItem(
+                        icon: Icons.history_rounded,
+                        label: 'History',
+                        isSelected: isAnalysis,
+                        onTap: () {
+                          Navigator.pop(context);
+                          if (!isAnalysis) {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(builder: (context) => const HistoryPage()),
                             );
                           }
                         },

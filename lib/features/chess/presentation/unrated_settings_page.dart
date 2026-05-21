@@ -50,7 +50,25 @@ class _UnratedSettingsPageState extends ConsumerState<UnratedSettingsPage> {
             physics: const BouncingScrollPhysics(),
             slivers: [
               // Extra top padding since app bar is gone
-              const SliverToBoxAdapter(child: SizedBox(height: 60)),
+              SliverToBoxAdapter(
+                child: SizedBox(height: MediaQuery.of(context).padding.top + 64),
+              ),
+
+              // Title
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                  child: Text(
+                    'SETTINGS',
+                    style: GoogleFonts.outfit(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 2,
+                      color: ScholarlyTheme.textPrimary,
+                    ),
+                  ),
+                ),
+              ),
 
               // Settings Sections
               SliverList(
@@ -213,39 +231,20 @@ class _UnratedSettingsPageState extends ConsumerState<UnratedSettingsPage> {
             ], // End of slivers
           ), // End of CustomScrollView
 
-          // Global Consistency Action Row (Floating over the scroll view)
-          _buildActionRow(context),
+          // Floating 3-bar drawer menu button (fixed at top-left)
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 12,
+            left: 16,
+            child: ActionIconButton(
+              icon: Icons.menu_rounded,
+              size: 24,
+              onTap: () => _scaffoldKey.currentState?.openDrawer(),
+            ),
+          ),
         ], // End of Stack.children
       ), // End of Stack
     ), // End of AmbientScaffold
    ); // End of PopScope
-  }
-
-  Widget _buildActionRow(BuildContext context) {
-    return Positioned(
-      bottom: 24,
-      left: 20,
-      right: 20,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          ActionIconButton(
-            icon: Icons.menu_rounded,
-            size: 24,
-            onTap: () => _scaffoldKey.currentState?.openDrawer(),
-          ),
-          Text(
-            'UNRATED SETTINGS',
-            style: GoogleFonts.inter(
-              color: ScholarlyTheme.textSubtle,
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 1.5,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   void _showThemeSelector(BuildContext context, WidgetRef ref) {

@@ -38,7 +38,7 @@ class _AboutUsPageState extends ConsumerState<AboutUsPage> {
               padding: const EdgeInsets.fromLTRB(24, 24, 24, 100),
               physics: const BouncingScrollPhysics(),
               children: [
-                const SizedBox(height: 20),
+                const SizedBox(height: 64),
                 Text(
                   'ABOUT US',
                   style: GoogleFonts.outfit(
@@ -245,29 +245,14 @@ class _AboutUsPageState extends ConsumerState<AboutUsPage> {
             ),
           ),
           
-          // Action Row
+          // Floating 3-bar drawer menu button (fixed at top-left)
           Positioned(
-            bottom: 24,
-            left: 24,
-            right: 24,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                ActionIconButton(
-                  icon: Icons.menu_rounded,
-                  size: 24,
-                  onTap: () => _scaffoldKey.currentState?.openDrawer(),
-                ),
-                Text(
-                  'ABOUT',
-                  style: GoogleFonts.inter(
-                    color: ScholarlyTheme.textSubtle,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.5,
-                  ),
-                ),
-              ],
+            top: MediaQuery.of(context).padding.top + 12,
+            left: 16,
+            child: ActionIconButton(
+              icon: Icons.menu_rounded,
+              size: 24,
+              onTap: () => _scaffoldKey.currentState?.openDrawer(),
             ),
           ),
         ],

@@ -51,12 +51,25 @@ class ChapterSelectScreen extends ConsumerWidget {
                 // Top margin since header is gone
                 const SizedBox(height: 60),
 
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                  child: Text(
+                    'TUTORIAL',
+                    style: GoogleFonts.outfit(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 2,
+                      color: ScholarlyTheme.textPrimary,
+                    ),
+                  ),
+                ),
+
                 const Divider(height: 1, color: Colors.white30),
 
                 // Main horizontal browser grid
                 Expanded(
                   child: GridView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
                     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 2,
                       mainAxisExtent: 116,
@@ -91,10 +104,21 @@ class ChapterSelectScreen extends ConsumerWidget {
 
           // 2. Absolute Utility Layer (Outside primary safe area flow)
           
-          // XP count container (Top Left)
+          // Floating 3-bar drawer menu button (fixed at top-left)
           Positioned(
-            top: 16,
+            top: MediaQuery.of(context).padding.top + 12,
             left: 16,
+            child: ActionIconButton(
+              icon: Icons.menu_rounded,
+              size: 24,
+              onTap: () => scaffoldKey.currentState?.openDrawer(),
+            ),
+          ),
+
+          // XP count container (Repositioned to clear menu button)
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 16,
+            left: 76,
             child: JuicyGlassCard(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               borderRadius: 12,
@@ -125,45 +149,14 @@ class ChapterSelectScreen extends ConsumerWidget {
             ),
           ),
 
-          // Settings Gear (Top Right)
+          // Settings Gear - upgraded to premium ActionIconButton (Top Right)
           Positioned(
-            top: 12,
-            right: 8,
-            child: IconButton(
-              onPressed: () => _showSettingsDialog(context, ref),
-              icon: const Icon(Icons.settings_rounded, color: ScholarlyTheme.textPrimary, size: 20),
-              tooltip: 'Tutorial Settings',
-            ),
-          ),
-
-          // Bottom Action Row for Global Consistency - stylized as a floating glass dock
-          Positioned(
-            bottom: 16,
-            left: 16,
+            top: MediaQuery.of(context).padding.top + 12,
             right: 16,
-            child: JuicyGlassCard(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              borderRadius: 20,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  ActionIconButton(
-                    icon: Icons.menu_rounded,
-                    size: 20,
-                    onTap: () => scaffoldKey.currentState?.openDrawer(),
-                  ),
-                  Text(
-                    'TUTORIAL',
-                    style: GoogleFonts.inter(
-                      color: ScholarlyTheme.accentBlue,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.5,
-                    ),
-                  ),
-                  const SizedBox(width: 32), // balance layout
-                ],
-              ),
+            child: ActionIconButton(
+              icon: Icons.settings_rounded,
+              size: 24,
+              onTap: () => _showSettingsDialog(context, ref),
             ),
           ),
         ],
