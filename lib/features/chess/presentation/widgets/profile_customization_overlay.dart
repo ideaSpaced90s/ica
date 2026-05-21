@@ -1,6 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import '../../application/chess_provider.dart';
 import '../../services/chess_sound_service.dart';
 import '../scholarly_theme.dart';
@@ -57,20 +61,13 @@ class _ProfileCustomizerContentState extends ConsumerState<_ProfileCustomizerCon
   late TextEditingController _nameController;
   late String _selectedAvatarPath;
 
-  final List<Map<String, String>> _avatars = const [
-    {'name': 'Bard', 'path': 'assets/persona/gm_bard.png'},
-    {'name': 'Kingslayer', 'path': 'assets/persona/gm_kingslayer.png'},
-    {'name': 'Morphy', 'path': 'assets/persona/gm_morphy.png'},
-    {'name': 'Titan', 'path': 'assets/persona/gm_titan.png'},
-    {'name': 'Blitzer', 'path': 'assets/persona/blitzer.png'},
-    {'name': 'Gambit', 'path': 'assets/persona/gambit.png'},
-    {'name': 'Rook-ie', 'path': 'assets/persona/rook-ie.png'},
-    {'name': 'Sentinel', 'path': 'assets/persona/sentinel.png'},
-    {'name': 'Sparky', 'path': 'assets/persona/sparky.png'},
-    {'name': 'Stonewall', 'path': 'assets/persona/stonewall.png'},
-    {'name': 'Vanguard', 'path': 'assets/persona/vanguard.png'},
-    {'name': 'Pawnzy', 'path': 'assets/persona/pawnzy.png'},
-  ];
+  final List<Map<String, String>> _avatars = List.generate(
+    60,
+    (index) => {
+      'name': 'Profile ${index + 1}',
+      'path': 'assets/persona/user_profile_$index.png',
+    },
+  );
 
   @override
   void initState() {
@@ -83,6 +80,38 @@ class _ProfileCustomizerContentState extends ConsumerState<_ProfileCustomizerCon
   void dispose() {
     _nameController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickCustomAvatar() async {
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 512,
+        maxHeight: 512,
+        imageQuality: 90,
+      );
+
+      if (pickedFile != null) {
+        final appSupportDir = await getApplicationSupportDirectory();
+        final localPath = p.join(
+          appSupportDir.path,
+          'custom_avatar_${DateTime.now().millisecondsSinceEpoch}.png',
+        );
+        
+        final savedFile = await File(pickedFile.path).copy(localPath);
+        
+        setState(() {
+          _selectedAvatarPath = savedFile.path;
+        });
+        
+        if (mounted) {
+          ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+        }
+      }
+    } catch (e) {
+      debugPrint('Error picking custom avatar: $e');
+    }
   }
 
   @override
@@ -134,49 +163,70 @@ class _ProfileCustomizerContentState extends ConsumerState<_ProfileCustomizerCon
 
             // Main Selected Avatar Preview
             Center(
-              child: Stack(
-                alignment: Alignment.bottomRight,
-                children: [
-                  Container(
-                    width: 104,
-                    height: 104,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: ScholarlyTheme.accentBlue,
-                        width: 3.5,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: ScholarlyTheme.accentBlue.withValues(alpha: 0.3),
-                          blurRadius: 16,
-                          spreadRadius: 2,
+              child: GestureDetector(
+                onTap: _pickCustomAvatar,
+                behavior: HitTestBehavior.opaque,
+                child: Stack(
+                  alignment: Alignment.bottomRight,
+                  children: [
+                    Container(
+                      width: 104,
+                      height: 104,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: ScholarlyTheme.accentBlue,
+                          width: 3.5,
                         ),
-                      ],
-                    ),
-                    child: ClipOval(
-                      child: Image.asset(
-                        _selectedAvatarPath,
-                        fit: BoxFit.cover,
+                        boxShadow: [
+                          BoxShadow(
+                            color: ScholarlyTheme.accentBlue.withValues(alpha: 0.3),
+                            blurRadius: 16,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: ClipOval(
+                        child: _selectedAvatarPath.startsWith('assets/')
+                            ? Image.asset(
+                                _selectedAvatarPath,
+                                fit: BoxFit.cover,
+                              )
+                            : Image.file(
+                                File(_selectedAvatarPath),
+                                fit: BoxFit.cover,
+                              ),
                       ),
                     ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: const BoxDecoration(
-                      color: ScholarlyTheme.accentBlue,
-                      shape: BoxShape.circle,
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: const BoxDecoration(
+                        color: ScholarlyTheme.accentBlue,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.edit_rounded,
+                        color: Colors.white,
+                        size: 14,
+                      ),
                     ),
-                    child: const Icon(
-                      Icons.edit_rounded,
-                      color: Colors.white,
-                      size: 14,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 24),
+
+            // Player Username Label
+            Text(
+              'PLAYER USERNAME',
+              style: GoogleFonts.inter(
+                color: ScholarlyTheme.accentBlue,
+                fontWeight: FontWeight.w900,
+                fontSize: 10,
+                letterSpacing: 1.5,
+              ),
+            ),
+            const SizedBox(height: 8),
 
             // Name input
             TextField(
@@ -189,14 +239,6 @@ class _ProfileCustomizerContentState extends ConsumerState<_ProfileCustomizerCon
               textCapitalization: TextCapitalization.words,
               maxLength: 16,
               decoration: InputDecoration(
-                labelText: 'PLAYER USERNAME',
-                labelStyle: GoogleFonts.inter(
-                  color: ScholarlyTheme.accentBlue,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 10,
-                  letterSpacing: 1.5,
-                ),
-                floatingLabelBehavior: FloatingLabelBehavior.always,
                 filled: true,
                 fillColor: Colors.white.withValues(alpha: 0.35),
                 enabledBorder: OutlineInputBorder(
@@ -215,7 +257,7 @@ class _ProfileCustomizerContentState extends ConsumerState<_ProfileCustomizerCon
 
             // Avatar list section
             Text(
-              'SELECT CHESS ARCHETYPE',
+              'SELECT YOUR PROFILE IMAGE',
               style: GoogleFonts.inter(
                 color: ScholarlyTheme.textMuted,
                 fontSize: 10,
@@ -234,7 +276,7 @@ class _ProfileCustomizerContentState extends ConsumerState<_ProfileCustomizerCon
                   crossAxisCount: 4,
                   mainAxisSpacing: 12,
                   crossAxisSpacing: 12,
-                  childAspectRatio: 0.85,
+                  childAspectRatio: 1.0,
                 ),
                 itemCount: _avatars.length,
                 itemBuilder: (context, index) {
@@ -248,67 +290,50 @@ class _ProfileCustomizerContentState extends ConsumerState<_ProfileCustomizerCon
                         _selectedAvatarPath = av['path']!;
                       });
                     },
-                    child: Column(
+                    child: Stack(
+                      alignment: Alignment.center,
                       children: [
-                        Expanded(
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              AnimatedContainer(
-                                duration: const Duration(milliseconds: 250),
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: isSelected ? ScholarlyTheme.accentBlue : Colors.white.withValues(alpha: 0.5),
-                                    width: isSelected ? 3.0 : 1.5,
-                                  ),
-                                  boxShadow: [
-                                    if (isSelected)
-                                      BoxShadow(
-                                        color: ScholarlyTheme.accentBlue.withValues(alpha: 0.25),
-                                        blurRadius: 8,
-                                        spreadRadius: 1,
-                                      ),
-                                  ],
-                                ),
-                                child: ClipOval(
-                                  child: Image.asset(
-                                    av['path']!,
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-                              ),
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 250),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: isSelected ? ScholarlyTheme.accentBlue : Colors.white.withValues(alpha: 0.5),
+                              width: isSelected ? 3.0 : 1.5,
+                            ),
+                            boxShadow: [
                               if (isSelected)
-                                Positioned(
-                                  bottom: 0,
-                                  right: 0,
-                                  child: Container(
-                                    padding: const EdgeInsets.all(2),
-                                    decoration: const BoxDecoration(
-                                      color: ScholarlyTheme.accentBlue,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Icon(
-                                      Icons.check_rounded,
-                                      color: Colors.white,
-                                      size: 10,
-                                    ),
-                                  ),
+                                BoxShadow(
+                                  color: ScholarlyTheme.accentBlue.withValues(alpha: 0.25),
+                                  blurRadius: 8,
+                                  spreadRadius: 1,
                                 ),
                             ],
                           ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          av['name']!,
-                          style: GoogleFonts.inter(
-                            color: isSelected ? ScholarlyTheme.textPrimary : ScholarlyTheme.textMuted,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                            fontSize: 10,
+                          child: ClipOval(
+                            child: Image.asset(
+                              av['path']!,
+                              fit: BoxFit.cover,
+                            ),
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
+                        if (isSelected)
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: Container(
+                              padding: const EdgeInsets.all(2),
+                              decoration: const BoxDecoration(
+                                color: ScholarlyTheme.accentBlue,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.check_rounded,
+                                color: Colors.white,
+                                size: 10,
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                   );

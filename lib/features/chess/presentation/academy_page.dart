@@ -8,7 +8,7 @@ import 'scholarly_theme.dart';
 import 'widgets/commentary_history.dart';
 import 'widgets/board_stage.dart';
 import 'themes/theme_registry.dart';
-import 'settings_page.dart';
+import 'unrated_settings_page.dart';
 import 'widgets/global_sidebar.dart';
 import 'widgets/ambient_scaffold.dart';
 import 'dart:ui';
@@ -379,7 +379,7 @@ class _AcademyPageState extends ConsumerState<AcademyPage> {
                                   onTap: () {
                                     Navigator.of(context).push(
                                       MaterialPageRoute(
-                                        builder: (context) => const SettingsPage(isAcademyMode: true),
+                                        builder: (context) => const UnratedSettingsPage(isAcademyMode: true),
                                       ),
                                     );
                                   },

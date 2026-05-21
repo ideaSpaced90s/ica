@@ -269,7 +269,7 @@ class ChessState {
     this.hasBlinkedMenu = false,
     this.isTimeOut = false,
     this.userName = 'Apprentice',
-    this.userAvatarPath = 'assets/persona/gm_bard.png',
+    this.userAvatarPath = 'assets/persona/user_profile_0.png',
   });
 
   final ChessGame game;

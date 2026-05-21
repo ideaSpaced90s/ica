@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -63,10 +64,15 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                         ],
                       ),
                       child: ClipOval(
-                        child: Image.asset(
-                          state.userAvatarPath,
-                          fit: BoxFit.cover,
-                        ),
+                        child: state.userAvatarPath.startsWith('assets/')
+                            ? Image.asset(
+                                state.userAvatarPath,
+                                fit: BoxFit.cover,
+                              )
+                            : Image.file(
+                                File(state.userAvatarPath),
+                                fit: BoxFit.cover,
+                              ),
                       ),
                     ),
                   ),

@@ -7,8 +7,7 @@ import '../../application/chess_provider.dart';
 import '../../services/chess_sound_service.dart';
 import '../main_page.dart';
 import '../academy_page.dart';
-import '../settings_page.dart';
-import '../rated_settings_page.dart';
+import '../unrated_settings_page.dart';
 import '../tutorial_page.dart';
 import '../dashboard_page.dart';
 import '../history_page.dart';
@@ -32,7 +31,7 @@ class GlobalSidebar extends ConsumerWidget {
     final isAcademy = context.findAncestorWidgetOfExactType<AcademyPage>() != null && state.isAcademyActive && !state.isPuzzleMode;
     final isPuzzles = context.findAncestorWidgetOfExactType<AcademyPage>() != null && state.isPuzzleMode;
     final isTutorial = context.findAncestorWidgetOfExactType<TutorialPage>() != null;
-    final isSettings = context.findAncestorWidgetOfExactType<SettingsPage>() != null;
+    final isSettings = context.findAncestorWidgetOfExactType<UnratedSettingsPage>() != null;
     final isAbout = context.findAncestorWidgetOfExactType<AboutUsPage>() != null;
 
     return Drawer(
@@ -184,17 +183,13 @@ class GlobalSidebar extends ConsumerWidget {
                         onTap: () {
                           Navigator.pop(context);
                           if (!isSettings) {
-                            if (state.isRatedMode) {
+                            if (state.isAcademyActive || state.isPuzzleMode) {
                               Navigator.of(context).push(
-                                MaterialPageRoute(builder: (context) => const RatedSettingsPage()),
-                              );
-                            } else if (state.isAcademyActive || state.isPuzzleMode) {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(builder: (context) => const SettingsPage(isAcademyMode: true)),
+                                MaterialPageRoute(builder: (context) => const UnratedSettingsPage(isAcademyMode: true)),
                               );
                             } else {
                               Navigator.of(context).push(
-                                MaterialPageRoute(builder: (context) => const SettingsPage()),
+                                MaterialPageRoute(builder: (context) => const UnratedSettingsPage()),
                               );
                             }
                           }

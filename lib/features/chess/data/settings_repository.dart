@@ -95,7 +95,7 @@ class AppSettings {
     this.blitzDominance = 0.0,
     this.rapidDominance = 0.0,
     this.userName = 'Apprentice',
-    this.userAvatarPath = 'assets/persona/gm_bard.png',
+    this.userAvatarPath = 'assets/persona/user_profile_0.png',
   });
 
   AppSettings copyWith({
@@ -299,7 +299,7 @@ class AppSettings {
       blitzDominance: (json['blitzDominance'] ?? 0.0).toDouble(),
       rapidDominance: (json['rapidDominance'] ?? 0.0).toDouble(),
       userName: json['userName'] ?? 'Apprentice',
-      userAvatarPath: json['userAvatarPath'] ?? 'assets/persona/gm_bard.png',
+      userAvatarPath: json['userAvatarPath'] ?? 'assets/persona/user_profile_0.png',
     );
   }
 }
