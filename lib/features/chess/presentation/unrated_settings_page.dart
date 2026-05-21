@@ -602,6 +602,25 @@ class _UnratedSettingsPageState extends ConsumerState<UnratedSettingsPage> {
                                 ),
                                 const SizedBox(height: 24),
                                 _AnimationToggle(
+                                  icon: Icons.rocket_launch_rounded,
+                                  label: 'Arcade Mode',
+                                  description: 'Blue particle bursts, motion blur & impact shockwaves',
+                                  value: state.animationSettings['arcadeMode'] ?? true,
+                                  onChanged: (v) => notifier.updateAnimationSetting(
+                                    'arcadeMode',
+                                    v,
+                                  ),
+                                  enabled: true,
+                                ),
+                                const SizedBox(height: 8),
+                                Divider(
+                                  color: ScholarlyTheme.panelStroke.withValues(alpha: 0.4),
+                                  thickness: 1,
+                                  indent: 12,
+                                  endIndent: 12,
+                                ),
+                                const SizedBox(height: 4),
+                                _AnimationToggle(
                                   icon: Icons.auto_awesome_motion_rounded,
                                   label: 'Signature Piece Motion',
                                   description: 'Custom arcs, jumps, and rotations per piece type',
@@ -667,6 +686,7 @@ class _UnratedSettingsPageState extends ConsumerState<UnratedSettingsPage> {
                                   ),
                                   enabled: true, // Always active in unrated settings
                                 ),
+
                                 const SizedBox(height: 16),
                                 FilledButton(
                                   onPressed: () => Navigator.of(context).pop(),

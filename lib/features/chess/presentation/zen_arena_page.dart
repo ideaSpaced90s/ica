@@ -28,6 +28,7 @@ class ZenArenaPage extends ConsumerStatefulWidget {
 class _ZenArenaPageState extends ConsumerState<ZenArenaPage> with WidgetsBindingObserver {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   late ConfettiController _confettiController;
+  late ConfettiController _confettiBottomController;
   bool _hasTriggeredConfetti = false;
 
   @override
@@ -35,12 +36,14 @@ class _ZenArenaPageState extends ConsumerState<ZenArenaPage> with WidgetsBinding
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _confettiController = ConfettiController(duration: const Duration(seconds: 3));
+    _confettiBottomController = ConfettiController(duration: const Duration(seconds: 3));
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _confettiController.dispose();
+    _confettiBottomController.dispose();
     super.dispose();
   }
 
@@ -92,11 +95,16 @@ class _ZenArenaPageState extends ConsumerState<ZenArenaPage> with WidgetsBinding
                 confettiController: _confettiController,
                 blastDirectionality: BlastDirectionality.explosive,
                 shouldLoop: false,
+                numberOfParticles: ref.watch(chessProvider.select(
+                  (s) => (s.animationSettings['arcadeMode'] ?? false) ? 40 : 20,
+                )),
                 colors: const [
                   ScholarlyTheme.accentGold,
                   ScholarlyTheme.accentBlue,
                   Colors.white,
                   Colors.yellow,
+                  Color(0xFF60A5FA), // arcade blue
+                  Color(0xFF7C3AED), // violet
                 ],
                 createParticlePath: (size) {
                   final path = Path();
@@ -105,6 +113,39 @@ class _ZenArenaPageState extends ConsumerState<ZenArenaPage> with WidgetsBinding
                 },
               ),
             ),
+            // Arcade Mode: second bottom-blast confetti
+            if (ref.watch(chessProvider.select(
+              (s) => s.animationSettings['arcadeMode'] ?? false,
+            )))
+              Align(
+                alignment: Alignment.bottomCenter,
+                child: ConfettiWidget(
+                  confettiController: _confettiBottomController,
+                  blastDirectionality: BlastDirectionality.explosive,
+                  blastDirection: -3.14 / 2, // upward
+                  shouldLoop: false,
+                  numberOfParticles: 30,
+                  gravity: 0.05,
+                  colors: const [
+                    Color(0xFF3B82F6),
+                    Color(0xFF60A5FA),
+                    Color(0xFFBAE6FD),
+                    Colors.white,
+                    Color(0xFF7C3AED),
+                    ScholarlyTheme.accentGold,
+                  ],
+                  createParticlePath: (size) {
+                    final path = Path();
+                    path.addOval(
+                      Rect.fromCircle(
+                        center: Offset(size.width / 2, size.height / 2),
+                        radius: size.width / 2,
+                      ),
+                    );
+                    return path;
+                  },
+                ),
+              ),
           ],
         ),
       ),
@@ -373,6 +414,10 @@ class _ZenArenaPageState extends ConsumerState<ZenArenaPage> with WidgetsBinding
     if (didWin && !_hasTriggeredConfetti) {
       _hasTriggeredConfetti = true;
       _confettiController.play();
+      final arcadeMode = ref.read(chessProvider).animationSettings['arcadeMode'] ?? false;
+      if (arcadeMode) {
+        _confettiBottomController.play();
+      }
     }
 
     String title = isDraw ? 'Match Draw' : (didWin ? 'Victory!' : 'Match Lost');

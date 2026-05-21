@@ -11,6 +11,7 @@ import '../unrated_settings_page.dart';
 import '../tutorial_page.dart';
 import '../dashboard_page.dart';
 import '../history_page.dart';
+import '../puzzle_page.dart';
 import '../about_us_page.dart';
 import 'ambient_flow_backdrop.dart';
 
@@ -28,8 +29,8 @@ class GlobalSidebar extends ConsumerWidget {
     final isDashboard = context.findAncestorWidgetOfExactType<DashboardPage>() != null;
     final isMain = context.findAncestorWidgetOfExactType<MainPage>() != null;
     final isAnalysis = context.findAncestorWidgetOfExactType<HistoryPage>() != null;
-    final isAcademy = context.findAncestorWidgetOfExactType<AcademyPage>() != null && state.isAcademyActive && !state.isPuzzleMode;
-    final isPuzzles = context.findAncestorWidgetOfExactType<AcademyPage>() != null && state.isPuzzleMode;
+    final isAcademy = context.findAncestorWidgetOfExactType<AcademyPage>() != null && state.isAcademyActive;
+    final isPuzzles = context.findAncestorWidgetOfExactType<PuzzlePage>() != null;
     final isTutorial = context.findAncestorWidgetOfExactType<TutorialPage>() != null;
     final isSettings = context.findAncestorWidgetOfExactType<UnratedSettingsPage>() != null;
     final isAbout = context.findAncestorWidgetOfExactType<AboutUsPage>() != null;
@@ -140,10 +141,10 @@ class GlobalSidebar extends ConsumerWidget {
                         isSelected: isPuzzles,
                         onTap: () {
                           Navigator.pop(context);
-                          if (!isPuzzles || !state.isPuzzleMode) {
+                          if (!isPuzzles) {
                             Navigator.of(context).push(
                               MaterialPageRoute(
-                                builder: (context) => const AcademyPage(startInPuzzleMode: true),
+                                builder: (context) => const PuzzlePage(),
                               ),
                             );
                           }

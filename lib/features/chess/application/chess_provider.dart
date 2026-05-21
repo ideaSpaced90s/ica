@@ -232,6 +232,8 @@ class ChessState {
       'indicators': true,
       'themeEffects': true,
       'themeAmbience': true,
+      'kineticImpact': true,
+      'arcadeMode': true,
     },
     this.isCouncilOnline = false,
     this.baseTimeDuration = _initialClock,
@@ -795,6 +797,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
             'themeEffects': false,
             'themeAmbience': false,
             'kineticImpact': false,
+            'arcadeMode': false,
           }
         : state.animationSettings,
     );
@@ -1892,9 +1895,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
     return state.game.turn == chess_lib.Color.WHITE ? 'Black' : 'White';
   }
 
-  Future<void> startPuzzleMode() async {
+  Future<void> startPuzzleMode({bool silent = false}) async {
     state = state.copyWith(isPuzzleMode: true);
-    await nextPuzzle();
+    await nextPuzzle(silent: silent);
   }
 
   Future<void> exitPuzzleMode() async {
@@ -1906,12 +1909,12 @@ class ChessNotifier extends StateNotifier<ChessState> {
     await reset();
   }
 
-  Future<void> nextPuzzle() async {
+  Future<void> nextPuzzle({bool silent = false}) async {
     if (!state.isPuzzleMode) return;
     
     final puzzle = await _puzzleRepository.getRandomPuzzle();
     if (puzzle != null) {
-      await loadPuzzle(puzzle);
+      await loadPuzzle(puzzle, silent: silent);
     } else {
       state = state.copyWith(
         commentaryError: 'Could not fetch a puzzle from the archives.',
@@ -1919,7 +1922,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
     }
   }
 
-  Future<void> loadPuzzle(rust_puzzles.Puzzle puzzle) async {
+  Future<void> loadPuzzle(rust_puzzles.Puzzle puzzle, {bool silent = false}) async {
     _engineMoveTimer?.cancel();
     _cancelCommentaryReveal();
     _pendingHintFen = null;
@@ -1958,17 +1961,21 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
     _syncUndoRedoFlags();
 
-    final introText = "Apprentice, I have loaded puzzle #${puzzle.id}. Rating: ${puzzle.rating}. Find the best sequence for ${isPlayerWhite ? 'White' : 'Black'}.";
-    state = state.copyWith(
-      commentaryHistory: [
-        CommentaryEntry(
-          text: introText,
-          timestamp: DateTime.now(),
-          isComplete: true,
-          isUser: false,
-        ),
-      ],
-    );
+    if (!silent) {
+      final introText = "Apprentice, I have loaded puzzle #${puzzle.id}. Rating: ${puzzle.rating}. Find the best sequence for ${isPlayerWhite ? 'White' : 'Black'}.";
+      state = state.copyWith(
+        commentaryHistory: [
+          CommentaryEntry(
+            text: introText,
+            timestamp: DateTime.now(),
+            isComplete: true,
+            isUser: false,
+          ),
+        ],
+      );
+    } else {
+      state = state.copyWith(commentaryHistory: const []);
+    }
 
     if (initialMove != null && initialMove.length >= 4) {
       final from = initialMove.substring(0, 2);

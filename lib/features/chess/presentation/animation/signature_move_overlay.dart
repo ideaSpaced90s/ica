@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -522,10 +523,36 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
     Widget movingPiece,
   ) {
     if (!_profile.isTeleport) {
+      // ── Arcade Mode: motion blur while sliding ──────────────────────────
+      final arcadeMode = ref
+          .read(chessProvider.notifier)
+          .isAnimationTypeEnabled('arcadeMode');
+      final moveDistanceSq = (_path.length > 1)
+          ? (_path.last - _path.first).distanceSquared
+          : 0.0;
+      final isLongMove = moveDistanceSq > (_squareSize * _squareSize * 1.5);
+
+      Widget finalPiece = Transform.scale(scale: pieceScale, child: movingPiece);
+
+      if (arcadeMode && isLongMove && rawProgress < 0.88) {
+        // Blur peaks at mid-move (rawProgress ≈ 0.5), fades to 0 near arrival
+        final blurSigma = 2.5 * math.sin(rawProgress * math.pi).clamp(0.0, 1.0);
+        if (blurSigma > 0.1) {
+          finalPiece = ImageFiltered(
+            imageFilter: ui.ImageFilter.blur(
+              sigmaX: blurSigma,
+              sigmaY: blurSigma * 0.4, // mostly horizontal blur
+              tileMode: TileMode.decal,
+            ),
+            child: finalPiece,
+          );
+        }
+      }
+
       return Positioned(
         left: piecePos.dx - _squareSize / 2 + vibration.dx,
         top: piecePos.dy - _squareSize / 2 + verticalLift + vibration.dy,
-        child: Transform.scale(scale: pieceScale, child: movingPiece),
+        child: finalPiece,
       );
     }
 

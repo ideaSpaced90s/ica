@@ -28,9 +28,12 @@ import 'animation/knight_dust.dart';
 import 'animation/bishop_wind.dart';
 import 'animation/impact_shake.dart';
 import 'animation/shake_animation.dart';
+import 'animation/landing_shockwave.dart';
+import 'animation/arcade_capture_burst.dart';
 import 'themes/theme_registry.dart';
 import 'themes/chess_theme.dart';
 import 'themes/shadow_theme.dart';
+import '../services/chess_sound_service.dart';
 
 class ChessBoard extends ConsumerStatefulWidget {
   final AlignmentGeometry alignment;
@@ -62,6 +65,8 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
   // ── Signature Animation System ───────────────────────────────────────────
   /// Landing micro-settle entries: {square, profile, row, col}
   final List<Map<String, dynamic>> _landingFeedbacks = [];
+  /// Arcade landing shockwave rings: {square, row, col}
+  final List<Map<String, dynamic>> _landingShockwaves = [];
 
   /// Tap ripple entries: board-local top-left Offset of the tapped square
   final List<Offset> _tapRipples = [];
@@ -573,6 +578,9 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
                         TapRipple(
                           position: pos,
                           squareSize: boardSize / 8,
+                          arcadeMode: ref
+                              .read(chessProvider.notifier)
+                              .isAnimationTypeEnabled('arcadeMode'),
                           onComplete: () =>
                               setState(() => _tapRipples.remove(pos)),
                         ),
@@ -606,6 +614,17 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
                           onComplete: () =>
                               setState(() => _toyConfetti.remove(pos)),
                         ),
+                      for (final shockwave in _landingShockwaves)
+                        LandingShockwave(
+                          squareSize: boardSize / 8,
+                          squareRow: shockwave['row'] as int,
+                          squareCol: shockwave['col'] as int,
+                          isFlipped: chessState.isBoardFlipped,
+                          onComplete: () => setState(
+                            () => _landingShockwaves.remove(shockwave),
+                          ),
+                        ),
+
                       for (final shatter in _metalShatters)
                         MetalShatterEffect(
                           position: shatter['pos'],
@@ -704,6 +723,12 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
     // Tap ripple on every tap (gated by animations setting)
     if (ref.read(chessProvider.notifier).isAnimationTypeEnabled('feedback')) {
       _triggerTapRipple(squareName);
+      // Arcade: play UI tap sound on square select
+      if (ref
+          .read(chessProvider.notifier)
+          .isAnimationTypeEnabled('arcadeMode')) {
+        ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiTap);
+      }
     }
 
     if (_selectedSquare != null && _legalTargets.contains(squareName)) {
@@ -736,6 +761,14 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
         } else if (themeId == 'theme9') {
           _triggerToyConfetti(squareName);
         }
+      }
+      // Arcade Mode: blue particle burst on any capture
+      if (isCapture &&
+          ref
+              .read(chessProvider.notifier)
+              .isAnimationTypeEnabled('arcadeMode')) {
+        _triggerArcadeCaptureBurst(squareName);
+        ref.read(chessSoundServiceProvider).playSfx(SoundEffect.captureImpact);
       }
       ref.read(chessProvider.notifier).makeMove(_selectedSquare!, squareName);
       _clearSelection();
@@ -1152,6 +1185,28 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
       _triggerLandingFeedback(to, profile, boardSize, isCritical: isCritical);
     }
 
+    // 1b. Arcade: landing shockwave ring + piece land sound
+    if (ref
+        .read(chessProvider.notifier)
+        .isAnimationTypeEnabled('arcadeMode')) {
+      _triggerLandingShockwave(to, boardSize);
+      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.pieceLand);
+    }
+
+    // 1c. Arcade: check alert sound when in check
+    if (ref
+            .read(chessProvider.notifier)
+            .isAnimationTypeEnabled('arcadeMode') &&
+        ref.read(chessProvider).game.inCheck) {
+      Future.delayed(const Duration(milliseconds: 120), () {
+        if (mounted) {
+          ref
+              .read(chessSoundServiceProvider)
+              .playSfx(SoundEffect.checkAlert);
+        }
+      });
+    }
+
     // 2. Kinetic Impact Effects
     if (ref
         .read(chessProvider.notifier)
@@ -1191,6 +1246,40 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
   void _triggerKnightDust(String square, double boardSize) {
     final pos = _getSquareCenter(square, boardSize);
     setState(() => _knightDusts.add({'pos': pos}));
+  }
+
+  /// Triggers a landing shockwave ring on a given square (arcade mode).
+  void _triggerLandingShockwave(String square, double boardSize) {
+    final col = square.codeUnitAt(0) - 'a'.codeUnitAt(0);
+    final row = 8 - int.parse(square[1]);
+    setState(() => _landingShockwaves.add({'square': square, 'row': row, 'col': col}));
+  }
+
+  /// Triggers the blue arcade particle burst on a captured square via Overlay.
+  void _triggerArcadeCaptureBurst(String squareName) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final overlay = Overlay.of(context);
+      final box = context.findRenderObject() as RenderBox?;
+      if (box == null) return;
+      final boardSize = box.size.width;
+      final squareSize = boardSize / 8;
+      final isFlipped = ref.read(chessProvider).isBoardFlipped;
+      final col = squareName.codeUnitAt(0) - 'a'.codeUnitAt(0);
+      final row = 8 - int.parse(squareName[1]);
+      final effectiveCol = isFlipped ? 7 - col : col;
+      final effectiveRow = isFlipped ? 7 - row : row;
+      final localCenter = Offset(
+        effectiveCol * squareSize + squareSize / 2,
+        effectiveRow * squareSize + squareSize / 2,
+      );
+      final globalCenter = box.localToGlobal(localCenter);
+      ArcadeCaptureBurst.show(
+        overlay: overlay,
+        globalCenter: globalCenter,
+        squareSize: squareSize,
+      );
+    });
   }
 
   void _triggerBishopWind(String from, String to, double boardSize) {

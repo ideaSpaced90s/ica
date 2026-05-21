@@ -12,6 +12,12 @@ enum SoundEffect {
   uiClick,
   uiNavigate,
   uiToggle,
+  // Arcade mode SFX (Kenney packs)
+  captureImpact,
+  pieceLand,
+  checkAlert,
+  uiTap,
+  moveSoft,
 }
 
 class ChessSoundService {
@@ -34,6 +40,12 @@ class ChessSoundService {
     'ui_click': 'assets/sfx/ui_click.ogg',
     'ui_navigate': 'assets/sfx/ui_navigate.ogg',
     'ui_toggle': 'assets/sfx/ui_toggle.ogg',
+    // Arcade mode SFX (Kenney packs)
+    'capture_impact': 'assets/sfx/capture_impact.ogg',
+    'move_soft': 'assets/sfx/move_soft.ogg',
+    'piece_land': 'assets/sfx/piece_land.ogg',
+    'check_alert': 'assets/sfx/check_alert.ogg',
+    'ui_tap': 'assets/sfx/ui_tap.ogg',
   };
 
   final List<AudioSource> _bgmSources = [];
@@ -203,6 +215,22 @@ class ChessSoundService {
         break;
       case SoundEffect.gameover:
         playWhoosh();
+        break;
+      // Arcade mode SFX
+      case SoundEffect.captureImpact:
+        _playSound('capture_impact');
+        break;
+      case SoundEffect.pieceLand:
+        _playSound('piece_land');
+        break;
+      case SoundEffect.checkAlert:
+        _playSound('check_alert');
+        break;
+      case SoundEffect.uiTap:
+        _playSound('ui_tap');
+        break;
+      case SoundEffect.moveSoft:
+        _playSound('move_soft');
         break;
     }
   }
