@@ -18,6 +18,16 @@ enum SoundEffect {
   checkAlert,
   uiTap,
   moveSoft,
+  // Kenney-based RPG/UI sound enhancements
+  gmbardThinking,
+  gmbardComplete,
+  victory,
+  defeat,
+  draw,
+  castle,
+  promote,
+  tabSwipe,
+  switchToggle,
 }
 
 class ChessSoundService {
@@ -46,6 +56,21 @@ class ChessSoundService {
     'piece_land': 'assets/sfx/piece_land.ogg',
     'check_alert': 'assets/sfx/check_alert.ogg',
     'ui_tap': 'assets/sfx/ui_tap.ogg',
+    // Kenney-based RPG/UI sound enhancements
+    'book_open': 'assets/sfx/book_open.ogg',
+    'book_close': 'assets/sfx/book_close.ogg',
+    'click_soft1': 'assets/sfx/click_soft1.ogg',
+    'click_soft2': 'assets/sfx/click_soft2.ogg',
+    'click_soft3': 'assets/sfx/click_soft3.ogg',
+    'click_soft4': 'assets/sfx/click_soft4.ogg',
+    'click_soft5': 'assets/sfx/click_soft5.ogg',
+    'coins': 'assets/sfx/coins.ogg',
+    'creak': 'assets/sfx/creak.ogg',
+    'metal_latch': 'assets/sfx/metal_latch.ogg',
+    'castle_impact': 'assets/sfx/castle_impact.ogg',
+    'promotion_bell': 'assets/sfx/promotion_bell.ogg',
+    'tab_swipe': 'assets/sfx/tab_swipe.ogg',
+    'switch_toggle': 'assets/sfx/switch_toggle.ogg',
   };
 
   final List<AudioSource> _bgmSources = [];
@@ -189,6 +214,25 @@ class ChessSoundService {
   Future<void> playPawnMove() async => _playSound('piecemove');
   Future<void> playKingMove() async => _playSound('move');
 
+  // Sequential state index to cycle through soft typing sounds organically
+  int _writingSoundIndex = 0;
+
+  Future<void> playWriting() async {
+    if (!isSfxEnabled || !_isInitialized || !SoLoud.instance.isInitialized) return;
+    
+    // Cycle through 5 clicks to sound like real typing
+    _writingSoundIndex = (_writingSoundIndex % 5) + 1;
+    final source = _sfxSources['click_soft$_writingSoundIndex'];
+    if (source != null) {
+      try {
+        // Play at lower volume so it remains a subtle background texture
+        await SoLoud.instance.play(source, volume: _sfxVolumeScale * 0.45);
+      } catch (e) {
+        debugPrint('Error playing writing click: $e');
+      }
+    }
+  }
+
   void playSfx(SoundEffect effect) {
     switch (effect) {
       case SoundEffect.move:
@@ -231,6 +275,34 @@ class ChessSoundService {
         break;
       case SoundEffect.moveSoft:
         _playSound('move_soft');
+        break;
+      // Kenney-based RPG/UI sound enhancements
+      case SoundEffect.gmbardThinking:
+        _playSound('book_open');
+        break;
+      case SoundEffect.gmbardComplete:
+        _playSound('book_close');
+        break;
+      case SoundEffect.victory:
+        _playSound('coins');
+        break;
+      case SoundEffect.defeat:
+        _playSound('creak');
+        break;
+      case SoundEffect.draw:
+        _playSound('metal_latch');
+        break;
+      case SoundEffect.castle:
+        _playSound('castle_impact');
+        break;
+      case SoundEffect.promote:
+        _playSound('promotion_bell');
+        break;
+      case SoundEffect.tabSwipe:
+        _playSound('tab_swipe');
+        break;
+      case SoundEffect.switchToggle:
+        _playSound('switch_toggle');
         break;
     }
   }

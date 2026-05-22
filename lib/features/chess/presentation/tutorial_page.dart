@@ -10,8 +10,6 @@ import 'widgets/chapter_completion_overlay.dart';
 import 'widgets/chapter_select_screen.dart';
 import 'widgets/illegal_move_feedback.dart';
 import 'widgets/mentor_panel.dart';
-import 'widgets/global_sidebar.dart';
-import 'widgets/game_controls.dart';
 import 'widgets/ambient_scaffold.dart';
 import 'dashboard_page.dart';
 
@@ -73,7 +71,6 @@ class _TutorialPageState extends ConsumerState<TutorialPage> {
     else {
       content = AmbientScaffold(
         scaffoldKey: _scaffoldKey,
-        drawer: const GlobalSidebar(),
         blob1Color: const Color(0xFFFEF9C3), // Soft Gold
         blob2Color: const Color(0xFFDBEAFE), // Soft Blue
         blob3Color: const Color(0xFFF3E8FF), // Soft Purple
@@ -106,12 +103,6 @@ class _TutorialPageState extends ConsumerState<TutorialPage> {
                   borderRadius: 16,
                   child: Row(
                     children: [
-                      ActionIconButton(
-                        icon: Icons.menu_rounded,
-                        size: 20,
-                        onTap: () => _scaffoldKey.currentState?.openDrawer(),
-                      ),
-                      const SizedBox(width: 12),
                       IconButton(
                         onPressed: () => setState(() => _isChapterSelectionVisible = true),
                         icon: const Icon(Icons.grid_view_rounded, size: 20, color: ScholarlyTheme.accentBlue),

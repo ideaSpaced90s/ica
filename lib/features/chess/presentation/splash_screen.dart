@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../application/chess_provider.dart';
-import 'dashboard_page.dart';
+import 'mobile_navigation_shell.dart';
 import 'scholarly_theme.dart';
 import 'widgets/ambient_flow_backdrop.dart';
 
@@ -25,8 +25,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   @override
   void initState() {
     super.initState();
-    // Enforce Portrait for the Splash Screen
-    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+    // Enforce Portrait for the Splash Screen (or allow landscape)
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
 
     _progressController = AnimationController(
       vsync: this,
@@ -93,10 +97,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     }
 
     if (mounted) {
-      // Keep Main App portrait locked
+      // Allow Landscape
       await SystemChrome.setPreferredOrientations([
         DeviceOrientation.portraitUp,
         DeviceOrientation.portraitDown,
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
       ]);
 
       if (!mounted) return;
@@ -105,7 +111,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
           pageBuilder: (context, animation, secondaryAnimation) =>
-              const DashboardPage(),
+              const MobileNavigationShell(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(opacity: animation, child: child);
           },

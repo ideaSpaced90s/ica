@@ -54,3 +54,12 @@ python_portable/
 assets/engine/stockfish
 assets/llm
 
+# Other engines to ignore
+assets/engine/wincessengines/crafty-chess-master
+assets/engine/wincessengines/sunfish-master
+
+# Heap dumps
+*.hprof
+
+# Scratch files
+scratch/

@@ -9,8 +9,8 @@ import 'widgets/commentary_history.dart';
 import 'widgets/board_stage.dart';
 import 'themes/theme_registry.dart';
 import 'unrated_settings_page.dart';
-import 'widgets/global_sidebar.dart';
 import 'widgets/ambient_scaffold.dart';
+import 'widgets/classic_windows_tabs.dart';
 import 'dashboard_page.dart';
 import 'dart:ui';
 
@@ -236,10 +236,125 @@ class _AcademyPageState extends ConsumerState<AcademyPage> {
     );
   }
 
+  Widget _buildLandscapeLayout(BuildContext context, WidgetRef ref, ChessState state, ChessNotifier notifier) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // LEFT COLUMN (Chessboard Area) - taking 55% width
+        Expanded(
+          flex: 11,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: 16),
+              Expanded(
+                child: const BoardStage(isExpanded: true),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+
+        // VERTICAL SEPARATOR
+        Container(
+          width: 1.5,
+          color: ScholarlyTheme.panelStroke.withValues(alpha: 0.5),
+        ),
+
+        // RIGHT COLUMN (Sidebar Area) - taking 45% width
+        Expanded(
+          flex: 9,
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Captured Pieces Header (Top of Sidebar)
+                _CompactCapturedPiecesHeader(state: state),
+                const SizedBox(height: 12),
+
+                // Center Section: Classic Windows Tabs (AI Coach, Moves, Metrics)
+                Expanded(
+                  child: ClassicWindowsTabs(state: state),
+                ),
+                const SizedBox(height: 12),
+
+                // Bottom Section: Academy Actions bar
+                JuicyGlassCard(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  borderRadius: 20,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
+                    child: Row(
+                      children: [
+                        _CompactActionIcon(
+                          icon: Icons.add_box_rounded,
+                          tooltip: 'New Game',
+                          onTap: () => _handleNewGame(context, ref),
+                        ),
+                        const SizedBox(width: 8),
+                        _CompactActionIcon(
+                          icon: Icons.tune_rounded,
+                          tooltip: 'Settings',
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => const UnratedSettingsPage(),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(width: 8),
+                        _CompactActionIcon(
+                          icon: Icons.undo_rounded,
+                          tooltip: 'Undo',
+                          isEnabled: state.canUndo,
+                          onTap: state.canUndo ? () => notifier.undo() : null,
+                        ),
+                        const SizedBox(width: 8),
+                        _CompactActionIcon(
+                          icon: Icons.redo_rounded,
+                          tooltip: 'Redo',
+                          isEnabled: state.canRedo,
+                          onTap: state.canRedo ? () => notifier.redo() : null,
+                        ),
+                        const SizedBox(width: 8),
+                        _CompactActionIcon(
+                          icon: Icons.flip_camera_android_outlined,
+                          tooltip: 'Flip Board',
+                          isActive: state.isBoardFlipped,
+                          onTap: () => notifier.toggleBoardOrientation(),
+                        ),
+                        const SizedBox(width: 8),
+                        _CompactActionIcon(
+                          icon: state.isBulbGlowing
+                              ? Icons.lightbulb_rounded
+                              : Icons.lightbulb_outline_rounded,
+                          tooltip: 'Hint',
+                          isEnabled: !state.isHintLoading,
+                          isActive: state.isBulbGlowing,
+                          activeColor: ScholarlyTheme.accentYellowSoft,
+                          activeIconColor: ScholarlyTheme.accentYellow,
+                          onTap: () => notifier.requestHint(),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(chessProvider);
     final notifier = ref.read(chessProvider.notifier);
+    final isLandscape = MediaQuery.of(context).size.width > MediaQuery.of(context).size.height;
 
     return PopScope(
       canPop: false,
@@ -249,7 +364,6 @@ class _AcademyPageState extends ConsumerState<AcademyPage> {
       },
       child: AmbientScaffold(
         scaffoldKey: _scaffoldKey,
-        drawer: const GlobalSidebar(),
         blob1Color: const Color(0xFFDBEAFE),
         blob2Color: const Color(0xFFD1FAE5),
         blob3Color: const Color(0xFFFEF3C7),
@@ -258,9 +372,11 @@ class _AcademyPageState extends ConsumerState<AcademyPage> {
           left: false, // Allow AI chat box on far left to reach edge-to-edge under notch/notification area
           child: Padding(
             padding: const EdgeInsets.fromLTRB(0, 0, 0, 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
+            child: isLandscape
+                ? _buildLandscapeLayout(context, ref, state, notifier)
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
                 // 1. Top side chessboard taking exact square space, extending edge-to-edge
                 const AspectRatio(
                   aspectRatio: 1.0,
@@ -308,12 +424,6 @@ class _AcademyPageState extends ConsumerState<AcademyPage> {
                       physics: const BouncingScrollPhysics(),
                       child: Row(
                         children: [
-                          _CompactActionIcon(
-                            icon: Icons.menu_rounded,
-                            tooltip: 'Menu',
-                            onTap: () => _scaffoldKey.currentState?.openDrawer(),
-                          ),
-                          const SizedBox(width: 8),
                           _CompactActionIcon(
                             icon: Icons.add_box_rounded,
                             tooltip: 'New Game',

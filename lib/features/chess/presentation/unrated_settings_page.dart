@@ -7,8 +7,6 @@ import 'scholarly_theme.dart';
 import 'package:kingslayer_chess/features/chess/presentation/themes/theme_registry.dart';
 import 'package:kingslayer_chess/features/chess/presentation/themes/chess_theme.dart';
 import '../domain/models/ai_avatar.dart';
-import 'widgets/global_sidebar.dart';
-import 'widgets/game_controls.dart';
 import 'widgets/avatar_selection_sheet.dart';
 import 'widgets/ambient_scaffold.dart';
 import 'dart:ui';
@@ -38,7 +36,6 @@ class _UnratedSettingsPageState extends ConsumerState<UnratedSettingsPage> {
       },
       child: AmbientScaffold(
         scaffoldKey: _scaffoldKey,
-        drawer: const GlobalSidebar(),
         blob1Color: const Color(0xFFE2E8F0),
         blob2Color: const Color(0xFFDBEAFE),
         blob3Color: const Color(0xFFD1FAE5),
@@ -191,11 +188,42 @@ class _UnratedSettingsPageState extends ConsumerState<UnratedSettingsPage> {
                           builder: (context) {
                             final currentAvatar = AiAvatar.getAvatar(state.engineLevel);
                             return _SettingsTile(
-                              label: 'Persona',
+                              label: 'Upper Side Persona (Engine)',
                               description: '${currentAvatar.name} • ${currentAvatar.title}',
                               icon: currentAvatar.icon,
                               imagePath: currentAvatar.imagePath,
-                              onTap: () => _showStrengthOverlay(context, ref),
+                              onTap: () => showAvatarSelectionSheet(context, ref, isBottomSlot: false),
+                              trailing: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: currentAvatar.color.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(color: currentAvatar.color),
+                                ),
+                                child: Text(
+                                  'FIDE ${currentAvatar.fideRatingRange}',
+                                  style: GoogleFonts.jetBrainsMono(
+                                    color: currentAvatar.color.computeLuminance() > 0.6 ? Colors.black87 : currentAvatar.color,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        Builder(
+                          builder: (context) {
+                            final currentAvatar = AiAvatar.getAvatar(state.bottomAvatarId);
+                            return _SettingsTile(
+                              label: 'Bottom Side Persona (Robot Mode)',
+                              description: '${currentAvatar.name} • ${currentAvatar.title}',
+                              icon: currentAvatar.icon,
+                              imagePath: currentAvatar.imagePath,
+                              onTap: () => showAvatarSelectionSheet(context, ref, isBottomSlot: true),
                               trailing: Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 8,
@@ -226,17 +254,6 @@ class _UnratedSettingsPageState extends ConsumerState<UnratedSettingsPage> {
               ),
             ], // End of slivers
           ), // End of CustomScrollView
-
-          // Floating 3-bar drawer menu button (fixed at top-left)
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 12,
-            left: 16,
-            child: ActionIconButton(
-              icon: Icons.menu_rounded,
-              size: 24,
-              onTap: () => _scaffoldKey.currentState?.openDrawer(),
-            ),
-          ),
         ], // End of Stack.children
       ), // End of Stack
     ), // End of AmbientScaffold
@@ -724,9 +741,7 @@ class _UnratedSettingsPageState extends ConsumerState<UnratedSettingsPage> {
     );
   }
 
-  void _showStrengthOverlay(BuildContext context, WidgetRef ref) {
-    showAvatarSelectionSheet(context, ref, isBottomSlot: false);
-  }
+
 }
 
 class _SettingsCategory extends StatelessWidget {
@@ -857,7 +872,7 @@ class _SettingsSwitchTile extends ConsumerWidget {
         value: value,
         onChanged: (v) {
           if (!enabled) return;
-          ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiToggle);
+          ref.read(chessSoundServiceProvider).playSfx(SoundEffect.switchToggle);
           onChanged(v);
         },
         secondary: Container(
@@ -955,7 +970,7 @@ class _AnimationToggle extends ConsumerWidget {
         child: InkWell(
           onTap: () {
             if (!enabled) return;
-            ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiToggle);
+            ref.read(chessSoundServiceProvider).playSfx(SoundEffect.switchToggle);
             onChanged(!value);
           },
           borderRadius: BorderRadius.circular(12),
@@ -1009,7 +1024,7 @@ class _AnimationToggle extends ConsumerWidget {
                   value: value,
                   onChanged: (v) {
                     if (!enabled) return;
-                    ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiToggle);
+                    ref.read(chessSoundServiceProvider).playSfx(SoundEffect.switchToggle);
                     onChanged(v);
                   },
                   activeThumbColor: ScholarlyTheme.accentBlue,

@@ -4,7 +4,6 @@ import 'package:google_fonts/google_fonts.dart';
 import '../application/chess_provider.dart';
 import '../services/chess_sound_service.dart';
 import 'scholarly_theme.dart';
-import 'widgets/global_sidebar.dart';
 import 'widgets/game_controls.dart';
 import 'widgets/ambient_scaffold.dart';
 
@@ -25,7 +24,6 @@ class _RatedSettingsPageState extends ConsumerState<RatedSettingsPage> {
 
     return AmbientScaffold(
       scaffoldKey: _scaffoldKey,
-      drawer: const GlobalSidebar(),
       blob1Color: const Color(0xFFE2E8F0),
       blob2Color: const Color(0xFFDBEAFE),
       blob3Color: const Color(0xFFD1FAE5),
@@ -350,7 +348,7 @@ class _SettingsTile extends ConsumerWidget {
   }
 }
 
-class _SettingsSwitchTile extends StatelessWidget {
+class _SettingsSwitchTile extends ConsumerWidget {
   final String label;
   final String description;
   final IconData icon;
@@ -366,10 +364,11 @@ class _SettingsSwitchTile extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return SwitchListTile(
       value: value,
       onChanged: (v) {
+        ref.read(chessSoundServiceProvider).playSfx(SoundEffect.switchToggle);
         onChanged(v);
       },
       secondary: Container(

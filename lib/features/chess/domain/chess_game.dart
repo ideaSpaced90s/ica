@@ -8,11 +8,13 @@ import 'package:chess/chess.dart' as chess_lib;
 class ChessGame {
   final chess_lib.Chess _chess;
   final bool isChess960;
+  final String initialFen;
   static const List<String> files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
   static const List<String> ranks = ['8', '7', '6', '5', '4', '3', '2', '1'];
 
   ChessGame({String? fen, this.isChess960 = false})
-    : _chess = chess_lib.Chess.fromFEN(fen ?? chess_lib.Chess.DEFAULT_POSITION);
+    : initialFen = fen ?? chess_lib.Chess.DEFAULT_POSITION,
+      _chess = chess_lib.Chess.fromFEN(fen ?? chess_lib.Chess.DEFAULT_POSITION);
 
   String get fen => _chess.fen;
   GameTerminationStatus? _cachedStatus;
@@ -326,7 +328,7 @@ class ChessGame {
 
   List<String> moveHistoryLabels() {
     final stopwatchDart = Stopwatch()..start();
-    final tempGame = chess_lib.Chess.fromFEN(chess_lib.Chess.DEFAULT_POSITION);
+    final tempGame = chess_lib.Chess.fromFEN(initialFen);
     final labels = <String>[];
     for (final h in _chess.history) {
       final move = h.move;
@@ -350,7 +352,7 @@ class ChessGame {
       }).toList();
 
       labelsRust = getSanHistory(
-        initialFen: chess_lib.Chess.DEFAULT_POSITION,
+        initialFen: initialFen,
         uciMoves: uciMoves,
         isChess960: isChess960,
       );

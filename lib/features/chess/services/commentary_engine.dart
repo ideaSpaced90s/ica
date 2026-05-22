@@ -1,11 +1,14 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:path_provider/path_provider.dart';
 import 'package:llama_cpp_dart/llama_cpp_dart.dart';
 import 'package:kingslayer_chess/src/rust/api/puzzles.dart' as rust_puzzles;
+import 'package:http/http.dart' as http;
 import '../data/puzzle_repository.dart';
+import 'env_config.dart';
 
 class CommentaryEngine {
   bool isInitialized = false;
@@ -16,6 +19,18 @@ class CommentaryEngine {
   LlamaEngine? _llamaEngine;
   EngineSession? _llamaSession;
   void Function(rust_puzzles.Puzzle puzzle)? onPuzzleLoaded;
+
+  Future<void> _loadPersonaIfNeeded() async {
+    if (systemInstruction != null && systemInstruction!.isNotEmpty) return;
+    try {
+      final personaText = await rootBundle.loadString('assets/persona/gmbard.md');
+      if (personaText.isNotEmpty) {
+        systemInstruction = personaText;
+      }
+    } catch (e) {
+      debugPrint('CommentaryEngine: Failed to load gmbard.md: $e');
+    }
+  }
 
   Future<void> initialize() async {
     if (isInitialized || isInitializing) return;
@@ -44,8 +59,15 @@ class CommentaryEngine {
       }
 
       // 2. Setup LLM parameters for local inference using LlamaEngine
+      String libraryPath = 'libllama.so';
+      if (Platform.isWindows) {
+        libraryPath = 'llama.dll';
+      } else if (Platform.isMacOS) {
+        libraryPath = 'libllama.dylib';
+      }
+
       _llamaEngine = await LlamaEngine.spawn(
-        libraryPath: 'libllama.so',
+        libraryPath: libraryPath,
         modelParams: ModelParams(
           path: localModelFile.path,
           gpuLayers: 0,
@@ -58,14 +80,7 @@ class CommentaryEngine {
       _llamaSession = await _llamaEngine!.createSession();
 
       // 3. Load dynamic persona once
-      try {
-        final personaText = await rootBundle.loadString('assets/persona/gmbard.md');
-        if (personaText.isNotEmpty) {
-          systemInstruction = personaText;
-        }
-      } catch (e) {
-        debugPrint('CommentaryEngine: Failed to load gmbard.md: $e');
-      }
+      await _loadPersonaIfNeeded();
 
       isInitialized = true;
       debugPrint('CommentaryEngine: Local LLM initialized successfully.');
@@ -78,7 +93,7 @@ class CommentaryEngine {
     }
   }
 
-  /// Generates commentary using the local llama_cpp_dart engine
+  /// Generates commentary using either Sarvam AI (primary) or local llama_cpp_dart engine (fallback)
   Stream<String> generateCommentaryStream({
     String? player,
     String? move,
@@ -86,16 +101,6 @@ class CommentaryEngine {
     String? structuredPrompt,
     String? userQuery,
   }) async* {
-    if (!isInitialized) {
-      await initialize();
-    }
-
-    if (!isInitialized || _llamaSession == null) {
-      debugPrint('CommentaryEngine: GM Bard is Offline.');
-      yield 'GM Bard is preparing training materials. Please try again in a moment.';
-      return;
-    }
-
     // 1. Intercept puzzle search queries deterministically to bypass LLM tool-calling
     final query = userQuery?.toLowerCase() ?? '';
     final isPuzzleRequest = query.contains('puzzle') || query.contains('train') || query.contains('exercise');
@@ -155,7 +160,54 @@ class CommentaryEngine {
       return;
     }
 
-    // 2. Normal Commentary generation via Local LLM
+    // Load GM Bard persona
+    await _loadPersonaIfNeeded();
+
+    // Check EnvConfig to see if Sarvam AI is configured
+    await EnvConfig.load();
+    final sarvamApiKey = EnvConfig.get('SARVAM_API_KEY');
+    final sarvamModel = EnvConfig.get('SARVAM_MODEL') ?? 'sarvam-30b';
+
+    // If Sarvam API key is dropped into the .env file, use it as primary
+    if (sarvamApiKey != null &&
+        sarvamApiKey.isNotEmpty &&
+        sarvamApiKey != 'your_api_key_here') {
+      try {
+        debugPrint('CommentaryEngine: Utilizing Sarvam AI ($sarvamModel) as primary...');
+        isGenerating = true;
+        lastError = null;
+
+        String accumulatedResponse = '';
+        await for (final chunk in _streamSarvamAi(
+          apiKey: sarvamApiKey,
+          model: sarvamModel,
+          prompt: structuredPrompt ?? userQuery ?? '',
+        )) {
+          accumulatedResponse += chunk;
+          yield _cleanResponse(accumulatedResponse);
+        }
+
+        isGenerating = false;
+        return; // Stream succeeded, exit early!
+      } catch (e) {
+        debugPrint('CommentaryEngine: Sarvam AI primary failed: $e. Falling back to secondary local AI...');
+        lastError = 'Primary Sarvam AI failed: $e';
+      } finally {
+        isGenerating = false;
+      }
+    }
+
+    // 2. Normal Commentary generation via Local LLM (Fallback / Secondary)
+    if (!isInitialized) {
+      await initialize();
+    }
+
+    if (!isInitialized || _llamaSession == null) {
+      debugPrint('CommentaryEngine: GM Bard is Offline.');
+      yield 'GM Bard is preparing training materials. Please try again in a moment.';
+      return;
+    }
+
     isGenerating = true;
     lastError = null;
 
@@ -206,6 +258,65 @@ class CommentaryEngine {
       yield 'GM Bard is out of reach. Please try again later.';
     } finally {
       isGenerating = false;
+    }
+  }
+
+  /// Streams tokens from the Sarvam AI completions endpoint
+  Stream<String> _streamSarvamAi({
+    required String apiKey,
+    required String model,
+    required String prompt,
+  }) async* {
+    final client = http.Client();
+    final url = Uri.parse('https://api.sarvam.ai/v1/chat/completions');
+
+    final request = http.Request('POST', url)
+      ..headers['Content-Type'] = 'application/json'
+      ..headers['api-subscription-key'] = apiKey
+      ..body = jsonEncode({
+        'model': model,
+        'messages': [
+          if (systemInstruction != null && systemInstruction!.isNotEmpty)
+            {'role': 'system', 'content': systemInstruction},
+          {'role': 'user', 'content': prompt},
+        ],
+        'stream': true,
+      });
+
+    try {
+      final response = await client.send(request);
+      if (response.statusCode != 200) {
+        final body = await response.stream.bytesToString();
+        throw Exception('Sarvam AI returned status ${response.statusCode}: $body');
+      }
+
+      await for (final line in response.stream
+          .transform(utf8.decoder)
+          .transform(const LineSplitter())) {
+        final trimmed = line.trim();
+        if (trimmed.isEmpty) continue;
+        if (trimmed == 'data: [DONE]') break;
+        if (trimmed.startsWith('data: ')) {
+          final jsonStr = trimmed.substring(6).trim();
+          try {
+            final data = jsonDecode(jsonStr);
+            final choices = data['choices'] as List?;
+            if (choices != null && choices.isNotEmpty) {
+              final delta = choices[0]['delta'] as Map?;
+              if (delta != null) {
+                final content = delta['content'] as String?;
+                if (content != null) {
+                  yield content;
+                }
+              }
+            }
+          } catch (_) {
+            // Ignore parse errors on partial / malformed chunks
+          }
+        }
+      }
+    } finally {
+      client.close();
     }
   }
 

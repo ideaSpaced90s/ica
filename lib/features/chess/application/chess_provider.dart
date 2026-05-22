@@ -2572,7 +2572,19 @@ class ChessNotifier extends StateNotifier<ChessState> {
       if (state.game.inCheckmate) {
         unawaited(_soundService.duckBgmTemporarily());
       }
-      _soundService.playSfx(SoundEffect.gameover);
+      
+      bool isDraw = state.game.inDraw || state.game.inStalemate;
+      if (isDraw) {
+        _soundService.playSfx(SoundEffect.draw);
+      } else {
+        final winnerIsWhite = player == 'White';
+        final humanWon = winnerIsWhite == state.isPlayerWhite;
+        if (humanWon) {
+          _soundService.playSfx(SoundEffect.victory);
+        } else {
+          _soundService.playSfx(SoundEffect.defeat);
+        }
+      }
     } else if (state.game.inCheck) {
       _soundService.playSfx(SoundEffect.check);
     } else {
@@ -2748,6 +2760,12 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
     if (lastMove == null) return;
 
+    // Check for promotion first
+    if (lastMove.promotion != null) {
+      _soundService.playSfx(SoundEffect.promote);
+      return;
+    }
+
     // 1. Check for capture
     bool isCapture = lastMove.captured != null;
 
@@ -2760,7 +2778,19 @@ class ChessNotifier extends StateNotifier<ChessState> {
     final piece = lastMove.piece; // Piece type that moved
     final type = piece.toString().toLowerCase();
 
+    // Check for castling (King moving 2 squares horizontally)
+    bool isCastle = false;
     if (type == 'k') {
+      final fromFile = lastMove.from % 8;
+      final toFile = lastMove.to % 8;
+      if ((fromFile - toFile).abs() == 2) {
+        isCastle = true;
+      }
+    }
+
+    if (isCastle) {
+      _soundService.playSfx(SoundEffect.castle);
+    } else if (type == 'k') {
       _soundService.playKingMove();
     } else if (type == 'p') {
       _soundService.playPawnMove();
@@ -2842,6 +2872,8 @@ class ChessNotifier extends StateNotifier<ChessState> {
       isCommentaryStreaming: false,
     );
 
+    _soundService.playSfx(SoundEffect.gmbardThinking);
+
     try {
       // 1. Wait briefly for a fresh evaluation if it's the start of a turn
       if (!isNested) {
@@ -2895,6 +2927,8 @@ class ChessNotifier extends StateNotifier<ChessState> {
           isCommentaryStreaming: true,
         );
 
+        _soundService.playWriting();
+
         if (state.academyHouseAnimations) {
           _extractMoveSuggestion(chunk);
         }
@@ -2914,6 +2948,8 @@ class ChessNotifier extends StateNotifier<ChessState> {
           commentaryHistory: finalHistory,
           isCommentaryStreaming: false,
         );
+
+        _soundService.playSfx(SoundEffect.gmbardComplete);
 
         // --- NO AUTOMATIC ORCHESTRATION ---
         // The High Council (AI) only reveals its intelligence when asked.
@@ -3063,6 +3099,11 @@ class ChessNotifier extends StateNotifier<ChessState> {
     }
 
     saveCurrentGame(resultOverride: result);
+
+    final timedOutSideIsWhite = side == _clockWhite;
+    final playerIsWhite = state.isPlayerWhite;
+    final humanWon = playerIsWhite != timedOutSideIsWhite;
+    _soundService.playSfx(humanWon ? SoundEffect.victory : SoundEffect.defeat);
   }
 
   void _stopClock() {
@@ -3257,7 +3298,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
     }
   }
 
-  Future<void> initializeAcademySession() async {
+  Future<void> initializeAcademySession({String? customFen}) async {
     // Force state to Engine as White, Board Flipped
     _undoStack.clear();
     _redoStack.clear();
@@ -3277,7 +3318,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
     final preserveBottomLevel = state.bottomAvatarId;
 
     state = ChessState(
-      game: ChessGame(isChess960: false),
+      game: ChessGame(fen: customFen, isChess960: false),
       isPlayerWhite: false, // Engine is White
       isBoardFlipped: true, // White is at the top
       engineLevel: preserveLevel,
@@ -3302,8 +3343,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
       isAcademyActive: true,
       commentaryHistory: [
         CommentaryEntry(
-          text:
-              "Welcome back to the Academy, Apprentice. Today, I shall take the first step. Observe how I open the board to secure the center, then the path will be yours to choose.",
+          text: customFen != null
+              ? "Ah, you bring me a position from your Study Lab! Let me examine this setup. What would you like to know or practice from here?"
+              : "Welcome back to the Academy, Apprentice. Today, I shall take the first step. Observe how I open the board to secure the center, then the path will be yours to choose.",
           timestamp: DateTime.now(),
           isComplete: true,
           isUser: false,

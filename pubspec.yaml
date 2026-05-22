@@ -79,6 +79,8 @@ flutter:
     - assets/bgm/
     - assets/splash/
     - assets/engine/
+    - assets/engine/wincessengines/stockfish-windows-x86-64-avx2/stockfish/
+    - assets/engine/wincessengines/stockfish-windows-x86-64/stockfish/
     - assets/data/
     - assets/llm/
 

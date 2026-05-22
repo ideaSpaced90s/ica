@@ -9,15 +9,16 @@ import 'widgets/game_controls.dart';
 import 'widgets/board_stage.dart';
 import '../domain/models/ai_avatar.dart';
 import 'widgets/opponent_avatar_indicator.dart';
-import 'widgets/global_sidebar.dart';
 import 'rated_settings_page.dart';
 import 'widgets/arena_time_display.dart';
 import 'widgets/arena_turn_indicator.dart';
 import 'widgets/evaluation_bar.dart';
 import 'widgets/user_avatar_indicator.dart';
+import 'widgets/captured_pieces_inline.dart';
 import 'widgets/dice_rolling_overlay.dart';
 import 'widgets/ambient_flow_backdrop.dart';
 import 'widgets/ambient_scaffold.dart';
+import 'widgets/classic_windows_tabs.dart';
 import 'package:confetti/confetti.dart';
 import 'dashboard_page.dart';
 
@@ -53,6 +54,7 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(chessProvider);
+    final isLandscape = MediaQuery.of(context).size.width > MediaQuery.of(context).size.height;
 
     // One-time Rated Caution Popup
     if (!_hasShownRatedCaution) {
@@ -95,11 +97,12 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
       child: Scaffold(
         key: _scaffoldKey,
         backgroundColor: ScholarlyTheme.backgroundStart,
-        drawer: const GlobalSidebar(),
         body: Stack(
           children: [
             const AmbientFlowBackdrop(),
-            _buildPortraitLayout(context, ref, state),
+            isLandscape
+                ? _buildLandscapeLayout(context, ref, state)
+                : _buildPortraitLayout(context, ref, state),
             if ((state.game.gameOver || state.isTimeOut) && !state.isGameOverDismissed)
               _buildGameOverOverlay(context, ref, state),
             if (_isDiceRolling)
@@ -130,9 +133,148 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
     );
   }
 
+  Widget _buildLandscapeLayout(BuildContext context, WidgetRef ref, ChessState state) {
+    final isTurn = _isPlayerTurn(state);
+    final isFlipped = state.isBoardFlipped;
+    final topPieces = isFlipped ? state.game.capturedByWhite : state.game.capturedByBlack;
+    final bottomPieces = isFlipped ? state.game.capturedByBlack : state.game.capturedByWhite;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // LEFT COLUMN (Chessboard Area) - taking 55% of the space
+        Expanded(
+          flex: 11,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: 12),
+              // Opponent Avatar Indicator (Top Left) with Inline Captured Pieces
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ActiveAvatarWrapper(
+                        isActive: !isTurn,
+                        child: OpponentAvatarIndicator(
+                          avatar: AiAvatar.getAvatar(state.engineLevel),
+                          onTap: null, // Read-only from rated arena
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      CapturedPiecesInline(pieces: topPieces),
+                    ],
+                  ),
+                ),
+              ),
+              // BoardStage centered
+              Expanded(
+                child: Stack(
+                  children: [
+                    const BoardStage(isExpanded: true),
+                    if (state.isPaused) _buildPauseOverlay(context, ref),
+                  ],
+                ),
+              ),
+              // User Avatar Indicator (Bottom Right) with Inline Captured Pieces
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CapturedPiecesInline(pieces: bottomPieces),
+                      const SizedBox(width: 12),
+                      ActiveAvatarWrapper(
+                        isActive: isTurn,
+                        child: const UserAvatarIndicator(),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        ),
+
+        // VERTICAL SEPARATOR
+        Container(
+          width: 1.5,
+          color: ScholarlyTheme.panelStroke.withValues(alpha: 0.5),
+        ),
+
+        // RIGHT COLUMN (Sidebar Area) - taking 45% of the space
+        Expanded(
+          flex: 9,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Top Row: Stats & Clocks wrapped in glass
+                JuicyGlassCard(
+                  borderRadius: 16,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ArenaTurnIndicator(isActive: isTurn, isWhite: state.isPlayerWhite),
+                          const SizedBox(width: 8),
+                          EvaluationBar(fillFraction: _getEvalFraction(state, true)),
+                        ],
+                      ),
+                      const Spacer(),
+                      ArenaTimeDisplay(isActive: isTurn, timeLeft: state.isPlayerWhite ? state.whiteTimeLeft : state.blackTimeLeft),
+                      const SizedBox(width: 12),
+                      ArenaTimeDisplay(isActive: !isTurn, timeLeft: state.isPlayerWhite ? state.blackTimeLeft : state.whiteTimeLeft),
+                      const Spacer(),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          EvaluationBar(fillFraction: _getEvalFraction(state, false)),
+                          const SizedBox(width: 8),
+                          ArenaTurnIndicator(isActive: !isTurn, isWhite: !state.isPlayerWhite),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Center Section: Classic Tabbed Panel
+                Expanded(
+                  child: ClassicWindowsTabs(state: state),
+                ),
+                const SizedBox(height: 12),
+
+                // Bottom Section: Rated Action Row wrapped in JuicyGlassCard
+                JuicyGlassCard(
+                  borderRadius: 24,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  child: _buildRatedActionRow(context, ref, state),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildPortraitLayout(BuildContext context, WidgetRef ref, ChessState state) {
     final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
     final isTurn = _isPlayerTurn(state);
+    final isFlipped = state.isBoardFlipped;
+    final topPieces = isFlipped ? state.game.capturedByWhite : state.game.capturedByBlack;
+    final bottomPieces = isFlipped ? state.game.capturedByBlack : state.game.capturedByWhite;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -178,16 +320,24 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
             ),
           ),
         ),
-        // Opponent
+        // Opponent with inline captured pieces
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: Align(
             alignment: Alignment.centerLeft,
-            child: ActiveAvatarWrapper(
-              isActive: !isTurn,
-              child: OpponentAvatarIndicator(
-                avatar: AiAvatar.getAvatar(state.engineLevel),
-              ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ActiveAvatarWrapper(
+                  isActive: !isTurn,
+                  child: OpponentAvatarIndicator(
+                    avatar: AiAvatar.getAvatar(state.engineLevel),
+                    onTap: null, // Read-only from rated arena
+                  ),
+                ),
+                const SizedBox(width: 12),
+                CapturedPiecesInline(pieces: topPieces),
+              ],
             ),
           ),
         ),
@@ -195,19 +345,26 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
         Expanded(
           child: Stack(
             children: [
-              const BoardStage(isExpanded: false),
+              const BoardStage(isExpanded: true),
               if (state.isPaused) _buildPauseOverlay(context, ref),
             ],
           ),
         ),
-        // User
+        // User with inline captured pieces
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           child: Align(
             alignment: Alignment.centerRight,
-            child: ActiveAvatarWrapper(
-              isActive: isTurn,
-              child: const UserAvatarIndicator(),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CapturedPiecesInline(pieces: bottomPieces),
+                const SizedBox(width: 12),
+                ActiveAvatarWrapper(
+                  isActive: isTurn,
+                  child: const UserAvatarIndicator(),
+                ),
+              ],
             ),
           ),
         ),
@@ -235,25 +392,6 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          ActionIconButton(
-            icon: Icons.menu_rounded,
-            size: 22,
-            onTap: () async {
-              if (isMatchActive) {
-                final resigned = await _showRatedExitDialog(context);
-                if (resigned == true) {
-                  await ref.read(chessProvider.notifier).resignRatedGame();
-                  await ref.read(chessProvider.notifier).setRatedMode(false);
-                  if (context.mounted) {
-                    exitToDashboardWithSidebar(context, ref);
-                  }
-                }
-              } else {
-                _scaffoldKey.currentState?.openDrawer();
-              }
-            },
-          ),
-          const SizedBox(width: 8),
           ActionIconButton(
             icon: state.gameMode == 'chess960' ? Icons.grid_view_rounded : Icons.shuffle_rounded,
             size: 22,

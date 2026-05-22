@@ -197,9 +197,10 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
 
                           final isSelected = _selectedSquare == squareName;
                           final isHint = _legalTargets.contains(squareName);
-                          final isLastMove =
-                              chessState.lastMove?.contains(squareName) ??
-                              false;
+                          final isLastMoveStartOrEnd =
+                               _isStartOrEndSquare(squareName, chessState.lastMove);
+                           final isLastMoveInBetween =
+                               _isInBetweenSquare(squareName, chessState.lastMove);
                           final isSuggestedFrom =
                               chessState.isHintVisible &&
                               chessState.hintFrom == squareName;
@@ -361,21 +362,21 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
                                                const AcademySquareGlow(
                                                  color: ScholarlyTheme.accentBlue,
                                                ),
-                                             // 6. Last Move Highlight
-                                            if (isLastMove)
+                                            // 6. Last Move Highlight (Premium Trajectory Path)
+                                            if (isLastMoveStartOrEnd || isLastMoveInBetween)
                                               TweenAnimationBuilder<double>(
                                                 key: ValueKey(
                                                   'lm_${chessState.lastMove}',
                                                 ),
                                                 tween: Tween(
-                                                  begin:
-                                                      chessTheme.id == 'theme8'
-                                                      ? 0.10
-                                                      : 0.18,
-                                                  end: 0.0,
+                                                  begin: isLastMoveStartOrEnd
+                                                      ? (chessTheme.id == 'theme8' ? 0.20 : 0.35)
+                                                      : (chessTheme.id == 'theme8' ? 0.08 : 0.15),
+                                                  end: isLastMoveStartOrEnd
+                                                      ? (chessTheme.id == 'theme8' ? 0.14 : 0.24)
+                                                      : (chessTheme.id == 'theme8' ? 0.05 : 0.09),
                                                 ),
-                                                duration:
-                                                    ref
+                                                duration: ref
                                                         .read(
                                                           chessProvider
                                                               .notifier,
@@ -384,10 +385,10 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
                                                           'indicators',
                                                         )
                                                     ? const Duration(
-                                                        milliseconds: 1800,
+                                                        milliseconds: 400,
                                                       )
                                                     : Duration.zero,
-                                                curve: Curves.easeIn,
+                                                curve: Curves.easeOutCubic,
                                                 builder: (context, opacity, _) {
                                                   return chessTheme
                                                       .buildLastMoveHighlight(
@@ -1278,6 +1279,54 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
         _triggerGreaseTrail(from, to);
       }
     }
+  }
+
+  bool _isStartOrEndSquare(String square, String? lastMove) {
+    if (lastMove == null || lastMove.length < 4) return false;
+    final from = lastMove.substring(0, 2);
+    final to = lastMove.substring(2, 4);
+    return square == from || square == to;
+  }
+
+  bool _isInBetweenSquare(String square, String? lastMove) {
+    if (lastMove == null || lastMove.length < 4) return false;
+    final from = lastMove.substring(0, 2);
+    final to = lastMove.substring(2, 4);
+    final inBetween = _getInBetweenSquares(from, to);
+    return inBetween.contains(square);
+  }
+
+  List<String> _getInBetweenSquares(String from, String to) {
+    if (from.length < 2 || to.length < 2) return const [];
+    final fromCol = from.codeUnitAt(0) - 'a'.codeUnitAt(0);
+    final fromRow = int.tryParse(from[1]) == null ? 0 : int.parse(from[1]) - 1;
+    final toCol = to.codeUnitAt(0) - 'a'.codeUnitAt(0);
+    final toRow = int.tryParse(to[1]) == null ? 0 : int.parse(to[1]) - 1;
+
+    final dCol = toCol - fromCol;
+    final dRow = toRow - fromRow;
+
+    if (dCol == 0 && dRow == 0) return const [];
+
+    final stepCol = dCol.sign;
+    final stepRow = dRow.sign;
+
+    final squares = <String>[];
+
+    // Horizontal, vertical, or perfect diagonal (45 degrees)
+    if (dCol == 0 || dRow == 0 || dCol.abs() == dRow.abs()) {
+      var curCol = fromCol + stepCol;
+      var curRow = fromRow + stepRow;
+      while (curCol != toCol || curRow != toRow) {
+        if (curCol < 0 || curCol > 7 || curRow < 0 || curRow > 7) break;
+        final colChar = String.fromCharCode('a'.codeUnitAt(0) + curCol);
+        final rowChar = (curRow + 1).toString();
+        squares.add('$colChar$rowChar');
+        curCol += stepCol;
+        curRow += stepRow;
+      }
+    }
+    return squares;
   }
 
   void _triggerKnightDust(String square, double boardSize) {

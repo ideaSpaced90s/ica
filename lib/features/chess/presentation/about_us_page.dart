@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'scholarly_theme.dart';
-import 'widgets/global_sidebar.dart';
-import 'widgets/game_controls.dart';
 import 'widgets/ambient_scaffold.dart';
 import 'dashboard_page.dart';
 
@@ -27,7 +25,6 @@ class _AboutUsPageState extends ConsumerState<AboutUsPage> {
       },
       child: AmbientScaffold(
         scaffoldKey: _scaffoldKey,
-        drawer: const GlobalSidebar(),
         blob1Color: const Color(0xFFDBEAFE), // Soft Blue
         blob2Color: const Color(0xFFFCE7F3), // Soft Pink
         blob3Color: const Color(0xFFF3E8FF), // Soft Purple
@@ -242,17 +239,6 @@ class _AboutUsPageState extends ConsumerState<AboutUsPage> {
                   ),
                 ),
               ],
-            ),
-          ),
-          
-          // Floating 3-bar drawer menu button (fixed at top-left)
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 12,
-            left: 16,
-            child: ActionIconButton(
-              icon: Icons.menu_rounded,
-              size: 24,
-              onTap: () => _scaffoldKey.currentState?.openDrawer(),
             ),
           ),
         ],

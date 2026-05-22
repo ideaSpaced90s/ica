@@ -41,53 +41,121 @@ class StockfishService {
       return;
     }
 
+    _isReady = false;
+    _isError = false;
+    _readyCompleter = Completer<void>();
+
     try {
-      // debugPrint('StockfishService: Starting unified initialization sequence...');
-      _isReady = false;
-      _isError = false;
-      _readyCompleter = Completer<void>();
-
-      String? enginePath;
-
       if (Platform.isAndroid) {
         // debugPrint('StockfishService: Android detected. Using Native Library hunting logic...');
         final String libDir = await _channel.invokeMethod(
           'getNativeLibraryDir',
         );
-        enginePath = p.join(libDir, 'libstockfish.so');
+        final enginePath = p.join(libDir, 'libstockfish.so');
+        final success = await _tryLaunchEngine(enginePath, const Duration(seconds: 20));
+        if (!success) {
+          throw Exception('Failed to start Stockfish on Android');
+        }
       } else if (Platform.isWindows) {
         // debugPrint('StockfishService: Windows detected. Using Asset mapping logic...');
         final exePath = Platform.resolvedExecutable;
         final exeDir = p.dirname(exePath);
-        const relPath = 'assets/engine/stockfish.exe';
+        
+        // Define paths for AVX2 (Primary) and Non-AVX2 (Backup)
+        const relPathAvx2 = 'assets/engine/wincessengines/stockfish-windows-x86-64-avx2/stockfish/stockfish-windows-x86-64-avx2.exe';
+        const relPathNonAvx2 = 'assets/engine/wincessengines/stockfish-windows-x86-64/stockfish/stockfish-windows-x86-64.exe';
 
-        final potentialPaths = [
-          p.join(Directory.current.path, relPath),
-          p.join(exeDir, 'data', 'flutter_assets', relPath),
-          p.join(exeDir, relPath), // Direct asset path in some build modes
-          'C:\\Stockfish\\stockfish.exe', // Fallback for some users
+        final potentialPathsAvx2 = [
+          p.join(Directory.current.path, relPathAvx2),
+          p.join(exeDir, 'data', 'flutter_assets', relPathAvx2),
+          p.join(exeDir, relPathAvx2),
+          'C:\\Stockfish\\stockfish.exe',
         ];
 
-        // debugPrint('StockfishService: Searching for engine in potential locations:');
-        for (final path in potentialPaths) {
-          final exists = await File(path).exists();
-          // debugPrint('  - Checking: $path [Exists: $exists]');
-          if (exists) {
-            enginePath = path;
+        final potentialPathsNonAvx2 = [
+          p.join(Directory.current.path, relPathNonAvx2),
+          p.join(exeDir, 'data', 'flutter_assets', relPathNonAvx2),
+          p.join(exeDir, relPathNonAvx2),
+        ];
+
+        // 1. Try AVX2
+        String? avx2Path;
+        for (final path in potentialPathsAvx2) {
+          if (await File(path).exists()) {
+            avx2Path = path;
             break;
           }
         }
+
+        bool success = false;
+        if (avx2Path != null) {
+          debugPrint('StockfishService: Attempting AVX2 primary engine -> $avx2Path');
+          // Short timeout (3s) so we fallback immediately on unsupported CPUs
+          success = await _tryLaunchEngine(avx2Path, const Duration(seconds: 3));
+          if (success) {
+            debugPrint('StockfishService: AVX2 primary engine successfully launched and handshaked!');
+          } else {
+            debugPrint('StockfishService WARNING: AVX2 primary engine failed or crashed. Falling back to non-AVX2...');
+          }
+        }
+
+        // 2. Try Non-AVX2 fallback
+        if (!success) {
+          String? nonAvx2Path;
+          for (final path in potentialPathsNonAvx2) {
+            if (await File(path).exists()) {
+              nonAvx2Path = path;
+              break;
+            }
+          }
+
+          if (nonAvx2Path != null) {
+            debugPrint('StockfishService: Attempting Non-AVX2 backup engine -> $nonAvx2Path');
+            success = await _tryLaunchEngine(nonAvx2Path, const Duration(seconds: 20));
+            if (success) {
+              debugPrint('StockfishService: Non-AVX2 backup engine successfully launched and handshaked!');
+            }
+          }
+        }
+
+        if (!success) {
+          throw Exception('Stockfish binary NOT FOUND or failed to execute on Windows.');
+        }
+      }
+    } catch (e) {
+      debugPrint('StockfishService: FAILED to start engine: $e');
+      _isError = true;
+      if (_readyCompleter != null && !_readyCompleter!.isCompleted) {
+        _readyCompleter!.complete();
+      }
+    }
+  }
+
+  Future<bool> _tryLaunchEngine(String enginePath, Duration timeout) async {
+    _cleanupCurrentProcess();
+
+    final completer = Completer<bool>();
+    var hasExited = false;
+    var isTimedOut = false;
+
+    try {
+      if (!await File(enginePath).exists()) {
+        return false;
       }
 
-      if (enginePath == null || !await File(enginePath).exists()) {
-        final errorMsg = 'Stockfish binary NOT FOUND. (Path: $enginePath)';
-        debugPrint('StockfishService CRITICAL: $errorMsg');
-        throw Exception(errorMsg);
-      }
-
-      // debugPrint('StockfishService: Launching engine -> $enginePath');
       _process = await Process.start(enginePath, []);
-      // debugPrint('StockfishService: Process up. PID: ${_process?.pid}');
+
+      // Monitor process exit
+      _process!.exitCode.then((code) {
+        hasExited = true;
+        if (code != 0) {
+          debugPrint('StockfishService: Process exited abnormally with code $code');
+        }
+        _isReady = false;
+        if (!completer.isCompleted && !isTimedOut) {
+          completer.complete(false);
+        }
+      });
 
       _stdoutSubscription = _process!.stdout
           .transform(utf8.decoder)
@@ -96,17 +164,17 @@ class StockfishService {
             (line) {
               final trimmed = line.trim();
               if (trimmed.isNotEmpty) {
-                // debugPrint('Stockfish >>> $trimmed');
                 _outputController.add(trimmed);
 
                 if (trimmed == 'uciok') {
                   sendCommand('isready');
                 }
                 if (trimmed == 'readyok') {
-                  // debugPrint('StockfishService: Engine STATUS -> READY');
                   _isReady = true;
-                  if (_readyCompleter != null &&
-                      !_readyCompleter!.isCompleted) {
+                  if (!completer.isCompleted) {
+                    completer.complete(true);
+                  }
+                  if (_readyCompleter != null && !_readyCompleter!.isCompleted) {
                     _readyCompleter!.complete();
                   }
                 }
@@ -114,10 +182,11 @@ class StockfishService {
             },
             onError: (err) {
               debugPrint('StockfishService: [STDOUT ERROR] $err');
+              if (!completer.isCompleted) completer.complete(false);
             },
             onDone: () {
-              // debugPrint('StockfishService: [STDOUT] Stream closed.');
               _isReady = false;
+              if (!completer.isCompleted) completer.complete(false);
             },
           );
 
@@ -126,48 +195,45 @@ class StockfishService {
           .transform(const LineSplitter())
           .listen(
             (line) => debugPrint('Stockfish [STDERR] -> $line'),
-            onDone: () {
-              /* debugPrint('StockfishService: [STDERR] Stream closed.'); */
-            },
+            onDone: () {},
           );
 
-      // Monitor process exit
-      _process!.exitCode.then((code) {
-        if (code != 0) {
-          debugPrint(
-            'StockfishService: Process exited abnormally with code $code',
-          );
-        }
-        _isReady = false;
-        _process = null;
-      });
+      // Wait a tiny bit for the process to start up
+      await Future.delayed(const Duration(milliseconds: 200));
+      if (hasExited) {
+        return false;
+      }
 
-      // Wait a tiny bit for the process to be fully ready for input
-      await Future.delayed(const Duration(milliseconds: 500));
-
-      // debugPrint('StockfishService: Handshaking with engine (uci)...');
       sendCommand('uci');
 
-      // Standardized 20s timeout for all platforms
-      await _readyCompleter?.future.timeout(
-        const Duration(seconds: 20),
+      final result = await completer.future.timeout(
+        timeout,
         onTimeout: () {
-          debugPrint('StockfishService: TIMEOUT waiting for readyok.');
-          _isError = true;
-          if (_readyCompleter != null && !_readyCompleter!.isCompleted) {
-            _readyCompleter!.complete();
-          }
+          isTimedOut = true;
+          debugPrint('StockfishService: Timeout waiting for handshake for $enginePath');
+          return false;
         },
       );
 
-      // debugPrint('StockfishService: Handshake complete. Ready: $_isReady');
-    } catch (e) {
-      debugPrint('StockfishService: FAILED to start engine: $e');
-      _isError = true;
-      if (_readyCompleter != null && !_readyCompleter!.isCompleted) {
-        _readyCompleter!.complete();
+      if (!result) {
+        _cleanupCurrentProcess();
       }
+      return result;
+    } catch (e) {
+      debugPrint('StockfishService error in _tryLaunchEngine for $enginePath: $e');
+      _cleanupCurrentProcess();
+      return false;
     }
+  }
+
+  void _cleanupCurrentProcess() {
+    _stdoutSubscription?.cancel();
+    _stdoutSubscription = null;
+    _stderrSubscription?.cancel();
+    _stderrSubscription = null;
+    _process?.kill();
+    _process = null;
+    _isReady = false;
   }
 
   Future<void> sendCommand(String command) async {

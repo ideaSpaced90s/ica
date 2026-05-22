@@ -11,7 +11,6 @@ import '../../domain/models/tutorial_lesson.dart';
 import '../../domain/models/tutorial_progress.dart';
 import '../../data/tutorial_lessons.dart';
 import '../scholarly_theme.dart';
-import 'global_sidebar.dart';
 import 'game_controls.dart';
 import 'ambient_scaffold.dart';
 
@@ -37,7 +36,6 @@ class ChapterSelectScreen extends ConsumerWidget {
 
     return AmbientScaffold(
       scaffoldKey: scaffoldKey,
-      drawer: const GlobalSidebar(),
       blob1Color: const Color(0xFFFEF9C3), // Soft Gold
       blob2Color: const Color(0xFFDBEAFE), // Soft Blue
       blob3Color: const Color(0xFFF3E8FF), // Soft Purple
@@ -103,22 +101,10 @@ class ChapterSelectScreen extends ConsumerWidget {
           ),
 
           // 2. Absolute Utility Layer (Outside primary safe area flow)
-          
-          // Floating 3-bar drawer menu button (fixed at top-left)
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 12,
-            left: 16,
-            child: ActionIconButton(
-              icon: Icons.menu_rounded,
-              size: 24,
-              onTap: () => scaffoldKey.currentState?.openDrawer(),
-            ),
-          ),
-
-          // XP count container (Repositioned to clear menu button)
+          // XP count container
           Positioned(
             top: MediaQuery.of(context).padding.top + 16,
-            left: 76,
+            left: 16,
             child: JuicyGlassCard(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               borderRadius: 12,

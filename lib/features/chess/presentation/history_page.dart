@@ -11,8 +11,6 @@ import '../application/chess_provider.dart';
 import '../services/chess_sound_service.dart';
 import 'scholarly_theme.dart';
 import 'widgets/history_card.dart';
-import 'widgets/game_controls.dart';
-import 'widgets/global_sidebar.dart';
 import 'widgets/ambient_scaffold.dart';
 import 'dashboard_page.dart';
 
@@ -87,7 +85,6 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
       },
       child: AmbientScaffold(
         scaffoldKey: _scaffoldKey,
-        drawer: const GlobalSidebar(),
         blob1Color: const Color(0xFFCCFBF1), // Soft Teal
         blob2Color: const Color(0xFFDBEAFE), // Soft Blue
         blob3Color: const Color(0xFFFCE7F3), // Soft Pink
@@ -97,19 +94,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 60),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                  child: Text(
-                    'HISTORY',
-                    style: GoogleFonts.outfit(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 2,
-                      color: ScholarlyTheme.textPrimary,
-                    ),
-                  ),
-                ),
+                const SizedBox(height: 12),
                 // Integrated Glass Header: Search + Filters
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
@@ -235,19 +220,6 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
                             ),
                 ),
               ],
-            ),
-          ),
-
-          // Floating 3-bar drawer menu button (fixed at top-left)
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 12,
-            left: 16,
-            child: ActionIconButton(
-              icon: Icons.menu_rounded,
-              size: 24,
-              shouldBlink: !state.hasBlinkedMenu,
-              onBlinkComplete: () => notifier.markMenuAsBlinked(),
-              onTap: () => _scaffoldKey.currentState?.openDrawer(),
             ),
           ),
         ],

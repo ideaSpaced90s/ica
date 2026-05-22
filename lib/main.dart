@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -28,19 +29,23 @@ void main() {
       debugPrint('GLOBAL FLUTTER ERROR: ${details.exception}\n${details.stack}');
     };
 
-    await SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
-    ]);
+    if (Platform.isAndroid || Platform.isIOS) {
+      await SystemChrome.setPreferredOrientations([
+        DeviceOrientation.portraitUp,
+        DeviceOrientation.portraitDown,
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
+      ]);
 
-    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      systemNavigationBarColor: Colors.transparent,
-      systemNavigationBarDividerColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-      systemNavigationBarIconBrightness: Brightness.light,
-    ));
+      await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+      SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        systemNavigationBarColor: Colors.transparent,
+        systemNavigationBarDividerColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        systemNavigationBarIconBrightness: Brightness.light,
+      ));
+    }
 
     runApp(const KingslayerChessApp());
   }, (error, stack) {

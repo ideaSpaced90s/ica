@@ -5,6 +5,7 @@ class ScholarlyTheme {
   // Modern Office App Palette
   static const Color backgroundStart = Color(0xFFF8F9FA); // Clean off-white
   static const Color backgroundEnd = Color(0xFFE9ECEF);
+  static const Color backgroundDark = Color(0xFF0F172A); // Modern dark slate
   static const Color panelBase = Color(0xFFFFFFFF); // Clean white for panels
   static const Color panelGlass = Color(0xFFFFFFFF);
   static const Color panelStroke = Color(0xFFDEE2E6); // Subtle border

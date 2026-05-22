@@ -7,7 +7,6 @@ import '../application/chess_provider.dart';
 import 'scholarly_theme.dart';
 import 'widgets/board_stage.dart';
 
-import 'widgets/global_sidebar.dart';
 import 'widgets/ambient_scaffold.dart';
 import 'dashboard_page.dart';
 import 'dart:ui';
@@ -179,89 +178,179 @@ class _PuzzlePageState extends ConsumerState<PuzzlePage> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final state = ref.watch(chessProvider);
-    final notifier = ref.read(chessProvider.notifier);
-
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (bool didPop, Object? result) async {
-        if (didPop) return;
-        await _requestExitPuzzle();
-      },
-      child: AmbientScaffold(
-        scaffoldKey: _scaffoldKey,
-        drawer: const GlobalSidebar(),
-        blob1Color: const Color(0xFFF0F9FF), // Very light blue
-        blob2Color: const Color(0xFFFDF2F8), // Very light pink
-        blob3Color: const Color(0xFFFFFBEB), // Very light amber
-        body: SafeArea(
-          top: false,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // 1. Board
-              const AspectRatio(
-                aspectRatio: 1.0,
-                child: BoardStage(isExpanded: true),
-              ),
-              
-              // 2. Puzzle Info & Move Log
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _PuzzleStatusHeader(state: state),
-                      const SizedBox(height: 12),
-                      Expanded(
-                        child: JuicyGlassCard(
-                          borderRadius: 20,
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.only(top: 12, bottom: 4),
-                                child: Text(
-                                  'MOVE SEQUENCE',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w900,
-                                    color: ScholarlyTheme.textSubtle,
-                                    letterSpacing: 1.0,
-                                  ),
-                                ),
-                              ),
-                              const Divider(color: ScholarlyTheme.panelStroke),
-                              Expanded(
-                                child: _buildMoveLog(context, state),
-                              ),
-                            ],
+  Widget _buildPortraitLayout(
+    BuildContext context,
+    ChessState state,
+    ChessNotifier notifier,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // 1. Board
+        const AspectRatio(
+          aspectRatio: 1.0,
+          child: BoardStage(isExpanded: true),
+        ),
+        
+        // 2. Puzzle Info & Move Log
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _PuzzleStatusHeader(state: state),
+                const SizedBox(height: 12),
+                Expanded(
+                  child: JuicyGlassCard(
+                    borderRadius: 20,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12, bottom: 4),
+                          child: Text(
+                            'MOVE SEQUENCE',
+                            style: GoogleFonts.inter(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w900,
+                              color: ScholarlyTheme.textSubtle,
+                              letterSpacing: 1.0,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                        const Divider(color: ScholarlyTheme.panelStroke),
+                        Expanded(
+                          child: _buildMoveLog(context, state),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
+              ],
+            ),
+          ),
+        ),
 
-              // 3. Actions
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-                child: JuicyGlassCard(
+        // 3. Actions
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+          child: JuicyGlassCard(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            borderRadius: 24,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _CompactActionIcon(
+                  icon: Icons.skip_next_rounded,
+                  tooltip: 'Next Puzzle',
+                  onTap: () => notifier.nextPuzzle(silent: true),
+                ),
+                _CompactActionIcon(
+                  icon: Icons.refresh_rounded,
+                  tooltip: 'Reset',
+                  onTap: () => notifier.resetPuzzleLine(),
+                ),
+                _CompactActionIcon(
+                  icon: Icons.flip_camera_android_outlined,
+                  tooltip: 'Flip',
+                  isActive: state.isBoardFlipped,
+                  onTap: () => notifier.toggleBoardOrientation(),
+                ),
+                _CompactActionIcon(
+                  icon: state.isBulbGlowing
+                      ? Icons.lightbulb_rounded
+                      : Icons.lightbulb_outline_rounded,
+                  tooltip: 'Hint',
+                  isEnabled: !state.isHintLoading,
+                  isActive: state.isBulbGlowing,
+                  activeColor: ScholarlyTheme.accentYellowSoft,
+                  activeIconColor: ScholarlyTheme.accentYellow,
+                  onTap: () => notifier.requestHint(),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLandscapeLayout(
+    BuildContext context,
+    ChessState state,
+    ChessNotifier notifier,
+  ) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // LEFT COLUMN (Chessboard Area) - taking 55% of the space
+        Expanded(
+          flex: 11,
+          child: const Center(
+            child: AspectRatio(
+              aspectRatio: 1.0,
+              child: BoardStage(isExpanded: true),
+            ),
+          ),
+        ),
+
+        // VERTICAL SEPARATOR
+        Container(
+          width: 1.5,
+          color: ScholarlyTheme.panelStroke.withValues(alpha: 0.5),
+        ),
+
+        // RIGHT COLUMN (Sidebar Area) - taking 45% of the space
+        Expanded(
+          flex: 9,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // 1. Puzzle Status Header
+                _PuzzleStatusHeader(state: state),
+                const SizedBox(height: 12),
+
+                // 2. Move Log
+                Expanded(
+                  child: JuicyGlassCard(
+                    borderRadius: 20,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12, bottom: 4),
+                          child: Text(
+                            'MOVE SEQUENCE',
+                            style: GoogleFonts.inter(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w900,
+                              color: ScholarlyTheme.textSubtle,
+                              letterSpacing: 1.0,
+                            ),
+                          ),
+                        ),
+                        const Divider(color: ScholarlyTheme.panelStroke),
+                        Expanded(
+                          child: _buildMoveLog(context, state),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // 3. Actions Row
+                JuicyGlassCard(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   borderRadius: 24,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      _CompactActionIcon(
-                        icon: Icons.menu_rounded,
-                        tooltip: 'Menu',
-                        onTap: () => _scaffoldKey.currentState?.openDrawer(),
-                      ),
                       _CompactActionIcon(
                         icon: Icons.skip_next_rounded,
                         tooltip: 'Next Puzzle',
@@ -292,9 +381,36 @@ class _PuzzlePageState extends ConsumerState<PuzzlePage> {
                     ],
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = ref.watch(chessProvider);
+    final notifier = ref.read(chessProvider.notifier);
+    final isLandscape = MediaQuery.of(context).size.width > MediaQuery.of(context).size.height;
+
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (bool didPop, Object? result) async {
+        if (didPop) return;
+        await _requestExitPuzzle();
+      },
+      child: AmbientScaffold(
+        scaffoldKey: _scaffoldKey,
+        blob1Color: const Color(0xFFF0F9FF), // Very light blue
+        blob2Color: const Color(0xFFFDF2F8), // Very light pink
+        blob3Color: const Color(0xFFFFFBEB), // Very light amber
+        body: SafeArea(
+          top: false,
+          child: isLandscape
+              ? _buildLandscapeLayout(context, state, notifier)
+              : _buildPortraitLayout(context, state, notifier),
         ),
       ),
     );
