@@ -44,7 +44,7 @@ void main() {
       expect(contextOpening.gamePhase, 'Opening');
     });
 
-    test('PromptBuilder ChatML construction', () {
+    test('PromptBuilder Gemma 3 construction', () {
       final game = ChessGame();
       final context = PositionContextBuilder.build(
         move: 'e2e4',
@@ -59,11 +59,11 @@ void main() {
       expect(prompt, contains('Analysis:'));
 
       // Let's test PromptBuilder itself
-      final chatmlPrompt = PromptBuilder.buildCommentaryPrompt(context: context);
-      expect(chatmlPrompt, contains('<|im_start|>system'));
-      expect(chatmlPrompt, contains('Identity: You are GM Bard'));
-      expect(chatmlPrompt, contains('<|im_start|>user'));
-      expect(chatmlPrompt, contains('<|im_start|>assistant'));
+      final gemmaPrompt = PromptBuilder.buildCommentaryPrompt(context: context);
+      expect(gemmaPrompt, contains('<start_of_turn>system'));
+      expect(gemmaPrompt, contains('Identity: You are GM Bard'));
+      expect(gemmaPrompt, contains('<start_of_turn>user'));
+      expect(gemmaPrompt, contains('<start_of_turn>model'));
     });
   });
 }

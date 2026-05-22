@@ -1,14 +1,11 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:path_provider/path_provider.dart';
 import 'package:llama_cpp_dart/llama_cpp_dart.dart';
 import 'package:kingslayer_chess/src/rust/api/puzzles.dart' as rust_puzzles;
-import 'package:http/http.dart' as http;
 import '../data/puzzle_repository.dart';
-import 'env_config.dart';
 
 class CommentaryEngine {
   bool isInitialized = false;
@@ -43,11 +40,11 @@ class CommentaryEngine {
       
       // 1. Copy GGUF model file from assets to local application directory if it doesn't exist
       final appDir = await getApplicationDocumentsDirectory();
-      final localModelFile = File('${appDir.path}/SmolLM2-135M.gguf');
+      final localModelFile = File('${appDir.path}/gemma-3-270m-it-Q8_0.gguf');
 
       if (!await localModelFile.exists()) {
-        debugPrint('CommentaryEngine: Copying SmolLM2-135M.gguf model asset to local storage (first-run)...');
-        final byteData = await rootBundle.load('assets/llm/SmolLM2-135M.gguf');
+        debugPrint('CommentaryEngine: Copying gemma-3-270m-it-Q8_0.gguf model asset to local storage (first-run)...');
+        final byteData = await rootBundle.load('assets/llm/gemma/gemma-3-270m-it-Q8_0.gguf');
         await localModelFile.create(recursive: true);
         await localModelFile.writeAsBytes(
           byteData.buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes),
@@ -93,7 +90,7 @@ class CommentaryEngine {
     }
   }
 
-  /// Generates commentary using either Sarvam AI (primary) or local llama_cpp_dart engine (fallback)
+  /// Generates commentary using the primary local Gemma 3 270M Instruct model
   Stream<String> generateCommentaryStream({
     String? player,
     String? move,
@@ -163,41 +160,7 @@ class CommentaryEngine {
     // Load GM Bard persona
     await _loadPersonaIfNeeded();
 
-    // Check EnvConfig to see if Sarvam AI is configured
-    await EnvConfig.load();
-    final sarvamApiKey = EnvConfig.get('SARVAM_API_KEY');
-    final sarvamModel = EnvConfig.get('SARVAM_MODEL') ?? 'sarvam-30b';
-
-    // If Sarvam API key is dropped into the .env file, use it as primary
-    if (sarvamApiKey != null &&
-        sarvamApiKey.isNotEmpty &&
-        sarvamApiKey != 'your_api_key_here') {
-      try {
-        debugPrint('CommentaryEngine: Utilizing Sarvam AI ($sarvamModel) as primary...');
-        isGenerating = true;
-        lastError = null;
-
-        String accumulatedResponse = '';
-        await for (final chunk in _streamSarvamAi(
-          apiKey: sarvamApiKey,
-          model: sarvamModel,
-          prompt: structuredPrompt ?? userQuery ?? '',
-        )) {
-          accumulatedResponse += chunk;
-          yield _cleanResponse(accumulatedResponse);
-        }
-
-        isGenerating = false;
-        return; // Stream succeeded, exit early!
-      } catch (e) {
-        debugPrint('CommentaryEngine: Sarvam AI primary failed: $e. Falling back to secondary local AI...');
-        lastError = 'Primary Sarvam AI failed: $e';
-      } finally {
-        isGenerating = false;
-      }
-    }
-
-    // 2. Normal Commentary generation via Local LLM (Fallback / Secondary)
+    // Commentary generation via Local LLM
     if (!isInitialized) {
       await initialize();
     }
@@ -218,7 +181,7 @@ class CommentaryEngine {
       final controller = StreamController<String>();
 
       final genSub = _llamaSession!.generate(
-        prompt: structuredPrompt,
+        prompt: structuredPrompt ?? userQuery ?? '',
         addSpecial: true,
         sampler: const SamplerParams(
           temperature: 0.5,
@@ -261,64 +224,7 @@ class CommentaryEngine {
     }
   }
 
-  /// Streams tokens from the Sarvam AI completions endpoint
-  Stream<String> _streamSarvamAi({
-    required String apiKey,
-    required String model,
-    required String prompt,
-  }) async* {
-    final client = http.Client();
-    final url = Uri.parse('https://api.sarvam.ai/v1/chat/completions');
 
-    final request = http.Request('POST', url)
-      ..headers['Content-Type'] = 'application/json'
-      ..headers['api-subscription-key'] = apiKey
-      ..body = jsonEncode({
-        'model': model,
-        'messages': [
-          if (systemInstruction != null && systemInstruction!.isNotEmpty)
-            {'role': 'system', 'content': systemInstruction},
-          {'role': 'user', 'content': prompt},
-        ],
-        'stream': true,
-      });
-
-    try {
-      final response = await client.send(request);
-      if (response.statusCode != 200) {
-        final body = await response.stream.bytesToString();
-        throw Exception('Sarvam AI returned status ${response.statusCode}: $body');
-      }
-
-      await for (final line in response.stream
-          .transform(utf8.decoder)
-          .transform(const LineSplitter())) {
-        final trimmed = line.trim();
-        if (trimmed.isEmpty) continue;
-        if (trimmed == 'data: [DONE]') break;
-        if (trimmed.startsWith('data: ')) {
-          final jsonStr = trimmed.substring(6).trim();
-          try {
-            final data = jsonDecode(jsonStr);
-            final choices = data['choices'] as List?;
-            if (choices != null && choices.isNotEmpty) {
-              final delta = choices[0]['delta'] as Map?;
-              if (delta != null) {
-                final content = delta['content'] as String?;
-                if (content != null) {
-                  yield content;
-                }
-              }
-            }
-          } catch (_) {
-            // Ignore parse errors on partial / malformed chunks
-          }
-        }
-      }
-    } finally {
-      client.close();
-    }
-  }
 
   /// Generates a single block of commentary
   Future<String> generateCommentary({
@@ -339,12 +245,18 @@ class CommentaryEngine {
     return lastChunk;
   }
 
-  /// Clean ChatML tags or prompt markers leaking into output
+  /// Clean ChatML/Gemma tags or prompt markers leaking into output
   String _cleanResponse(String text) {
     return text
         .replaceAll('<|im_end|>', '')
         .replaceAll('<|im_start|>', '')
         .replaceAll('<|endoftext|>', '')
+        .replaceAll('<start_of_turn>', '')
+        .replaceAll('<end_of_turn>', '')
+        .replaceAll('<eos>', '')
+        .replaceAll('<bos>', '')
+        .replaceAll('model\n', '')
+        .replaceAll('model', '')
         .replaceAll('assistant\n', '')
         .replaceAll('assistant', '')
         .trim();

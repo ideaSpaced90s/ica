@@ -19,12 +19,12 @@ Rules:
   }) {
     final buffer = StringBuffer();
 
-    // 1. System Instruction in ChatML
+    // 1. System Instruction in Gemma 3 formatting
     final system = systemInstructionOverride ?? systemInstruction;
-    buffer.write('<|im_start|>system\n$system<|im_end|>\n');
+    buffer.write('<start_of_turn>system\n$system<end_of_turn>\n');
 
     // 2. Few-shot Example 1: Standard Commentary
-    buffer.write('<|im_start|>user\n');
+    buffer.write('<start_of_turn>user\n');
     buffer.write('Board State:\n');
     buffer.write('- Last Move Played: Knight to f3\n');
     buffer.write('- Analysis: The last move was a Strong move.\n');
@@ -33,12 +33,12 @@ Rules:
     buffer.write('- Tactical Alerts: None detected.\n');
     buffer.write('- Threat Level: Low\n');
     buffer.write('- Position Style: Positional\n');
-    buffer.write('\nInstruction: React to the move with a brief, grandmaster-style comment. Speak directly to the Apprentice. Max 1-2 sentences.<|im_end|>\n');
-    buffer.write('<|im_start|>assistant\n');
-    buffer.write('White has developed their Knight to f3, controlling the center, Apprentice. I recommend contesting the center immediately by playing Pawn to d5.<|im_end|>\n');
+    buffer.write('\nInstruction: React to the move with a brief, grandmaster-style comment. Speak directly to the Apprentice. Max 1-2 sentences.<end_of_turn>\n');
+    buffer.write('<start_of_turn>model\n');
+    buffer.write('White has developed their Knight to f3, controlling the center, Apprentice. I recommend contesting the center immediately by playing Pawn to d5.<end_of_turn>\n');
 
     // Few-shot Example 2: Tactical Threat (Pin)
-    buffer.write('<|im_start|>user\n');
+    buffer.write('<start_of_turn>user\n');
     buffer.write('Board State:\n');
     buffer.write('- Last Move Played: Bishop to c5\n');
     buffer.write('- Analysis: The last move was a Blunder move.\n');
@@ -48,12 +48,12 @@ Rules:
     buffer.write('  * Your Knight on f3 is pinned to your King by the opponent\'s Bishop on g4.\n');
     buffer.write('- Threat Level: High\n');
     buffer.write('- Position Style: Attacking\n');
-    buffer.write('\nInstruction: React to the move with a brief, grandmaster-style comment. Speak directly to the Apprentice. Max 1-2 sentences.<|im_end|>\n');
-    buffer.write('<|im_start|>assistant\n');
-    buffer.write('A dangerous moment, Apprentice. Your Knight on f3 is pinned to your King. You must play cautiously—consider playing Pawn to c3 to challenge their center.<|im_end|>\n');
+    buffer.write('\nInstruction: React to the move with a brief, grandmaster-style comment. Speak directly to the Apprentice. Max 1-2 sentences.<end_of_turn>\n');
+    buffer.write('<start_of_turn>model\n');
+    buffer.write('A dangerous moment, Apprentice. Your Knight on f3 is pinned to your King. You must play cautiously—consider playing Pawn to c3 to challenge their center.<end_of_turn>\n');
 
     // Few-shot Example 3: User Ask (Advice)
-    buffer.write('<|im_start|>user\n');
+    buffer.write('<start_of_turn>user\n');
     buffer.write('Apprentice: What should I play next?\n\n');
     buffer.write('Board State:\n');
     buffer.write('- Last Move Played: Pawn to e4\n');
@@ -66,21 +66,21 @@ Rules:
     buffer.write('- Candidate Moves:\n');
     buffer.write('  * Option 1: Move c7c5, continuation: c7c5 -> g1f3 -> d7d6\n');
     buffer.write('  * Option 2: Move e7e5, continuation: e7e5 -> g1f3 -> b8c6\n');
-    buffer.write('\nInstruction: Recommend the best move continuation and explain its direct benefit. Max 2 sentences.<|im_end|>\n');
-    buffer.write('<|im_start|>assistant\n');
-    buffer.write('I recommend playing Pawn to c5, Apprentice. This enters the Sicilian Defense, contesting the d4 square and creating asymmetrical tactical chances.<|im_end|>\n');
+    buffer.write('\nInstruction: Recommend the best move continuation and explain its direct benefit. Max 2 sentences.<end_of_turn>\n');
+    buffer.write('<start_of_turn>model\n');
+    buffer.write('I recommend playing Pawn to c5, Apprentice. This enters the Sicilian Defense, contesting the d4 square and creating asymmetrical tactical chances.<end_of_turn>\n');
 
     // 3. Conversation History (if present)
     if (chatHistory.isNotEmpty) {
       final relevantHistory = chatHistory.reversed.take(2).toList().reversed;
       for (final entry in relevantHistory) {
-        final role = entry.isUser ? 'user' : 'assistant';
-        buffer.write('<|im_start|>$role\n${entry.text}<|im_end|>\n');
+        final role = entry.isUser ? 'user' : 'model';
+        buffer.write('<start_of_turn>$role\n${entry.text}<end_of_turn>\n');
       }
     }
 
     // 4. Current Prompt Input
-    buffer.write('<|im_start|>user\n');
+    buffer.write('<start_of_turn>user\n');
     if (userQuery != null && userQuery.isNotEmpty) {
       buffer.write('Apprentice: $userQuery\n\n');
     }
@@ -105,12 +105,12 @@ Rules:
       } else if (queryLower.contains('what') || queryLower.contains('play') || queryLower.contains('advice') || queryLower.contains('should')) {
         customTask = "Recommend the best move continuation and explain its direct benefit. Max 2 sentences.";
       }
-      buffer.write('\nInstruction: $customTask<|im_end|>\n');
+      buffer.write('\nInstruction: $customTask<end_of_turn>\n');
     } else {
-      buffer.write('\nInstruction: React to the move with a brief, grandmaster-style comment. Speak directly to the Apprentice. Max 1-2 sentences.<|im_end|>\n');
+      buffer.write('\nInstruction: React to the move with a brief, grandmaster-style comment. Speak directly to the Apprentice. Max 1-2 sentences.<end_of_turn>\n');
     }
 
-    buffer.write('<|im_start|>assistant\n');
+    buffer.write('<start_of_turn>model\n');
     return buffer.toString();
   }
 }
