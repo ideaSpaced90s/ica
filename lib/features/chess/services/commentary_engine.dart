@@ -20,12 +20,12 @@ class CommentaryEngine {
   Future<void> _loadPersonaIfNeeded() async {
     if (systemInstruction != null && systemInstruction!.isNotEmpty) return;
     try {
-      final personaText = await rootBundle.loadString('assets/persona/gmbard.md');
+      final personaText = await rootBundle.loadString('assets/persona/gmchanakya.md');
       if (personaText.isNotEmpty) {
         systemInstruction = personaText;
       }
     } catch (e) {
-      debugPrint('CommentaryEngine: Failed to load gmbard.md: $e');
+      debugPrint('CommentaryEngine: Failed to load gmchanakya.md: $e');
     }
   }
 
@@ -82,7 +82,7 @@ class CommentaryEngine {
       isInitialized = true;
       debugPrint('CommentaryEngine: Local LLM initialized successfully.');
     } catch (error) {
-      lastError = 'Kingslayer Local AI Initialization failed: $error';
+      lastError = 'IdeaSpace Chess Academy Local AI Initialization failed: $error';
       debugPrint('CommentaryEngine: Failed to initialize local LLM: $error');
       isInitialized = false;
     } finally {
@@ -102,7 +102,7 @@ class CommentaryEngine {
     final query = userQuery?.toLowerCase() ?? '';
     final isPuzzleRequest = query.contains('puzzle') || query.contains('train') || query.contains('exercise');
     if (isPuzzleRequest) {
-      yield 'GM Bard is consulting the puzzle archives...';
+      yield 'GM Chanakya is consulting the puzzle archives...';
       
       final repo = PuzzleRepository();
       rust_puzzles.Puzzle? selectedPuzzle;
@@ -157,7 +157,7 @@ class CommentaryEngine {
       return;
     }
 
-    // Load GM Bard persona
+    // Load GM Chanakya persona
     await _loadPersonaIfNeeded();
 
     // Commentary generation via Local LLM
@@ -166,8 +166,8 @@ class CommentaryEngine {
     }
 
     if (!isInitialized || _llamaSession == null) {
-      debugPrint('CommentaryEngine: GM Bard is Offline.');
-      yield 'GM Bard is preparing training materials. Please try again in a moment.';
+      debugPrint('CommentaryEngine: GM Chanakya is Offline.');
+      yield 'GM Chanakya is preparing training materials. Please try again in a moment.';
       return;
     }
 
@@ -213,12 +213,12 @@ class CommentaryEngine {
 
       final cleaned = _cleanResponse(accumulatedResponse);
       if (cleaned.isEmpty) {
-        yield 'GM Bard is contemplating the board state...';
+        yield 'GM Chanakya is contemplating the board state...';
       }
     } catch (error) {
       lastError = 'Local AI Request failed: $error';
       debugPrint('CommentaryEngine: Request failed: $error');
-      yield 'GM Bard is out of reach. Please try again later.';
+      yield 'GM Chanakya is out of reach. Please try again later.';
     } finally {
       isGenerating = false;
     }

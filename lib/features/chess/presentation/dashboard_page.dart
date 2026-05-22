@@ -482,10 +482,17 @@ class DashboardPage extends ConsumerWidget {
 void exitToDashboardWithSidebar(BuildContext context, WidgetRef ref) {
   // Ensure the widget is still mounted before accessing ref or navigating.
   if (!context.mounted) return;
-  // Use a post-frame callback to avoid accessing ref after disposal.
+  // Use a post-frame callback to safely transition navigation.
   WidgetsBinding.instance.addPostFrameCallback((_) {
     if (!context.mounted) return;
-    ref.read(mobileNavIndexProvider.notifier).state = 0;
+    try {
+      ProviderScope.containerOf(context).read(mobileNavIndexProvider.notifier).state = 0;
+    } catch (_) {
+      // Fallback check if the container couldn't be obtained or widget was disposed
+      if (ref.context.mounted) {
+        ref.read(mobileNavIndexProvider.notifier).state = 0;
+      }
+    }
     if (Navigator.of(context).canPop()) {
       Navigator.of(context).pop();
     }

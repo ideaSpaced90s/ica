@@ -228,7 +228,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
             ),
             const SizedBox(height: 12),
             Text(
-              'Initializing GM Bard...',
+              'Initializing GM Chanakya...',
               style: GoogleFonts.inter(
                 color: ScholarlyTheme.textMuted,
                 fontSize: 14,
@@ -312,7 +312,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
           CircleAvatar(
             radius: 12,
             backgroundColor: Colors.transparent,
-            backgroundImage: const AssetImage('assets/persona/gm_bard.png'),
+            backgroundImage: const AssetImage('assets/persona/gm_chanakya.png'),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -320,7 +320,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'GM BARD • ${_formatTime(entry.timestamp)}',
+                  'GM CHANAKYA • ${_formatTime(entry.timestamp)}',
                   style: GoogleFonts.inter(
                     fontSize: 10,
                     color: ScholarlyTheme.accentBlue.withValues(alpha: 0.8),
@@ -350,7 +350,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              'GM Bard is writing',
+                              'GM Chanakya is writing',
                               style: GoogleFonts.fraunces(
                                 color: ScholarlyTheme.textMuted,
                                 fontSize: 12,
@@ -417,7 +417,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
     final List<InlineSpan> spans = [];
     final regExp = RegExp(
       r'\*\*(.*?)\*\*|'
-      r'\b(Apprentice|Defender of Humanity|Kingslayer|Bard)\b|'
+      r'\b(Apprentice|Defender of Humanity|Kingslayer|Chanakya)\b|'
       r'\b(King|Queen|Rook|Bishop|Knight|Pawn)s?\b|'
       r'\b(Consider|Observe|Strategy|Warning|Tactics|Recommended|Crucial|Focus|Analyze)\b|'
       r'\b([a-h][1-8]-?[a-h][1-8]|[a-h][1-8])\b|'

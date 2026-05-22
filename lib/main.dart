@@ -75,7 +75,7 @@ class _KingslayerAppView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'KINGSLAYER: CHESS',
+      title: 'IdeaSpace Chess Academy',
       debugShowCheckedModeBanner: false,
       theme: ScholarlyTheme.themeData,
       home: const SplashScreen(),

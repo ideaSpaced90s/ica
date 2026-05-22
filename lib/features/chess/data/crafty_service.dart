@@ -278,7 +278,7 @@ class CraftyService implements ChessEngineService {
     } else if (level <= 18) {
       _currentDepth = 18; // Titan (avatar_9)
     } else {
-      _currentDepth = 20; // Default / GM Bard / Full power
+      _currentDepth = 20; // Default / GM Chanakya / Full power
     }
     debugPrint('CraftyService: skillLevel set to $level, configured search depth limit: $_currentDepth');
   }

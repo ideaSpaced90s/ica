@@ -65,7 +65,7 @@ class StudyLabState {
   final int engineDepth;
   final bool isBoardFlipped;
   final Map<int, Map<String, dynamic>> engineLines; // multiPV index -> line info
-  final String? commentary; // GM Bard commentary or opening name
+  final String? commentary; // GM Chanakya commentary or opening name
 
   StudyLabState({
     this.nodes = const [],
@@ -546,7 +546,7 @@ class StudyLabNotifier extends StateNotifier<StudyLabState> {
   String exportToPgn() {
     final buffer = StringBuffer();
     buffer.writeln('[Event "Study Lab Analysis"]');
-    buffer.writeln('[Site "Kingslayer"]');
+    buffer.writeln('[Site "IdeaSpace Chess Academy"]');
     buffer.writeln('[Date "${DateFormat('yyyy.MM.dd').format(DateTime.now())}"]');
     buffer.writeln('[Result "*"]');
     if (state.startFen != chess_lib.Chess.DEFAULT_POSITION) {

@@ -61,7 +61,7 @@ void main() {
       // Let's test PromptBuilder itself
       final gemmaPrompt = PromptBuilder.buildCommentaryPrompt(context: context);
       expect(gemmaPrompt, contains('<start_of_turn>system'));
-      expect(gemmaPrompt, contains('Identity: You are GM Bard'));
+      expect(gemmaPrompt, contains('Identity: You are GM Chanakya'));
       expect(gemmaPrompt, contains('<start_of_turn>user'));
       expect(gemmaPrompt, contains('<start_of_turn>model'));
     });

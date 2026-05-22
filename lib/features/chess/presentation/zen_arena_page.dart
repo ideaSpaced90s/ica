@@ -829,7 +829,7 @@ class _ZenArenaPageState extends ConsumerState<ZenArenaPage> with WidgetsBinding
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: ScholarlyTheme.panelBase,
-        title: const Text('Exit Kingslayer?'),
+        title: const Text('Exit IdeaSpace Chess Academy?'),
         content: const Text('Do you want to quit?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Continue')),

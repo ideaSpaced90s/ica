@@ -266,7 +266,7 @@ class ChessState {
     this.academyHouseColorFonts = true,
     this.academyHouseBoldEmphasis = true,
     this.academyHouseTypingEffect = true,
-    this.bardSuggestion,
+    this.chanakyaSuggestion,
     this.isAcademyActive = false,
     this.glowingSquare,
     this.academyAnimationTrigger = 0,
@@ -363,7 +363,7 @@ class ChessState {
   final bool academyHouseColorFonts;
   final bool academyHouseBoldEmphasis;
   final bool academyHouseTypingEffect;
-  final MoveAnimationData? bardSuggestion;
+  final MoveAnimationData? chanakyaSuggestion;
   final bool isAcademyActive;
   final String? glowingSquare;
   final int academyAnimationTrigger;
@@ -473,7 +473,7 @@ class ChessState {
     bool? academyHouseColorFonts,
     bool? academyHouseBoldEmphasis,
     bool? academyHouseTypingEffect,
-    Object? bardSuggestion = _sentinel,
+    Object? chanakyaSuggestion = _sentinel,
     bool? isAcademyActive,
     Object? glowingSquare = _sentinel,
     int? academyAnimationTrigger,
@@ -604,9 +604,9 @@ class ChessState {
           academyHouseBoldEmphasis ?? this.academyHouseBoldEmphasis,
       academyHouseTypingEffect:
           academyHouseTypingEffect ?? this.academyHouseTypingEffect,
-      bardSuggestion: identical(bardSuggestion, _sentinel)
-          ? this.bardSuggestion
-          : bardSuggestion as MoveAnimationData?,
+      chanakyaSuggestion: identical(chanakyaSuggestion, _sentinel)
+          ? this.chanakyaSuggestion
+          : chanakyaSuggestion as MoveAnimationData?,
       isAcademyActive: isAcademyActive ?? this.isAcademyActive,
       glowingSquare: identical(glowingSquare, _sentinel)
           ? this.glowingSquare
@@ -637,7 +637,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
           game: ChessGame(),
           commentaryHistory: [
             CommentaryEntry(
-              text: "Welcome to the Academy, Apprentice. I am GM Bard. Place your pieces on the board or ask me for strategic counsel, and we shall prepare for the coming trials against the machine collective.",
+              text: "Welcome to the Academy, Apprentice. I am GM Chanakya. Place your pieces on the board or ask me for strategic counsel, and we shall prepare for the coming trials against the machine collective.",
               timestamp: DateTime.now(),
               isComplete: true,
               isUser: false,
@@ -2677,7 +2677,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
           ? _clockSideForTurn()
           : state.activeClockSide,
       threatenedSquares: threatened,
-      bardSuggestion: null,
+      chanakyaSuggestion: null,
     );
 
     if (state.game.gameOver) {
@@ -2949,7 +2949,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
     state = state.copyWith(
       commentaryHistory: [...state.commentaryHistory, userEntry],
       commentaryError: null,
-      bardSuggestion: null,
+      chanakyaSuggestion: null,
     );
 
     await _runCommentary(
@@ -2984,7 +2984,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
       isCommentaryStreaming: false,
     );
 
-    _soundService.playSfx(SoundEffect.gmbardThinking);
+    _soundService.playSfx(SoundEffect.gmchanakyaThinking);
 
     try {
       // 1. Wait briefly for a fresh evaluation if it's the start of a turn
@@ -3061,7 +3061,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
           isCommentaryStreaming: false,
         );
 
-        _soundService.playSfx(SoundEffect.gmbardComplete);
+        _soundService.playSfx(SoundEffect.gmchanakyaComplete);
 
         // --- NO AUTOMATIC ORCHESTRATION ---
         // The High Council (AI) only reveals its intelligence when asked.
@@ -3542,7 +3542,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
       final pieceCode = '$colorPrefix$pieceChar';
 
       state = state.copyWith(
-        bardSuggestion: MoveAnimationData(
+        chanakyaSuggestion: MoveAnimationData(
           from: from,
           to: to,
           pieceCode: pieceCode,

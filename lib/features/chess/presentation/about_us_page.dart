@@ -47,7 +47,7 @@ class _AboutUsPageState extends ConsumerState<AboutUsPage> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Kingslayer Chess Academy & Lab',
+                  'IdeaSpace Chess Academy',
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     color: ScholarlyTheme.accentBlue,
@@ -95,7 +95,7 @@ class _AboutUsPageState extends ConsumerState<AboutUsPage> {
                       ),
                       const SizedBox(height: 24),
                       Text(
-                        'KINGSLAYER CHESS',
+                        'IDEASPACE CHESS ACADEMY',
                         style: GoogleFonts.outfit(
                           fontSize: 24,
                           fontWeight: FontWeight.w900,
@@ -135,7 +135,7 @@ class _AboutUsPageState extends ConsumerState<AboutUsPage> {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        'Kingslayer is engineered as an advanced tactical sandbox for serious students of the royal game. We combine the mathematical precision of neural-network chess models with cognitive visualization methods to help players transition from rote calculation to powerful, intuitive grandmaster sight.',
+                        'IdeaSpace Chess Academy is engineered as an advanced tactical sandbox for serious students of the royal game. We combine the mathematical precision of neural-network chess models with cognitive visualization methods to help players transition from rote calculation to powerful, intuitive grandmaster sight.',
                         textAlign: TextAlign.center,
                         style: GoogleFonts.inter(
                           fontSize: 13,
@@ -172,7 +172,7 @@ class _AboutUsPageState extends ConsumerState<AboutUsPage> {
                 _buildPillarCard(
                   icon: Icons.android_rounded,
                   title: 'Persona-Driven AI Simulation',
-                  description: 'Playing against rigid engines is pedagogically ineffective. Kingslayer simulates real-world competitive styles through customized Stockfish profiles, teaching students how to counter aggressive attackers, solid endgames, and creative defensive tacticians.',
+                  description: 'Playing against rigid engines is pedagogically ineffective. IdeaSpace Chess Academy simulates real-world competitive styles through customized Stockfish profiles, teaching students how to counter aggressive attackers, solid endgames, and creative defensive tacticians.',
                 ),
                 const SizedBox(height: 12),
 
@@ -180,7 +180,7 @@ class _AboutUsPageState extends ConsumerState<AboutUsPage> {
                 _buildPillarCard(
                   icon: Icons.insights_rounded,
                   title: 'Rigorous Training Loops',
-                  description: 'A dedicated student progresses through disciplined practice. By merging targeted thematic chapter puzzles with ELO-scaled competitive arenas, Kingslayer provides a rigorous training cycle with zero analytical distractions.',
+                  description: 'A dedicated student progresses through disciplined practice. By merging targeted thematic chapter puzzles with ELO-scaled competitive arenas, IdeaSpace Chess Academy provides a rigorous training cycle with zero analytical distractions.',
                 ),
                 const SizedBox(height: 28),
 
@@ -242,7 +242,7 @@ class _AboutUsPageState extends ConsumerState<AboutUsPage> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'The Kingslayer Creative Lab & AI Team',
+                        'The IdeaSpace Chess Academy Team',
                         style: GoogleFonts.outfit(
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
@@ -356,7 +356,7 @@ class _AboutUsPageState extends ConsumerState<AboutUsPage> {
   Widget _buildPersonaTable() {
     final items = const [
       _PersonaMatrixItem(
-        name: 'GM Bard',
+        name: 'GM Chanakya',
         engine: 'Crafty',
         elo: 'Ideal 2 (Full Power)',
         style: 'Wisdom/mentor style, maximum precision, classic intuition.',

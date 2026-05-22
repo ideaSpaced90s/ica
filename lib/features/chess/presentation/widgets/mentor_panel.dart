@@ -200,7 +200,7 @@ class _TutorialMentorPanelState extends ConsumerState<TutorialMentorPanel> with 
               ),
               child: const CircleAvatar(
                 backgroundColor: Colors.transparent,
-                backgroundImage: AssetImage('assets/persona/gm_bard.png'),
+                backgroundImage: AssetImage('assets/persona/gm_chanakya.png'),
               ),
             );
           },
@@ -213,7 +213,7 @@ class _TutorialMentorPanelState extends ConsumerState<TutorialMentorPanel> with 
               Row(
                 children: [
                   Text(
-                    'GM BARD',
+                    'GM CHANAKYA',
                     style: GoogleFonts.inter(
                       color: moodColor,
                       fontSize: 13,

@@ -19,8 +19,8 @@ enum SoundEffect {
   uiTap,
   moveSoft,
   // Kenney-based RPG/UI sound enhancements
-  gmbardThinking,
-  gmbardComplete,
+  gmchanakyaThinking,
+  gmchanakyaComplete,
   victory,
   defeat,
   draw,
@@ -277,10 +277,10 @@ class ChessSoundService {
         _playSound('move_soft');
         break;
       // Kenney-based RPG/UI sound enhancements
-      case SoundEffect.gmbardThinking:
+      case SoundEffect.gmchanakyaThinking:
         _playSound('book_open');
         break;
-      case SoundEffect.gmbardComplete:
+      case SoundEffect.gmchanakyaComplete:
         _playSound('book_close');
         break;
       case SoundEffect.victory:

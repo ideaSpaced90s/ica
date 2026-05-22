@@ -210,7 +210,7 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
                           final isThreatened = chessState.threatenedSquares
                               .contains(squareName);
                           final isGlow = chessState.glowingSquare == squareName;
-                          final isSuggestionTarget = chessState.bardSuggestion?.to == squareName;
+                          final isSuggestionTarget = chessState.chanakyaSuggestion?.to == squareName;
                           final piece = displayGame.getPiece(squareName);
 
                           return DragTarget<String>(
@@ -696,10 +696,10 @@ class _ChessBoardState extends ConsumerState<ChessBoard>
                               setState(() => _thunderTrails.remove(trail)),
                         ),
 
-                      if (chessState.bardSuggestion != null &&
+                      if (chessState.chanakyaSuggestion != null &&
                           chessState.academyHouseAnimations)
                         AcademySuggestionOverlay(
-                          data: chessState.bardSuggestion!,
+                          data: chessState.chanakyaSuggestion!,
                           boardSize: boardSize,
                           isFlipped: chessState.isBoardFlipped,
                           trigger: chessState.academyAnimationTrigger,

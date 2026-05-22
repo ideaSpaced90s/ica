@@ -350,7 +350,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
         : 'untitled$shortId';
 
     buffer.writeln('[Event "$title"]');
-    buffer.writeln('[Site "Kingslayer Chess App"]');
+    buffer.writeln('[Site "IdeaSpace Chess Academy"]');
     buffer.writeln('[Date "$dateStr"]');
     buffer.writeln('[Round "1"]');
     buffer.writeln('[White "${game.isPlayerWhite ? "Player" : "Stockfish"}"]');
@@ -380,7 +380,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
   ) async {
     try {
       final directory = await getApplicationDocumentsDirectory();
-      final path = '${directory.path}/kingslayer_game_${game.id}.pgn';
+      final path = '${directory.path}/ideaspace_chess_academy_game_${game.id}.pgn';
       final file = File(path);
       await file.writeAsString(pgnText);
 
@@ -417,15 +417,15 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
   ) async {
     try {
       final directory = await getTemporaryDirectory();
-      final path = '${directory.path}/kingslayer_game_${game.id}.pgn';
+      final path = '${directory.path}/ideaspace_chess_academy_game_${game.id}.pgn';
       final file = File(path);
       await file.writeAsString(pgnText);
 
       await SharePlus.instance.share(
         ShareParams(
           files: [XFile(path)],
-          text: 'Here is my chess game notation from Kingslayer!',
-          subject: 'Kingslayer Chess Game',
+          text: 'Here is my chess game notation from IdeaSpace Chess Academy!',
+          subject: 'IdeaSpace Chess Academy Chess Game',
         ),
       );
     } catch (e) {

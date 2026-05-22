@@ -402,7 +402,7 @@ class _StudyLabPageState extends ConsumerState<StudyLabPage> with SingleTickerPr
     );
   }
 
-  // Tab 1: Structured recursive move tree visualizer, annotations textarea, and GM Bard handoff button
+  // Tab 1: Structured recursive move tree visualizer, annotations textarea, and GM Chanakya handoff button
   Widget _buildMoveTreeTab(
     BuildContext context,
     StudyLabState state,
@@ -416,7 +416,7 @@ class _StudyLabPageState extends ConsumerState<StudyLabPage> with SingleTickerPr
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // "Ask GM Bard" Position Handoff Button
+          // "Ask GM Chanakya" Position Handoff Button
           Container(
             margin: const EdgeInsets.only(bottom: 12),
             decoration: BoxDecoration(
@@ -464,7 +464,7 @@ class _StudyLabPageState extends ConsumerState<StudyLabPage> with SingleTickerPr
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'ASK GM BARD',
+                          'ASK GM CHANAKYA',
                           style: GoogleFonts.outfit(
                             fontWeight: FontWeight.bold,
                             fontSize: 13,

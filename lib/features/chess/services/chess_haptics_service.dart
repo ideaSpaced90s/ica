@@ -1,7 +1,7 @@
 import 'package:flutter/services.dart';
 import 'dart:async';
 
-/// Service to handle custom haptic feedback patterns for the Kingslayer chess engine.
+/// Service to handle custom haptic feedback patterns for the IdeaSpace Chess Academy chess engine.
 class ChessHapticsService {
   bool isEnabled = true;
 

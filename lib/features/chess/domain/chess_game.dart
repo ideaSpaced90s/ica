@@ -238,7 +238,7 @@ class ChessGame {
   }
 
   chess_lib.Move? findMoveBySan(String san) {
-    // Remove common punctuation Bard might add
+    // Remove common punctuation Chanakya might add
     final cleanSan = san.replaceAll(RegExp(r'[.?!]'), '').trim();
     if (cleanSan.isEmpty) return null;
 

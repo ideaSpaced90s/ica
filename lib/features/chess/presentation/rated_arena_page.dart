@@ -21,6 +21,7 @@ import 'widgets/ambient_scaffold.dart';
 import 'widgets/classic_windows_tabs.dart';
 import 'package:confetti/confetti.dart';
 import 'dashboard_page.dart';
+import 'mobile_navigation_shell.dart';
 
 class RatedArenaPage extends ConsumerStatefulWidget {
   const RatedArenaPage({super.key});
@@ -55,9 +56,11 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
   Widget build(BuildContext context) {
     final state = ref.watch(chessProvider);
     final isLandscape = MediaQuery.of(context).size.width > MediaQuery.of(context).size.height;
+    final currentNavIndex = ref.watch(mobileNavIndexProvider);
+    final isVisible = currentNavIndex == 1; // Tab 1 in MobileNavigationShell is MainPage (Rated/Unrated)
 
-    // One-time Rated Caution Popup
-    if (!_hasShownRatedCaution) {
+    // One-time Rated Caution Popup, only show if this page/tab is currently active/visible to the user
+    if (isVisible && !_hasShownRatedCaution) {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (mounted && !_hasShownRatedCaution) {
           setState(() => _hasShownRatedCaution = true);

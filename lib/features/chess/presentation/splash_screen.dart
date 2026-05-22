@@ -140,9 +140,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(
-        0xFF0F172A,
-      ), // Dark Navy for immersive icon blending
+      backgroundColor: const Color(0xFFF7F7EF), // Cream off-white to match the app icon
       body: _buildStaticPhase(),
     );
   }
@@ -153,11 +151,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       children: [
         // Ambient animated background glow
         AmbientFlowBackdrop(
-          backgroundColor: const Color(0xFF0F172A),
-          blob1Color: const Color(0xFF1E3A8A).withValues(alpha: 0.15), // Deep navy
-          blob2Color: const Color(0xFF312E81).withValues(alpha: 0.15), // Deep indigo
-          blob3Color: const Color(0xFF4C1D95).withValues(alpha: 0.12), // Deep purple
-          overlayColor: Colors.black.withValues(alpha: 0.25),
+          backgroundColor: const Color(0xFFF7F7EF),
+          blob1Color: const Color(0xFFDBEAFE).withValues(alpha: 0.5), // Soft pastel blue
+          blob2Color: const Color(0xFFFEE2E2).withValues(alpha: 0.4), // Soft pastel pink
+          blob3Color: const Color(0xFFF3E8FF).withValues(alpha: 0.45), // Soft pastel lavender
+          overlayColor: Colors.white.withValues(alpha: 0.35),
         ),
 
         // Background Logo (Centered and maximized) moved 20% up
@@ -184,13 +182,13 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                   animation: _pulseController,
                   builder: (context, child) {
                     return Container(
-                      width: MediaQuery.of(context).size.width * 0.72,
-                      height: MediaQuery.of(context).size.width * 0.72,
+                      width: MediaQuery.of(context).size.width * 0.60,
+                      height: MediaQuery.of(context).size.width * 0.60,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.white.withValues(alpha: 0.03 + 0.04 * _pulseController.value),
+                            color: const Color(0xFF0D6EFD).withValues(alpha: 0.05 + 0.05 * _pulseController.value),
                             blurRadius: 45 + 15 * _pulseController.value,
                             spreadRadius: 8 + 12 * _pulseController.value,
                           ),
@@ -201,24 +199,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                 ),
                 Container(
                   margin: const EdgeInsets.symmetric(vertical: 60),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(40),
-                    boxShadow: [
-                      BoxShadow(
-                        color: ScholarlyTheme.shadowColor.withValues(alpha: 0.15),
-                        blurRadius: 50,
-                        spreadRadius: 2,
-                        offset: const Offset(0, 25),
-                      ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(20), // Subtle rounding
-                    child: Image.asset(
-                      'assets/splash/splash.png',
-                      height: MediaQuery.of(context).size.height * 0.52,
-                      fit: BoxFit.contain,
-                    ),
+                  child: Image.asset(
+                    'assets/splash/appicon.png',
+                    height: MediaQuery.of(context).size.height * 0.416, // Reduced by 20% (0.52 * 0.8)
+                    fit: BoxFit.contain,
                   ),
                 ),
               ],
@@ -252,7 +236,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
           '${_loadingValue.toInt()}%',
           style: GoogleFonts.inter(
             fontSize: 14,
-            color: Colors.white70,
+            color: const Color(0xFF475569), // Dark slate grey for readability
             fontWeight: FontWeight.w600,
             letterSpacing: 1,
           ),
@@ -262,7 +246,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
           width: 240,
           height: 6,
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.1),
+            color: const Color(0xFFE2E8F0), // Light slate track
             borderRadius: BorderRadius.circular(3),
           ),
           child: FractionallySizedBox(
@@ -337,7 +321,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
             Text(
               'powered by ',
               style: GoogleFonts.inter(
-                color: Colors.white38,
+                color: const Color(0xFF64748B), // Slate grey
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
                 letterSpacing: 0.5,
@@ -349,7 +333,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
               errorBuilder: (context, error, stackTrace) => Text(
                 'ideaspace',
                 style: GoogleFonts.inter(
-                  color: Colors.white70,
+                  color: const Color(0xFF334155), // Dark slate
                   fontWeight: FontWeight.bold,
                   fontSize: 12,
                 ),
@@ -361,7 +345,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
         Text(
           'v1.0.0',
           style: GoogleFonts.inter(
-            color: Colors.white24,
+            color: const Color(0xFF94A3B8), // Muted slate
             fontSize: 11,
             fontWeight: FontWeight.w500,
           ),

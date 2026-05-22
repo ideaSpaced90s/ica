@@ -1,7 +1,7 @@
 // Core Data Models for the Scripted Tutorial System
 
 enum TutorialStepType {
-  /// Simple dialogue sequence where GM Bard explains concepts.
+  /// Simple dialogue sequence where GM Chanakya explains concepts.
   dialogue,
 
   /// Visual demonstration where pieces move automatically with path traces.
@@ -89,13 +89,13 @@ class TutorialStep {
   /// Visual overlay effect to apply to the board for this step.
   final TutorialOverlayEffect overlayEffect;
 
-  /// Reaction from GM Bard when the user performs the correct action.
+  /// Reaction from GM Chanakya when the user performs the correct action.
   final MentorReaction? reactionCorrect;
 
-  /// Reaction from GM Bard when the user performs an incorrect or illegal action.
+  /// Reaction from GM Chanakya when the user performs an incorrect or illegal action.
   final MentorReaction? reactionIllegal;
 
-  /// Reaction from GM Bard if the user takes too long to respond.
+  /// Reaction from GM Chanakya if the user takes too long to respond.
   final MentorReaction? reactionHesitation;
 
   const TutorialStep({

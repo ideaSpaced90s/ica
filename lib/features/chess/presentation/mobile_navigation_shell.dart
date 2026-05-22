@@ -45,17 +45,17 @@ class MobileNavigationShell extends ConsumerWidget {
     String getTitle() {
       switch (currentIndex) {
         case 0:
-          return 'DASHBOARD';
+          return 'HOME';
         case 1:
-          return state.isRatedMode ? 'RATED ARENA' : 'UNRATED ARENA';
+          return state.isRatedMode ? 'BATTLEGROUND' : 'ARENA';
         case 2:
           return 'ACADEMY';
         case 3:
           return 'PUZZLES';
         case 4:
-          return 'STUDY LAB';
+          return 'ANALYSIS';
         case 5:
-          return 'HISTORY';
+          return 'ARCHIVE';
         case 6:
           return 'TUTORIAL';
         case 7:
@@ -63,14 +63,14 @@ class MobileNavigationShell extends ConsumerWidget {
         case 8:
           return 'SETTINGS';
         default:
-          return 'KINGSLAYER';
+          return 'IDEASPACE CHESS ACADEMY';
       }
     }
 
     return Scaffold(
-      backgroundColor: ScholarlyTheme.backgroundDark,
+      backgroundColor: ScholarlyTheme.backgroundStart,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1E1E2C),
+        backgroundColor: ScholarlyTheme.backgroundStart,
         elevation: 0,
         centerTitle: true,
         title: Text(
@@ -79,13 +79,13 @@ class MobileNavigationShell extends ConsumerWidget {
             fontSize: 16,
             fontWeight: FontWeight.bold,
             letterSpacing: 1.5,
-            color: Colors.white,
+            color: ScholarlyTheme.textPrimary,
           ),
         ),
         leading: Builder(
           builder: (context) {
             return IconButton(
-              icon: const Icon(Icons.menu_rounded, color: Colors.white),
+              icon: const Icon(Icons.menu_rounded, color: ScholarlyTheme.textPrimary),
               onPressed: () {
                 ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
                 Scaffold.of(context).openDrawer();
@@ -97,9 +97,9 @@ class MobileNavigationShell extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.only(right: 16.0),
             child: Image.asset(
-              'assets/board/appicon.png',
-              width: 28,
-              height: 28,
+              'assets/splash/ideaspace.png',
+              height: 20,
+              fit: BoxFit.contain,
               errorBuilder: (context, error, stackTrace) => const SizedBox(),
             ),
           ),
@@ -124,7 +124,7 @@ class _MobileSidebarDrawer extends ConsumerWidget {
     final notifier = ref.read(chessProvider.notifier);
 
     return Drawer(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: ScholarlyTheme.backgroundStart,
       child: Column(
         children: [
           // Elegant Drawer Header
@@ -136,15 +136,15 @@ class _MobileSidebarDrawer extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(vertical: 8.0),
               children: [
                 _DrawerTile(
-                  label: 'Dashboard',
-                  icon: Icons.dashboard_rounded,
+                  label: 'Home',
+                  icon: Icons.home_rounded,
                   isSelected: currentIndex == 0,
                   onTap: () {
                     _navigate(ref, context, 0);
                   },
                 ),
                 _DrawerTile(
-                  label: 'Unrated Arena',
+                  label: 'Arena',
                   icon: Icons.sports_esports_rounded,
                   isSelected: currentIndex == 1 && !state.isRatedMode,
                   onTap: () {
@@ -153,7 +153,7 @@ class _MobileSidebarDrawer extends ConsumerWidget {
                   },
                 ),
                 _DrawerTile(
-                  label: 'Rated Arena',
+                  label: 'Battleground',
                   icon: Icons.emoji_events_rounded,
                   isSelected: currentIndex == 1 && state.isRatedMode,
                   onTap: () {
@@ -178,7 +178,7 @@ class _MobileSidebarDrawer extends ConsumerWidget {
                   },
                 ),
                 _DrawerTile(
-                  label: 'Study Lab',
+                  label: 'Analysis',
                   icon: Icons.science_rounded,
                   isSelected: currentIndex == 4,
                   onTap: () {
@@ -186,7 +186,7 @@ class _MobileSidebarDrawer extends ConsumerWidget {
                   },
                 ),
                 _DrawerTile(
-                  label: 'History',
+                  label: 'Archive',
                   icon: Icons.history_rounded,
                   isSelected: currentIndex == 5,
                   onTap: () {
@@ -195,7 +195,7 @@ class _MobileSidebarDrawer extends ConsumerWidget {
                 ),
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                  child: Divider(color: Color(0x22FFFFFF), height: 1),
+                  child: Divider(color: Color(0xFFE2E8F0), height: 1),
                 ),
                 _DrawerTile(
                   label: 'Tutorial',
@@ -242,10 +242,10 @@ class _MobileSidebarDrawer extends ConsumerWidget {
         right: 20,
       ),
       decoration: const BoxDecoration(
-        color: Color(0xFF1E1E2C),
+        color: ScholarlyTheme.backgroundStart,
         border: Border(
           bottom: BorderSide(
-            color: Color(0x11FFFFFF),
+            color: Color(0xFFE2E8F0),
             width: 1.0,
           ),
         ),
@@ -253,7 +253,7 @@ class _MobileSidebarDrawer extends ConsumerWidget {
       child: Row(
         children: [
           Image.asset(
-            'assets/board/appicon.png',
+            'assets/splash/appicon.png',
             width: 40,
             height: 40,
             errorBuilder: (context, error, stackTrace) => Container(
@@ -273,12 +273,12 @@ class _MobileSidebarDrawer extends ConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'KINGSLAYER',
+                  'IDEASPACE CHESS ACADEMY',
                   style: GoogleFonts.outfit(
-                    fontSize: 18,
+                    fontSize: 14,
                     fontWeight: FontWeight.bold,
-                    letterSpacing: 1.5,
-                    color: Colors.white,
+                    letterSpacing: 1.0,
+                    color: ScholarlyTheme.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -286,7 +286,7 @@ class _MobileSidebarDrawer extends ConsumerWidget {
                   'Master Chess',
                   style: GoogleFonts.inter(
                     fontSize: 12,
-                    color: Colors.white60,
+                    color: ScholarlyTheme.textMuted,
                     fontWeight: FontWeight.w400,
                   ),
                 ),
@@ -303,9 +303,9 @@ class _MobileSidebarDrawer extends ConsumerWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
       decoration: const BoxDecoration(
-        color: Color(0xFF13192B),
+        color: Color(0xFFF1F5F9),
         border: Border(
-          top: BorderSide(color: Color(0x11FFFFFF), width: 1.0),
+          top: BorderSide(color: Color(0xFFE2E8F0), width: 1.0),
         ),
       ),
       child: Column(
@@ -316,7 +316,7 @@ class _MobileSidebarDrawer extends ConsumerWidget {
               Text(
                 'powered by ',
                 style: GoogleFonts.inter(
-                  color: Colors.white38,
+                  color: ScholarlyTheme.textMuted,
                   fontSize: 10,
                   fontWeight: FontWeight.w500,
                 ),
@@ -327,7 +327,7 @@ class _MobileSidebarDrawer extends ConsumerWidget {
                 errorBuilder: (context, error, stackTrace) => Text(
                   'ideaspace',
                   style: GoogleFonts.inter(
-                    color: Colors.white70,
+                    color: ScholarlyTheme.textPrimary,
                     fontWeight: FontWeight.bold,
                     fontSize: 10,
                   ),
@@ -339,7 +339,7 @@ class _MobileSidebarDrawer extends ConsumerWidget {
           Text(
             'v1.0.0',
             style: GoogleFonts.inter(
-              color: Colors.white24,
+              color: Color(0xFF94A3B8),
               fontSize: 9,
               fontWeight: FontWeight.w500,
             ),
@@ -378,12 +378,12 @@ class _DrawerTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(12.0),
         ),
         selected: isSelected,
-        selectedTileColor: ScholarlyTheme.accentBlue.withValues(alpha: 0.15),
+        selectedTileColor: ScholarlyTheme.accentBlue.withValues(alpha: 0.12),
         tileColor: Colors.transparent,
         onTap: onTap,
         leading: Icon(
           icon,
-          color: isSelected ? ScholarlyTheme.accentBlue : Colors.white60,
+          color: isSelected ? ScholarlyTheme.accentBlue : ScholarlyTheme.textMuted,
           size: 22,
         ),
         title: Text(
@@ -391,7 +391,7 @@ class _DrawerTile extends StatelessWidget {
           style: GoogleFonts.inter(
             fontSize: 14,
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-            color: isSelected ? Colors.white : Colors.white70,
+            color: isSelected ? ScholarlyTheme.accentBlue : ScholarlyTheme.textPrimary,
           ),
         ),
       ),

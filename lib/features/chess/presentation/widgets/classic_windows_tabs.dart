@@ -528,7 +528,7 @@ class _ClassicWindowsTabsState extends ConsumerState<ClassicWindowsTabs> {
     final title = '${state.gameMode.toUpperCase()} MATCH';
 
     buffer.writeln('[Event "$title"]');
-    buffer.writeln('[Site "Kingslayer Chess App"]');
+    buffer.writeln('[Site "IdeaSpace Chess Academy"]');
     buffer.writeln('[Date "$dateStr"]');
     buffer.writeln('[Round "1"]');
     buffer.writeln('[White "${state.isPlayerWhite ? "Player" : "Stockfish"}"]');
