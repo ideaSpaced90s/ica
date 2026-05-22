@@ -10,7 +10,6 @@ import '../../application/chess_provider.dart';
 import '../../presentation/mobile_navigation_shell.dart';
 import '../../services/chess_sound_service.dart';
 
-import '../sign_in_page.dart';
 
 class WelcomeGuidePage extends ConsumerStatefulWidget {
   const WelcomeGuidePage({super.key});
@@ -24,7 +23,7 @@ class _WelcomeGuidePageState extends ConsumerState<WelcomeGuidePage>
   late final AnimationController _glowController;
   String _displayedText = '';
   final String _introText =
-      'Apprentice... Welcome to the Academy. The machines have conquered raw calculation, but they lack human intuition. To restore balance, we must forge your strategic mind.\n\nTell me, what is your understanding of the board?';
+      'Welcome to the Academy. I\'m GM Chanakya — I\'ll be coaching you through your chess training here.\n\nBefore we get started, tell me where you\'re at right now:';
   int _charIndex = 0;
   bool _isTyping = true;
 
@@ -100,28 +99,6 @@ class _WelcomeGuidePageState extends ConsumerState<WelcomeGuidePage>
     ref.read(dashboardTourStepProvider.notifier).startTour();
   }
 
-  void _signOut() async {
-    ref.read(chessSoundServiceProvider).playSfx(SoundEffect.click);
-    final repo = ref.read(tutorialProgressRepositoryProvider);
-    await repo.setIsGoogleSignedIn(false);
-    await repo.setWelcomeGuideSeen(false);
-
-    // Reset navigation state to Home (tab index 0)
-    ref.read(mobileNavIndexProvider.notifier).state = 0;
-
-    if (mounted) {
-      Navigator.of(context).pushReplacement(
-        PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) =>
-              const SignInPage(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return FadeTransition(opacity: animation, child: child);
-          },
-          transitionDuration: const Duration(milliseconds: 800),
-        ),
-      );
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -138,39 +115,6 @@ class _WelcomeGuidePageState extends ConsumerState<WelcomeGuidePage>
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               child: Column(
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      TextButton.icon(
-                        onPressed: _signOut,
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.redAccent,
-                        ),
-                        icon: const Icon(Icons.logout_rounded, size: 16),
-                        label: Text(
-                          'Sign Out',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      TextButton.icon(
-                        onPressed: _skipGuide,
-                        style: TextButton.styleFrom(
-                          foregroundColor: ScholarlyTheme.textMuted,
-                        ),
-                        icon: const Icon(Icons.close_rounded, size: 16),
-                        label: Text(
-                          'Skip Guide',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
                   const Spacer(),
                   // Chanakya bubble
                   _buildChanakyaBubble(),
@@ -178,6 +122,22 @@ class _WelcomeGuidePageState extends ConsumerState<WelcomeGuidePage>
                   // Choices
                   _buildChoicesSection(),
                   const Spacer(),
+                  // Centered Skip button at the bottom
+                  TextButton.icon(
+                    onPressed: _skipGuide,
+                    style: TextButton.styleFrom(
+                      foregroundColor: ScholarlyTheme.textMuted,
+                    ),
+                    icon: const Icon(Icons.close_rounded, size: 16),
+                    label: Text(
+                      'Skip',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                 ],
               ),
             ),

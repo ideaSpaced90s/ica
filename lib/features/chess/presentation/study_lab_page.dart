@@ -13,7 +13,7 @@ import 'themes/theme_registry.dart';
 import '../application/study_lab_provider.dart';
 import '../application/chess_provider.dart';
 import '../services/chess_sound_service.dart';
-import 'academy_page.dart';
+import '../application/onboarding_provider.dart';
 
 class StudyLabPage extends ConsumerStatefulWidget {
   const StudyLabPage({super.key});
@@ -32,7 +32,7 @@ class _StudyLabPageState extends ConsumerState<StudyLabPage> with SingleTickerPr
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
   }
 
   @override
@@ -49,49 +49,6 @@ class _StudyLabPageState extends ConsumerState<StudyLabPage> with SingleTickerPr
       return int.tryParse(parts[5]) ?? 1;
     }
     return 1;
-  }
-
-  // Converts UCI move lists (from Stockfish PV) into standard SAN notation on the fly for chess readability
-  List<String> _convertUciListToSan(String startFen, List<dynamic> uciMoves) {
-    try {
-      final tempChess = chess_lib.Chess.fromFEN(startFen);
-      final sanMoves = <String>[];
-      for (final moveObj in uciMoves) {
-        final uci = moveObj.toString();
-        if (uci.length < 4) break;
-        final from = uci.substring(0, 2);
-        final to = uci.substring(2, 4);
-        final promo = uci.length > 4 ? uci.substring(4) : '';
-
-        // Find matching move on the pre-move state to safely generate SAN
-        final moves = tempChess.generate_moves();
-        chess_lib.Move? matchingMove;
-        for (final m in moves) {
-          final mFrom = chess_lib.Chess.algebraic(m.from);
-          final mTo = chess_lib.Chess.algebraic(m.to);
-          final mPromo = m.promotion != null ? m.promotion.toString().split('.').last.toLowerCase()[0] : '';
-          if (mFrom == from && mTo == to && mPromo == promo) {
-            matchingMove = m;
-            break;
-          }
-        }
-
-        if (matchingMove == null) break;
-
-        sanMoves.add(tempChess.move_to_san(matchingMove));
-
-        final moveMap = {
-          'from': from,
-          'to': to,
-          if (promo.isNotEmpty) 'promotion': promo,
-        };
-        final success = tempChess.move(moveMap);
-        if (!success) break;
-      }
-      return sanMoves;
-    } catch (_) {
-      return [];
-    }
   }
 
   @override
@@ -129,6 +86,7 @@ class _StudyLabPageState extends ConsumerState<StudyLabPage> with SingleTickerPr
         body: Stack(
           children: [
             SafeArea(
+              key: analysisPageKey,
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   final bool isWide = constraints.maxWidth > 800;
@@ -211,28 +169,18 @@ class _StudyLabPageState extends ConsumerState<StudyLabPage> with SingleTickerPr
     );
   }
 
-  // Wraps interactive chessboard and vertical Stockfish evaluation bar in a side-by-side row
   Widget _buildBoardWithEval(
     BuildContext context,
     StudyLabState state,
     StudyLabNotifier notifier,
     double maxWidth,
   ) {
-    final double boardHeight = maxWidth - 24;
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        // Premium Vertical Evaluation Bar
-        StudyLabVerticalEvalBar(state: state, height: boardHeight),
-        const SizedBox(width: 8),
-        // Interactive Study Chessboard
-        StudyLabChessBoard(
-          state: state,
-          notifier: notifier,
-          boardSize: boardHeight,
-        ),
-      ],
+    return Center(
+      child: StudyLabChessBoard(
+        state: state,
+        notifier: notifier,
+        boardSize: maxWidth,
+      ),
     );
   }
 
@@ -354,7 +302,7 @@ class _StudyLabPageState extends ConsumerState<StudyLabPage> with SingleTickerPr
     );
   }
 
-  // Creates the premium tabbed workspace cards displaying moves, annotations, stockfish candidate lines, and PGN texts
+  // Creates the premium tabbed workspace cards displaying moves, annotations, and PGN texts
   Widget _buildWorkspaceTabsCard(
     BuildContext context,
     StudyLabState state,
@@ -380,7 +328,6 @@ class _StudyLabPageState extends ConsumerState<StudyLabPage> with SingleTickerPr
             unselectedLabelStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500),
             tabs: const [
               Tab(text: 'Move Tree'),
-              Tab(text: 'Stockfish'),
               Tab(text: 'Raw PGN'),
             ],
           ),
@@ -393,7 +340,6 @@ class _StudyLabPageState extends ConsumerState<StudyLabPage> with SingleTickerPr
             controller: _tabController,
             children: [
               _buildMoveTreeTab(context, state, notifier),
-              _buildStockfishTab(context, state, notifier),
               _buildRawPgnTab(context, state, notifier),
             ],
           ),
@@ -416,79 +362,6 @@ class _StudyLabPageState extends ConsumerState<StudyLabPage> with SingleTickerPr
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // "Ask GM Chanakya" Position Handoff Button
-          Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              gradient: const LinearGradient(
-                colors: [Color(0xFF0D6EFD), Color(0xFF6B21A8)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF0D6EFD).withValues(alpha: 0.2),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(16),
-              onTap: () async {
-                final currentFen = state.activeFen;
-                ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
-                // Initialize a dynamic handoff session on the Academy page
-                await ref.read(chessProvider.notifier).initializeAcademySession(customFen: currentFen);
-                if (context.mounted) {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (context) => const AcademyPage()),
-                  );
-                }
-              },
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: const BoxDecoration(
-                        color: Colors.white24,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.auto_awesome_rounded, color: Colors.amberAccent, size: 16),
-                    ),
-                    const SizedBox(width: 10),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'ASK GM CHANAKYA',
-                          style: GoogleFonts.outfit(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                            letterSpacing: 1.0,
-                            color: Colors.white,
-                          ),
-                        ),
-                        Text(
-                          'Hand off current position for AI explanation',
-                          style: GoogleFonts.inter(
-                            fontSize: 10,
-                            color: Colors.white70,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const Spacer(),
-                    const Icon(Icons.chevron_right_rounded, color: Colors.white, size: 20),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
           // Move Tree Box
           JuicyGlassCard(
             padding: const EdgeInsets.all(12),
@@ -780,256 +653,7 @@ class _StudyLabPageState extends ConsumerState<StudyLabPage> with SingleTickerPr
     _buildSidelineRecursive(state, notifier, nextNode.index, chips);
   }
 
-  // Tab 2: Stockfish engine analyzer controller, multi-PV candidate lines, and dynamic evaluation indicators
-  Widget _buildStockfishTab(
-    BuildContext context,
-    StudyLabState state,
-    StudyLabNotifier notifier,
-  ) {
-    final sortedPvLines = state.engineLines.entries.toList()
-      ..sort((a, b) => a.key.compareTo(b.key));
 
-    return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Active Analysis Switch Panel
-          JuicyGlassCard(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            borderRadius: 16,
-            child: Row(
-              children: [
-                Icon(
-                  state.isAnalysisActive ? Icons.online_prediction_rounded : Icons.sensors_off_rounded,
-                  color: state.isAnalysisActive ? const Color(0xFF34D399) : ScholarlyTheme.textMuted,
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'STOCKFISH ANALYZER',
-                        style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary),
-                      ),
-                      Text(
-                        state.isAnalysisActive 
-                            ? 'Thinking (PV lines: 3, Depth: ${state.engineDepth})' 
-                            : 'Engine is offline',
-                        style: GoogleFonts.inter(fontSize: 9, color: ScholarlyTheme.textMuted),
-                      ),
-                    ],
-                  ),
-                ),
-                Switch(
-                  value: state.isAnalysisActive,
-                  activeThumbColor: const Color(0xFF34D399),
-                  onChanged: (val) {
-                    notifier.toggleAnalysis();
-                    ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiToggle);
-                  },
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 10),
-
-          // Depth Control Card
-          if (state.isAnalysisActive) ...[
-            JuicyGlassCard(
-              padding: const EdgeInsets.all(12),
-              borderRadius: 16,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.tune_rounded, size: 14, color: ScholarlyTheme.textMuted),
-                      const SizedBox(width: 4),
-                      Text(
-                        'ENGINE TARGET DEPTH',
-                        style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: ScholarlyTheme.textMuted, letterSpacing: 0.5),
-                      ),
-                      const Spacer(),
-                      Text(
-                        'Depth ${state.engineDepth}',
-                        style: GoogleFonts.jetBrainsMono(fontSize: 11, fontWeight: FontWeight.bold, color: ScholarlyTheme.accentBlue),
-                      ),
-                    ],
-                  ),
-                  Slider(
-                    value: state.engineDepth.toDouble(),
-                    min: 10,
-                    max: 22,
-                    divisions: 12,
-                    activeColor: ScholarlyTheme.accentBlue,
-                    inactiveColor: ScholarlyTheme.panelStroke,
-                    onChanged: (val) {
-                      notifier.updateEngineDepth(val.toInt());
-                    },
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 10),
-          ],
-
-          // Multi-PV Candidate Lines Box
-          JuicyGlassCard(
-            padding: const EdgeInsets.all(12),
-            borderRadius: 16,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.stacked_line_chart_rounded, size: 14, color: ScholarlyTheme.accentBlue),
-                    const SizedBox(width: 4),
-                    Text(
-                      'CANDIDATE MOVES (MULTI-PV)',
-                      style: GoogleFonts.inter(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: ScholarlyTheme.accentBlue,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                if (!state.isAnalysisActive)
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    alignment: Alignment.center,
-                    child: Text(
-                      'Toggle the Stockfish switch above to generate multi-PV engine analysis for this board setup.',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        fontStyle: FontStyle.italic,
-                        color: ScholarlyTheme.textMuted,
-                      ),
-                    ),
-                  )
-                else if (sortedPvLines.isEmpty)
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    alignment: Alignment.center,
-                    child: const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: ScholarlyTheme.accentBlue),
-                    ),
-                  )
-                else
-                  ...sortedPvLines.map((entry) {
-                    final lineData = entry.value;
-
-                    final scoreType = lineData['scoreType'] as String? ?? 'cp';
-                    final score = lineData['score'] as int? ?? 0;
-                    final pvList = lineData['pv'] as List<dynamic>? ?? [];
-
-                    // Convert raw UCI coordinates to chess readable SAN strings on the fly
-                    final sanMoves = _convertUciListToSan(state.activeFen, pvList);
-
-                    String scoreStr = '0.0';
-                    Color scoreColor = ScholarlyTheme.textPrimary;
-                    Color bgGlow = ScholarlyTheme.panelStroke.withValues(alpha: 0.3);
-
-                    if (scoreType == 'mate') {
-                      scoreStr = 'M$score';
-                      scoreColor = score > 0 ? const Color(0xFF10B981) : const Color(0xFFEF4444);
-                      bgGlow = score > 0 ? const Color(0xFFD1FAE5) : const Color(0xFFFEE2E2);
-                    } else {
-                      final evalVal = score / 100.0;
-                      scoreStr = evalVal > 0 ? '+${evalVal.toStringAsFixed(1)}' : evalVal.toStringAsFixed(1);
-                      if (evalVal > 0.5) {
-                        scoreColor = const Color(0xFF10B981);
-                        bgGlow = const Color(0xFFD1FAE5);
-                      } else if (evalVal < -0.5) {
-                        scoreColor = const Color(0xFFEF4444);
-                        bgGlow = const Color(0xFFFEE2E2);
-                      } else {
-                        scoreColor = ScholarlyTheme.accentBlue;
-                        bgGlow = ScholarlyTheme.accentBlueSoft;
-                      }
-                    }
-
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.white12,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: ScholarlyTheme.panelStroke),
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          // Score Tag
-                          Container(
-                            width: 50,
-                            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-                            decoration: BoxDecoration(
-                              color: bgGlow,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: scoreColor.withValues(alpha: 0.3)),
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(
-                              scoreStr,
-                              style: GoogleFonts.jetBrainsMono(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: scoreColor,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-
-                          // Moves preview
-                          Expanded(
-                            child: SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              physics: const BouncingScrollPhysics(),
-                              child: Row(
-                                children: sanMoves.isEmpty
-                                    ? [
-                                        Text(
-                                          'Analyzing...',
-                                          style: GoogleFonts.inter(fontSize: 11, fontStyle: FontStyle.italic, color: ScholarlyTheme.textMuted),
-                                        ),
-                                      ]
-                                    : List.generate(sanMoves.length, (idx) {
-                                        final isFirst = idx == 0;
-                                        return Padding(
-                                          padding: const EdgeInsets.only(right: 4),
-                                          child: Text(
-                                            '${isFirst ? "" : " "}${sanMoves[idx]}',
-                                            style: GoogleFonts.inter(
-                                              fontSize: 12,
-                                              fontWeight: isFirst ? FontWeight.bold : FontWeight.normal,
-                                              color: ScholarlyTheme.textPrimary,
-                                            ),
-                                          ),
-                                        );
-                                      }),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   // Tab 3: Bi-directional Raw PGN text sync editor, clipboard copying, and load buttons
   Widget _buildRawPgnTab(
@@ -1174,108 +798,7 @@ class _StudyLabPageState extends ConsumerState<StudyLabPage> with SingleTickerPr
   }
 }
 
-// Visual layout helper for vertical evaluation scores
-class StudyLabVerticalEvalBar extends StatelessWidget {
-  final StudyLabState state;
-  final double height;
 
-  const StudyLabVerticalEvalBar({
-    super.key,
-    required this.state,
-    required this.height,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    if (!state.isAnalysisActive) {
-      return Container(
-        width: 14,
-        height: height,
-        decoration: BoxDecoration(
-          color: Colors.black12,
-          borderRadius: BorderRadius.circular(4),
-          border: Border.all(color: Colors.white24),
-        ),
-      );
-    }
-
-    final line1 = state.engineLines[1];
-    final scoreType = line1?['scoreType'] as String? ?? 'cp';
-    final score = line1?['score'] as int? ?? 0;
-
-    double fillFraction = 0.5;
-    String scoreText = '0.0';
-
-    if (scoreType == 'mate') {
-      scoreText = 'M$score';
-      fillFraction = score > 0 ? 0.95 : 0.05;
-    } else {
-      final evalScore = score / 100.0;
-      scoreText = evalScore > 0 ? '+${evalScore.toStringAsFixed(1)}' : evalScore.toStringAsFixed(1);
-      fillFraction = ((evalScore.clamp(-5.0, 5.0) + 5.0) / 10.0);
-    }
-
-    final double fill = state.isBoardFlipped ? 1.0 - fillFraction : fillFraction;
-
-    return Container(
-      width: 16,
-      height: height,
-      decoration: BoxDecoration(
-        color: Colors.black87,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: Colors.white30, width: 1.2),
-        boxShadow: const [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 4,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Stack(
-        alignment: Alignment.bottomCenter,
-        children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 350),
-            curve: Curves.easeOutCubic,
-            width: double.infinity,
-            height: height * fill,
-            color: Colors.white,
-          ),
-          Positioned(
-            bottom: height * 0.5 - 1.0,
-            left: 0,
-            right: 0,
-            child: Container(
-              height: 2,
-              color: Colors.grey.withValues(alpha: 0.4),
-            ),
-          ),
-          Positioned(
-            top: state.isBoardFlipped ? 8 : null,
-            bottom: state.isBoardFlipped ? null : 8,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: RotatedBox(
-                quarterTurns: 3,
-                child: Text(
-                  scoreText,
-                  style: GoogleFonts.jetBrainsMono(
-                    color: fill > 0.5 ? Colors.black87 : Colors.white,
-                    fontSize: 8,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 // Custom study board supporting tap selections, drag-and-drop, pawn promotions, and coordinates
 class StudyLabChessBoard extends ConsumerStatefulWidget {

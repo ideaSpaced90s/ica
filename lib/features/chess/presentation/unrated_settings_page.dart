@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../application/chess_provider.dart';
+import '../application/tutorial_provider.dart';
 import '../services/chess_sound_service.dart';
 import 'scholarly_theme.dart';
 import 'package:kingslayer_chess/features/chess/presentation/themes/theme_registry.dart';
@@ -9,6 +10,8 @@ import 'package:kingslayer_chess/features/chess/presentation/themes/chess_theme.
 import '../domain/models/ai_avatar.dart';
 import 'widgets/avatar_selection_sheet.dart';
 import 'widgets/ambient_scaffold.dart';
+import 'sign_in_page.dart';
+import 'mobile_navigation_shell.dart';
 import 'dart:ui';
 import 'dashboard_page.dart';
 
@@ -248,6 +251,43 @@ class _UnratedSettingsPageState extends ConsumerState<UnratedSettingsPage> {
                         ),
                       ],
                     ),
+
+                  // ACCOUNT
+                  _SettingsCategory(
+                    title: 'ACCOUNT',
+                    children: [
+                      _SettingsTile(
+                        label: 'Sign Out',
+                        description: 'Return to the sign in screen',
+                        icon: Icons.logout_rounded,
+                        onTap: () async {
+                          ref.read(chessSoundServiceProvider).playSfx(SoundEffect.click);
+                          final repo = ref.read(tutorialProgressRepositoryProvider);
+                          await repo.setIsGoogleSignedIn(false);
+                          await repo.setWelcomeGuideSeen(false);
+                          ref.read(mobileNavIndexProvider.notifier).state = 0;
+                          if (context.mounted) {
+                            Navigator.of(context).pushReplacement(
+                              PageRouteBuilder(
+                                pageBuilder: (context, animation, secondaryAnimation) =>
+                                    const SignInPage(),
+                                transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                                  return FadeTransition(opacity: animation, child: child);
+                                },
+                                transitionDuration: const Duration(milliseconds: 800),
+                              ),
+                            );
+                          }
+                        },
+                        trailing: const Icon(
+                          Icons.chevron_right_rounded,
+                          color: Colors.redAccent,
+                          size: 18,
+                        ),
+                        accentColor: Colors.redAccent,
+                      ),
+                    ],
+                  ),
 
                   const SizedBox(height: 120), // Bottom padding for floating bar
                 ]),
@@ -782,6 +822,7 @@ class _SettingsTile extends ConsumerWidget {
   final VoidCallback onTap;
   final Widget? trailing;
   final String? imagePath;
+  final Color? accentColor;
 
   const _SettingsTile({
     required this.label,
@@ -790,10 +831,12 @@ class _SettingsTile extends ConsumerWidget {
     required this.onTap,
     this.trailing,
     this.imagePath,
+    this.accentColor,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final effectiveAccent = accentColor;
     return ListTile(
       onTap: () {
         ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
@@ -802,10 +845,14 @@ class _SettingsTile extends ConsumerWidget {
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.35),
+          color: effectiveAccent != null
+              ? effectiveAccent.withValues(alpha: 0.1)
+              : Colors.white.withValues(alpha: 0.35),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: Colors.white.withValues(alpha: 0.5),
+            color: effectiveAccent != null
+                ? effectiveAccent.withValues(alpha: 0.35)
+                : Colors.white.withValues(alpha: 0.5),
             width: 1,
           ),
         ),
@@ -821,14 +868,14 @@ class _SettingsTile extends ConsumerWidget {
               )
             : Icon(
                 icon,
-                color: ScholarlyTheme.textPrimary,
+                color: effectiveAccent ?? ScholarlyTheme.textPrimary,
                 size: 20,
               ),
       ),
       title: Text(
         label,
         style: GoogleFonts.inter(
-          color: ScholarlyTheme.textPrimary,
+          color: effectiveAccent ?? ScholarlyTheme.textPrimary,
           fontSize: 14,
           fontWeight: FontWeight.w600,
         ),

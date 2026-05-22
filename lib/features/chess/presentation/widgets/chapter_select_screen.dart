@@ -21,20 +21,24 @@ class ChapterSelectScreen extends ConsumerWidget {
 
   final void Function(int) onSelectChapter;
 
-  Widget _buildOnboardingAdvisor(int targetChapter) {
+  String _getSkipLabel(int targetChapter) {
+    return 'Skip';
+  }
+
+  Widget _buildOnboardingAdvisor(BuildContext context, WidgetRef ref, int targetChapter) {
     String message = '';
     switch (targetChapter) {
       case 1:
-        message = 'Apprentice, the journey of a thousand leagues begins with the board itself. Touch Chapter 1 to learn the foundation.';
+        message = 'Start here — Chapter 1 covers the board layout and how each piece moves. It\'s the foundation. Tap it to begin.';
         break;
       case 10:
-        message = 'You have bypassed the basics. Now, let us study Check—the warning that precedes the fall. Touch Chapter 10.';
+        message = 'Good. Now let\'s get to the real stuff — Check. This is where pressure starts. Tap Chapter 10.';
         break;
       case 14:
-        message = 'Castling is the ultimate defensive maneuver, hiding the King behind his fortress. Touch Chapter 14 to proceed.';
+        message = 'Castling is one of the most underused moves at this level. Learn it here. Tap Chapter 14.';
         break;
       default:
-        message = 'Touch the highlighted chapter to continue your guided learning.';
+        message = 'Tap the highlighted chapter to continue your training.';
     }
 
     return TweenAnimationBuilder<double>(
@@ -61,47 +65,78 @@ class ChapterSelectScreen extends ConsumerWidget {
             ),
           ),
           padding: const EdgeInsets.all(16),
-          child: Row(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: ScholarlyTheme.accentBlue, width: 1.5),
-                  image: const DecorationImage(
-                    image: AssetImage('assets/persona/gm_chanakya.png'),
-                    fit: BoxFit.cover,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: ScholarlyTheme.accentBlue, width: 1.5),
+                      image: const DecorationImage(
+                        image: AssetImage('assets/persona/gm_chanakya.png'),
+                        fit: BoxFit.cover,
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'GM CHANAKYA',
+                          style: GoogleFonts.inter(
+                            color: ScholarlyTheme.accentBlue,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          message,
+                          style: GoogleFonts.inter(
+                            color: ScholarlyTheme.textPrimary,
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'GM CHANAKYA',
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton.icon(
+                    onPressed: () {
+                      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.click);
+                      OnboardingService(ref).skipToNextMilestone(targetChapter);
+                    },
+                    style: TextButton.styleFrom(
+                      foregroundColor: ScholarlyTheme.accentBlue,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    icon: const Icon(Icons.skip_next_rounded, size: 15),
+                    label: Text(
+                      _getSkipLabel(targetChapter),
                       style: GoogleFonts.inter(
-                        color: ScholarlyTheme.accentBlue,
                         fontSize: 11,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1.2,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      message,
-                      style: GoogleFonts.inter(
-                        color: ScholarlyTheme.textPrimary,
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w600,
-                        height: 1.4,
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -148,7 +183,7 @@ class ChapterSelectScreen extends ConsumerWidget {
                 ),
 
                 if (isOnboarding)
-                  _buildOnboardingAdvisor(targetChapter),
+                  _buildOnboardingAdvisor(context, ref, targetChapter),
 
                 const Divider(height: 1, color: Colors.white30),
 

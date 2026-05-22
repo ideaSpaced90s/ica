@@ -16,11 +16,12 @@ import 'history_page.dart';
 import 'unrated_settings_page.dart';
 import 'tutorial_page.dart';
 import 'about_us_page.dart';
-import 'sign_in_page.dart';
+
 import 'widgets/welcome_guide_page.dart';
 import 'widgets/dashboard_tour_overlay.dart';
+import 'widgets/app_tour_overlay.dart';
 import '../application/onboarding_provider.dart';
-import '../application/tutorial_provider.dart';
+
 
 // Provides the current active mobile tab index.
 final mobileNavIndexProvider = StateProvider<int>((ref) => 0);
@@ -74,6 +75,7 @@ class MobileNavigationShell extends ConsumerWidget {
 
     final showWelcome = ref.watch(showWelcomeDialogProvider);
     final tourStep = ref.watch(dashboardTourStepProvider);
+    final appTourStep = ref.watch(appTourStepProvider);
 
     Widget result = Scaffold(
       backgroundColor: ScholarlyTheme.backgroundStart,
@@ -120,6 +122,15 @@ class MobileNavigationShell extends ConsumerWidget {
         children: pages,
       ),
     );
+
+    if (appTourStep != null) {
+      result = Stack(
+        children: [
+          result,
+          const AppTourOverlay(),
+        ],
+      );
+    }
 
     if (tourStep != null) {
       result = Stack(
@@ -341,60 +352,24 @@ class _MobileSidebarDrawer extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Text(
-                    'powered by ',
-                    style: GoogleFonts.inter(
-                      color: ScholarlyTheme.textMuted,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  Image.asset(
-                    'assets/splash/ideaspace.png',
-                    height: 12,
-                    errorBuilder: (context, error, stackTrace) => Text(
-                      'ideaspace',
-                      style: GoogleFonts.inter(
-                        color: ScholarlyTheme.textPrimary,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 10,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              TextButton.icon(
-                onPressed: () async {
-                  ref.read(chessSoundServiceProvider).playSfx(SoundEffect.click);
-                  final repo = ref.read(tutorialProgressRepositoryProvider);
-                  await repo.setIsGoogleSignedIn(false);
-                  await repo.setWelcomeGuideSeen(false);
-                  
-                  // Reset navigation state to Home (tab index 0)
-                  ref.read(mobileNavIndexProvider.notifier).state = 0;
-                  
-                  if (context.mounted) {
-                    Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(builder: (context) => const SignInPage()),
-                    );
-                  }
-                },
-                style: TextButton.styleFrom(
-                  padding: EdgeInsets.zero,
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  foregroundColor: Colors.redAccent,
+              Text(
+                'powered by ',
+                style: GoogleFonts.inter(
+                  color: ScholarlyTheme.textMuted,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500,
                 ),
-                icon: const Icon(Icons.logout_rounded, size: 12),
-                label: Text(
-                  'Sign Out',
+              ),
+              Image.asset(
+                'assets/splash/ideaspace.png',
+                height: 12,
+                errorBuilder: (context, error, stackTrace) => Text(
+                  'ideaspace',
                   style: GoogleFonts.inter(
-                    fontSize: 10,
+                    color: ScholarlyTheme.textPrimary,
                     fontWeight: FontWeight.bold,
+                    fontSize: 10,
                   ),
                 ),
               ),

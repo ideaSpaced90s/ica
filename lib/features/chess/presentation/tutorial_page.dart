@@ -130,7 +130,7 @@ class _TutorialPageState extends ConsumerState<TutorialPage> {
                           ),
                           icon: const Icon(Icons.skip_next_rounded, size: 16),
                           label: Text(
-                            'Skip Guide',
+                            'Skip',
                             style: GoogleFonts.inter(
                               fontSize: 11,
                               fontWeight: FontWeight.bold,

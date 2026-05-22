@@ -84,9 +84,11 @@ class _ZenArenaPageState extends ConsumerState<ZenArenaPage> with WidgetsBinding
         body: Stack(
           children: [
             const AmbientFlowBackdrop(),
-            isLandscape
-                ? _buildLandscapeLayout(context, ref, state)
-                : _buildPortraitLayout(context, ref, state),
+            Positioned.fill(
+              child: isLandscape
+                  ? _buildLandscapeLayout(context, ref, state)
+                  : _buildPortraitLayout(context, ref, state),
+            ),
             if ((state.game.gameOver || state.isTimeOut) && !state.isGameOverDismissed)
               _buildGameOverOverlay(context, ref, state),
             
@@ -176,7 +178,6 @@ class _ZenArenaPageState extends ConsumerState<ZenArenaPage> with WidgetsBinding
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: Row(
-                    mainAxisSize: MainAxisSize.min,
                     children: [
                       ActiveAvatarWrapper(
                         isActive: !isTurn,
@@ -186,7 +187,7 @@ class _ZenArenaPageState extends ConsumerState<ZenArenaPage> with WidgetsBinding
                         ),
                       ),
                       const SizedBox(width: 12),
-                      CapturedPiecesInline(pieces: topPieces),
+                      Flexible(child: CapturedPiecesInline(pieces: topPieces)),
                     ],
                   ),
                 ),
@@ -206,9 +207,8 @@ class _ZenArenaPageState extends ConsumerState<ZenArenaPage> with WidgetsBinding
                 child: Align(
                   alignment: Alignment.centerRight,
                   child: Row(
-                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      CapturedPiecesInline(pieces: bottomPieces),
+                      Flexible(child: CapturedPiecesInline(pieces: bottomPieces)),
                       const SizedBox(width: 12),
                       ActiveAvatarWrapper(
                         isActive: isTurn,
@@ -381,7 +381,6 @@ class _ZenArenaPageState extends ConsumerState<ZenArenaPage> with WidgetsBinding
           child: Align(
             alignment: Alignment.centerLeft,
             child: Row(
-              mainAxisSize: MainAxisSize.min,
               children: [
                 ActiveAvatarWrapper(
                   isActive: !isTurn,
@@ -391,7 +390,7 @@ class _ZenArenaPageState extends ConsumerState<ZenArenaPage> with WidgetsBinding
                   ),
                 ),
                 const SizedBox(width: 12),
-                CapturedPiecesInline(pieces: topPieces),
+                Flexible(child: CapturedPiecesInline(pieces: topPieces)),
               ],
             ),
           ),
@@ -411,9 +410,8 @@ class _ZenArenaPageState extends ConsumerState<ZenArenaPage> with WidgetsBinding
           child: Align(
             alignment: Alignment.centerRight,
             child: Row(
-              mainAxisSize: MainAxisSize.min,
               children: [
-                CapturedPiecesInline(pieces: bottomPieces),
+                Flexible(child: CapturedPiecesInline(pieces: bottomPieces)),
                 const SizedBox(width: 12),
                 ActiveAvatarWrapper(
                   isActive: isTurn,

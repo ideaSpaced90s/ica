@@ -59,10 +59,22 @@ class _DashboardTourOverlayState extends ConsumerState<DashboardTourOverlay>
       if (renderBox != null && renderBox.hasSize) {
         final pos = renderBox.localToGlobal(Offset.zero);
         final sz = renderBox.size;
-        if (pos != _targetPosition || sz != _targetSize) {
-          setState(() {
-            _targetPosition = pos;
-            _targetSize = sz;
+        
+        // A coordinate of 10000+ or negative (when offscreen/inactive) is clearly not sane yet.
+        final isSane = pos.dy >= -100 && pos.dy < 10000;
+        
+        if (isSane) {
+          if (pos != _targetPosition || sz != _targetSize) {
+            setState(() {
+              _targetPosition = pos;
+              _targetSize = sz;
+            });
+          }
+        } else {
+          // If the position is not sane (e.g. transitioning or unrendered), retry shortly.
+          Future.delayed(const Duration(milliseconds: 50), () {
+            if (!mounted) return;
+            _updateTargetLayout(step);
           });
         }
       } else {
@@ -78,11 +90,11 @@ class _DashboardTourOverlayState extends ConsumerState<DashboardTourOverlay>
   String _getDialogueText(int step) {
     switch (step) {
       case 0:
-        return 'Apprentice, this is your Master Standing. Here, we track your ELO rating and tactical progress. Watch your winning streaks and dominance factor closely—they measure your growing intuition against the cold logic of the machines.';
+        return 'This is your player profile — it shows your ELO rating, winning streaks, and performance over time. Check it regularly to track how you\'re improving.';
       case 1:
-        return 'The Arenas are where you test your metal under different time controls. Whether in the lightning speed of Bullet, the fiery intensity of Blitz, or the patient calculations of Rapid, you must learn to govern your time and dominate the board.';
+        return 'These are the Arenas. Pick a time control — Bullet, Blitz, or Rapid — and play. Each one tests a different part of your game, so try them all.';
       case 2:
-        return 'Use this navigation gate to traverse the Academy. From here, you can access our Archives, enter the Battleground for rated play, or return to the Tutorial map to study the sacred principles of the board. The choices are yours, Young Strategist.';
+        return 'The menu button on the top-left gets you to every part of the app — Tutorial, Academy, Puzzles, Archives. One tap and you\'re there.';
       default:
         return '';
     }
@@ -101,6 +113,11 @@ class _DashboardTourOverlayState extends ConsumerState<DashboardTourOverlay>
     }
   }
 
+  Future<void> _handleSkip() async {
+    ref.read(chessSoundServiceProvider).playSfx(SoundEffect.click);
+    ref.read(dashboardTourStepProvider.notifier).skipTour();
+  }
+
   @override
   Widget build(BuildContext context) {
     final step = ref.watch(dashboardTourStepProvider);
@@ -117,14 +134,36 @@ class _DashboardTourOverlayState extends ConsumerState<DashboardTourOverlay>
     }
 
     final screenHeight = MediaQuery.of(context).size.height;
-    final isTargetInUpperHalf = _targetPosition.dy < (screenHeight / 2);
+    
+    // Check if the measured target position is actually on-screen and valid
+    final isPositionSane = _targetSize != Size.zero &&
+        _targetPosition.dy >= -100 &&
+        _targetPosition.dy < screenHeight + 100;
+
+    double? cardTop;
+    double? cardBottom;
+
+    if (!isPositionSane) {
+      // Center the dialogue card if target layout is not ready or is offscreen
+      cardTop = (screenHeight - 240) / 2;
+      cardBottom = null;
+    } else {
+      final isTargetInUpperHalf = _targetPosition.dy < (screenHeight / 2);
+      if (isTargetInUpperHalf) {
+        cardTop = _targetPosition.dy + _targetSize.height + 24;
+        cardBottom = null;
+      } else {
+        cardTop = null;
+        cardBottom = (screenHeight - _targetPosition.dy) + 24;
+      }
+    }
 
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Stack(
         children: [
-          // Spotlight background overlay
-          if (_targetSize != Size.zero)
+          // Spotlight background overlay (only draw spotlight cutout if target layout is sane)
+          if (isPositionSane)
             Positioned.fill(
               child: CustomPaint(
                 painter: SpotlightPainter(
@@ -158,12 +197,8 @@ class _DashboardTourOverlayState extends ConsumerState<DashboardTourOverlay>
             curve: Curves.easeInOut,
             left: 20,
             right: 20,
-            top: isTargetInUpperHalf
-                ? _targetPosition.dy + _targetSize.height + 24
-                : null,
-            bottom: !isTargetInUpperHalf
-                ? (screenHeight - _targetPosition.dy) + 24
-                : null,
+            top: cardTop,
+            bottom: cardBottom,
             child: _buildChanakyaDialogueCard(step),
           ),
         ],
@@ -256,15 +291,12 @@ class _DashboardTourOverlayState extends ConsumerState<DashboardTourOverlay>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               TextButton(
-                onPressed: () {
-                  ref.read(chessSoundServiceProvider).playSfx(SoundEffect.click);
-                  ref.read(dashboardTourStepProvider.notifier).skipTour();
-                },
+                onPressed: _handleSkip,
                 style: TextButton.styleFrom(
                   foregroundColor: Colors.white38,
                 ),
                 child: Text(
-                  'Skip Walkthrough',
+                  'Skip',
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,

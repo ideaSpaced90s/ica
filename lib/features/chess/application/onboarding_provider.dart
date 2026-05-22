@@ -8,6 +8,12 @@ final drawerMenuButtonKey = GlobalKey(debugLabel: 'drawerMenuButtonKey');
 final profileCardKey = GlobalKey(debugLabel: 'profileCardKey');
 final arenaGridKey = GlobalKey(debugLabel: 'arenaGridKey');
 
+// Global keys for app tour spotlight targets (page-level content areas)
+final arenaPageKey = GlobalKey(debugLabel: 'arenaPageKey');
+final academyPageKey = GlobalKey(debugLabel: 'academyPageKey');
+final puzzlePageKey = GlobalKey(debugLabel: 'puzzlePageKey');
+final analysisPageKey = GlobalKey(debugLabel: 'analysisPageKey');
+
 /// Provider tracking whether the user is currently in the active onboarding tutorial flow.
 final isOnboardingProvider = StateProvider<bool>((ref) => false);
 
@@ -23,7 +29,7 @@ final showWelcomeDialogProvider = StateProvider<bool>((ref) {
   return !repo.hasSeenWelcomeGuide();
 });
 
-/// State notifier for the Dashboard Spotlight Tour steps (0 = Profile, 1 = Arena, 2 = Menu, 3 = Completed).
+/// State notifier for the Dashboard Spotlight Tour steps (0 = Profile, 1 = Arena, 2 = Menu, null = done).
 class DashboardTourStepNotifier extends StateNotifier<int?> {
   DashboardTourStepNotifier() : super(null);
 
@@ -49,6 +55,41 @@ final dashboardTourStepProvider = StateNotifierProvider<DashboardTourStepNotifie
   return DashboardTourStepNotifier();
 });
 
+/// State notifier for the App Feature Tour (Arena, Academy, Puzzles, Analysis Lab, Navigation).
+/// Steps: 0 = Arena, 1 = Academy, 2 = Puzzles, 3 = Analysis Lab, 4 = Navigation. null = not active.
+class AppTourStepNotifier extends StateNotifier<int?> {
+  AppTourStepNotifier() : super(null);
+
+  void startTour() {
+    state = 0;
+  }
+
+  void nextStep(WidgetRef ref) {
+    if (state == null) return;
+    if (state! < 4) {
+      state = state! + 1;
+    } else {
+      // App Tour complete — hand off to Dashboard Tour
+      state = null;
+      ref.read(dashboardTourStepProvider.notifier).startTour();
+    }
+  }
+
+  void skipTour(WidgetRef ref) {
+    state = null;
+    // Skipping App Tour also launches Dashboard Tour
+    ref.read(dashboardTourStepProvider.notifier).startTour();
+  }
+
+  void cancelTour() {
+    state = null;
+  }
+}
+
+final appTourStepProvider = StateNotifierProvider<AppTourStepNotifier, int?>((ref) {
+  return AppTourStepNotifier();
+});
+
 /// Service class to handle the custom onboarding skip milestones.
 class OnboardingService {
   final WidgetRef ref;
@@ -65,18 +106,18 @@ class OnboardingService {
       ref.read(onboardingTargetChapterProvider.notifier).state = 14;
       ref.read(showChapterSelectionProvider.notifier).state = true;
     } else {
-      // Milestone 3: Finish and go to Dashboard Tour
+      // Milestone 3: Onboarding complete — launch App Tour, then Dashboard Tour
       ref.read(isOnboardingProvider.notifier).state = false;
-      
+
       // Save welcome guide completed in SharedPreferences
       final repo = ref.read(tutorialProgressRepositoryProvider);
       repo.setWelcomeGuideSeen(true);
 
-      // Reset navigation state to Home (tab index 0)
-      ref.read(mobileNavIndexProvider.notifier).state = 0;
+      // Navigate to Arena (first App Tour stop)
+      ref.read(mobileNavIndexProvider.notifier).state = 1;
 
-      // Reset tutorial page visibility and route to Dashboard
-      ref.read(dashboardTourStepProvider.notifier).startTour();
+      // Start App Tour
+      ref.read(appTourStepProvider.notifier).startTour();
     }
   }
 }

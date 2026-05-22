@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../application/chess_provider.dart';
+import '../application/onboarding_provider.dart';
 import 'zen_arena_page.dart';
 import 'rated_arena_page.dart';
 
@@ -12,10 +13,16 @@ class MainPage extends ConsumerWidget {
     // We select only isRatedMode to avoid unnecessary rebuilds of this shell
     final isRated = ref.watch(chessProvider.select((s) => s.isRatedMode));
 
+    final Widget child;
     if (isRated) {
-      return const RatedArenaPage();
+      child = const RatedArenaPage();
     } else {
-      return const ZenArenaPage();
+      child = const ZenArenaPage();
     }
+
+    return KeyedSubtree(
+      key: arenaPageKey,
+      child: child,
+    );
   }
 }
