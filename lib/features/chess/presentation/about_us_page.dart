@@ -184,6 +184,20 @@ class _AboutUsPageState extends ConsumerState<AboutUsPage> {
                 ),
                 const SizedBox(height: 28),
 
+                // Section: Dual-Engine Persona Matrix
+                Text(
+                  'TACTICAL CORE ARCHITECTURE',
+                  style: GoogleFonts.outfit(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.5,
+                    color: ScholarlyTheme.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _buildPersonaTable(),
+                const SizedBox(height: 28),
+
                 // Section 3: Technical Specifications
                 Text(
                   'ENGINE & SYSTEM SPECIFICATIONS',
@@ -338,4 +352,254 @@ class _AboutUsPageState extends ConsumerState<AboutUsPage> {
       ],
     );
   }
+
+  Widget _buildPersonaTable() {
+    final items = const [
+      _PersonaMatrixItem(
+        name: 'GM Bard',
+        engine: 'Crafty',
+        elo: 'Ideal 2 (Full Power)',
+        style: 'Wisdom/mentor style, maximum precision, classic intuition.',
+        icon: Icons.school_rounded,
+        color: ScholarlyTheme.accentBlue,
+      ),
+      _PersonaMatrixItem(
+        name: 'Kingslayer',
+        engine: 'Stockfish',
+        elo: '2850 - 3200+ (Depth 22, Full Power)',
+        style: 'Ultimate absolute computational perfection.',
+        icon: Icons.diamond_rounded,
+        color: Color(0xFFE0E0E0),
+      ),
+      _PersonaMatrixItem(
+        name: 'Titan',
+        engine: 'Crafty',
+        elo: '2500 - 2700 (Depth 18, Full Power)',
+        style: 'Grandmaster precision, relentless positional pressure.',
+        icon: Icons.psychology_rounded,
+        color: Color(0xFFFFD54F),
+      ),
+      _PersonaMatrixItem(
+        name: 'Morphy',
+        engine: 'Stockfish',
+        elo: '2200 - 2400 (Depth 15)',
+        style: 'Classical elegance, open lines, rapid piece coordination.',
+        icon: Icons.local_fire_department_rounded,
+        color: Color(0xFFE57373),
+      ),
+      _PersonaMatrixItem(
+        name: 'Sentinel',
+        engine: 'Crafty',
+        elo: '1900 - 2100 (Depth 12)',
+        style: 'Positional trap specialist, superb prophylaxis.',
+        icon: Icons.gpp_good_rounded,
+        color: Color(0xFF7986CB),
+      ),
+      _PersonaMatrixItem(
+        name: 'Vanguard',
+        engine: 'Stockfish',
+        elo: '1700 - 1850 (Depth 10)',
+        style: 'Sharp tactical vision, uncoordinated piece punisher.',
+        icon: Icons.track_changes_rounded,
+        color: Color(0xFF4DB6AC),
+      ),
+      _PersonaMatrixItem(
+        name: 'Gambit',
+        engine: 'Stockfish',
+        elo: '1500 - 1650 (Depth 7)',
+        style: 'Chaos lover, tactical sacrifices, material imbalances.',
+        icon: Icons.auto_awesome_rounded,
+        color: Color(0xFFBA68C8),
+      ),
+      _PersonaMatrixItem(
+        name: 'Blitzer',
+        engine: 'Crafty',
+        elo: '1300 - 1450 (Depth 5)',
+        style: 'Highly tactical, rapid attacker targeting the king.',
+        icon: Icons.bolt_rounded,
+        color: Color(0xFFFFB74D),
+      ),
+      _PersonaMatrixItem(
+        name: 'Stonewall',
+        engine: 'Stockfish',
+        elo: '1100 - 1250 (Depth 4)',
+        style: 'Locked pawn chains, ultra-conservative, closed files.',
+        icon: Icons.shield_rounded,
+        color: Color(0xFF90A4AE),
+      ),
+      _PersonaMatrixItem(
+        name: 'Rook-ie',
+        engine: 'Stockfish',
+        elo: '950 - 1050 (Depth 3)',
+        style: 'Capturing undefended pieces immediately without recapture risk assessment.',
+        icon: Icons.castle_rounded,
+        color: Color(0xFF64B5F6),
+      ),
+      _PersonaMatrixItem(
+        name: 'Pawnzy',
+        engine: 'Crafty',
+        elo: '800 - 950 (Depth 2)',
+        style: 'Erratic novice, pawn-heavy movements.',
+        icon: Icons.cruelty_free_rounded,
+        color: Color(0xFF81C784),
+      ),
+      _PersonaMatrixItem(
+        name: 'Sparky',
+        engine: 'Crafty',
+        elo: '400 - 500 (Depth 1)',
+        style: 'Absolute beginner, frequent blunders, random pushes.',
+        icon: Icons.child_care_rounded,
+        color: Color(0xFFA1887F),
+      ),
+    ];
+
+    return JuicyGlassCard(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      borderRadius: 24,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        child: Container(
+          constraints: const BoxConstraints(minWidth: 800),
+          child: Table(
+            columnWidths: const {
+              0: FixedColumnWidth(150), // Name
+              1: FixedColumnWidth(160), // Engine
+              2: FixedColumnWidth(210), // Strength/ELO
+              3: FixedColumnWidth(280), // Playing Style
+            },
+            defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+            children: [
+              TableRow(
+                decoration: const BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(color: Colors.white24, width: 1.5),
+                  ),
+                ),
+                children: [
+                  _buildHeaderCell('PERSONA'),
+                  _buildHeaderCell('CORE ENGINE'),
+                  _buildHeaderCell('CALIBRATION / ELO'),
+                  _buildHeaderCell('TACTICAL PLAYSTYLE'),
+                ],
+              ),
+              ...items.map((item) {
+                return TableRow(
+                  decoration: const BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(color: Colors.white12, width: 1),
+                    ),
+                  ),
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(item.icon, color: item.color, size: 20),
+                          const SizedBox(width: 10),
+                          Text(
+                            item.name,
+                            style: GoogleFonts.outfit(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: ScholarlyTheme.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      child: _buildEngineChip(item.engine),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      child: Text(
+                        item.elo,
+                        style: GoogleFonts.jetBrainsMono(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.bold,
+                          color: ScholarlyTheme.accentGold,
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      child: Text(
+                        item.style,
+                        style: GoogleFonts.inter(
+                          fontSize: 12.5,
+                          color: ScholarlyTheme.textMuted,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              }),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeaderCell(String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Text(
+        text,
+        style: GoogleFonts.outfit(
+          fontSize: 11.5,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 1.2,
+          color: ScholarlyTheme.textSubtle,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEngineChip(String engine) {
+    final isCrafty = engine == 'Crafty';
+    final color = isCrafty ? ScholarlyTheme.accentGold : ScholarlyTheme.accentBlue;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: color.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
+      child: Text(
+        isCrafty ? 'C-ENGINE (Crafty)' : 'S-ENGINE (Stockfish)',
+        style: GoogleFonts.jetBrainsMono(
+          color: color,
+          fontSize: 10.5,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 0.5,
+        ),
+      ),
+    );
+  }
+}
+
+class _PersonaMatrixItem {
+  final String name;
+  final String engine;
+  final String elo;
+  final String style;
+  final IconData icon;
+  final Color color;
+
+  const _PersonaMatrixItem({
+    required this.name,
+    required this.engine,
+    required this.elo,
+    required this.style,
+    required this.icon,
+    required this.color,
+  });
 }

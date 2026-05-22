@@ -8,7 +8,7 @@ import 'scholarly_theme.dart';
 import 'widgets/commentary_history.dart';
 import 'widgets/board_stage.dart';
 import 'themes/theme_registry.dart';
-import 'unrated_settings_page.dart';
+import 'academy_settings_page.dart';
 import 'widgets/ambient_scaffold.dart';
 import 'widgets/classic_windows_tabs.dart';
 import 'dashboard_page.dart';
@@ -300,7 +300,7 @@ class _AcademyPageState extends ConsumerState<AcademyPage> {
                           onTap: () {
                             Navigator.of(context).push(
                               MaterialPageRoute(
-                                builder: (context) => const UnratedSettingsPage(),
+                                builder: (context) => const AcademySettingsPage(),
                               ),
                             );
                           },
@@ -436,7 +436,7 @@ class _AcademyPageState extends ConsumerState<AcademyPage> {
                             onTap: () {
                               Navigator.of(context).push(
                                 MaterialPageRoute(
-                                  builder: (context) => const UnratedSettingsPage(),
+                                  builder: (context) => const AcademySettingsPage(),
                                 ),
                               );
                             },

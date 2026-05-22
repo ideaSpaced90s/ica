@@ -5,11 +5,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
+import 'chess_engine_service.dart';
 
 /// A service to manage and communicate with the Stockfish engine via UCI.
 /// This implementation treats Stockfish as a separate, independent executable
 /// for GPL compliance and uses a platform channel to find the executable path on Android.
-class StockfishService {
+class StockfishService implements ChessEngineService {
   static const _channel = MethodChannel('com.dsamok.kingslayer/native_path');
 
   bool _isReady = false;
@@ -22,10 +23,14 @@ class StockfishService {
   StreamSubscription? _stdoutSubscription;
   StreamSubscription? _stderrSubscription;
 
+  @override
   bool get isReady => _isReady;
+  @override
   bool get isError => _isError;
+  @override
   Stream<String> get outputStream => _outputController.stream;
 
+  @override
   Future<void> init() async {
     // debugPrint('StockfishService: [Unified] init() called.');
     if (_isDisposed) _isDisposed = false;
@@ -236,6 +241,7 @@ class StockfishService {
     _isReady = false;
   }
 
+  @override
   Future<void> sendCommand(String command) async {
     if (_process == null) {
       debugPrint(
@@ -251,6 +257,7 @@ class StockfishService {
     }
   }
 
+  @override
   Future<void> analyzePosition(String fen, {int depth = 15}) async {
     if (!_isReady) await _readyCompleter?.future;
     await sendCommand('stop');
@@ -258,22 +265,26 @@ class StockfishService {
     await sendCommand('go depth $depth');
   }
 
+  @override
   Future<void> stopAnalysis() async {
     if (!_isReady) return;
     await sendCommand('stop');
   }
 
+  @override
   Future<void> setSkillLevel(int level, {int multiPV = 1}) async {
     await sendCommand('setoption name MultiPV value $multiPV');
     await sendCommand('setoption name Skill Level value $level');
   }
 
+  @override
   Future<void> setChess960Mode(bool isEnabled) async {
     await sendCommand(
       'setoption name UCI_Chess960 value ${isEnabled ? "true" : "false"}',
     );
   }
 
+  @override
   void dispose() {
     if (_isDisposed) return;
     _isDisposed = true;

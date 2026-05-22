@@ -10,6 +10,8 @@ import 'package:kingslayer_chess/src/rust/api/threats.dart';
 import '../data/saved_game.dart';
 import '../data/saved_game_repository.dart';
 import '../data/stockfish_service.dart';
+import '../data/chess_engine_service.dart';
+import '../data/crafty_service.dart';
 import '../data/uci_parser.dart';
 import '../domain/chess_game.dart';
 import '../domain/chess_960_generator.dart';
@@ -621,7 +623,8 @@ class ChessState {
 
 class ChessNotifier extends StateNotifier<ChessState> {
   ChessNotifier(
-    this._engine,
+    this._stockfishEngine,
+    this._craftyEngine,
     this._commentaryEngine,
     this._savedGameRepository,
     this._soundService,
@@ -1079,7 +1082,36 @@ class ChessNotifier extends StateNotifier<ChessState> {
     state = state.copyWith(threatenedSquares: finalThreats);
   }
 
-  final StockfishService _engine;
+  final ChessEngineService _stockfishEngine;
+  final ChessEngineService _craftyEngine;
+
+  String get _activeAvatarId {
+    if (state.isAcademyActive) {
+      return 'academy';
+    }
+    bool isBottomTurn = false;
+    final fenParts = state.game.fen.split(' ');
+    if (fenParts.length > 1) {
+      final turnWhite = fenParts[1] == 'w';
+      isBottomTurn = (state.isPlayerWhite == turnWhite);
+    }
+    return (state.isEngineVsEngine && isBottomTurn)
+        ? state.bottomAvatarId
+        : state.engineLevel;
+  }
+
+  ChessEngineService get _engine {
+    final avatarId = _activeAvatarId;
+    if (avatarId == 'academy') {
+      return _craftyEngine.isError ? _stockfishEngine : _craftyEngine;
+    }
+    final craftyIds = {'avatar_0', 'avatar_1', 'avatar_4', 'avatar_7', 'avatar_9'};
+    if (craftyIds.contains(avatarId)) {
+      return _craftyEngine.isError ? _stockfishEngine : _craftyEngine;
+    }
+    return _stockfishEngine;
+  }
+
   final CommentaryEngine _commentaryEngine;
   final SavedGameRepository _savedGameRepository;
   final ChessSoundService _soundService;
@@ -1094,7 +1126,15 @@ class ChessNotifier extends StateNotifier<ChessState> {
   Timer? _clockTimer;
   Timer? _maxThinkingTimer;
   DateTime? _engineStartTime;
-  StreamSubscription<String>? _engineOutputSubscription;
+  StreamSubscription<String>? _stockfishSubscription;
+  StreamSubscription<String>? _craftySubscription;
+
+  Future<void> _cancelEngineSubscriptions() async {
+    await _stockfishSubscription?.cancel();
+    _stockfishSubscription = null;
+    await _craftySubscription?.cancel();
+    _craftySubscription = null;
+  }
   final List<_BoardSnapshot> _undoStack = [];
   final List<_BoardSnapshot> _redoStack = [];
   final List<CandidateMove> _currentCandidates = [];
@@ -1146,17 +1186,27 @@ class ChessNotifier extends StateNotifier<ChessState> {
     required bool analyzeCurrentPosition,
   }) async {
     try {
-      // Start listening BEFORE init so we don't miss uciok/readyok
-      _engineOutputSubscription ??= _engine.outputStream.listen(
+      // Start listening to BOTH engines BEFORE init so we don't miss uciok/readyok
+      _stockfishSubscription ??= _stockfishEngine.outputStream.listen(
+        _handleEngineOutput,
+      );
+      _craftySubscription ??= _craftyEngine.outputStream.listen(
         _handleEngineOutput,
       );
 
-      await _engine.init();
+      await _stockfishEngine.init();
+      await _craftyEngine.init();
 
       final avatar = AiAvatar.getAvatar(state.engineLevel);
-      await _engine.setSkillLevel(
+      final multiPV = state.isAcademyActive ? 3 : (avatar.name == 'Kingslayer' ? 1 : 4);
+      
+      await _stockfishEngine.setSkillLevel(
         avatar.skillLevel,
-        multiPV: state.isAcademyActive ? 3 : (avatar.name == 'Kingslayer' ? 1 : 4),
+        multiPV: multiPV,
+      );
+      await _craftyEngine.setSkillLevel(
+        avatar.skillLevel,
+        multiPV: multiPV,
       );
 
       state = state.copyWith(
@@ -1318,6 +1368,16 @@ class ChessNotifier extends StateNotifier<ChessState> {
   ) {
     if (candidates.isEmpty) return engineBestMove;
 
+    bool isOpenFile(String fileChar) {
+      for (int r = 1; r <= 8; r++) {
+        final p = game.getPiece('$fileChar$r');
+        if (p != null && p.type == chess_lib.PieceType.PAWN) {
+          return false;
+        }
+      }
+      return true;
+    }
+
     String bestCandidateMove = candidates.first.uciMove;
     double highestAdjustedScore = -999.0;
 
@@ -1339,7 +1399,10 @@ class ChessNotifier extends StateNotifier<ChessState> {
       double adjustedScore = candidate.evaluation;
 
       // Trait scoring adjustments
-      if (avatar.name == 'Pawnzy') {
+      if (avatar.name == 'Sparky') {
+        final randomVal = (math.Random().nextDouble() * 3.0) - 1.5; // -1.5 to +1.5
+        adjustedScore += randomVal;
+      } else if (avatar.name == 'Pawnzy') {
         if (piece?.type == chess_lib.PieceType.PAWN) {
           adjustedScore += 1.5;
         }
@@ -1362,15 +1425,64 @@ class ChessNotifier extends StateNotifier<ChessState> {
         } else if (targetPiece != null) {
           adjustedScore -= 0.5; // Penalize early unforced trades
         }
+      } else if (avatar.name == 'Blitzer') {
+        if (piece?.type == chess_lib.PieceType.KNIGHT ||
+            piece?.type == chess_lib.PieceType.BISHOP) {
+          adjustedScore += 0.8;
+        }
+        // Find opponent king's coordinate
+        String? opponentKingSq;
+        for (final sq in chess_lib.Chess.SQUARES.keys) {
+          final p = game.getPiece(sq);
+          if (p != null && p.type == chess_lib.PieceType.KING && p.color == opponentColor) {
+            opponentKingSq = sq;
+            break;
+          }
+        }
+        if (opponentKingSq != null) {
+          final fromFileIdx = toSq.codeUnitAt(0) - 97; // 'a'.codeUnitAt(0)
+          final fromRankIdx = int.tryParse(toSq[1]) ?? 1;
+          final kingFileIdx = opponentKingSq.codeUnitAt(0) - 97;
+          final kingRankIdx = int.tryParse(opponentKingSq[1]) ?? 1;
+          final distance = math.sqrt(math.pow(fromFileIdx - kingFileIdx, 2) + math.pow(fromRankIdx - kingRankIdx, 2));
+          adjustedScore += math.max(0.0, (10.0 - distance) * 0.15); // Reward moving closer to opponent king
+        }
       } else if (avatar.name == 'Gambit') {
         // Enjoys material chaos or sacrifices to open active vectors
         if (candidate.evaluation < -0.5 && (targetPiece != null || piece?.type == chess_lib.PieceType.PAWN)) {
           adjustedScore += 1.2;
         }
-      } else if (avatar.name == 'Blitzer') {
-        if (piece?.type == chess_lib.PieceType.KNIGHT ||
-            piece?.type == chess_lib.PieceType.BISHOP) {
-          adjustedScore += 0.8;
+      } else if (avatar.name == 'Vanguard') {
+        if (targetPiece != null && !game.isAttacked(toSq, opponentColor)) {
+          adjustedScore += 1.5; // Highly prioritize capturing hanging pieces
+        }
+      } else if (avatar.name == 'Sentinel') {
+        final file = toSq[0];
+        final rank = toSq[1];
+        final isCenterFile = file == 'c' || file == 'd' || file == 'e' || file == 'f';
+        final isCenterRank = rank == '4' || rank == '5';
+        if (isCenterFile && isCenterRank) {
+          adjustedScore += 0.8; // Prioritize central outposts
+        }
+        if (piece?.type == chess_lib.PieceType.KING) {
+          adjustedScore += 0.4; // Prophylactic king safety moves
+        }
+      } else if (avatar.name == 'Morphy') {
+        final file = toSq[0];
+        if ((piece?.type == chess_lib.PieceType.ROOK || piece?.type == chess_lib.PieceType.QUEEN) && isOpenFile(file)) {
+          adjustedScore += 1.0; // Reward rooks and queens on open files
+        }
+        final moveCount = game.history.length;
+        if (moveCount < 24 && (piece?.type == chess_lib.PieceType.KNIGHT || piece?.type == chess_lib.PieceType.BISHOP)) {
+          adjustedScore += 0.6; // Rapid minor piece development in early game
+        }
+      } else if (avatar.name == 'Titan') {
+        final file = toSq[0];
+        final rank = toSq[1];
+        final isCenterFile = file == 'd' || file == 'e';
+        final isCenterRank = rank == '4' || rank == '5';
+        if (isCenterFile && isCenterRank) {
+          adjustedScore += 0.3; // Subtle center control positional pressure
         }
       }
 
@@ -3197,6 +3309,11 @@ class ChessNotifier extends StateNotifier<ChessState> {
   }
 
   Future<void> reset({bool? forcedPlayerWhite, bool skipAutoSave = false}) async {
+    if (state.isAcademyActive) {
+      await _cancelEngineSubscriptions();
+      state = state.copyWith(servicesStarted: false, engineReady: false);
+    }
+
     // Auto-save current game before resetting if there is progress
     if (!skipAutoSave && state.recentMoves.isNotEmpty) {
       await saveCurrentGame();
@@ -3299,6 +3416,10 @@ class ChessNotifier extends StateNotifier<ChessState> {
   }
 
   Future<void> initializeAcademySession({String? customFen}) async {
+    // Transitioning into Academy Mode. Ensure any old engine output stream is canceled,
+    // and servicesStarted is set to false so the Crafty engine can be clean-started.
+    await _cancelEngineSubscriptions();
+
     // Force state to Engine as White, Board Flipped
     _undoStack.clear();
     _redoStack.clear();
@@ -3334,9 +3455,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
       blackTimeLeft: baseTime,
       baseTimeDuration: baseTime,
       isEngineThinking: false,
-      servicesStarted: state.servicesStarted,
+      servicesStarted: false, // Will start Crafty on-demand below
       servicesStarting: false,
-      engineReady: state.engineReady,
+      engineReady: false,
       isCommentaryEngineLoading: _commentaryEngine.isInitializing,
       commentaryError: _commentaryEngine.lastError,
       savedGames: state.savedGames,
@@ -3366,9 +3487,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
     _engineMoveTimer?.cancel();
     _stopClock();
     _cancelCommentaryReveal();
-    await _engineOutputSubscription?.cancel();
-    _engineOutputSubscription = null;
-    _engine.dispose();
+    await _cancelEngineSubscriptions();
+    _stockfishEngine.dispose();
+    _craftyEngine.dispose();
     await _commentaryEngine.dispose();
   }
 
@@ -3379,8 +3500,12 @@ class ChessNotifier extends StateNotifier<ChessState> {
     _maxThinkingTimer?.cancel();
     _stopClock();
     _cancelCommentaryReveal();
-    _engineOutputSubscription?.cancel();
-    _engine.dispose();
+    _stockfishSubscription?.cancel();
+    _stockfishSubscription = null;
+    _craftySubscription?.cancel();
+    _craftySubscription = null;
+    _stockfishEngine.dispose();
+    _craftyEngine.dispose();
     unawaited(_commentaryEngine.dispose());
     super.dispose();
   }
@@ -3456,7 +3581,8 @@ final savedGameRepositoryProvider = Provider((ref) => SavedGameRepository());
 final settingsRepositoryProvider = Provider((ref) => SettingsRepository());
 
 final chessProvider = StateNotifierProvider<ChessNotifier, ChessState>((ref) {
-  final engine = ref.watch(stockfishServiceProvider);
+  final stockfishEngine = ref.watch(stockfishServiceProvider);
+  final craftyEngine = ref.watch(craftyServiceProvider);
   final commentaryEngine = ref.watch(commentaryEngineProvider);
   final savedGameRepository = ref.watch(savedGameRepositoryProvider);
   final soundService = ref.watch(chessSoundServiceProvider);
@@ -3465,7 +3591,8 @@ final chessProvider = StateNotifierProvider<ChessNotifier, ChessState>((ref) {
   final settingsRepository = ref.watch(settingsRepositoryProvider);
   final puzzleRepository = ref.watch(puzzleRepositoryProvider);
   return ChessNotifier(
-    engine,
+    stockfishEngine,
+    craftyEngine,
     commentaryEngine,
     savedGameRepository,
     soundService,
