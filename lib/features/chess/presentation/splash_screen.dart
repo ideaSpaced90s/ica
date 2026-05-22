@@ -3,7 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../application/chess_provider.dart';
+import '../application/tutorial_provider.dart';
 import 'mobile_navigation_shell.dart';
+import 'sign_in_page.dart';
 import 'scholarly_theme.dart';
 import 'widgets/ambient_flow_backdrop.dart';
 
@@ -107,11 +109,14 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
       if (!mounted) return;
 
-      // debugPrint('SplashScreen: Navigating to MainPage.');
+      final repo = ref.read(tutorialProgressRepositoryProvider);
+      final isGoogleSignedIn = repo.getIsGoogleSignedIn();
+
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) =>
-              const MobileNavigationShell(),
+          pageBuilder: (context, animation, secondaryAnimation) => isGoogleSignedIn
+              ? const MobileNavigationShell()
+              : const SignInPage(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(opacity: animation, child: child);
           },

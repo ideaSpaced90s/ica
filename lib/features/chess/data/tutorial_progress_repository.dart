@@ -14,6 +14,8 @@ class TutorialProgressRepository {
   static const String _kActiveStep = 'tutorial_active_step';
   static const String _kActiveFen = 'tutorial_active_fen';
   static const String _kSettings = 'tutorial_settings';
+  static const String _kWelcomeSeen = 'tutorial_welcome_guide_seen';
+  static const String _kIsGoogleSignedIn = 'user_is_google_signed_in';
 
   final SharedPreferences _prefs;
 
@@ -26,7 +28,7 @@ class TutorialProgressRepository {
       final completedList = _prefs.getStringList(_kCompleted) ?? [];
       final completed = completedList.map((e) => int.tryParse(e) ?? 0).where((e) => e > 0).toSet();
 
-      final unlockedList = _prefs.getStringList(_kUnlocked) ?? ['1'];
+      final unlockedList = _prefs.getStringList(_kUnlocked) ?? List.generate(23, (i) => (i + 1).toString());
       final unlocked = unlockedList.map((e) => int.tryParse(e) ?? 0).where((e) => e > 0).toSet();
 
       final starsString = _prefs.getString(_kStars);
@@ -147,7 +149,7 @@ class TutorialProgressRepository {
       }
       // Re-establish version anchor
       await _prefs.setInt(_kVersion, kTutorialDataVersion);
-      await _prefs.setStringList(_kUnlocked, ['1']);
+      await _prefs.setStringList(_kUnlocked, List.generate(23, (i) => (i + 1).toString()));
     } catch (e) {
       debugPrint('Error resetting tutorial progress: $e');
     }
@@ -161,5 +163,21 @@ class TutorialProgressRepository {
       tutorialDataVersion: toVersion,
       clearActiveSession: true,
     );
+  }
+
+  bool getIsGoogleSignedIn() {
+    return _prefs.getBool(_kIsGoogleSignedIn) ?? false;
+  }
+
+  Future<void> setIsGoogleSignedIn(bool value) async {
+    await _prefs.setBool(_kIsGoogleSignedIn, value);
+  }
+
+  bool hasSeenWelcomeGuide() {
+    return _prefs.getBool(_kWelcomeSeen) ?? false;
+  }
+
+  Future<void> setWelcomeGuideSeen(bool value) async {
+    await _prefs.setBool(_kWelcomeSeen, value);
   }
 }

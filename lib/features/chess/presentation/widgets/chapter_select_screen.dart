@@ -8,11 +8,12 @@ import '../../application/chess_provider.dart';
 import '../../services/chess_sound_service.dart';
 // Constants mapped locally or internally via progress state objects
 import '../../domain/models/tutorial_lesson.dart';
-import '../../domain/models/tutorial_progress.dart';
 import '../../data/tutorial_lessons.dart';
 import '../scholarly_theme.dart';
 import 'game_controls.dart';
 import 'ambient_scaffold.dart';
+import '../mobile_navigation_shell.dart';
+import '../../application/onboarding_provider.dart';
 
 
 class ChapterSelectScreen extends ConsumerWidget {
@@ -20,10 +21,92 @@ class ChapterSelectScreen extends ConsumerWidget {
 
   final void Function(int) onSelectChapter;
 
-  void _showSettingsDialog(BuildContext context, WidgetRef ref) {
-    showDialog(
-      context: context,
-      builder: (ctx) => const _TutorialSettingsModal(),
+  Widget _buildOnboardingAdvisor(int targetChapter) {
+    String message = '';
+    switch (targetChapter) {
+      case 1:
+        message = 'Apprentice, the journey of a thousand leagues begins with the board itself. Touch Chapter 1 to learn the foundation.';
+        break;
+      case 10:
+        message = 'You have bypassed the basics. Now, let us study Check—the warning that precedes the fall. Touch Chapter 10.';
+        break;
+      case 14:
+        message = 'Castling is the ultimate defensive maneuver, hiding the King behind his fortress. Touch Chapter 14 to proceed.';
+        break;
+      default:
+        message = 'Touch the highlighted chapter to continue your guided learning.';
+    }
+
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 600),
+      curve: Curves.easeOutBack,
+      builder: (context, value, child) {
+        return Transform.translate(
+          offset: Offset(0, 30 * (1 - value)),
+          child: Opacity(
+            opacity: value,
+            child: child,
+          ),
+        );
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Container(
+          decoration: ScholarlyTheme.glassPanelDecoration(radius: 16).copyWith(
+            color: Colors.white.withValues(alpha: 0.9),
+            border: Border.all(
+              color: ScholarlyTheme.accentBlue.withValues(alpha: 0.3),
+              width: 1.5,
+            ),
+          ),
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: ScholarlyTheme.accentBlue, width: 1.5),
+                  image: const DecorationImage(
+                    image: AssetImage('assets/persona/gm_chanakya.png'),
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'GM CHANAKYA',
+                      style: GoogleFonts.inter(
+                        color: ScholarlyTheme.accentBlue,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      message,
+                      style: GoogleFonts.inter(
+                        color: ScholarlyTheme.textPrimary,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -33,6 +116,8 @@ class ChapterSelectScreen extends ConsumerWidget {
     final state = ref.watch(tutorialProvider);
     final p = state.progress;
     final lessons = TutorialLessonsDatabase.lessons;
+    final isOnboarding = ref.watch(isOnboardingProvider);
+    final targetChapter = ref.watch(onboardingTargetChapterProvider);
 
     return AmbientScaffold(
       scaffoldKey: scaffoldKey,
@@ -62,6 +147,9 @@ class ChapterSelectScreen extends ConsumerWidget {
                   ),
                 ),
 
+                if (isOnboarding)
+                  _buildOnboardingAdvisor(targetChapter),
+
                 const Divider(height: 1, color: Colors.white30),
 
                 // Main horizontal browser grid
@@ -77,21 +165,39 @@ class ChapterSelectScreen extends ConsumerWidget {
                     itemCount: lessons.length,
                     itemBuilder: (context, index) {
                       final lesson = lessons[index];
-                      final isUnlocked = p.unlockedChapters.contains(lesson.chapterId);
+                      final isUnlocked = !isOnboarding || lesson.chapterId == targetChapter;
                       final isCompleted = p.completedChapters.contains(lesson.chapterId);
                       final stars = p.stars[lesson.chapterId] ?? 0;
                       final isActiveCheckpoint = p.activeChapterIndex == lesson.chapterId;
 
-                      return _ChapterCard(
-                        lesson: lesson,
-                        isUnlocked: isUnlocked,
-                        isCompleted: isCompleted,
-                        stars: stars,
-                        isActiveCheckpoint: isActiveCheckpoint,
-                        onTap: () {
-                          ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
-                          onSelectChapter(lesson.chapterId);
+                      final animIndex = index < 8 ? index : 8;
+                      return TweenAnimationBuilder<double>(
+                        tween: Tween<double>(begin: 0.0, end: 1.0),
+                        duration: Duration(milliseconds: 400 + animIndex * 80),
+                        curve: Curves.easeOutCubic,
+                        builder: (context, value, child) {
+                          return Transform.translate(
+                            offset: Offset(0, 20 * (1.0 - value)),
+                            child: Opacity(
+                              opacity: value,
+                              child: child,
+                            ),
+                          );
                         },
+                        child: PulsingGlowWrapper(
+                          isActive: isOnboarding && lesson.chapterId == targetChapter,
+                          child: _ChapterCard(
+                            lesson: lesson,
+                            isUnlocked: isUnlocked,
+                            isCompleted: isCompleted,
+                            stars: stars,
+                            isActiveCheckpoint: isActiveCheckpoint,
+                            onTap: () {
+                              ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
+                              onSelectChapter(lesson.chapterId);
+                            },
+                          ),
+                        ),
                       );
                     },
                   ),
@@ -135,14 +241,22 @@ class ChapterSelectScreen extends ConsumerWidget {
             ),
           ),
 
-          // Settings Gear - upgraded to premium ActionIconButton (Top Right)
+          // Replay App Tour (Walkthrough) button - aligned to top right
           Positioned(
             top: MediaQuery.of(context).padding.top + 12,
             right: 16,
             child: ActionIconButton(
-              icon: Icons.settings_rounded,
+              icon: Icons.explore_rounded,
               size: 24,
-              onTap: () => _showSettingsDialog(context, ref),
+              onTap: () {
+                ref.read(chessSoundServiceProvider).playSfx(SoundEffect.click);
+                // Clear guide flags and activate the welcome guide dialog overlay
+                final repo = ref.read(tutorialProgressRepositoryProvider);
+                repo.setWelcomeGuideSeen(false);
+                ref.read(showWelcomeDialogProvider.notifier).state = true;
+                // Navigate to home dashboard screen where guide overlays render
+                ref.read(mobileNavIndexProvider.notifier).state = 0;
+              },
             ),
           ),
         ],
@@ -258,7 +372,7 @@ class _ChapterCard extends StatelessWidget {
               ]);
 
     return Opacity(
-      opacity: isUnlocked ? 1.0 : 0.45,
+      opacity: isUnlocked ? 1.0 : 0.3,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(18),
         child: BackdropFilter(
@@ -366,7 +480,7 @@ class _ChapterCard extends StatelessWidget {
                               )
                             else
                               Text(
-                                '${lesson.steps.length} Steps',
+                                  '${lesson.steps.length} Steps',
                                 style: GoogleFonts.inter(
                                   color: ScholarlyTheme.textSubtle,
                                   fontSize: 10,
@@ -420,195 +534,93 @@ class _ChapterCard extends StatelessWidget {
   }
 }
 
-class _TutorialSettingsModal extends ConsumerStatefulWidget {
-  const _TutorialSettingsModal();
+class PulsingGlowWrapper extends StatefulWidget {
+  final Widget child;
+  final bool isActive;
+  final Color glowColor;
+
+  const PulsingGlowWrapper({
+    super.key,
+    required this.child,
+    required this.isActive,
+    this.glowColor = ScholarlyTheme.accentBlue,
+  });
 
   @override
-  ConsumerState<_TutorialSettingsModal> createState() => _TutorialSettingsModalState();
+  State<PulsingGlowWrapper> createState() => _PulsingGlowWrapperState();
 }
 
-class _TutorialSettingsModalState extends ConsumerState<_TutorialSettingsModal> {
-  late bool skipAnimations;
-  late bool showSubtitles;
-  late double timerVal;
+class _PulsingGlowWrapperState extends State<PulsingGlowWrapper>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scaleAnimation;
+  late final Animation<double> _glowAnimation;
 
   @override
   void initState() {
     super.initState();
-    final s = ref.read(tutorialProvider).progress.settings;
-    skipAnimations = s.skipAnimations;
-    showSubtitles = s.showSubtitles;
-    timerVal = s.hesitationTimerSeconds.toDouble();
-  }
-
-  void _save() {
-    final notifier = ref.read(tutorialProvider.notifier);
-    notifier.updateSettings(TutorialSettings(
-      skipAnimations: skipAnimations,
-      showSubtitles: showSubtitles,
-      hesitationTimerSeconds: timerVal.toInt(),
-    ));
-    Navigator.of(context).pop();
-  }
-
-  void _confirmReset() {
-    showDialog(
-      context: context,
-      builder: (ctx) => Dialog(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        child: JuicyGlassCard(
-          padding: const EdgeInsets.all(20),
-          borderRadius: 24,
-          borderColor: Colors.white.withValues(alpha: 0.5),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Reset Progress?',
-                style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'This will erase all Academy Tutorial chapter progress, stars, and XP. This action cannot be undone.',
-                style: GoogleFonts.inter(color: ScholarlyTheme.textSubtle, fontSize: 13, height: 1.4),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.of(ctx).pop(),
-                    child: Text('Cancel', style: GoogleFonts.inter(color: ScholarlyTheme.textSubtle, fontWeight: FontWeight.w600)),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: () {
-                      ref.read(tutorialProvider.notifier).resetAllProgress();
-                      Navigator.of(ctx).pop(); // Close confirm
-                      Navigator.of(context).pop(); // Close settings modal
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.redAccent,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: Text('Reset All', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
     );
+
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.025).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+
+    _glowAnimation = Tween<double>(begin: 4.0, end: 18.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+
+    if (widget.isActive) {
+      _controller.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void didUpdateWidget(PulsingGlowWrapper oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isActive && !_controller.isAnimating) {
+      _controller.repeat(reverse: true);
+    } else if (!widget.isActive && _controller.isAnimating) {
+      _controller.stop();
+      _controller.reset();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      child: JuicyGlassCard(
-        padding: const EdgeInsets.all(20),
-        borderRadius: 24,
-        borderColor: Colors.white.withValues(alpha: 0.5),
-        child: SizedBox(
-          width: 340,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Tutorial Preferences',
-                style: GoogleFonts.inter(
-                  color: ScholarlyTheme.textPrimary,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 16),
-              SwitchListTile(
-                title: Text('Skip Dialogue Animations', style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
-                subtitle: Text('Instantly renders mentor advice', style: GoogleFonts.inter(color: ScholarlyTheme.textSubtle, fontSize: 11)),
-                value: skipAnimations,
-                activeThumbColor: ScholarlyTheme.accentBlue,
-                activeTrackColor: ScholarlyTheme.accentBlue.withValues(alpha: 0.3),
-                contentPadding: EdgeInsets.zero,
-                onChanged: (val) {
-                  ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiToggle);
-                  setState(() => skipAnimations = val);
-                },
-              ),
-              SwitchListTile(
-                title: Text('Show Subtitles', style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
-                value: showSubtitles,
-                activeThumbColor: ScholarlyTheme.accentBlue,
-                activeTrackColor: ScholarlyTheme.accentBlue.withValues(alpha: 0.3),
-                contentPadding: EdgeInsets.zero,
-                onChanged: (val) {
-                  ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiToggle);
-                  setState(() => showSubtitles = val);
-                },
-              ),
-              const SizedBox(height: 12),
-              Text('Hesitation Hint Delay: ${timerVal.toInt()}s', style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
-              Slider(
-                value: timerVal,
-                min: 0,
-                max: 30,
-                divisions: 6,
-                activeColor: ScholarlyTheme.accentBlue,
-                inactiveColor: ScholarlyTheme.accentBlue.withValues(alpha: 0.2),
-                onChanged: (val) => setState(() => timerVal = val),
-              ),
-              Text('Set to 0s to disable automated hint reminders.', style: GoogleFonts.inter(color: ScholarlyTheme.textSubtle, fontSize: 10)),
-              
-              const SizedBox(height: 20),
-              const Divider(height: 1, color: Colors.white24),
-              const SizedBox(height: 16),
+    if (!widget.isActive) return widget.child;
 
-              // Nuclear DB purge control block
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: _confirmReset,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.redAccent,
-                    side: BorderSide(color: Colors.redAccent.withValues(alpha: 0.4)),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _scaleAnimation.value,
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: [
+                BoxShadow(
+                  color: widget.glowColor.withValues(
+                    alpha: 0.4 * (1.0 - _controller.value),
                   ),
-                  icon: const Icon(Icons.delete_forever_rounded, size: 16),
-                  label: Text('Erase All Tutorial Progress', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold)),
+                  blurRadius: _glowAnimation.value,
+                  spreadRadius: _controller.value * 2.5,
                 ),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: Text('Cancel', style: GoogleFonts.inter(color: ScholarlyTheme.textSubtle, fontWeight: FontWeight.w600)),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: _save,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: ScholarlyTheme.accentBlue,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    ),
-                    child: Text('Save', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-                  ),
-                ],
-              )
-            ],
+              ],
+            ),
+            child: child,
           ),
-        ),
-      ),
+        );
+      },
+      child: widget.child,
     );
   }
 }

@@ -16,6 +16,11 @@ import 'history_page.dart';
 import 'unrated_settings_page.dart';
 import 'tutorial_page.dart';
 import 'about_us_page.dart';
+import 'sign_in_page.dart';
+import 'widgets/welcome_guide_page.dart';
+import 'widgets/dashboard_tour_overlay.dart';
+import '../application/onboarding_provider.dart';
+import '../application/tutorial_provider.dart';
 
 // Provides the current active mobile tab index.
 final mobileNavIndexProvider = StateProvider<int>((ref) => 0);
@@ -67,7 +72,10 @@ class MobileNavigationShell extends ConsumerWidget {
       }
     }
 
-    return Scaffold(
+    final showWelcome = ref.watch(showWelcomeDialogProvider);
+    final tourStep = ref.watch(dashboardTourStepProvider);
+
+    Widget result = Scaffold(
       backgroundColor: ScholarlyTheme.backgroundStart,
       appBar: AppBar(
         backgroundColor: ScholarlyTheme.backgroundStart,
@@ -85,6 +93,7 @@ class MobileNavigationShell extends ConsumerWidget {
         leading: Builder(
           builder: (context) {
             return IconButton(
+              key: drawerMenuButtonKey,
               icon: const Icon(Icons.menu_rounded, color: ScholarlyTheme.textPrimary),
               onPressed: () {
                 ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
@@ -111,6 +120,26 @@ class MobileNavigationShell extends ConsumerWidget {
         children: pages,
       ),
     );
+
+    if (tourStep != null) {
+      result = Stack(
+        children: [
+          result,
+          const DashboardTourOverlay(),
+        ],
+      );
+    }
+
+    if (showWelcome) {
+      result = Stack(
+        children: [
+          result,
+          const WelcomeGuidePage(),
+        ],
+      );
+    }
+
+    return result;
   }
 }
 
@@ -226,7 +255,7 @@ class _MobileSidebarDrawer extends ConsumerWidget {
           ),
           
           // Drawer Footer with branding and version
-          _buildFooter(),
+          _buildFooter(context, ref),
         ],
       ),
     );
@@ -298,7 +327,7 @@ class _MobileSidebarDrawer extends ConsumerWidget {
     );
   }
 
-  Widget _buildFooter() {
+  Widget _buildFooter(BuildContext context, WidgetRef ref) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
@@ -312,24 +341,60 @@ class _MobileSidebarDrawer extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'powered by ',
-                style: GoogleFonts.inter(
-                  color: ScholarlyTheme.textMuted,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w500,
-                ),
+              Row(
+                children: [
+                  Text(
+                    'powered by ',
+                    style: GoogleFonts.inter(
+                      color: ScholarlyTheme.textMuted,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  Image.asset(
+                    'assets/splash/ideaspace.png',
+                    height: 12,
+                    errorBuilder: (context, error, stackTrace) => Text(
+                      'ideaspace',
+                      style: GoogleFonts.inter(
+                        color: ScholarlyTheme.textPrimary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              Image.asset(
-                'assets/splash/ideaspace.png',
-                height: 12,
-                errorBuilder: (context, error, stackTrace) => Text(
-                  'ideaspace',
+              TextButton.icon(
+                onPressed: () async {
+                  ref.read(chessSoundServiceProvider).playSfx(SoundEffect.click);
+                  final repo = ref.read(tutorialProgressRepositoryProvider);
+                  await repo.setIsGoogleSignedIn(false);
+                  await repo.setWelcomeGuideSeen(false);
+                  
+                  // Reset navigation state to Home (tab index 0)
+                  ref.read(mobileNavIndexProvider.notifier).state = 0;
+                  
+                  if (context.mounted) {
+                    Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(builder: (context) => const SignInPage()),
+                    );
+                  }
+                },
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  foregroundColor: Colors.redAccent,
+                ),
+                icon: const Icon(Icons.logout_rounded, size: 12),
+                label: Text(
+                  'Sign Out',
                   style: GoogleFonts.inter(
-                    color: ScholarlyTheme.textPrimary,
-                    fontWeight: FontWeight.bold,
                     fontSize: 10,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
@@ -339,7 +404,7 @@ class _MobileSidebarDrawer extends ConsumerWidget {
           Text(
             'v1.0.0',
             style: GoogleFonts.inter(
-              color: Color(0xFF94A3B8),
+              color: const Color(0xFF94A3B8),
               fontSize: 9,
               fontWeight: FontWeight.w500,
             ),
