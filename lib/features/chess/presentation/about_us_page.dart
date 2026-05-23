@@ -269,6 +269,57 @@ class _AboutUsPageState extends ConsumerState<AboutUsPage> {
                           '• Versatility (VER): The proportion of Chess 960 games played. It tracks your adaptability when standard opening theory is stripped away.\n'
                           '• Intensity (INT): Your overall rated win rate (Wins / total rated games). Winning 100% of your matches yields 1.0.'
                         ),
+                        const SizedBox(height: 24),
+
+                        _buildMathSectionHeader('4. THEORY REPERTOIRE MASTERY'),
+                        const SizedBox(height: 10),
+                        _buildMathText(
+                          'To evaluate your opening repertoire, we classify the first 10 plies (5 full moves) '
+                          'against common opening schemas. We measure your performance using your win rate and '
+                          'overall repertoire diversity.',
+                        ),
+                        const SizedBox(height: 12),
+                        _buildMathFormula(
+                          '                       Wins_op + 0.5 × Draws_op\n'
+                          'Opening Win Rate = ───────────────────────────────── × 100%\n'
+                          '                                Games_op\n\n'
+                          '                                 H_op\n'
+                          'Repertoire Depth Index (RDI) = ───────────────────────── × 100%\n'
+                          '                                log(Catalog Size)'
+                        ),
+                        const SizedBox(height: 12),
+                        _buildMathText(
+                          'Explanation of the Variables:\n'
+                          '• Wins_op / Draws_op: The quantity of victories and draws you achieved using a specific classified opening sequence.\n'
+                          '• Games_op: The total number of rated games played with this specific opening line.\n'
+                          '• RDI: Measures how balanced and diverse your opening repertoire is. It is calculated by taking the Shannon Entropy (H_op) of your play rates across all classified openings and dividing by the logarithm of the total openings catalog size.'
+                        ),
+                        const SizedBox(height: 24),
+
+                        _buildMathSectionHeader('5. ENDGAME CONVERSION & SURVIVAL'),
+                        const SizedBox(height: 10),
+                        _buildMathText(
+                          'We define the endgame as the phase of the game where the total remaining non-pawn material '
+                          'points on the board falls to 12 or less (Queen = 9, Rook = 5, Bishop = 3, Knight = 3). '
+                          'The Endgame Performance Index (EPI) evaluates your conversion efficiency (winning when ahead) '
+                          'and your defensive survival (saving equal or disadvantageous positions).',
+                        ),
+                        const SizedBox(height: 12),
+                        _buildMathFormula(
+                          'M_non_pawn = 9 × (Q_white + Q_black) + 5 × (R_white + R_black) + 3 × (B_white + B_black + N_white + N_black)\n\n'
+                          'Endgame Transition: M_non_pawn ≤ 12\n\n'
+                          '                                     Σ (Score_k × Complexity_k)\n'
+                          'Endgame Performance Index (EPI) = ────────────────────────────── × 100%\n'
+                          '                                           Σ Complexity_k'
+                        ),
+                        const SizedBox(height: 12),
+                        _buildMathText(
+                          'How endgame metrics are calculated:\n'
+                          '• Score_k: The outcome of game k, where Win = 1.0, Draw = 0.5, and Loss = 0.0.\n'
+                          '• Complexity_k: A difficulty coefficient weighting factor based on the final material balance of that endgame. It scales to: 2.0 when converting a material advantage (to penalize losses heavily); 1.5 when defending a material disadvantage (to reward wins/draws highly); and 1.0 for equal material positions.\n'
+                          '• Conversion Efficiency: The raw win rate in endgames where you had a positive material advantage.\n'
+                          '• Defensive Save Rate: The rate at which you successfully Drew or Won endgames where you had a negative material balance.'
+                        ),
                       ],
                     ),
                   ),

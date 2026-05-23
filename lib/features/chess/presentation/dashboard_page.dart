@@ -9,6 +9,7 @@ import 'widgets/progression_charts.dart';
 import 'widgets/mini_board_preview.dart';
 import 'widgets/ambient_scaffold.dart';
 import 'widgets/profile_customization_overlay.dart';
+import 'widgets/phase_analysis_widgets.dart';
 import 'package:intl/intl.dart';
 
 class DashboardPage extends ConsumerWidget {
@@ -117,6 +118,25 @@ class DashboardPage extends ConsumerWidget {
         _buildSectionHeader('RECENT MASTERPIECES', icon: Icons.workspace_premium_rounded),
         const SizedBox(height: 16),
         _buildRecentMasterpieces(state),
+        const SizedBox(height: 32),
+        _buildSectionHeader('STRATEGIC PHASE ANALYSIS', icon: Icons.insights_rounded),
+        const SizedBox(height: 16),
+        isMobile
+            ? Column(
+                children: [
+                  OpeningRepertoireCard(saves: state.savedGames),
+                  const SizedBox(height: 16),
+                  EndgameTechniqueCard(saves: state.savedGames),
+                ],
+              )
+            : Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: OpeningRepertoireCard(saves: state.savedGames)),
+                  const SizedBox(width: 16),
+                  Expanded(child: EndgameTechniqueCard(saves: state.savedGames)),
+                ],
+              ),
       ],
     );
 
