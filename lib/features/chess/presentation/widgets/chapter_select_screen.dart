@@ -49,7 +49,7 @@ class ChapterSelectScreen extends ConsumerWidget {
         return Transform.translate(
           offset: Offset(0, 30 * (1 - value)),
           child: Opacity(
-            opacity: value,
+            opacity: value.clamp(0.0, 1.0),
             child: child,
           ),
         );
@@ -214,7 +214,7 @@ class ChapterSelectScreen extends ConsumerWidget {
                           return Transform.translate(
                             offset: Offset(0, 20 * (1.0 - value)),
                             child: Opacity(
-                              opacity: value,
+                              opacity: value.clamp(0.0, 1.0),
                               child: child,
                             ),
                           );

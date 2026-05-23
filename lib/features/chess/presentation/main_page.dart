@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../application/chess_provider.dart';
-import '../application/onboarding_provider.dart';
 import 'zen_arena_page.dart';
 import 'rated_arena_page.dart';
 
@@ -20,9 +19,6 @@ class MainPage extends ConsumerWidget {
       child = const ZenArenaPage();
     }
 
-    return KeyedSubtree(
-      key: arenaPageKey,
-      child: child,
-    );
+    return child;
   }
 }

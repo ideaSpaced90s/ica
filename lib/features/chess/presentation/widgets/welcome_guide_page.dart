@@ -94,9 +94,6 @@ class _WelcomeGuidePageState extends ConsumerState<WelcomeGuidePage>
 
     // Direct user to Dashboard (tab index 0)
     ref.read(mobileNavIndexProvider.notifier).state = 0;
-
-    // Trigger the Guided Tour immediately
-    ref.read(dashboardTourStepProvider.notifier).startTour();
   }
 
 
@@ -271,7 +268,7 @@ class _WelcomeGuidePageState extends ConsumerState<WelcomeGuidePage>
         return Transform.translate(
           offset: Offset(0, 40 * (1.0 - value)),
           child: Opacity(
-            opacity: value,
+            opacity: value.clamp(0.0, 1.0),
             child: child,
           ),
         );

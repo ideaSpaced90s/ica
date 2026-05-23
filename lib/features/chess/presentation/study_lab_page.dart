@@ -13,7 +13,6 @@ import 'themes/theme_registry.dart';
 import '../application/study_lab_provider.dart';
 import '../application/chess_provider.dart';
 import '../services/chess_sound_service.dart';
-import '../application/onboarding_provider.dart';
 
 class StudyLabPage extends ConsumerStatefulWidget {
   const StudyLabPage({super.key});
@@ -86,7 +85,6 @@ class _StudyLabPageState extends ConsumerState<StudyLabPage> with SingleTickerPr
         body: Stack(
           children: [
             SafeArea(
-              key: analysisPageKey,
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   final bool isWide = constraints.maxWidth > 800;

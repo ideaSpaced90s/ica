@@ -8,7 +8,6 @@ import 'scholarly_theme.dart';
 import 'widgets/board_stage.dart';
 import 'widgets/ambient_scaffold.dart';
 import 'dashboard_page.dart';
-import '../application/onboarding_provider.dart';
 import 'dart:ui';
 
 class PuzzlePage extends ConsumerStatefulWidget {
@@ -407,7 +406,6 @@ class _PuzzlePageState extends ConsumerState<PuzzlePage> {
         blob2Color: const Color(0xFFFDF2F8), // Very light pink
         blob3Color: const Color(0xFFFFFBEB), // Very light amber
         body: SafeArea(
-          key: puzzlePageKey,
           top: false,
           child: isLandscape
               ? _buildLandscapeLayout(context, state, notifier)

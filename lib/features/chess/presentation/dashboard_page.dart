@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../application/chess_provider.dart';
-import '../application/onboarding_provider.dart';
 import 'mobile_navigation_shell.dart';
 import 'scholarly_theme.dart';
 import 'widgets/progression_charts.dart';
@@ -78,7 +77,6 @@ class DashboardPage extends ConsumerWidget {
         _buildSectionHeader('ARENA PERFORMANCE', icon: Icons.workspace_premium_rounded),
         const SizedBox(height: 16),
         GridView.count(
-          key: arenaGridKey,
           crossAxisCount: isMobile ? 1 : 2,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -192,7 +190,6 @@ class DashboardPage extends ConsumerWidget {
     }
 
     return Container(
-      key: profileCardKey,
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: ScholarlyTheme.gradientCard(radius: 28),

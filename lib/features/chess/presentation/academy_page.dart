@@ -12,7 +12,6 @@ import 'academy_settings_page.dart';
 import 'widgets/ambient_scaffold.dart';
 import 'widgets/classic_windows_tabs.dart';
 import 'dashboard_page.dart';
-import '../application/onboarding_provider.dart';
 import 'dart:ui';
 
 
@@ -369,7 +368,6 @@ class _AcademyPageState extends ConsumerState<AcademyPage> {
         blob2Color: const Color(0xFFD1FAE5),
         blob3Color: const Color(0xFFFEF3C7),
         body: SafeArea(
-          key: academyPageKey,
           top: false,
           left: false, // Allow AI chat box on far left to reach edge-to-edge under notch/notification area
           child: Padding(

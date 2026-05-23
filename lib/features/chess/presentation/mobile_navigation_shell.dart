@@ -18,8 +18,6 @@ import 'tutorial_page.dart';
 import 'about_us_page.dart';
 
 import 'widgets/welcome_guide_page.dart';
-import 'widgets/dashboard_tour_overlay.dart';
-import 'widgets/app_tour_overlay.dart';
 import '../application/onboarding_provider.dart';
 
 
@@ -74,8 +72,6 @@ class MobileNavigationShell extends ConsumerWidget {
     }
 
     final showWelcome = ref.watch(showWelcomeDialogProvider);
-    final tourStep = ref.watch(dashboardTourStepProvider);
-    final appTourStep = ref.watch(appTourStepProvider);
 
     Widget result = Scaffold(
       backgroundColor: ScholarlyTheme.backgroundStart,
@@ -95,7 +91,6 @@ class MobileNavigationShell extends ConsumerWidget {
         leading: Builder(
           builder: (context) {
             return IconButton(
-              key: drawerMenuButtonKey,
               icon: const Icon(Icons.menu_rounded, color: ScholarlyTheme.textPrimary),
               onPressed: () {
                 ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
@@ -122,24 +117,6 @@ class MobileNavigationShell extends ConsumerWidget {
         children: pages,
       ),
     );
-
-    if (appTourStep != null) {
-      result = Stack(
-        children: [
-          result,
-          const AppTourOverlay(),
-        ],
-      );
-    }
-
-    if (tourStep != null) {
-      result = Stack(
-        children: [
-          result,
-          const DashboardTourOverlay(),
-        ],
-      );
-    }
 
     if (showWelcome) {
       result = Stack(
