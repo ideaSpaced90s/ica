@@ -17,7 +17,7 @@ class OpeningRepertoireCard extends StatelessWidget {
     
     if (ratedSaves.isEmpty) {
       return _buildEmptyCard(
-        title: 'THEORY REPERTOIRE MASTERY',
+        title: 'REPERTOIRE',
         message: 'No rated matches recorded yet.\nPlay a rated match to identify your opening weapon.',
       );
     }
@@ -47,7 +47,7 @@ class OpeningRepertoireCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'THEORY REPERTOIRE MASTERY',
+                'REPERTOIRE',
                 style: GoogleFonts.inter(
                   color: ScholarlyTheme.accentBlue,
                   fontSize: 10,
@@ -240,7 +240,7 @@ class EndgameTechniqueCard extends StatelessWidget {
 
     if (endgameSaves.isEmpty) {
       return _buildEmptyCard(
-        title: 'ENDGAME CONVERSION & SURVIVAL',
+        title: 'ENDGAME PERFORMANCE',
         message: 'No endgame positions recorded yet.\nPlay matches to the endgame to populate your metrics.',
       );
     }
@@ -309,7 +309,7 @@ class EndgameTechniqueCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'ENDGAME CONVERSION & SURVIVAL',
+                'ENDGAME PERFORMANCE',
                 style: GoogleFonts.inter(
                   color: ScholarlyTheme.accentBlue,
                   fontSize: 10,
