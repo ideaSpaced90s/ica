@@ -320,6 +320,32 @@ class _AboutUsPageState extends ConsumerState<AboutUsPage> {
                           '• Conversion Efficiency: The raw win rate in endgames where you had a positive material advantage.\n'
                           '• Defensive Save Rate: The rate at which you successfully Drew or Won endgames where you had a negative material balance.'
                         ),
+                        const SizedBox(height: 24),
+                        
+                        _buildMathSectionHeader('6. SCOTOMA VISUAL BLIND SPOT ALGORITHMS'),
+                        const SizedBox(height: 10),
+                        _buildMathText(
+                          'A Scotoma (from the Greek "skotos", meaning darkness) is a visual blind spot. In Kingslayer, the '
+                          'Scotoma Diagnostic Engine analyzes the move logs of your rated games in a native Rust core to '
+                          'compute your vulnerability indices across 8 distinct visual and psychological axes.',
+                        ),
+                        const SizedBox(height: 12),
+                        _buildMathFormula(
+                          'Diagonal Retreat (DGB) Vector: |x2 - x1| = |y2 - y1| ≥ 3  AND  y2 < y1 (White) / y2 > y1 (Black)\n'
+                          'Horizontal Swing (HRZ) Vector: y1 = y2  AND  |x2 - x1| ≥ 3 (Rook/Queen moves)\n'
+                          'Knight Flank (KNF) Check: Knight moves where x1 ∈ {0,7} OR x2 ∈ {0,7} (A or H files)\n'
+                          'Tunnel Vision (TNL) Check: |x_threat - mean(x_recent)| ≥ 4 (Opposite side threat)\n'
+                          'Time Panic (TMP) Decay: Flagged if moves are played with remaining time < 45 seconds'
+                        ),
+                        const SizedBox(height: 12),
+                        _buildMathText(
+                          'How visual blind spot metrics are computed in Rust:\n'
+                          '• We reconstruct your rated matches move-by-move. If a game is lost, we scan the final 8 plies (where critical blunders cluster) for tactical themes.\n'
+                          '• Diagonal retreats and horizontal swings are detected by coordinate deltas. If you lose to an opponent\'s retreating bishop move or horizontal rook swing, your scotoma score for that theme increases.\n'
+                          '• Pinned Pieces (PIN): Rust temporarily removes a piece to verify if it is pinned to the King/Queen. If you move a pinned piece or fail to see a pin, your PIN scotoma increases.\n'
+                          '• King Safety (KSB): Flagged if you allow a checkmate or ignore checking lines in the final moves.\n'
+                          '• Overlooked Intermezzo (INT): Evaluates if you play a capture expecting a standard recapture, but the opponent plays an intermediate threat (Zwischenzug) that collapses your line.'
+                        ),
                       ],
                     ),
                   ),

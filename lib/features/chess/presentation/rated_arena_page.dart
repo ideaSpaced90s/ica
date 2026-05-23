@@ -299,6 +299,14 @@ class _RatedArenaPageState extends ConsumerState<RatedArenaPage> with WidgetsBin
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        // Menu Icon for Exit/Resign
+                        IconButton(
+                          icon: const Icon(Icons.menu),
+                          onPressed: () {
+                            _showRatedExitDialog(context);
+                          },
+                        ),
+                        const SizedBox(width: 8), // Spacer for the new icon
                         ArenaTurnIndicator(isActive: isTurn, isWhite: state.isPlayerWhite),
                         const SizedBox(width: 8),
                         EvaluationBar(fillFraction: _getEvalFraction(state, true)),

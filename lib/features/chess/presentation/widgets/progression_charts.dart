@@ -1,17 +1,19 @@
 import 'dart:math' as math;
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../data/saved_game.dart';
 import '../scholarly_theme.dart';
+import '../../application/chess_provider.dart';
 import 'ambient_scaffold.dart';
 
-class EloAscentChart extends StatelessWidget {
-  final List<SavedGameEntry> saves;
-  const EloAscentChart({super.key, required this.saves});
+class EloAscentChart extends ConsumerWidget {
+  const EloAscentChart({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final saves = ref.watch(chessProvider).savedGames;
     final ratedSaves = saves.where((s) => s.isRatedMode && s.ratingSnapshot != null).toList();
     ratedSaves.sort((a, b) => a.savedAt.compareTo(b.savedAt));
 
@@ -173,110 +175,250 @@ class EloAscentChart extends StatelessWidget {
   }
 }
 
-class TacticalRadarChart extends StatelessWidget {
-  final List<SavedGameEntry> saves;
-  const TacticalRadarChart({super.key, required this.saves});
+class TacticalRadarChart extends ConsumerWidget {
+  const TacticalRadarChart({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final ratedSaves = saves.where((s) => s.isRatedMode).toList();
-    if (ratedSaves.isEmpty) return const SizedBox.shrink();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final playstyle = ref.watch(chessProvider).cachedPlaystyle;
+    if (playstyle == null) return const SizedBox.shrink();
 
-    // Calculate Axes (0.0 to 1.0)
-    // 1. Aggression (Dominance)
-    final avgDom = ratedSaves.isNotEmpty 
-      ? ratedSaves.map((s) => s.dominanceSnapshot ?? 0.0).reduce((a, b) => a + b) / ratedSaves.length
-      : 0.0;
-    final aggression = math.min(1.0, math.max(0.0, (avgDom + 5) / 10)); // Normalized around 0
+    final aggression = playstyle.aggression;
+    final power = playstyle.power;
+    final versatility = playstyle.versatility;
+    final intensity = playstyle.intensity;
+    final speed = playstyle.speed;
 
-    // 2. Power (Max Elo)
-    final maxElo = ratedSaves.map((s) => s.ratingSnapshot ?? 1200).reduce(math.max);
-    final power = math.min(1.0, (maxElo - 400) / 2000);
+    // Determine the archetype based on highest value
+    final axes = [
+      (aggression, 'Aggressive Attacker', 'You consistently maintain high dominance on the board, pushing active threats.', const Color(0xFFEF4444)),
+      (power, 'High-Power Veteran', 'Your rating profile shows seasoned, high-caliber positional strength.', const Color(0xFFF59E0B)),
+      (versatility, 'Universalist', 'You are highly versatile, regularly transitioning between Chess960 and Classic formats.', const Color(0xFF8B5CF6)),
+      (intensity, 'Relentless Competitor', 'Your profile highlights a high conversion and win rate in battles.', const Color(0xFF10B981)),
+      (speed, 'Speed Demon', 'You manage your clock exceptionally well, keeping a healthy time advantage.', const Color(0xFF06B6D4)),
+    ];
 
-    // 3. Versatility (960 vs Classic)
-    final count960 = ratedSaves.where((s) => s.gameMode == 'chess960').length;
-    final versatility = count960 / ratedSaves.length;
-
-    // 4. Intensity (Win Rate)
-    final wins = ratedSaves.where((s) => s.result == 'W').length;
-    final intensity = wins / ratedSaves.length;
-
-    // 5. Speed (Time Management - dynamic clock ratios)
-    double speedSum = 0.0;
-    int speedCount = 0;
-    for (final s in ratedSaves) {
-      final double baseTimeMs = s.ratingCategory == 'bullet'
-          ? 120000.0
-          : s.ratingCategory == 'blitz'
-              ? 300000.0
-              : 600000.0;
-      final playerTimeLeftMs = s.isPlayerWhite ? s.whiteTimeLeftMs : s.blackTimeLeftMs;
-      final ratio = playerTimeLeftMs / baseTimeMs;
-      speedSum += math.min(1.0, math.max(0.0, ratio));
-      speedCount++;
+    var highestAxis = axes[0];
+    for (final a in axes) {
+      if (a.$1 > highestAxis.$1) {
+        highestAxis = a;
+      }
     }
-    final speed = speedCount > 0 ? (speedSum / speedCount) : 0.7;
+
+    String archetypeTitle = highestAxis.$2.toUpperCase();
+    String archetypeDesc = highestAxis.$3;
+    Color archetypeColor = highestAxis.$4;
+
+    if (highestAxis.$1 < 0.2) {
+      archetypeTitle = 'APPRENTICE TACTICIAN';
+      archetypeDesc = 'Your playstyle profile is stabilizing as you log more rated matches.';
+      archetypeColor = const Color(0xFF8B5CF6);
+    }
 
     return JuicyGlassCard(
       borderColor: const Color(0xFF8B5CF6), // Vibrant Electric Violet Border
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       child: SizedBox(
-        height: 208,
-        child: RadarChart(
-          RadarChartData(
-            dataSets: [
-              RadarDataSet(
-                fillColor: const Color(0x33A855F7), // Colorful purple translucent fill
-                borderColor: const Color(0xFFC084FC), // Colorful purple border
-                entryRadius: 4,
-                dataEntries: [
-                  RadarEntry(value: aggression),
-                  RadarEntry(value: power),
-                  RadarEntry(value: versatility),
-                  RadarEntry(value: intensity),
-                  RadarEntry(value: speed),
-                ],
+        width: double.infinity,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Text(
+              'PLAYSTYLE PROFILE',
+              style: GoogleFonts.outfit(
+                color: const Color(0xFF8B5CF6), // Violet Scholarly header
+                fontSize: 10,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.2,
               ),
-            ],
-            radarBackgroundColor: Colors.transparent,
-            borderData: FlBorderData(show: false),
-            radarBorderData: const BorderSide(color: Color(0xFFF3E8FF), width: 1),
-            getTitle: (index, angle) {
-              final text = ['ATK', 'POW', 'VER', 'INT', 'SPD'][index];
-              final color = [
-                const Color(0xFFEF4444), // ATK (Red)
-                const Color(0xFFF59E0B), // POW (Gold)
-                const Color(0xFF8B5CF6), // VER (Violet)
-                const Color(0xFF10B981), // INT (Emerald)
-                const Color(0xFF06B6D4), // SPD (Cyan)
-              ][index];
-              return RadarChartTitle(
-                text: '',
+            ),
+            const SizedBox(height: 16),
+
+            // Radar Chart inside constrained container
+            SizedBox(
+              height: 220,
+              child: RadarChart(
+                RadarChartData(
+                  dataSets: [
+                    RadarDataSet(
+                      fillColor: const Color(0x33A855F7), // Colorful purple translucent fill
+                      borderColor: const Color(0xFFC084FC), // Colorful purple border
+                      entryRadius: 4,
+                      dataEntries: [
+                        RadarEntry(value: aggression),
+                        RadarEntry(value: power),
+                        RadarEntry(value: versatility),
+                        RadarEntry(value: intensity),
+                        RadarEntry(value: speed),
+                      ],
+                    ),
+                  ],
+                  radarBackgroundColor: Colors.transparent,
+                  borderData: FlBorderData(show: false),
+                  radarBorderData: const BorderSide(color: Color(0xFFF3E8FF), width: 1),
+                  getTitle: (index, angle) {
+                    final text = ['ATK', 'POW', 'VER', 'INT', 'SPD'][index];
+                    final color = [
+                      const Color(0xFFEF4444), // ATK (Red)
+                      const Color(0xFFF59E0B), // POW (Gold)
+                      const Color(0xFF8B5CF6), // VER (Violet)
+                      const Color(0xFF10B981), // INT (Emerald)
+                      const Color(0xFF06B6D4), // SPD (Cyan)
+                    ][index];
+                    return RadarChartTitle(
+                      text: '',
+                      children: [
+                        TextSpan(
+                          text: text,
+                          style: GoogleFonts.outfit(color: color, fontSize: 10, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                      angle: angle,
+                    );
+                  },
+                  tickCount: 4,
+                  ticksTextStyle: GoogleFonts.jetBrainsMono(color: ScholarlyTheme.textMuted, fontSize: 8),
+                  gridBorderData: const BorderSide(color: Color(0xFFF3E8FF), width: 1),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Archetype Report Box
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: archetypeColor.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: archetypeColor.withValues(alpha: 0.2),
+                  width: 1.5,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  TextSpan(
-                    text: text,
-                    style: GoogleFonts.outfit(color: color, fontSize: 10, fontWeight: FontWeight.bold),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.lens_blur_rounded,
+                        color: archetypeColor,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          archetypeTitle,
+                          style: GoogleFonts.outfit(
+                            color: archetypeColor,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    archetypeDesc,
+                    style: GoogleFonts.inter(
+                      color: ScholarlyTheme.textMuted,
+                      fontSize: 11.5,
+                      height: 1.45,
+                    ),
                   ),
                 ],
-                angle: angle,
-              );
-            },
-            tickCount: 4,
-            ticksTextStyle: GoogleFonts.jetBrainsMono(color: ScholarlyTheme.textMuted, fontSize: 8),
-            gridBorderData: const BorderSide(color: Color(0xFFF3E8FF), width: 1),
-          ),
+              ),
+            ),
+
+            const SizedBox(height: 20),
+            Divider(color: ScholarlyTheme.panelStroke.withValues(alpha: 0.5), height: 1),
+            const SizedBox(height: 16),
+            Text(
+              'PLAYSTYLE METRIC KEY',
+              style: GoogleFonts.outfit(
+                color: ScholarlyTheme.textSubtle,
+                fontSize: 9,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.0,
+              ),
+            ),
+            const SizedBox(height: 12),
+            _buildLegendItem('ATK', 'Aggression (Attack)', 'Measures your average material and territory dominance over opponents.', const Color(0xFFEF4444)),
+            const SizedBox(height: 10),
+            _buildLegendItem('POW', 'Power rating', 'Scaled from your peak ELO rating achieved in rated battles.', const Color(0xFFF59E0B)),
+            const SizedBox(height: 10),
+            _buildLegendItem('VER', 'Versatility Index', 'Ratio of Chess960 variants played compared to Classic chess matches.', const Color(0xFF8B5CF6)),
+            const SizedBox(height: 10),
+            _buildLegendItem('INT', 'Intensity (Win Rate)', 'Win rate percentage calculated over all active rated matches.', const Color(0xFF10B981)),
+            const SizedBox(height: 10),
+            _buildLegendItem('SPD', 'Time Speed Management', 'Average ratio of remaining clock time upon match completion.', const Color(0xFF06B6D4)),
+          ],
         ),
       ),
     );
   }
+
+  Widget _buildLegendItem(String abbr, String title, String desc, Color badgeColor) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 32,
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          decoration: BoxDecoration(
+            color: badgeColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Text(
+            abbr,
+            style: GoogleFonts.jetBrainsMono(
+              color: badgeColor,
+              fontSize: 8.5,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: GoogleFonts.inter(
+                  color: ScholarlyTheme.textPrimary,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                desc,
+                style: GoogleFonts.inter(
+                  color: ScholarlyTheme.textMuted,
+                  fontSize: 10,
+                  height: 1.3,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 }
 
-class ModeDistributionChart extends StatelessWidget {
-  final List<SavedGameEntry> saves;
-  const ModeDistributionChart({super.key, required this.saves});
+class ModeDistributionChart extends ConsumerWidget {
+  const ModeDistributionChart({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final saves = ref.watch(chessProvider).savedGames;
     final ratedSaves = saves.where((s) => s.isRatedMode).toList();
     final classic = ratedSaves.where((s) => s.gameMode == 'classic').length;
     final nineSixty = ratedSaves.where((s) => s.gameMode == 'chess960').length;
@@ -342,76 +484,45 @@ class ModeDistributionChart extends StatelessWidget {
   }
 }
 
-class DominanceHeatmap extends StatelessWidget {
-  final List<SavedGameEntry> saves;
-  const DominanceHeatmap({super.key, required this.saves});
+class DominanceHeatmap extends ConsumerWidget {
+  const DominanceHeatmap({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    // Last 30 days
-    final now = DateTime.now();
-    final thirtyDaysAgo = now.subtract(const Duration(days: 30));
-    
-    // Group by day
-    final Map<String, List<double>> dailyDom = {};
-    for (int i = 0; i < 30; i++) {
-      final date = now.subtract(Duration(days: i));
-      final dateKey = '${date.year}-${date.month}-${date.day}';
-      dailyDom[dateKey] = [];
-    }
-
-    for (final s in saves) {
-      if (s.savedAt.isAfter(thirtyDaysAgo)) {
-        final dateKey = '${s.savedAt.year}-${s.savedAt.month}-${s.savedAt.day}';
-        if (dailyDom.containsKey(dateKey) && s.dominanceSnapshot != null) {
-          dailyDom[dateKey]!.add(s.dominanceSnapshot!);
-        }
-      }
-    }
-
-    final List<String> sortedKeys = dailyDom.keys.toList()..sort((a, b) => b.compareTo(a));
+  Widget build(BuildContext context, WidgetRef ref) {
+    final heatmap = ref.watch(chessProvider).cachedDominanceHeatmap;
 
     return JuicyGlassCard(
       borderColor: const Color(0xFF10B981), // Vibrant Emerald Green Border
       padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('30D PERFORMANCE', 
-            style: GoogleFonts.inter(color: ScholarlyTheme.accentBlue, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.0)
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: sortedKeys.map((key) {
-              final doms = dailyDom[key]!;
-              final avg = doms.isEmpty ? 0.0 : doms.reduce((a, b) => a + b) / doms.length;
-              
-              Color color = ScholarlyTheme.panelStroke.withValues(alpha: 0.3);
-              if (doms.isNotEmpty) {
-                if (avg > 5) {
-                  color = const Color(0xFF10B981); // Neon Emerald Green
-                } else if (avg > 0) {
-                  color = const Color(0xFF06B6D4); // Electric Cyan
-                } else if (avg > -5) {
-                  color = const Color(0xFFF59E0B); // Hot Amber
-                } else {
-                  color = const Color(0xFFEF4444); // Deep Crimson
-                }
+      child: SizedBox(
+        width: double.infinity,
+        child: Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: heatmap.map((avg) {
+            Color color = ScholarlyTheme.panelStroke.withValues(alpha: 0.3);
+            if (!avg.isNaN) {
+              if (avg > 5) {
+                color = const Color(0xFF10B981); // Neon Emerald Green
+              } else if (avg > 0) {
+                color = const Color(0xFF06B6D4); // Electric Cyan
+              } else if (avg > -5) {
+                color = const Color(0xFFF59E0B); // Hot Amber
+              } else {
+                color = const Color(0xFFEF4444); // Deep Crimson
               }
+            }
 
-              return Container(
-                width: 14,
-                height: 14,
-                decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: BorderRadius.circular(3),
-                ),
-              );
-            }).toList(),
-          ),
-        ],
+            return Container(
+              width: 14,
+              height: 14,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(3),
+              ),
+            );
+          }).toList(),
+        ),
       ),
     );
   }

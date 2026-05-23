@@ -38,7 +38,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.12.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1198586408;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 144298715;
 
 // Section: executor
 
@@ -46,6 +46,38 @@ flutter_rust_bridge::frb_generated_default_handler!();
 
 // Section: wire_funcs
 
+fn wire__crate__api__cognitive__analyze_scotoma_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "analyze_scotoma",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_games =
+                <Vec<crate::api::cognitive::SavedGameUci>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok =
+                    Result::<_, ()>::Ok(crate::api::cognitive::analyze_scotoma(api_games))?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
 fn wire__crate__api__threats__analyze_tactical_threats_impl(
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -485,6 +517,13 @@ impl SseDecode for bool {
     }
 }
 
+impl SseDecode for f64 {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        deserializer.cursor.read_f64::<NativeEndian>().unwrap()
+    }
+}
+
 impl SseDecode for crate::api::status::GameTerminationStatus {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -541,6 +580,20 @@ impl SseDecode for Vec<crate::api::puzzles::Puzzle> {
         let mut ans_ = Vec::with_capacity(len_ as usize);
         for idx_ in 0..len_ {
             ans_.push(<crate::api::puzzles::Puzzle>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::api::cognitive::SavedGameUci> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::cognitive::SavedGameUci>::sse_decode(
+                deserializer,
+            ));
         }
         return ans_;
     }
@@ -609,6 +662,50 @@ impl SseDecode for crate::api::puzzles::Puzzle {
     }
 }
 
+impl SseDecode for crate::api::cognitive::SavedGameUci {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_recentMoves = <Vec<String>>::sse_decode(deserializer);
+        let mut var_isPlayerWhite = <bool>::sse_decode(deserializer);
+        let mut var_result = <String>::sse_decode(deserializer);
+        let mut var_whiteTimeLeftMs = <i32>::sse_decode(deserializer);
+        let mut var_blackTimeLeftMs = <i32>::sse_decode(deserializer);
+        let mut var_ratingCategory = <String>::sse_decode(deserializer);
+        return crate::api::cognitive::SavedGameUci {
+            recent_moves: var_recentMoves,
+            is_player_white: var_isPlayerWhite,
+            result: var_result,
+            white_time_left_ms: var_whiteTimeLeftMs,
+            black_time_left_ms: var_blackTimeLeftMs,
+            rating_category: var_ratingCategory,
+        };
+    }
+}
+
+impl SseDecode for crate::api::cognitive::ScotomaResult {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_diagonalRetreats = <f64>::sse_decode(deserializer);
+        let mut var_horizontalSwings = <f64>::sse_decode(deserializer);
+        let mut var_knightForks = <f64>::sse_decode(deserializer);
+        let mut var_timePanic = <f64>::sse_decode(deserializer);
+        let mut var_materialGreed = <f64>::sse_decode(deserializer);
+        let mut var_tunnelVision = <f64>::sse_decode(deserializer);
+        let mut var_pinnedPieces = <f64>::sse_decode(deserializer);
+        let mut var_kingSafety = <f64>::sse_decode(deserializer);
+        return crate::api::cognitive::ScotomaResult {
+            diagonal_retreats: var_diagonalRetreats,
+            horizontal_swings: var_horizontalSwings,
+            knight_forks: var_knightForks,
+            time_panic: var_timePanic,
+            material_greed: var_materialGreed,
+            tunnel_vision: var_tunnelVision,
+            pinned_pieces: var_pinnedPieces,
+            king_safety: var_kingSafety,
+        };
+    }
+}
+
 impl SseDecode for u32 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -637,9 +734,9 @@ fn pde_ffi_dispatcher_primary_impl(
 ) {
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
-        5 => wire__crate__api__puzzles__get_random_puzzle_impl(port, ptr, rust_vec_len, data_len),
-        10 => wire__crate__api__simple__init_app_impl(port, ptr, rust_vec_len, data_len),
-        11 => wire__crate__api__puzzles__search_puzzles_impl(port, ptr, rust_vec_len, data_len),
+        6 => wire__crate__api__puzzles__get_random_puzzle_impl(port, ptr, rust_vec_len, data_len),
+        11 => wire__crate__api__simple__init_app_impl(port, ptr, rust_vec_len, data_len),
+        12 => wire__crate__api__puzzles__search_puzzles_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -652,15 +749,16 @@ fn pde_ffi_dispatcher_sync_impl(
 ) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
-        1 => wire__crate__api__threats__analyze_tactical_threats_impl(ptr, rust_vec_len, data_len),
-        2 => wire__crate__api__status__evaluate_game_status_impl(ptr, rust_vec_len, data_len),
-        3 => wire__crate__api__context__evaluate_position_metrics_impl(ptr, rust_vec_len, data_len),
-        4 => wire__crate__api__moves__get_legal_destinations_impl(ptr, rust_vec_len, data_len),
-        6 => wire__crate__api__history__get_san_history_impl(ptr, rust_vec_len, data_len),
-        7 => wire__crate__api__threats__get_threatened_squares_impl(ptr, rust_vec_len, data_len),
-        8 => wire__crate__api__simple__greet_impl(ptr, rust_vec_len, data_len),
-        9 => wire__crate__api__humanizer__humanize_move_rust_impl(ptr, rust_vec_len, data_len),
-        12 => wire__crate__api__state__validate_and_apply_move_impl(ptr, rust_vec_len, data_len),
+        1 => wire__crate__api__cognitive__analyze_scotoma_impl(ptr, rust_vec_len, data_len),
+        2 => wire__crate__api__threats__analyze_tactical_threats_impl(ptr, rust_vec_len, data_len),
+        3 => wire__crate__api__status__evaluate_game_status_impl(ptr, rust_vec_len, data_len),
+        4 => wire__crate__api__context__evaluate_position_metrics_impl(ptr, rust_vec_len, data_len),
+        5 => wire__crate__api__moves__get_legal_destinations_impl(ptr, rust_vec_len, data_len),
+        7 => wire__crate__api__history__get_san_history_impl(ptr, rust_vec_len, data_len),
+        8 => wire__crate__api__threats__get_threatened_squares_impl(ptr, rust_vec_len, data_len),
+        9 => wire__crate__api__simple__greet_impl(ptr, rust_vec_len, data_len),
+        10 => wire__crate__api__humanizer__humanize_move_rust_impl(ptr, rust_vec_len, data_len),
+        13 => wire__crate__api__state__validate_and_apply_move_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -733,6 +831,58 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::puzzles::Puzzle>
         self
     }
 }
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::cognitive::SavedGameUci {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.recent_moves.into_into_dart().into_dart(),
+            self.is_player_white.into_into_dart().into_dart(),
+            self.result.into_into_dart().into_dart(),
+            self.white_time_left_ms.into_into_dart().into_dart(),
+            self.black_time_left_ms.into_into_dart().into_dart(),
+            self.rating_category.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::cognitive::SavedGameUci
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::cognitive::SavedGameUci>
+    for crate::api::cognitive::SavedGameUci
+{
+    fn into_into_dart(self) -> crate::api::cognitive::SavedGameUci {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::cognitive::ScotomaResult {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.diagonal_retreats.into_into_dart().into_dart(),
+            self.horizontal_swings.into_into_dart().into_dart(),
+            self.knight_forks.into_into_dart().into_dart(),
+            self.time_panic.into_into_dart().into_dart(),
+            self.material_greed.into_into_dart().into_dart(),
+            self.tunnel_vision.into_into_dart().into_dart(),
+            self.pinned_pieces.into_into_dart().into_dart(),
+            self.king_safety.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::cognitive::ScotomaResult
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::cognitive::ScotomaResult>
+    for crate::api::cognitive::ScotomaResult
+{
+    fn into_into_dart(self) -> crate::api::cognitive::ScotomaResult {
+        self
+    }
+}
 
 impl SseEncode for String {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -745,6 +895,13 @@ impl SseEncode for bool {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         serializer.cursor.write_u8(self as _).unwrap();
+    }
+}
+
+impl SseEncode for f64 {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        serializer.cursor.write_f64::<NativeEndian>(self).unwrap();
     }
 }
 
@@ -796,6 +953,16 @@ impl SseEncode for Vec<crate::api::puzzles::Puzzle> {
     }
 }
 
+impl SseEncode for Vec<crate::api::cognitive::SavedGameUci> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::cognitive::SavedGameUci>::sse_encode(item, serializer);
+        }
+    }
+}
+
 impl SseEncode for Option<String> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -842,6 +1009,32 @@ impl SseEncode for crate::api::puzzles::Puzzle {
         <Vec<String>>::sse_encode(self.moves, serializer);
         <i32>::sse_encode(self.rating, serializer);
         <String>::sse_encode(self.themes, serializer);
+    }
+}
+
+impl SseEncode for crate::api::cognitive::SavedGameUci {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <Vec<String>>::sse_encode(self.recent_moves, serializer);
+        <bool>::sse_encode(self.is_player_white, serializer);
+        <String>::sse_encode(self.result, serializer);
+        <i32>::sse_encode(self.white_time_left_ms, serializer);
+        <i32>::sse_encode(self.black_time_left_ms, serializer);
+        <String>::sse_encode(self.rating_category, serializer);
+    }
+}
+
+impl SseEncode for crate::api::cognitive::ScotomaResult {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <f64>::sse_encode(self.diagonal_retreats, serializer);
+        <f64>::sse_encode(self.horizontal_swings, serializer);
+        <f64>::sse_encode(self.knight_forks, serializer);
+        <f64>::sse_encode(self.time_panic, serializer);
+        <f64>::sse_encode(self.material_greed, serializer);
+        <f64>::sse_encode(self.tunnel_vision, serializer);
+        <f64>::sse_encode(self.pinned_pieces, serializer);
+        <f64>::sse_encode(self.king_safety, serializer);
     }
 }
 

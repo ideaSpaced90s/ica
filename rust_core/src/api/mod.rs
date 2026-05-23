@@ -7,4 +7,5 @@ pub mod state;
 pub mod status;
 pub mod puzzles;
 pub mod humanizer;
+pub mod cognitive;
 

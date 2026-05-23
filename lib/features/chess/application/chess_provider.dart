@@ -24,6 +24,11 @@ import '../domain/models/ai_avatar.dart';
 import '../domain/models/candidate_move.dart';
 import 'package:kingslayer_chess/src/rust/api/puzzles.dart' as rust_puzzles;
 import '../data/puzzle_repository.dart';
+import '../domain/models/dashboard_stats.dart';
+import '../domain/opening_classifier.dart';
+import '../domain/fen_parser.dart';
+import 'package:kingslayer_chess/src/rust/api/cognitive.dart';
+
 
 const _sentinel = Object();
 // Commentary default
@@ -274,6 +279,11 @@ class ChessState {
     this.isTimeOut = false,
     this.userName = 'Apprentice',
     this.userAvatarPath = 'assets/persona/user_profile_0.png',
+    this.cachedScotoma,
+    this.cachedPlaystyle,
+    this.cachedOpenings = const [],
+    this.cachedEndgames,
+    this.cachedDominanceHeatmap = const [],
   });
 
   final ChessGame game;
@@ -371,6 +381,11 @@ class ChessState {
   final bool isTimeOut;
   final String userName;
   final String userAvatarPath;
+  final ScotomaResult? cachedScotoma;
+  final TacticalPlaystyleStats? cachedPlaystyle;
+  final List<OpeningRepertoireStats> cachedOpenings;
+  final EndgamePerformanceStats? cachedEndgames;
+  final List<double> cachedDominanceHeatmap;
 
   bool get isChess960 => gameMode == 'chess960';
 
@@ -481,6 +496,11 @@ class ChessState {
     bool? isTimeOut,
     String? userName,
     String? userAvatarPath,
+    ScotomaResult? cachedScotoma,
+    TacticalPlaystyleStats? cachedPlaystyle,
+    List<OpeningRepertoireStats>? cachedOpenings,
+    EndgamePerformanceStats? cachedEndgames,
+    List<double>? cachedDominanceHeatmap,
   }) {
     return ChessState(
       game: game ?? this.game,
@@ -617,6 +637,11 @@ class ChessState {
       isTimeOut: isTimeOut ?? this.isTimeOut,
       userName: userName ?? this.userName,
       userAvatarPath: userAvatarPath ?? this.userAvatarPath,
+      cachedScotoma: cachedScotoma ?? this.cachedScotoma,
+      cachedPlaystyle: cachedPlaystyle ?? this.cachedPlaystyle,
+      cachedOpenings: cachedOpenings ?? this.cachedOpenings,
+      cachedEndgames: cachedEndgames ?? this.cachedEndgames,
+      cachedDominanceHeatmap: cachedDominanceHeatmap ?? this.cachedDominanceHeatmap,
     );
   }
 }
@@ -716,6 +741,8 @@ class ChessNotifier extends StateNotifier<ChessState> {
         bgmEnabled: s.isMusicEnabled,
       );
       _hapticsService.updateSettings(hapticsEnabled: s.isHapticsEnabled);
+      // Automatically load saved games and populate dashboard caches on boot
+      await loadSavedGames();
     } catch (e) {
       debugPrint('Failed to load settings: $e');
     }
@@ -1527,11 +1554,218 @@ class ChessNotifier extends StateNotifier<ChessState> {
     _engine.sendCommand(command);
   }
 
+  void _refreshDashboardStats() {
+    final ratedSaves = state.savedGames.where((s) => s.isRatedMode).toList();
+
+    // 1. Analyze Scotoma via Rust FFI
+    ScotomaResult? scotoma;
+    if (ratedSaves.isNotEmpty) {
+      final uciGames = ratedSaves.map((s) {
+        return SavedGameUci(
+          recentMoves: s.recentMoves,
+          isPlayerWhite: s.isPlayerWhite,
+          result: s.result ?? 'D',
+          whiteTimeLeftMs: s.whiteTimeLeftMs,
+          blackTimeLeftMs: s.blackTimeLeftMs,
+          ratingCategory: s.ratingCategory ?? 'rapid',
+        );
+      }).toList();
+      try {
+        scotoma = analyzeScotoma(games: uciGames);
+      } catch (e) {
+        debugPrint('Failed to run Rust analyzeScotoma: $e');
+      }
+    }
+
+    // 2. Playstyle calculations
+    TacticalPlaystyleStats? playstyle;
+    if (ratedSaves.isNotEmpty) {
+      final avgDom = ratedSaves.map((s) => s.dominanceSnapshot ?? 0.0).reduce((a, b) => a + b) / ratedSaves.length;
+      final aggression = math.min(1.0, math.max(0.0, (avgDom + 5) / 10));
+
+      final maxElo = ratedSaves.map((s) => s.ratingSnapshot ?? 1200).reduce(math.max);
+      final power = math.min(1.0, (maxElo - 400) / 2000);
+
+      final count960 = ratedSaves.where((s) => s.gameMode == 'chess960').length;
+      final versatility = count960 / ratedSaves.length;
+
+      final wins = ratedSaves.where((s) => s.result == 'W').length;
+      final intensity = wins / ratedSaves.length;
+
+      double speedSum = 0.0;
+      int speedCount = 0;
+      for (final s in ratedSaves) {
+        final double baseTimeMs = s.ratingCategory == 'bullet'
+            ? 120000.0
+            : s.ratingCategory == 'blitz'
+                ? 300000.0
+                : 600000.0;
+        final playerTimeLeftMs = s.isPlayerWhite ? s.whiteTimeLeftMs : s.blackTimeLeftMs;
+        final ratio = playerTimeLeftMs / baseTimeMs;
+        speedSum += math.min(1.0, math.max(0.0, ratio));
+        speedCount++;
+      }
+      final speed = speedCount > 0 ? (speedSum / speedCount) : 0.7;
+
+      playstyle = TacticalPlaystyleStats(
+        aggression: aggression,
+        power: power,
+        versatility: versatility,
+        intensity: intensity,
+        speed: speed,
+      );
+    } else {
+      playstyle = const TacticalPlaystyleStats.empty();
+    }
+
+    // 3. Opening Repertoire calculations
+    final List<OpeningRepertoireStats> openings = [];
+    if (ratedSaves.isNotEmpty) {
+      final Map<String, _OpeningRepertoireStatsBuilder> statsMap = {};
+      for (final s in ratedSaves) {
+        final op = OpeningClassifier.detectOpening(s.recentMoves, gameMode: s.gameMode);
+        if (!statsMap.containsKey(op)) {
+          statsMap[op] = _OpeningRepertoireStatsBuilder(name: op);
+        }
+        statsMap[op]!.addPlay(s.result);
+      }
+
+      final sortedStats = statsMap.values.toList()
+        ..sort((a, b) => b.plays.compareTo(a.plays));
+
+      final totalPlays = ratedSaves.length;
+
+      for (final s in sortedStats) {
+        final double playPercentage = (s.plays / totalPlays) * 100;
+        final double winRate = (s.wins + 0.5 * s.draws) / s.plays * 100;
+        openings.add(OpeningRepertoireStats(
+          name: s.name,
+          plays: s.plays,
+          wins: s.wins,
+          draws: s.draws,
+          losses: s.losses,
+          playPercentage: playPercentage,
+          winRate: winRate,
+        ));
+      }
+    }
+
+    // 4. Endgame calculations
+    EndgamePerformanceStats? endgames;
+    if (ratedSaves.isNotEmpty) {
+      final endgameSaves = ratedSaves.where((s) => FenParser.isEndgame(s.fen)).toList();
+      if (endgameSaves.isNotEmpty) {
+        double totalWeightedScore = 0.0;
+        double totalWeight = 0.0;
+
+        int advantageGames = 0;
+        int advantageWins = 0;
+
+        int disadvantageGames = 0;
+        int disadvantageSaves = 0; // wins + draws
+
+        for (final s in endgameSaves) {
+          final score = s.result == 'W' ? 1.0 : (s.result == 'D' ? 0.5 : 0.0);
+          final balance = FenParser.calculateMaterialBalance(s.fen, s.isPlayerWhite);
+
+          double complexity = 1.0;
+          if (balance > 0) {
+            complexity = 2.0; // Attacking advantage
+            advantageGames++;
+            if (s.result == 'W') advantageWins++;
+          } else if (balance < 0) {
+            complexity = 1.5; // Defensive disadvantage
+            disadvantageGames++;
+            if (s.result == 'W' || s.result == 'D') disadvantageSaves++;
+          } else {
+            complexity = 1.0; // Equal
+          }
+
+          totalWeightedScore += (score * complexity);
+          totalWeight += complexity;
+        }
+
+        final double epi = totalWeight > 0 ? (totalWeightedScore / totalWeight) * 100 : 0.0;
+        final double conversionRate = advantageGames > 0 ? (advantageWins / advantageGames) * 100 : 0.0;
+        final double saveRate = disadvantageGames > 0 ? (disadvantageSaves / disadvantageGames) * 100 : 0.0;
+
+        String ratingCategory = 'Provisional';
+        if (endgameSaves.length >= 15) {
+          if (epi >= 85) {
+            ratingCategory = 'Endgame Grandmaster';
+          } else if (epi >= 70) {
+            ratingCategory = 'Endgame Specialist';
+          } else if (epi >= 50) {
+            ratingCategory = 'Tactician Class I';
+          } else {
+            ratingCategory = 'Endgame Scholar';
+          }
+        } else {
+          if (epi >= 75) {
+            ratingCategory = 'Technician (Provisional)';
+          } else {
+            ratingCategory = 'Apprentice (Provisional)';
+          }
+        }
+
+        endgames = EndgamePerformanceStats(
+          epi: epi,
+          conversionRate: conversionRate,
+          saveRate: saveRate,
+          ratingCategory: ratingCategory,
+          advantageGames: advantageGames,
+          advantageWins: advantageWins,
+          disadvantageGames: disadvantageGames,
+          disadvantageSaves: disadvantageSaves,
+          endgameSavesCount: endgameSaves.length,
+        );
+      }
+    }
+
+    // 5. Heatmap daily dominance metrics
+    final List<double> dominanceHeatmap = [];
+    final now = DateTime.now();
+    final thirtyDaysAgo = now.subtract(const Duration(days: 30));
+    
+    // Group by day
+    final Map<String, List<double>> dailyDom = {};
+    for (int i = 0; i < 30; i++) {
+      final date = now.subtract(Duration(days: i));
+      final dateKey = '${date.year}-${date.month}-${date.day}';
+      dailyDom[dateKey] = [];
+    }
+
+    for (final s in state.savedGames) {
+      if (s.savedAt.isAfter(thirtyDaysAgo)) {
+        final dateKey = '${s.savedAt.year}-${s.savedAt.month}-${s.savedAt.day}';
+        if (dailyDom.containsKey(dateKey) && s.dominanceSnapshot != null) {
+          dailyDom[dateKey]!.add(s.dominanceSnapshot!);
+        }
+      }
+    }
+
+    final List<String> sortedKeys = dailyDom.keys.toList()..sort((a, b) => b.compareTo(a));
+    for (final key in sortedKeys) {
+      final doms = dailyDom[key]!;
+      final avg = doms.isEmpty ? 0.0 : doms.reduce((a, b) => a + b) / doms.length;
+      dominanceHeatmap.add(doms.isEmpty ? double.nan : avg);
+    }
+
+    state = state.copyWith(
+      cachedScotoma: scotoma,
+      cachedPlaystyle: playstyle,
+      cachedOpenings: openings,
+      cachedEndgames: endgames,
+      cachedDominanceHeatmap: dominanceHeatmap,
+    );
+  }
+
   Future<List<SavedGameEntry>> loadSavedGames() async {
     state = state.copyWith(isSavedGamesLoading: true);
     try {
       final saves = await _savedGameRepository.listSaves();
       state = state.copyWith(savedGames: saves, isSavedGamesLoading: false);
+      _refreshDashboardStats();
       return saves;
     } catch (error, stackTrace) {
       debugPrint('Failed to load saved games: $error');
@@ -1610,6 +1844,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
         isSavingGame: false,
         commentaryError: null,
       );
+      _refreshDashboardStats();
       debugPrint('Game saved successfully: ${entry.id}');
       return entry;
     } catch (error, stackTrace) {
@@ -1627,6 +1862,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
     try {
       final saves = await _savedGameRepository.delete(id);
       state = state.copyWith(savedGames: saves);
+      _refreshDashboardStats();
     } catch (error, stackTrace) {
       debugPrint('Failed to delete save: $error');
       debugPrintStack(stackTrace: stackTrace);
@@ -1660,6 +1896,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
     try {
       await _savedGameRepository.clearAll();
       state = state.copyWith(savedGames: const []);
+      _refreshDashboardStats();
     } catch (e) {
       debugPrint('Failed to clear history: $e');
     }
@@ -3602,3 +3839,24 @@ final chessProvider = StateNotifierProvider<ChessNotifier, ChessState>((ref) {
     puzzleRepository,
   );
 });
+
+class _OpeningRepertoireStatsBuilder {
+  final String name;
+  int plays = 0;
+  int wins = 0;
+  int draws = 0;
+  int losses = 0;
+
+  _OpeningRepertoireStatsBuilder({required this.name});
+
+  void addPlay(String? result) {
+    plays++;
+    if (result == 'W') {
+      wins++;
+    } else if (result == 'D') {
+      draws++;
+    } else {
+      losses++;
+    }
+  }
+}

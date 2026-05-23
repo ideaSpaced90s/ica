@@ -6,6 +6,7 @@
 // Static analysis wrongly picks the IO variant, thus ignore this
 // ignore_for_file: argument_type_not_assignable
 
+import 'api/cognitive.dart';
 import 'api/context.dart';
 import 'api/history.dart';
 import 'api/humanizer.dart';
@@ -41,6 +42,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Puzzle dco_decode_box_autoadd_puzzle(dynamic raw);
 
   @protected
+  double dco_decode_f_64(dynamic raw);
+
+  @protected
   GameTerminationStatus dco_decode_game_termination_status(dynamic raw);
 
   @protected
@@ -56,6 +60,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<Puzzle> dco_decode_list_puzzle(dynamic raw);
 
   @protected
+  List<SavedGameUci> dco_decode_list_saved_game_uci(dynamic raw);
+
+  @protected
   String? dco_decode_opt_String(dynamic raw);
 
   @protected
@@ -69,6 +76,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   Puzzle dco_decode_puzzle(dynamic raw);
+
+  @protected
+  SavedGameUci dco_decode_saved_game_uci(dynamic raw);
+
+  @protected
+  ScotomaResult dco_decode_scotoma_result(dynamic raw);
 
   @protected
   int dco_decode_u_32(dynamic raw);
@@ -92,6 +105,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Puzzle sse_decode_box_autoadd_puzzle(SseDeserializer deserializer);
 
   @protected
+  double sse_decode_f_64(SseDeserializer deserializer);
+
+  @protected
   GameTerminationStatus sse_decode_game_termination_status(
     SseDeserializer deserializer,
   );
@@ -109,6 +125,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<Puzzle> sse_decode_list_puzzle(SseDeserializer deserializer);
 
   @protected
+  List<SavedGameUci> sse_decode_list_saved_game_uci(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   String? sse_decode_opt_String(SseDeserializer deserializer);
 
   @protected
@@ -122,6 +143,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   Puzzle sse_decode_puzzle(SseDeserializer deserializer);
+
+  @protected
+  SavedGameUci sse_decode_saved_game_uci(SseDeserializer deserializer);
+
+  @protected
+  ScotomaResult sse_decode_scotoma_result(SseDeserializer deserializer);
 
   @protected
   int sse_decode_u_32(SseDeserializer deserializer);
@@ -145,6 +172,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_box_autoadd_puzzle(Puzzle self, SseSerializer serializer);
 
   @protected
+  void sse_encode_f_64(double self, SseSerializer serializer);
+
+  @protected
   void sse_encode_game_termination_status(
     GameTerminationStatus self,
     SseSerializer serializer,
@@ -166,6 +196,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_list_puzzle(List<Puzzle> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_saved_game_uci(
+    List<SavedGameUci> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_opt_String(String? self, SseSerializer serializer);
 
   @protected
@@ -185,6 +221,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_puzzle(Puzzle self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_saved_game_uci(SavedGameUci self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_scotoma_result(ScotomaResult self, SseSerializer serializer);
 
   @protected
   void sse_encode_u_32(int self, SseSerializer serializer);

@@ -1,41 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../data/saved_game.dart';
-import '../../domain/opening_classifier.dart';
-import '../../domain/fen_parser.dart';
 import '../scholarly_theme.dart';
+import '../../application/chess_provider.dart';
 import 'ambient_scaffold.dart';
 
-class OpeningRepertoireCard extends StatelessWidget {
-  final List<SavedGameEntry> saves;
-
-  const OpeningRepertoireCard({super.key, required this.saves});
+class OpeningRepertoireCard extends ConsumerWidget {
+  const OpeningRepertoireCard({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final ratedSaves = saves.where((s) => s.isRatedMode).toList();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(chessProvider);
+    final openings = state.cachedOpenings;
     
-    if (ratedSaves.isEmpty) {
+    if (openings.isEmpty) {
       return _buildEmptyCard(
         title: 'REPERTOIRE',
         message: 'No rated matches recorded yet.\nPlay a rated match to identify your opening weapon.',
       );
     }
-
-    // Aggregate statistics
-    final Map<String, _OpeningStats> statsMap = {};
-    for (final s in ratedSaves) {
-      final op = OpeningClassifier.detectOpening(s.recentMoves, gameMode: s.gameMode);
-      if (!statsMap.containsKey(op)) {
-        statsMap[op] = _OpeningStats(name: op);
-      }
-      statsMap[op]!.addPlay(s.result);
-    }
-
-    final sortedStats = statsMap.values.toList()
-      ..sort((a, b) => b.plays.compareTo(a.plays));
-
-    final totalPlays = ratedSaves.length;
 
     return JuicyGlassCard(
       borderColor: const Color(0xFF14B8A6), // Vibrant Teal Border
@@ -63,7 +46,7 @@ class OpeningRepertoireCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  '${sortedStats.length} DISTINCT LNS',
+                  '${openings.length} DISTINCT LNS',
                   style: GoogleFonts.jetBrainsMono(
                     color: ScholarlyTheme.accentBlue,
                     fontSize: 9,
@@ -74,9 +57,9 @@ class OpeningRepertoireCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          ...sortedStats.take(3).map((stats) {
-            final double playPercentage = (stats.plays / totalPlays) * 100;
-            final double winRate = (stats.wins + 0.5 * stats.draws) / stats.plays * 100;
+          ...openings.take(3).map((stats) {
+            final double playPercentage = stats.playPercentage;
+            final double winRate = stats.winRate;
 
             final winPercent = stats.plays > 0 ? (stats.wins / stats.plays) : 0.0;
             final drawPercent = stats.plays > 0 ? (stats.draws / stats.plays) : 0.0;
@@ -208,96 +191,28 @@ class OpeningRepertoireCard extends StatelessWidget {
   }
 }
 
-class _OpeningStats {
-  final String name;
-  int plays = 0;
-  int wins = 0;
-  int draws = 0;
-  int losses = 0;
-
-  _OpeningStats({required this.name});
-
-  void addPlay(String? result) {
-    plays++;
-    if (result == 'W') {
-      wins++;
-    } else if (result == 'D') {
-      draws++;
-    } else {
-      losses++;
-    }
-  }
-}
-
-class EndgameTechniqueCard extends StatelessWidget {
-  final List<SavedGameEntry> saves;
-
-  const EndgameTechniqueCard({super.key, required this.saves});
+class EndgameTechniqueCard extends ConsumerWidget {
+  const EndgameTechniqueCard({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final ratedSaves = saves.where((s) => s.isRatedMode).toList();
-    final endgameSaves = ratedSaves.where((s) => FenParser.isEndgame(s.fen)).toList();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(chessProvider);
+    final endgames = state.cachedEndgames;
 
-    if (endgameSaves.isEmpty) {
+    if (endgames == null) {
       return _buildEmptyCard(
         title: 'ENDGAME PERFORMANCE',
         message: 'No endgame positions recorded yet.\nPlay matches to the endgame to populate your metrics.',
       );
     }
 
-    double totalWeightedScore = 0.0;
-    double totalWeight = 0.0;
-
-    int advantageGames = 0;
-    int advantageWins = 0;
-
-    int disadvantageGames = 0;
-    int disadvantageSaves = 0; // wins + draws
-
-    for (final s in endgameSaves) {
-      final score = s.result == 'W' ? 1.0 : (s.result == 'D' ? 0.5 : 0.0);
-      final balance = FenParser.calculateMaterialBalance(s.fen, s.isPlayerWhite);
-
-      double complexity = 1.0;
-      if (balance > 0) {
-        complexity = 2.0; // Attacking advantage
-        advantageGames++;
-        if (s.result == 'W') advantageWins++;
-      } else if (balance < 0) {
-        complexity = 1.5; // Defensive disadvantage
-        disadvantageGames++;
-        if (s.result == 'W' || s.result == 'D') disadvantageSaves++;
-      } else {
-        complexity = 1.0; // Equal
-      }
-
-      totalWeightedScore += (score * complexity);
-      totalWeight += complexity;
-    }
-
-    final double epi = totalWeight > 0 ? (totalWeightedScore / totalWeight) * 100 : 0.0;
-    final double conversionRate = advantageGames > 0 ? (advantageWins / advantageGames) * 100 : 0.0;
-    final double saveRate = disadvantageGames > 0 ? (disadvantageSaves / disadvantageGames) * 100 : 0.0;
-
-    String ratingCategory = 'Provisional';
-    if (endgameSaves.length >= 15) {
-      if (epi >= 85) {
-        ratingCategory = 'Endgame Grandmaster';
-      } else if (epi >= 70) {
-        ratingCategory = 'Endgame Specialist';
-      } else if (epi >= 50) {
-        ratingCategory = 'Tactician Class I';
-      } else {
-        ratingCategory = 'Endgame Scholar';
-      }
-    } else {
-      if (epi >= 75) {
-        ratingCategory = 'Technician (Provisional)';
-      } else {
-        ratingCategory = 'Apprentice (Provisional)';
-      }
-    }
+    final double epi = endgames.epi;
+    final double conversionRate = endgames.conversionRate;
+    final double saveRate = endgames.saveRate;
+    final String ratingCategory = endgames.ratingCategory;
+    final int advantageGames = endgames.advantageGames;
+    final int disadvantageGames = endgames.disadvantageGames;
+    final int endgameSavesCount = endgames.endgameSavesCount;
 
 
     return JuicyGlassCard(
@@ -326,7 +241,7 @@ class EndgameTechniqueCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  '${endgameSaves.length} ENDGAMES',
+                  '$endgameSavesCount ENDGAMES',
                   style: GoogleFonts.jetBrainsMono(
                     color: ScholarlyTheme.accentBlue,
                     fontSize: 9,

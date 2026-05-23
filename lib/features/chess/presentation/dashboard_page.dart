@@ -10,6 +10,7 @@ import 'widgets/mini_board_preview.dart';
 import 'widgets/ambient_scaffold.dart';
 import 'widgets/profile_customization_overlay.dart';
 import 'widgets/phase_analysis_widgets.dart';
+import 'widgets/scotoma_card.dart';
 import 'package:intl/intl.dart';
 
 class DashboardPage extends ConsumerWidget {
@@ -62,11 +63,15 @@ class DashboardPage extends ConsumerWidget {
         ),
         _buildMasterCard(state),
         const SizedBox(height: 32),
+        _buildSectionHeader('30D', icon: Icons.calendar_today_rounded),
+        const SizedBox(height: 16),
+        const DominanceHeatmap(),
+        const SizedBox(height: 32),
         _buildSectionHeader('ELO PROGRESS', icon: Icons.show_chart_rounded),
         const SizedBox(height: 16),
-        SizedBox(
+        const SizedBox(
           height: 240,
-          child: EloAscentChart(saves: state.savedGames),
+          child: EloAscentChart(),
         ),
       ],
     );
@@ -122,19 +127,19 @@ class DashboardPage extends ConsumerWidget {
         _buildSectionHeader('PHASE ANALYSIS', icon: Icons.insights_rounded),
         const SizedBox(height: 16),
         isMobile
-            ? Column(
+            ? const Column(
                 children: [
-                  OpeningRepertoireCard(saves: state.savedGames),
-                  const SizedBox(height: 16),
-                  EndgameTechniqueCard(saves: state.savedGames),
+                  OpeningRepertoireCard(),
+                  SizedBox(height: 16),
+                  EndgameTechniqueCard(),
                 ],
               )
-            : Row(
+            : const Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(child: OpeningRepertoireCard(saves: state.savedGames)),
-                  const SizedBox(width: 16),
-                  Expanded(child: EndgameTechniqueCard(saves: state.savedGames)),
+                  Expanded(child: OpeningRepertoireCard()),
+                  SizedBox(width: 16),
+                  Expanded(child: EndgameTechniqueCard()),
                 ],
               ),
       ],
@@ -146,19 +151,18 @@ class DashboardPage extends ConsumerWidget {
       children: [
         _buildSectionHeader('PLAYSTYLE', icon: Icons.radar_rounded),
         const SizedBox(height: 16),
-        SizedBox(
-          height: 240,
-          child: TacticalRadarChart(saves: state.savedGames),
-        ),
+        const TacticalRadarChart(),
         const SizedBox(height: 32),
         _buildSectionHeader('GAME MODES', icon: Icons.pie_chart_rounded),
         const SizedBox(height: 16),
-        SizedBox(
+        const SizedBox(
           height: 180,
-          child: ModeDistributionChart(saves: state.savedGames),
+          child: ModeDistributionChart(),
         ),
         const SizedBox(height: 32),
-        DominanceHeatmap(saves: state.savedGames),
+        _buildSectionHeader('SCOTOMA', icon: Icons.visibility_off_rounded),
+        const SizedBox(height: 16),
+        const ScotomaCard(),
       ],
     );
 
