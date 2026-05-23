@@ -498,3 +498,4 @@ void exitToDashboardWithSidebar(BuildContext context, WidgetRef ref) {
     }
   });
 }
+

@@ -35,27 +35,7 @@ class _AboutUsPageState extends ConsumerState<AboutUsPage> {
               padding: const EdgeInsets.fromLTRB(24, 24, 24, 100),
               physics: const BouncingScrollPhysics(),
               children: [
-                const SizedBox(height: 64),
-                Text(
-                  'ABOUT US',
-                  style: GoogleFonts.outfit(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 2,
-                    color: ScholarlyTheme.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'IdeaSpace Chess Academy',
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    color: ScholarlyTheme.accentBlue,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 1,
-                  ),
-                ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
 
                 // Hero Card - Branded Core
                 JuicyGlassCard(
@@ -148,82 +128,149 @@ class _AboutUsPageState extends ConsumerState<AboutUsPage> {
                 ),
                 const SizedBox(height: 28),
 
-                // Section 2: Educational Pillars
-                Text(
-                  'ACADEMIC PILLARS',
-                  style: GoogleFonts.outfit(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.5,
-                    color: ScholarlyTheme.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                // Pillar 1: Cognitive
-                _buildPillarCard(
-                  icon: Icons.psychology_rounded,
-                  title: 'Cognitive Visualization',
-                  description: 'High-fidelity visual indicators are not merely aesthetic; they are designed to strengthen pattern recognition. Our liquid evaluation bar, pulsing clock urgency warnings, and interactive board feedback visually anchor critical tactical themes in working memory.',
-                ),
-                const SizedBox(height: 12),
-
-                // Pillar 2: Persona Simulation
-                _buildPillarCard(
-                  icon: Icons.android_rounded,
-                  title: 'Persona-Driven AI Simulation',
-                  description: 'Playing against rigid engines is pedagogically ineffective. IdeaSpace Chess Academy simulates real-world competitive styles through customized Stockfish profiles, teaching students how to counter aggressive attackers, solid endgames, and creative defensive tacticians.',
-                ),
-                const SizedBox(height: 12),
-
-                // Pillar 3: Feedback Loop
-                _buildPillarCard(
-                  icon: Icons.insights_rounded,
-                  title: 'Rigorous Training Loops',
-                  description: 'A dedicated student progresses through disciplined practice. By merging targeted thematic chapter puzzles with ELO-scaled competitive arenas, IdeaSpace Chess Academy provides a rigorous training cycle with zero analytical distractions.',
-                ),
-                const SizedBox(height: 28),
-
-                // Section: Dual-Engine Persona Matrix
-                Text(
-                  'TACTICAL CORE ARCHITECTURE',
-                  style: GoogleFonts.outfit(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.5,
-                    color: ScholarlyTheme.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                _buildPersonaTable(),
-                const SizedBox(height: 28),
-
-                // Section 3: Technical Specifications
-                Text(
-                  'ENGINE & SYSTEM SPECIFICATIONS',
-                  style: GoogleFonts.outfit(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.5,
-                    color: ScholarlyTheme.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                JuicyGlassCard(
-                  padding: const EdgeInsets.all(20),
-                  borderRadius: 20,
+                CollapsibleSection(
+                  title: 'ACADEMIC PILLARS',
+                  initiallyExpanded: false,
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildSpecRow('Neural AI Evaluator', 'Fully offline Stockfish NNUE engine integrations.'),
-                      const Divider(height: 16, color: Colors.white24),
-                      _buildSpecRow('Visual Assessment', 'Dynamic liquid scale with color-coded critical thresholds.'),
-                      const Divider(height: 16, color: Colors.white24),
-                      _buildSpecRow('Temporal Precision', 'Monospaced digital clock feedback with urgency tracking.'),
-                      const Divider(height: 16, color: Colors.white24),
-                      _buildSpecRow('Curriculum Depth', 'Targeted lesson modules, hand-picked puzzles, and ELO-scaled arenas.'),
+                      _buildPillarCard(
+                        icon: Icons.psychology_rounded,
+                        title: 'Cognitive Visualization',
+                        description: 'High-fidelity visual indicators are not merely aesthetic; they are designed to strengthen pattern recognition. Our liquid evaluation bar, pulsing clock urgency warnings, and interactive board feedback visually anchor critical tactical themes in working memory.',
+                      ),
+                      const SizedBox(height: 12),
+                      _buildPillarCard(
+                        icon: Icons.android_rounded,
+                        title: 'Persona-Driven AI Simulation',
+                        description: 'Playing against rigid engines is pedagogically ineffective. IdeaSpace Chess Academy simulates real-world competitive styles through customized Stockfish profiles, teaching students how to counter aggressive attackers, solid endgames, and creative defensive tacticians.',
+                      ),
+                      const SizedBox(height: 12),
+                      _buildPillarCard(
+                        icon: Icons.insights_rounded,
+                        title: 'Rigorous Training Loops',
+                        description: 'A dedicated student progresses through disciplined practice. By merging targeted thematic chapter puzzles with ELO-scaled competitive arenas, IdeaSpace Chess Academy provides a rigorous training cycle with zero analytical distractions.',
+                      ),
                     ],
+                  ),
+                ),
+
+                CollapsibleSection(
+                  title: 'PERSONAS',
+                  initiallyExpanded: false,
+                  child: _buildPersonaTable(),
+                ),
+
+                CollapsibleSection(
+                  title: 'ENGINE SYSTEM & SPECIFICATIONS',
+                  initiallyExpanded: false,
+                  child: JuicyGlassCard(
+                    padding: const EdgeInsets.all(20),
+                    borderRadius: 20,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildSpecRow('Neural AI Evaluator', 'Fully offline Stockfish NNUE engine integrations.'),
+                        const Divider(height: 16, color: Colors.white24),
+                        _buildSpecRow('Visual Assessment', 'Dynamic liquid scale with color-coded critical thresholds.'),
+                        const Divider(height: 16, color: Colors.white24),
+                        _buildSpecRow('Temporal Precision', 'Monospaced digital clock feedback with urgency tracking.'),
+                        const Divider(height: 16, color: Colors.white24),
+                        _buildSpecRow('Curriculum Depth', 'Targeted lesson modules, hand-picked puzzles, and ELO-scaled arenas.'),
+                      ],
+                    ),
+                  ),
+                ),
+                CollapsibleSection(
+                  title: 'DASHBOARD LOGIC',
+                  initiallyExpanded: false,
+                  child: JuicyGlassCard(
+                    padding: const EdgeInsets.all(24),
+                    borderRadius: 24,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildMathSectionHeader('1. ELO RATING TRANSITION SYSTEM'),
+                        const SizedBox(height: 10),
+                        _buildMathText(
+                          'Your Elo rating measures your relative chess skill. When you play a rated game, the system '
+                          'calculates your probability of winning (Expected Score) and updates your rating based on '
+                          'how much you outperform or underperform that expectation.',
+                        ),
+                        const SizedBox(height: 12),
+                        _buildMathFormula(
+                          '                      1\n'
+                          'Expected Score = ───────────────────────────────────────────────\n'
+                          '                  1 + 10^((Rating of Opponent - Your Rating) / 400)\n\n'
+                          'New Rating = Old Rating + K × (Actual Score - Expected Score) + Streak Bonus'
+                        ),
+                        const SizedBox(height: 12),
+                        _buildMathText(
+                          'Explanation of the Variables:\n'
+                          '• Expected Score (Se): This is a value between 0% (0.0) and 100% (1.0). If you play against GM Chanakya or Kingslayer who are rated much higher than you, the system expects you to lose, resulting in a very low Se (e.g. 10%). If you win or draw despite that, your rating will jump significantly!\n'
+                          '• Scaling Constant (400): In standard chess math, a rating difference of 400 points means the stronger player is expected to score 10 times more points than the weaker player.\n'
+                          '• Sensitivity Factor (K): This controls how fast your rating adapts. We use K = 40 for your first 10 provisional games to help you find your skill bracket quickly, and K = 20 thereafter for stable progression.\n'
+                          '• S_actual: The actual outcome of the match, where a Win = 1.0, Draw = 0.5, and Loss/Resignation/Timeout = 0.0.\n'
+                          '• Streak Bonus (S_bonus): To reward consistent excellence, maintaining an active winning streak of 3 or more games automatically grants a bonus of +5 Elo points for each consecutive victory.'
+                        ),
+                        const SizedBox(height: 24),
+                        
+                        _buildMathSectionHeader('2. CUMULATIVE MATERIAL DOMINANCE'),
+                        const SizedBox(height: 10),
+                        _buildMathText(
+                          'A normal score only tells you who won, not how dominant they were. The Dominance Index (DOM) '
+                          'quantifies your average material advantage at the end of rated matches, reflecting your average tactical superiority.',
+                        ),
+                        const SizedBox(height: 12),
+                        _buildMathFormula(
+                          'Material Margin = (Sum of Your Piece Values) - (Sum of Opponent Piece Values)\n\n'
+                          '                     (Previous Dominance × N) + Material Margin\n'
+                          'Average Dominance = ───────────────────────────────────────────────\n'
+                          '                                         N + 1\n\n'
+                          '                      (Bullet DOM × Bullet Games) + (Blitz DOM × Blitz Games) + (Rapid DOM × Rapid Games)\n'
+                          'Overall Dominance = ─────────────────────────────────────────────────────────────────────────────────────────────\n'
+                          '                                               Total Rated Games Played'
+                        ),
+                        const SizedBox(height: 12),
+                        _buildMathText(
+                          'How it is calculated:\n'
+                          '• We count the remaining pieces on the board at game completion and sum their relative values: Pawn = 1.0, Knight/Bishop = 3.0, Rook = 5.0, Queen = 9.0. (Kings have infinite value but are excluded from this relative calculation).\n'
+                          '• Material Margin (M): Your material advantage. If you end the match with more pieces than your opponent, M is positive; if you have fewer, it is negative.\n'
+                          '• Average Dominance: The running average of this final margin over N total games played in that specific arena speed category (Bullet, Blitz, or Rapid).\n'
+                          '• Overall Dominance: The consolidated dominance shown on the dashboard\'s Master Card. It is the weighted average of your dominance across all time controls based on the number of matches played in each speed control.'
+                        ),
+                        const SizedBox(height: 24),
+
+                        _buildMathSectionHeader('3. TACTICAL PERSONA POLAR MAPPING'),
+                        const SizedBox(height: 10),
+                        _buildMathText(
+                          'The Radar Chart takes your raw statistics and normalizes them onto a scale from 0.0 (lowest) '
+                          'to 1.0 (highest) to visualize your unique playing style:',
+                        ),
+                        const SizedBox(height: 12),
+                        _buildMathFormula(
+                          '                              Average Dominance + 5\n'
+                          'Attack (ATK) = [Clamped to] ─────────────────────────\n'
+                          '                                       10\n\n'
+                          '                            Peak Rating - 400\n'
+                          'Power (POW) = [Clamped to] ───────────────────\n'
+                          '                                  2000\n\n'
+                          '                      Chess 960 Matches Played\n'
+                          'Versatility (VER) = ────────────────────────────\n'
+                          '                        Total Matches Played\n\n'
+                          '                     Rated Victories (Wins)\n'
+                          'Intensity (INT) = ────────────────────────────\n'
+                          '                      Total Matches Played'
+                        ),
+                        const SizedBox(height: 12),
+                        _buildMathText(
+                          'Interpretation of style coordinates:\n'
+                          '• Attack (ATK): Derived from your average dominance (DOM_avg) across all speed controls. Having an average dominance of +5.0 or more yields a maximum score of 1.0, indicating highly aggressive play.\n'
+                          '• Power (POW): Normalizes your peak rating achieved (Elo_max) on a scale from 400 to 2400. Reaching 2400+ rating earns a perfect 1.0.\n'
+                          '• Versatility (VER): The proportion of Chess 960 games played. It tracks your adaptability when standard opening theory is stripped away.\n'
+                          '• Intensity (INT): Your overall rated win rate (Wins / total rated games). Winning 100% of your matches yields 1.0.'
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 32),
@@ -241,12 +288,17 @@ class _AboutUsPageState extends ConsumerState<AboutUsPage> {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        'The IdeaSpace Chess Academy Team',
-                        style: GoogleFonts.outfit(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: ScholarlyTheme.accentBlue,
+                      Image.asset(
+                        'assets/splash/ideaspace.png',
+                        height: 14,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) => Text(
+                          'The IdeaSpace Chess Academy Team',
+                          style: GoogleFonts.outfit(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: ScholarlyTheme.accentBlue,
+                          ),
                         ),
                       ),
                     ],
@@ -353,100 +405,161 @@ class _AboutUsPageState extends ConsumerState<AboutUsPage> {
     );
   }
 
+  Widget _buildMathSectionHeader(String text) {
+    return Text(
+      text,
+      style: GoogleFonts.outfit(
+        fontSize: 12,
+        fontWeight: FontWeight.w900,
+        letterSpacing: 1.2,
+        color: ScholarlyTheme.accentBlue,
+      ),
+    );
+  }
+
+  Widget _buildMathText(String text) {
+    return Text(
+      text,
+      style: GoogleFonts.inter(
+        fontSize: 13,
+        color: ScholarlyTheme.textMuted,
+        height: 1.4,
+      ),
+    );
+  }
+
+  Widget _buildMathFormula(String formula) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        child: Text(
+          formula,
+          style: GoogleFonts.jetBrainsMono(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: const Color(0xFF0F172A),
+            height: 1.5,
+          ),
+        ),
+      ),
+    );
+  }
+
+
   Widget _buildPersonaTable() {
     final items = const [
       _PersonaMatrixItem(
         name: 'GM Chanakya',
-        engine: 'Crafty',
-        elo: 'Ideal 2 (Full Power)',
+        brand: 'Crafty',
+        depth: 'Full Power',
+        eloRange: 'Mentor',
         style: 'Wisdom/mentor style, maximum precision, classic intuition.',
         icon: Icons.school_rounded,
         color: ScholarlyTheme.accentBlue,
       ),
       _PersonaMatrixItem(
         name: 'Kingslayer',
-        engine: 'Stockfish',
-        elo: '2850 - 3200+ (Depth 22, Full Power)',
+        brand: 'Stockfish',
+        depth: 'Depth 22',
+        eloRange: '2850 - 3200+',
         style: 'Ultimate absolute computational perfection.',
         icon: Icons.diamond_rounded,
         color: Color(0xFFE0E0E0),
       ),
       _PersonaMatrixItem(
         name: 'Titan',
-        engine: 'Crafty',
-        elo: '2500 - 2700 (Depth 18, Full Power)',
+        brand: 'Crafty',
+        depth: 'Depth 18',
+        eloRange: '2500 - 2700',
         style: 'Grandmaster precision, relentless positional pressure.',
         icon: Icons.psychology_rounded,
         color: Color(0xFFFFD54F),
       ),
       _PersonaMatrixItem(
         name: 'Morphy',
-        engine: 'Stockfish',
-        elo: '2200 - 2400 (Depth 15)',
+        brand: 'Stockfish',
+        depth: 'Depth 15',
+        eloRange: '2200 - 2400',
         style: 'Classical elegance, open lines, rapid piece coordination.',
         icon: Icons.local_fire_department_rounded,
         color: Color(0xFFE57373),
       ),
       _PersonaMatrixItem(
         name: 'Sentinel',
-        engine: 'Crafty',
-        elo: '1900 - 2100 (Depth 12)',
+        brand: 'Crafty',
+        depth: 'Depth 12',
+        eloRange: '1900 - 2100',
         style: 'Positional trap specialist, superb prophylaxis.',
         icon: Icons.gpp_good_rounded,
         color: Color(0xFF7986CB),
       ),
       _PersonaMatrixItem(
         name: 'Vanguard',
-        engine: 'Stockfish',
-        elo: '1700 - 1850 (Depth 10)',
+        brand: 'Stockfish',
+        depth: 'Depth 10',
+        eloRange: '1700 - 1850',
         style: 'Sharp tactical vision, uncoordinated piece punisher.',
         icon: Icons.track_changes_rounded,
         color: Color(0xFF4DB6AC),
       ),
       _PersonaMatrixItem(
         name: 'Gambit',
-        engine: 'Stockfish',
-        elo: '1500 - 1650 (Depth 7)',
+        brand: 'Stockfish',
+        depth: 'Depth 7',
+        eloRange: '1500 - 1650',
         style: 'Chaos lover, tactical sacrifices, material imbalances.',
         icon: Icons.auto_awesome_rounded,
         color: Color(0xFFBA68C8),
       ),
       _PersonaMatrixItem(
         name: 'Blitzer',
-        engine: 'Crafty',
-        elo: '1300 - 1450 (Depth 5)',
+        brand: 'Crafty',
+        depth: 'Depth 5',
+        eloRange: '1300 - 1450',
         style: 'Highly tactical, rapid attacker targeting the king.',
         icon: Icons.bolt_rounded,
         color: Color(0xFFFFB74D),
       ),
       _PersonaMatrixItem(
         name: 'Stonewall',
-        engine: 'Stockfish',
-        elo: '1100 - 1250 (Depth 4)',
+        brand: 'Stockfish',
+        depth: 'Depth 4',
+        eloRange: '1100 - 1250',
         style: 'Locked pawn chains, ultra-conservative, closed files.',
         icon: Icons.shield_rounded,
         color: Color(0xFF90A4AE),
       ),
       _PersonaMatrixItem(
         name: 'Rook-ie',
-        engine: 'Stockfish',
-        elo: '950 - 1050 (Depth 3)',
+        brand: 'Stockfish',
+        depth: 'Depth 3',
+        eloRange: '950 - 1050',
         style: 'Capturing undefended pieces immediately without recapture risk assessment.',
         icon: Icons.castle_rounded,
         color: Color(0xFF64B5F6),
       ),
       _PersonaMatrixItem(
         name: 'Pawnzy',
-        engine: 'Crafty',
-        elo: '800 - 950 (Depth 2)',
+        brand: 'Crafty',
+        depth: 'Depth 2',
+        eloRange: '800 - 950',
         style: 'Erratic novice, pawn-heavy movements.',
         icon: Icons.cruelty_free_rounded,
         color: Color(0xFF81C784),
       ),
       _PersonaMatrixItem(
         name: 'Sparky',
-        engine: 'Crafty',
-        elo: '400 - 500 (Depth 1)',
+        brand: 'Crafty',
+        depth: 'Depth 1',
+        eloRange: '400 - 500',
         style: 'Absolute beginner, frequent blunders, random pushes.',
         icon: Icons.child_care_rounded,
         color: Color(0xFFA1887F),
@@ -463,10 +576,11 @@ class _AboutUsPageState extends ConsumerState<AboutUsPage> {
           constraints: const BoxConstraints(minWidth: 800),
           child: Table(
             columnWidths: const {
-              0: FixedColumnWidth(150), // Name
-              1: FixedColumnWidth(160), // Engine
-              2: FixedColumnWidth(210), // Strength/ELO
-              3: FixedColumnWidth(280), // Playing Style
+              0: FixedColumnWidth(160), // Name
+              1: FixedColumnWidth(130), // Engine Brand
+              2: FixedColumnWidth(120), // Engine Depth
+              3: FixedColumnWidth(120), // Elo Range
+              4: FixedColumnWidth(270), // Playing Style
             },
             defaultVerticalAlignment: TableCellVerticalAlignment.middle,
             children: [
@@ -478,8 +592,9 @@ class _AboutUsPageState extends ConsumerState<AboutUsPage> {
                 ),
                 children: [
                   _buildHeaderCell('PERSONA'),
-                  _buildHeaderCell('CORE ENGINE'),
-                  _buildHeaderCell('CALIBRATION / ELO'),
+                  _buildHeaderCell('ENGINE BRAND'),
+                  _buildHeaderCell('ENGINE DEPTH'),
+                  _buildHeaderCell('ELO RANGE'),
                   _buildHeaderCell('TACTICAL PLAYSTYLE'),
                 ],
               ),
@@ -494,16 +609,17 @@ class _AboutUsPageState extends ConsumerState<AboutUsPage> {
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       child: Row(
-                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(item.icon, color: item.color, size: 20),
                           const SizedBox(width: 10),
-                          Text(
-                            item.name,
-                            style: GoogleFonts.outfit(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                              color: ScholarlyTheme.textPrimary,
+                          Expanded(
+                            child: Text(
+                              item.name,
+                              style: GoogleFonts.outfit(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: ScholarlyTheme.textPrimary,
+                              ),
                             ),
                           ),
                         ],
@@ -511,12 +627,23 @@ class _AboutUsPageState extends ConsumerState<AboutUsPage> {
                     ),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                      child: _buildEngineChip(item.engine),
+                      child: _buildEngineChip(item.brand),
                     ),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       child: Text(
-                        item.elo,
+                        item.depth,
+                        style: GoogleFonts.jetBrainsMono(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.bold,
+                          color: ScholarlyTheme.textPrimary,
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      child: Text(
+                        item.eloRange,
                         style: GoogleFonts.jetBrainsMono(
                           fontSize: 12.5,
                           fontWeight: FontWeight.bold,
@@ -560,8 +687,8 @@ class _AboutUsPageState extends ConsumerState<AboutUsPage> {
     );
   }
 
-  Widget _buildEngineChip(String engine) {
-    final isCrafty = engine == 'Crafty';
+  Widget _buildEngineChip(String brand) {
+    final isCrafty = brand == 'Crafty';
     final color = isCrafty ? ScholarlyTheme.accentGold : ScholarlyTheme.accentBlue;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -574,7 +701,7 @@ class _AboutUsPageState extends ConsumerState<AboutUsPage> {
         ),
       ),
       child: Text(
-        isCrafty ? 'C-ENGINE (Crafty)' : 'S-ENGINE (Stockfish)',
+        brand,
         style: GoogleFonts.jetBrainsMono(
           color: color,
           fontSize: 10.5,
@@ -586,18 +713,106 @@ class _AboutUsPageState extends ConsumerState<AboutUsPage> {
   }
 }
 
+class CollapsibleSection extends StatefulWidget {
+  final String title;
+  final Widget child;
+  final bool initiallyExpanded;
+
+  const CollapsibleSection({
+    super.key,
+    required this.title,
+    required this.child,
+    this.initiallyExpanded = false,
+  });
+
+  @override
+  State<CollapsibleSection> createState() => _CollapsibleSectionState();
+}
+
+class _CollapsibleSectionState extends State<CollapsibleSection> {
+  late bool _isExpanded;
+
+  @override
+  void initState() {
+    super.initState();
+    _isExpanded = widget.initiallyExpanded;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                _isExpanded = !_isExpanded;
+              });
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.40),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.55), width: 1.5),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      widget.title,
+                      style: GoogleFonts.outfit(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.5,
+                        color: ScholarlyTheme.textPrimary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  AnimatedRotation(
+                    turns: _isExpanded ? 0.25 : 0.0,
+                    duration: const Duration(milliseconds: 200),
+                    child: const Icon(
+                      Icons.chevron_right_rounded,
+                      color: ScholarlyTheme.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          AnimatedCrossFade(
+            firstChild: const SizedBox(width: double.infinity),
+            secondChild: Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: widget.child,
+            ),
+            crossFadeState: _isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+            duration: const Duration(milliseconds: 250),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _PersonaMatrixItem {
   final String name;
-  final String engine;
-  final String elo;
+  final String brand;
+  final String depth;
+  final String eloRange;
   final String style;
   final IconData icon;
   final Color color;
 
   const _PersonaMatrixItem({
     required this.name,
-    required this.engine,
-    required this.elo,
+    required this.brand,
+    required this.depth,
+    required this.eloRange,
     required this.style,
     required this.icon,
     required this.color,

@@ -196,11 +196,24 @@ class ModeDistributionChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final classic = saves.where((s) => s.gameMode == 'classic').length;
-    final nineSixty = saves.where((s) => s.gameMode == 'chess960').length;
+    final ratedSaves = saves.where((s) => s.isRatedMode).toList();
+    final classic = ratedSaves.where((s) => s.gameMode == 'classic').length;
+    final nineSixty = ratedSaves.where((s) => s.gameMode == 'chess960').length;
     final total = classic + nineSixty;
 
-    if (total == 0) return const SizedBox.shrink();
+    if (total == 0) {
+      return Container(
+        height: 180,
+        decoration: ScholarlyTheme.modernDecoration(),
+        child: Center(
+          child: Text(
+            'No rated matches played yet.',
+            style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 12),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
 
     return Container(
       height: 300,

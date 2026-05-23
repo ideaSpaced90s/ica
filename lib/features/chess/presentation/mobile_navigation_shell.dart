@@ -142,6 +142,16 @@ class _MobileSidebarDrawer extends ConsumerWidget {
 
     return Drawer(
       backgroundColor: ScholarlyTheme.backgroundStart,
+      surfaceTintColor: Colors.transparent,
+      elevation: 16.0,
+      shadowColor: Colors.black.withValues(alpha: 0.15),
+      clipBehavior: Clip.antiAlias,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.only(
+          topRight: Radius.circular(20),
+          bottomRight: Radius.circular(20),
+        ),
+      ),
       child: Column(
         children: [
           // Elegant Drawer Header
@@ -223,19 +233,19 @@ class _MobileSidebarDrawer extends ConsumerWidget {
                   },
                 ),
                 _DrawerTile(
-                  label: 'About Us',
-                  icon: Icons.info_outline_rounded,
-                  isSelected: currentIndex == 7,
-                  onTap: () {
-                    _navigate(ref, context, 7);
-                  },
-                ),
-                _DrawerTile(
                   label: 'Settings',
                   icon: Icons.settings_rounded,
                   isSelected: currentIndex == 8,
                   onTap: () {
                     _navigate(ref, context, 8);
+                  },
+                ),
+                _DrawerTile(
+                  label: 'About Us',
+                  icon: Icons.info_outline_rounded,
+                  isSelected: currentIndex == 7,
+                  onTap: () {
+                    _navigate(ref, context, 7);
                   },
                 ),
               ],
@@ -259,7 +269,7 @@ class _MobileSidebarDrawer extends ConsumerWidget {
         right: 20,
       ),
       decoration: const BoxDecoration(
-        color: ScholarlyTheme.backgroundStart,
+        color: Colors.transparent,
         border: Border(
           bottom: BorderSide(
             color: Color(0xFFE2E8F0),
