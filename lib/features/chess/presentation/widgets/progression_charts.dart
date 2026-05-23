@@ -22,12 +22,37 @@ class EloAscentChart extends StatelessWidget {
     final blitzSpots = _getSpots(ratedSaves, 'blitz');
     final rapidSpots = _getSpots(ratedSaves, 'rapid');
 
+    final allSpots = [...bulletSpots, ...blitzSpots, ...rapidSpots];
+    double minYVal = 1000.0;
+    double maxYVal = 1400.0;
+    if (allSpots.isNotEmpty) {
+      final yValues = allSpots.map((spot) => spot.y).toList();
+      final minVal = yValues.reduce(math.min);
+      final maxVal = yValues.reduce(math.max);
+      final range = maxVal - minVal;
+      final padding = range < 100 ? 50.0 : (range * 0.15);
+      minYVal = math.max(0.0, (minVal - padding).floorToDouble());
+      maxYVal = (maxVal + padding).ceilToDouble();
+    }
+
+    double maxXVal = 1.0;
+    final lengths = [bulletSpots.length, blitzSpots.length, rapidSpots.length];
+    final maxLen = lengths.reduce(math.max);
+    if (maxLen > 1) {
+      maxXVal = (maxLen - 1).toDouble();
+    }
+
     return Container(
-      height: 220,
+      height: 240,
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
       decoration: ScholarlyTheme.modernDecoration(),
       child: LineChart(
         LineChartData(
+          minX: 0,
+          maxX: maxXVal,
+          minY: minYVal,
+          maxY: maxYVal,
+          clipData: const FlClipData.all(),
           gridData: FlGridData(
             show: true,
             drawVerticalLine: false,
@@ -78,10 +103,16 @@ class EloAscentChart extends StatelessWidget {
 
   List<FlSpot> _getSpots(List<SavedGameEntry> saves, String category) {
     final filtered = saves.where((s) => s.ratingCategory == category).toList();
-    return List.generate(filtered.length, (i) {
+    if (filtered.isEmpty) return [];
+
+    final List<FlSpot> spots = [];
+    spots.add(const FlSpot(0, 1200));
+
+    for (int i = 0; i < filtered.length; i++) {
       final snapshot = filtered[i].ratingSnapshot;
-      return FlSpot(i.toDouble(), (snapshot ?? 1200).toDouble());
-    });
+      spots.add(FlSpot((i + 1).toDouble(), (snapshot ?? 1200).toDouble()));
+    }
+    return spots;
   }
 
   LineChartBarData _lineBarData(List<FlSpot> spots, Color color) {
@@ -145,11 +176,24 @@ class TacticalRadarChart extends StatelessWidget {
     final wins = ratedSaves.where((s) => s.result == 'W').length;
     final intensity = wins / ratedSaves.length;
 
-    // 5. Speed (Time Management - placeholder for now)
-    final speed = 0.7; 
+    // 5. Speed (Time Management - dynamic clock ratios)
+    double speedSum = 0.0;
+    int speedCount = 0;
+    for (final s in ratedSaves) {
+      final double baseTimeMs = s.ratingCategory == 'bullet'
+          ? 120000.0
+          : s.ratingCategory == 'blitz'
+              ? 300000.0
+              : 600000.0;
+      final playerTimeLeftMs = s.isPlayerWhite ? s.whiteTimeLeftMs : s.blackTimeLeftMs;
+      final ratio = playerTimeLeftMs / baseTimeMs;
+      speedSum += math.min(1.0, math.max(0.0, ratio));
+      speedCount++;
+    }
+    final speed = speedCount > 0 ? (speedSum / speedCount) : 0.7;
 
     return Container(
-      height: 320,
+      height: 240,
       padding: const EdgeInsets.all(16),
       decoration: ScholarlyTheme.modernDecoration(),
       child: RadarChart(
@@ -216,27 +260,27 @@ class ModeDistributionChart extends StatelessWidget {
     }
 
     return Container(
-      height: 300,
-      padding: const EdgeInsets.all(16),
+      height: 180,
+      padding: const EdgeInsets.all(12),
       decoration: ScholarlyTheme.modernDecoration(),
       child: PieChart(
         PieChartData(
           sectionsSpace: 6,
-          centerSpaceRadius: 60,
+          centerSpaceRadius: 35,
           sections: [
             PieChartSectionData(
               color: ScholarlyTheme.accentBlue,
               value: classic.toDouble(),
               title: 'Classic\n${(classic / total * 100).toInt()}%',
-              radius: 70,
-              titleStyle: GoogleFonts.jetBrainsMono(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+              radius: 30,
+              titleStyle: GoogleFonts.jetBrainsMono(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
             ),
             PieChartSectionData(
               color: Colors.orangeAccent,
               value: nineSixty.toDouble(),
               title: '960\n${(nineSixty / total * 100).toInt()}%',
-              radius: 70,
-              titleStyle: GoogleFonts.jetBrainsMono(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+              radius: 30,
+              titleStyle: GoogleFonts.jetBrainsMono(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
             ),
           ],
         ),
@@ -280,7 +324,7 @@ class DominanceHeatmap extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('COMBAT EFFICIENCY (30D)', 
+          Text('30D PERFORMANCE', 
             style: GoogleFonts.inter(color: ScholarlyTheme.accentBlue, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.0)
           ),
           const SizedBox(height: 12),

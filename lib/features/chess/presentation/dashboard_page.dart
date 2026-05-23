@@ -62,7 +62,7 @@ class DashboardPage extends ConsumerWidget {
         ),
         _buildMasterCard(state),
         const SizedBox(height: 32),
-        _buildSectionHeader('ELO PROGRESSION', icon: Icons.show_chart_rounded),
+        _buildSectionHeader('ELO PROGRESS', icon: Icons.show_chart_rounded),
         const SizedBox(height: 16),
         SizedBox(
           height: 240,
@@ -75,7 +75,7 @@ class DashboardPage extends ConsumerWidget {
     final Widget centerColumn = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionHeader('ARENA PERFORMANCE', icon: Icons.workspace_premium_rounded),
+        _buildSectionHeader('ARENAS', icon: Icons.workspace_premium_rounded),
         const SizedBox(height: 16),
         GridView.count(
           crossAxisCount: isMobile ? 1 : 2,
@@ -115,11 +115,11 @@ class DashboardPage extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 32),
-        _buildSectionHeader('RECENT MASTERPIECES', icon: Icons.workspace_premium_rounded),
+        _buildSectionHeader('RECENT WINS', icon: Icons.workspace_premium_rounded),
         const SizedBox(height: 16),
         _buildRecentMasterpieces(state),
         const SizedBox(height: 32),
-        _buildSectionHeader('STRATEGIC PHASE ANALYSIS', icon: Icons.insights_rounded),
+        _buildSectionHeader('PHASE ANALYSIS', icon: Icons.insights_rounded),
         const SizedBox(height: 16),
         isMobile
             ? Column(
@@ -144,14 +144,14 @@ class DashboardPage extends ConsumerWidget {
     final Widget rightColumn = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionHeader('TACTICAL PERSONA', icon: Icons.radar_rounded),
+        _buildSectionHeader('PLAYSTYLE', icon: Icons.radar_rounded),
         const SizedBox(height: 16),
         SizedBox(
           height: 240,
           child: TacticalRadarChart(saves: state.savedGames),
         ),
         const SizedBox(height: 32),
-        _buildSectionHeader('MODES', icon: Icons.pie_chart_rounded),
+        _buildSectionHeader('GAME MODES', icon: Icons.pie_chart_rounded),
         const SizedBox(height: 16),
         SizedBox(
           height: 180,
