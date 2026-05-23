@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../data/saved_game.dart';
 import '../scholarly_theme.dart';
+import 'ambient_scaffold.dart';
 
 class EloAscentChart extends StatelessWidget {
   final List<SavedGameEntry> saves;
@@ -42,58 +43,82 @@ class EloAscentChart extends StatelessWidget {
       maxXVal = (maxLen - 1).toDouble();
     }
 
-    return Container(
-      height: 240,
+    return JuicyGlassCard(
+      borderColor: const Color(0xFF06B6D4), // Vibrant Electric Cyan Border
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
-      decoration: ScholarlyTheme.modernDecoration(),
-      child: LineChart(
-        LineChartData(
-          minX: 0,
-          maxX: maxXVal,
-          minY: minYVal,
-          maxY: maxYVal,
-          clipData: const FlClipData.all(),
-          gridData: FlGridData(
-            show: true,
-            drawVerticalLine: false,
-            getDrawingHorizontalLine: (value) => FlLine(
-              color: ScholarlyTheme.panelStroke.withValues(alpha: 0.5),
-              strokeWidth: 1,
-            ),
-          ),
-          titlesData: FlTitlesData(
-            show: true,
-            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            bottomTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            leftTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                getTitlesWidget: (value, meta) => Text(
-                  value.toInt().toString(),
-                  style: GoogleFonts.jetBrainsMono(color: ScholarlyTheme.textMuted, fontSize: 10),
-                ),
-                reservedSize: 35,
+      child: SizedBox(
+        height: 200,
+        child: LineChart(
+          LineChartData(
+            minX: 0,
+            maxX: maxXVal,
+            minY: minYVal,
+            maxY: maxYVal,
+            clipData: const FlClipData.all(),
+            gridData: FlGridData(
+              show: true,
+              drawVerticalLine: false,
+              getDrawingHorizontalLine: (value) => FlLine(
+                color: ScholarlyTheme.panelStroke.withValues(alpha: 0.5),
+                strokeWidth: 1,
               ),
             ),
-          ),
-          borderData: FlBorderData(show: false),
-          lineBarsData: [
-            if (bulletSpots.isNotEmpty) _lineBarData(bulletSpots, Colors.cyanAccent),
-            if (blitzSpots.isNotEmpty) _lineBarData(blitzSpots, Colors.orangeAccent),
-            if (rapidSpots.isNotEmpty) _lineBarData(rapidSpots, ScholarlyTheme.accentBlue),
-          ],
-          lineTouchData: LineTouchData(
-            touchTooltipData: LineTouchTooltipData(
-              getTooltipColor: (_) => ScholarlyTheme.panelBase,
-              getTooltipItems: (touchedSpots) {
-                return touchedSpots.map((spot) {
-                  return LineTooltipItem(
-                    '${spot.y.toInt()}',
-                    GoogleFonts.jetBrainsMono(color: ScholarlyTheme.textPrimary, fontWeight: FontWeight.bold),
+            titlesData: FlTitlesData(
+              show: true,
+              rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              bottomTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              leftTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  getTitlesWidget: (value, meta) => Text(
+                    value.toInt().toString(),
+                    style: GoogleFonts.jetBrainsMono(color: ScholarlyTheme.textMuted, fontSize: 10),
+                  ),
+                  reservedSize: 35,
+                ),
+              ),
+            ),
+            borderData: FlBorderData(show: false),
+            lineBarsData: [
+              if (bulletSpots.isNotEmpty) _lineBarData(bulletSpots, const Color(0xFF00F0FF)), // Electric Neon Cyan
+              if (blitzSpots.isNotEmpty) _lineBarData(blitzSpots, const Color(0xFFEC4899)), // Electric Neon Hot Pink
+              if (rapidSpots.isNotEmpty) _lineBarData(rapidSpots, const Color(0xFF10B981)), // Electric Neon Emerald
+            ],
+            lineTouchData: LineTouchData(
+              handleBuiltInTouches: true,
+              getTouchedSpotIndicator: (LineChartBarData barData, List<int> spotIndexes) {
+                return spotIndexes.map((spotIndex) {
+                  return TouchedSpotIndicatorData(
+                    FlLine(color: (barData.color ?? Colors.blue).withValues(alpha: 0.5), strokeWidth: 2, dashArray: [4, 4]),
+                    FlDotData(
+                      getDotPainter: (spot, percent, barData, index) {
+                        return FlDotCirclePainter(
+                          radius: 6,
+                          color: barData.color ?? Colors.blue,
+                          strokeWidth: 2,
+                          strokeColor: Colors.white,
+                        );
+                      },
+                    ),
                   );
                 }).toList();
               },
+              touchTooltipData: LineTouchTooltipData(
+                getTooltipColor: (_) => ScholarlyTheme.panelBase,
+                getTooltipItems: (touchedSpots) {
+                  return touchedSpots.map((spot) {
+                    return LineTooltipItem(
+                      '${spot.y.toInt()}',
+                      GoogleFonts.jetBrainsMono(
+                        color: spot.bar.color ?? ScholarlyTheme.textPrimary, 
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    );
+                  }).toList();
+                },
+              ),
             ),
           ),
         ),
@@ -192,42 +217,54 @@ class TacticalRadarChart extends StatelessWidget {
     }
     final speed = speedCount > 0 ? (speedSum / speedCount) : 0.7;
 
-    return Container(
-      height: 240,
+    return JuicyGlassCard(
+      borderColor: const Color(0xFF8B5CF6), // Vibrant Electric Violet Border
       padding: const EdgeInsets.all(16),
-      decoration: ScholarlyTheme.modernDecoration(),
-      child: RadarChart(
-        RadarChartData(
-          dataSets: [
-            RadarDataSet(
-              fillColor: ScholarlyTheme.accentBlue.withValues(alpha: 0.2),
-              borderColor: ScholarlyTheme.accentBlue,
-              entryRadius: 3,
-              dataEntries: [
-                RadarEntry(value: aggression),
-                RadarEntry(value: power),
-                RadarEntry(value: versatility),
-                RadarEntry(value: intensity),
-                RadarEntry(value: speed),
-              ],
-            ),
-          ],
-          radarBackgroundColor: Colors.transparent,
-          borderData: FlBorderData(show: false),
-          radarBorderData: const BorderSide(color: ScholarlyTheme.panelStroke, width: 1),
-          getTitle: (index, angle) {
-            switch (index) {
-              case 0: return RadarChartTitle(text: 'ATK', angle: angle);
-              case 1: return RadarChartTitle(text: 'POW', angle: angle);
-              case 2: return RadarChartTitle(text: 'VER', angle: angle);
-              case 3: return RadarChartTitle(text: 'INT', angle: angle);
-              case 4: return RadarChartTitle(text: 'SPD', angle: angle);
-              default: return const RadarChartTitle(text: '');
-            }
-          },
-          tickCount: 4,
-          ticksTextStyle: GoogleFonts.jetBrainsMono(color: ScholarlyTheme.textMuted, fontSize: 8),
-          gridBorderData: const BorderSide(color: ScholarlyTheme.panelStroke, width: 1),
+      child: SizedBox(
+        height: 208,
+        child: RadarChart(
+          RadarChartData(
+            dataSets: [
+              RadarDataSet(
+                fillColor: const Color(0x33A855F7), // Colorful purple translucent fill
+                borderColor: const Color(0xFFC084FC), // Colorful purple border
+                entryRadius: 4,
+                dataEntries: [
+                  RadarEntry(value: aggression),
+                  RadarEntry(value: power),
+                  RadarEntry(value: versatility),
+                  RadarEntry(value: intensity),
+                  RadarEntry(value: speed),
+                ],
+              ),
+            ],
+            radarBackgroundColor: Colors.transparent,
+            borderData: FlBorderData(show: false),
+            radarBorderData: const BorderSide(color: Color(0xFFF3E8FF), width: 1),
+            getTitle: (index, angle) {
+              final text = ['ATK', 'POW', 'VER', 'INT', 'SPD'][index];
+              final color = [
+                const Color(0xFFEF4444), // ATK (Red)
+                const Color(0xFFF59E0B), // POW (Gold)
+                const Color(0xFF8B5CF6), // VER (Violet)
+                const Color(0xFF10B981), // INT (Emerald)
+                const Color(0xFF06B6D4), // SPD (Cyan)
+              ][index];
+              return RadarChartTitle(
+                text: '',
+                children: [
+                  TextSpan(
+                    text: text,
+                    style: GoogleFonts.outfit(color: color, fontSize: 10, fontWeight: FontWeight.bold),
+                  ),
+                ],
+                angle: angle,
+              );
+            },
+            tickCount: 4,
+            ticksTextStyle: GoogleFonts.jetBrainsMono(color: ScholarlyTheme.textMuted, fontSize: 8),
+            gridBorderData: const BorderSide(color: Color(0xFFF3E8FF), width: 1),
+          ),
         ),
       ),
     );
@@ -259,30 +296,46 @@ class ModeDistributionChart extends StatelessWidget {
       );
     }
 
-    return Container(
-      height: 180,
+    return JuicyGlassCard(
+      borderColor: const Color(0xFFEC4899), // Vibrant Hot Pink Border
       padding: const EdgeInsets.all(12),
-      decoration: ScholarlyTheme.modernDecoration(),
-      child: PieChart(
-        PieChartData(
-          sectionsSpace: 6,
-          centerSpaceRadius: 35,
-          sections: [
-            PieChartSectionData(
-              color: ScholarlyTheme.accentBlue,
-              value: classic.toDouble(),
-              title: 'Classic\n${(classic / total * 100).toInt()}%',
-              radius: 30,
-              titleStyle: GoogleFonts.jetBrainsMono(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-            ),
-            PieChartSectionData(
-              color: Colors.orangeAccent,
-              value: nineSixty.toDouble(),
-              title: '960\n${(nineSixty / total * 100).toInt()}%',
-              radius: 30,
-              titleStyle: GoogleFonts.jetBrainsMono(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-            ),
-          ],
+      child: SizedBox(
+        height: 156,
+        child: PieChart(
+          PieChartData(
+            sectionsSpace: 6,
+            centerSpaceRadius: 35,
+            sections: [
+              PieChartSectionData(
+                color: const Color(0xFF8B5CF6), // Electric Violet
+                value: classic.toDouble(),
+                title: 'Classic\n${(classic / total * 100).toInt()}%',
+                radius: 30,
+                titleStyle: GoogleFonts.jetBrainsMono(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  shadows: [
+                    const Shadow(color: Colors.black45, blurRadius: 4, offset: Offset(0, 1.5)),
+                  ],
+                ),
+              ),
+              PieChartSectionData(
+                color: const Color(0xFFF59E0B), // Sunny Gold
+                value: nineSixty.toDouble(),
+                title: '960\n${(nineSixty / total * 100).toInt()}%',
+                radius: 30,
+                titleStyle: GoogleFonts.jetBrainsMono(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  shadows: [
+                    const Shadow(color: Colors.black45, blurRadius: 4, offset: Offset(0, 1.5)),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -318,9 +371,9 @@ class DominanceHeatmap extends StatelessWidget {
 
     final List<String> sortedKeys = dailyDom.keys.toList()..sort((a, b) => b.compareTo(a));
 
-    return Container(
+    return JuicyGlassCard(
+      borderColor: const Color(0xFF10B981), // Vibrant Emerald Green Border
       padding: const EdgeInsets.all(16),
-      decoration: ScholarlyTheme.modernDecoration(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -338,13 +391,13 @@ class DominanceHeatmap extends StatelessWidget {
               Color color = ScholarlyTheme.panelStroke.withValues(alpha: 0.3);
               if (doms.isNotEmpty) {
                 if (avg > 5) {
-                  color = Colors.greenAccent;
+                  color = const Color(0xFF10B981); // Neon Emerald Green
                 } else if (avg > 0) {
-                  color = Colors.greenAccent.withValues(alpha: 0.5);
+                  color = const Color(0xFF06B6D4); // Electric Cyan
                 } else if (avg > -5) {
-                  color = Colors.orangeAccent.withValues(alpha: 0.5);
+                  color = const Color(0xFFF59E0B); // Hot Amber
                 } else {
-                  color = Colors.redAccent.withValues(alpha: 0.5);
+                  color = const Color(0xFFEF4444); // Deep Crimson
                 }
               }
 

@@ -111,34 +111,70 @@ class JuicySectionHeader extends StatelessWidget {
   final String title;
   final IconData? icon;
   final Color? color;
+  final Gradient? gradient;
 
   const JuicySectionHeader({
     super.key,
     required this.title,
     this.icon,
     this.color,
+    this.gradient,
   });
 
   @override
   Widget build(BuildContext context) {
-    final c = color ?? const Color(0xFF0D6EFD);
+    final defaultGradient = const LinearGradient(
+      colors: [
+        Color(0xFF0D6EFD), // Primary blue
+        Color(0xFFEC4899), // Hot Pink/Magenta
+      ],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    );
+    final grad = gradient ?? (color == null ? defaultGradient : null);
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         if (icon != null) ...[
-          Icon(icon, size: 12, color: c),
-          const SizedBox(width: 6),
+          if (grad != null)
+            ShaderMask(
+              shaderCallback: (bounds) => grad.createShader(
+                Rect.fromLTWH(0, 0, bounds.width, bounds.height),
+              ),
+              child: Icon(icon, size: 14, color: Colors.white),
+            )
+          else
+            Icon(icon, size: 14, color: color ?? const Color(0xFF0D6EFD)),
+          const SizedBox(width: 8),
         ],
-        Text(
-          title,
-          style: TextStyle(
-            fontFamily: 'Inter',
-            color: c,
-            fontSize: 11,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 1.5,
+        if (grad != null)
+          ShaderMask(
+            blendMode: BlendMode.srcIn,
+            shaderCallback: (bounds) => grad.createShader(
+              Rect.fromLTWH(0, 0, bounds.width, bounds.height),
+            ),
+            child: Text(
+              title,
+              style: const TextStyle(
+                fontFamily: 'Outfit',
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.5,
+              ),
+            ),
+          )
+        else
+          Text(
+            title,
+            style: TextStyle(
+              fontFamily: 'Outfit',
+              color: color ?? const Color(0xFF0D6EFD),
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.5,
+            ),
           ),
-        ),
       ],
     );
   }

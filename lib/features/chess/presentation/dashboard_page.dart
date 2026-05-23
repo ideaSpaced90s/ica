@@ -233,15 +233,6 @@ class DashboardPage extends ConsumerWidget {
                         letterSpacing: 0.5,
                       ),
                     ),
-                    Text(
-                      'Master Standing (Level VIII)',
-                      style: GoogleFonts.inter(
-                        color: Colors.white.withValues(alpha: 0.8),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        letterSpacing: 0.2,
-                      ),
-                    ),
                   ],
                 ),
               ),

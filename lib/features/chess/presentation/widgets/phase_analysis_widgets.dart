@@ -38,6 +38,7 @@ class OpeningRepertoireCard extends StatelessWidget {
     final totalPlays = ratedSaves.length;
 
     return JuicyGlassCard(
+      borderColor: const Color(0xFF14B8A6), // Vibrant Teal Border
       padding: const EdgeInsets.all(20),
       borderRadius: 24,
       child: Column(
@@ -300,6 +301,7 @@ class EndgameTechniqueCard extends StatelessWidget {
 
 
     return JuicyGlassCard(
+      borderColor: const Color(0xFFF59E0B), // Vibrant Amber Border
       padding: const EdgeInsets.all(20),
       borderRadius: 24,
       child: Column(
@@ -338,26 +340,28 @@ class EndgameTechniqueCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Circular score widget
-              Container(
-                width: 90,
-                height: 90,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: ScholarlyTheme.accentBlue.withValues(alpha: 0.2),
-                    width: 6,
+              // Circular progress dial widget representing real math calculations
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  SizedBox(
+                    width: 90,
+                    height: 90,
+                    child: CircularProgressIndicator(
+                      value: epi / 100,
+                      strokeWidth: 6,
+                      backgroundColor: ScholarlyTheme.panelStroke.withValues(alpha: 0.3),
+                      valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFF59E0B)),
+                    ),
                   ),
-                ),
-                child: Center(
-                  child: Column(
+                  Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
                         '${epi.toStringAsFixed(1)}%',
                         style: GoogleFonts.jetBrainsMono(
-                          color: ScholarlyTheme.accentBlue,
-                          fontSize: 16,
+                          color: const Color(0xFFF59E0B),
+                          fontSize: 15,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -371,7 +375,7 @@ class EndgameTechniqueCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                ),
+                ],
               ),
               const SizedBox(width: 20),
               Expanded(
