@@ -476,6 +476,7 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
                                                         rotation:
                                                             _gearController
                                                                 .value,
+                                                        theme: chessTheme,
                                                         isMoving:
                                                             chessState
                                                                     .moveAnimation
@@ -531,6 +532,7 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
                           boardSize: boardSize,
                           isFlipped: chessState.isBoardFlipped,
                           isCheckmate: chessState.game.inCheckmate,
+                          theme: chessTheme,
                           onComplete: () {
                             ref
                                 .read(chessProvider.notifier)
@@ -689,7 +691,7 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
                               setState(() => _thunderTrails.remove(trail)),
                         ),
 
-                      const PromotionOverlay(),
+                      PromotionOverlay(theme: chessTheme),
                     ],
                   ),
               ),
