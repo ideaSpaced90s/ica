@@ -42,38 +42,47 @@ class ScholarTheme extends ChessTheme {
     bool isHighlighted,
     double animationValue,
   ) {
-    final colorPrefix = isWhite ? 'w' : 'b';
-    String pieceName;
-    
+    final rowIndex = isWhite ? 0 : 1;
+    int colIndex;
     switch (type.toUpperCase()) {
       case 'K':
-        pieceName = 'King';
+        colIndex = 0;
         break;
       case 'Q':
-        pieceName = 'Queen';
+        colIndex = 1;
         break;
       case 'B':
-        pieceName = 'Bishop';
+        colIndex = 2;
         break;
       case 'N':
-        pieceName = 'Knight';
+        colIndex = 3;
         break;
       case 'R':
-        pieceName = 'Rook';
+        colIndex = 4;
         break;
       case 'P':
-        pieceName = 'Pawn';
+        colIndex = 5;
         break;
       default:
-        pieceName = 'Pawn';
+        colIndex = 5;
     }
-    
-    return Padding(
-      padding: const EdgeInsets.all(4.0), // give it a little breathing room
-      child: Image.asset(
-        'assets/board/scholar_pieces/${pieceName}_$colorPrefix.png',
-        fit: BoxFit.contain,
-        filterQuality: FilterQuality.high,
+
+    return AspectRatio(
+      aspectRatio: 1,
+      child: ClipRect(
+        child: FractionallySizedBox(
+          widthFactor: 6.0,
+          heightFactor: 2.0,
+          alignment: Alignment(
+            (colIndex * 2.0 / 5.0) - 1.0,
+            (rowIndex * 2.0 / 1.0) - 1.0,
+          ),
+          child: Image.asset(
+            'assets/board/ideaspaceclassicchesssprite2.png',
+            fit: BoxFit.fill,
+            filterQuality: FilterQuality.high,
+          ),
+        ),
       ),
     );
   }
@@ -99,8 +108,7 @@ class ScholarTheme extends ChessTheme {
 
   @override
   Widget buildSelectionEffect(BuildContext context, double animationValue) {
-    // Standard gold star animation or similar
-    return const SizedBox.shrink(); // Will be handled by the default OrbitingStar
+    return const SizedBox.shrink();
   }
 
   @override

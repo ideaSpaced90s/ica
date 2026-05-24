@@ -74,7 +74,6 @@ flutter:
   assets:
     - assets/pieces/
     - assets/board/
-    - assets/board/scholar_pieces/
     - assets/persona/
     - assets/sfx/
     - assets/bgm/
