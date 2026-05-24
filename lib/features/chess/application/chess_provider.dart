@@ -222,6 +222,8 @@ class ChessState {
     this.moveAnimation,
     this.boardThemeId = 'classic',
     this.isSoundEnabled = true,
+    this.isGameSoundEnabled = true,
+    this.isAcademySoundEnabled = true,
     this.isMusicEnabled = false,
     this.showLog = false,
     this.showCoordinates = true,
@@ -243,6 +245,19 @@ class ChessState {
       'themeAmbience': true,
       'kineticImpact': true,
       'arcadeMode': true,
+    },
+    this.soundSettings = const {
+      'moveSounds': true,
+      'captureSounds': true,
+      'alertSounds': true,
+    },
+    this.academySoundSettings = const {
+      'moveSounds': true,
+      'captureSounds': true,
+      'alertSounds': true,
+      'outcomeSounds': true,
+      'coachSounds': true,
+      'ambientClicks': true,
     },
     this.isCouncilOnline = false,
     this.baseTimeDuration = _initialClock,
@@ -333,6 +348,8 @@ class ChessState {
   final MoveAnimationData? moveAnimation;
   final String boardThemeId;
   final bool isSoundEnabled;
+  final bool isGameSoundEnabled;
+  final bool isAcademySoundEnabled;
   final bool isMusicEnabled;
   final bool showLog;
   final bool showCoordinates;
@@ -347,6 +364,8 @@ class ChessState {
   final String? promotionDestination;
   final bool isAnimationsEnabled;
   final Map<String, bool> animationSettings;
+  final Map<String, bool> soundSettings;
+  final Map<String, bool> academySoundSettings;
   final bool isCouncilOnline;
   final Duration baseTimeDuration;
   final String gameMode;
@@ -449,6 +468,8 @@ class ChessState {
     Object? moveAnimation = _sentinel,
     String? boardThemeId,
     bool? isSoundEnabled,
+    bool? isGameSoundEnabled,
+    bool? isAcademySoundEnabled,
     bool? isMusicEnabled,
     bool? showLog,
     bool? showCoordinates,
@@ -463,6 +484,8 @@ class ChessState {
     Object? promotionDestination = _sentinel,
     bool? isAnimationsEnabled,
     Map<String, bool>? animationSettings,
+    Map<String, bool>? soundSettings,
+    Map<String, bool>? academySoundSettings,
     bool? isCouncilOnline,
     Duration? baseTimeDuration,
     String? gameMode,
@@ -574,6 +597,8 @@ class ChessState {
           : moveAnimation as MoveAnimationData?,
       boardThemeId: boardThemeId ?? this.boardThemeId,
       isSoundEnabled: isSoundEnabled ?? this.isSoundEnabled,
+      isGameSoundEnabled: isGameSoundEnabled ?? this.isGameSoundEnabled,
+      isAcademySoundEnabled: isAcademySoundEnabled ?? this.isAcademySoundEnabled,
       isMusicEnabled: isMusicEnabled ?? this.isMusicEnabled,
       showLog: showLog ?? this.showLog,
       showCoordinates: showCoordinates ?? this.showCoordinates,
@@ -594,6 +619,8 @@ class ChessState {
           : promotionDestination as String?,
       isAnimationsEnabled: isAnimationsEnabled ?? this.isAnimationsEnabled,
       animationSettings: animationSettings ?? this.animationSettings,
+      soundSettings: soundSettings ?? this.soundSettings,
+      academySoundSettings: academySoundSettings ?? this.academySoundSettings,
       isCouncilOnline: isCouncilOnline ?? this.isCouncilOnline,
       baseTimeDuration: baseTimeDuration ?? this.baseTimeDuration,
       gameMode: gameMode ?? this.gameMode,
@@ -677,7 +704,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
           ],
         ),
       ) {
-    _soundService.updateSettings(sfxEnabled: true, bgmEnabled: false);
+    _soundService.updateSettings(sfxEnabled: true, bgmEnabled: false, isRatedMode: false);
     _hapticsService.updateSettings(hapticsEnabled: true);
     _commentaryEngine.onPuzzleLoaded = loadPuzzle;
     _loadSettings();
@@ -698,9 +725,13 @@ class ChessNotifier extends StateNotifier<ChessState> {
         game: initialGame,
         boardThemeId: s.boardThemeId,
         isSoundEnabled: s.isSoundEnabled,
+        isGameSoundEnabled: s.isGameSoundEnabled,
+        isAcademySoundEnabled: s.isAcademySoundEnabled,
         isMusicEnabled: s.isMusicEnabled,
         isAnimationsEnabled: s.isAnimationsEnabled,
         animationSettings: s.animationSettings,
+        soundSettings: s.soundSettings,
+        academySoundSettings: s.academySoundSettings,
         isHapticsEnabled: s.isHapticsEnabled,
         showCoordinates: s.showCoordinates,
         engineLevel: s.engineLevel,
@@ -746,6 +777,12 @@ class ChessNotifier extends StateNotifier<ChessState> {
       _soundService.updateSettings(
         sfxEnabled: s.isSoundEnabled,
         bgmEnabled: s.isMusicEnabled,
+        gameSoundEnabled: s.isGameSoundEnabled,
+        soundSettings: s.soundSettings,
+        academySoundEnabled: s.isAcademySoundEnabled,
+        academySoundSettings: s.academySoundSettings,
+        isAcademyActive: state.isAcademyActive,
+        isRatedMode: s.isRatedMode,
       );
       _hapticsService.updateSettings(hapticsEnabled: s.isHapticsEnabled);
       // Automatically load saved games and populate dashboard caches on boot
@@ -760,9 +797,13 @@ class ChessNotifier extends StateNotifier<ChessState> {
       final s = AppSettings(
         boardThemeId: state.boardThemeId,
         isSoundEnabled: state.isSoundEnabled,
+        isGameSoundEnabled: state.isGameSoundEnabled,
+        isAcademySoundEnabled: state.isAcademySoundEnabled,
         isMusicEnabled: state.isMusicEnabled,
         isAnimationsEnabled: state.isAnimationsEnabled,
         animationSettings: state.animationSettings,
+        soundSettings: state.soundSettings,
+        academySoundSettings: state.academySoundSettings,
         isHapticsEnabled: state.isHapticsEnabled,
         showCoordinates: state.showCoordinates,
         engineLevel: state.engineLevel,
@@ -847,6 +888,12 @@ class ChessNotifier extends StateNotifier<ChessState> {
     _soundService.updateSettings(
       sfxEnabled: state.isSoundEnabled,
       bgmEnabled: newIsMusicEnabled,
+      gameSoundEnabled: state.isGameSoundEnabled,
+      soundSettings: state.soundSettings,
+      academySoundEnabled: state.isAcademySoundEnabled,
+      academySoundSettings: state.academySoundSettings,
+      isAcademyActive: state.isAcademyActive,
+      isRatedMode: isRated,
     );
     
     await _saveSettings();
@@ -890,6 +937,12 @@ class ChessNotifier extends StateNotifier<ChessState> {
     _soundService.updateSettings(
       sfxEnabled: newEnabled,
       bgmEnabled: state.isMusicEnabled,
+      gameSoundEnabled: state.isGameSoundEnabled,
+      soundSettings: state.soundSettings,
+      academySoundEnabled: state.isAcademySoundEnabled,
+      academySoundSettings: state.academySoundSettings,
+      isAcademyActive: state.isAcademyActive,
+      isRatedMode: state.isRatedMode,
     );
     _saveSettings();
   }
@@ -900,8 +953,88 @@ class ChessNotifier extends StateNotifier<ChessState> {
     _soundService.updateSettings(
       sfxEnabled: state.isSoundEnabled,
       bgmEnabled: newEnabled,
+      gameSoundEnabled: state.isGameSoundEnabled,
+      soundSettings: state.soundSettings,
+      academySoundEnabled: state.isAcademySoundEnabled,
+      academySoundSettings: state.academySoundSettings,
+      isAcademyActive: state.isAcademyActive,
+      isRatedMode: state.isRatedMode,
     );
     _saveSettings();
+  }
+
+  void toggleGameSound() {
+    final newEnabled = !state.isGameSoundEnabled;
+    state = state.copyWith(isGameSoundEnabled: newEnabled);
+    _soundService.updateSettings(
+      sfxEnabled: state.isSoundEnabled,
+      bgmEnabled: state.isMusicEnabled,
+      gameSoundEnabled: newEnabled,
+      soundSettings: state.soundSettings,
+      academySoundEnabled: state.isAcademySoundEnabled,
+      academySoundSettings: state.academySoundSettings,
+      isAcademyActive: state.isAcademyActive,
+      isRatedMode: state.isRatedMode,
+    );
+    _saveSettings();
+  }
+
+  void updateSoundSetting(String key, bool enabled) {
+    final newSettings = Map<String, bool>.from(state.soundSettings);
+    newSettings[key] = enabled;
+    state = state.copyWith(soundSettings: newSettings);
+    _soundService.updateSettings(
+      sfxEnabled: state.isSoundEnabled,
+      bgmEnabled: state.isMusicEnabled,
+      gameSoundEnabled: state.isGameSoundEnabled,
+      soundSettings: newSettings,
+      academySoundEnabled: state.isAcademySoundEnabled,
+      academySoundSettings: state.academySoundSettings,
+      isAcademyActive: state.isAcademyActive,
+      isRatedMode: state.isRatedMode,
+    );
+    _saveSettings();
+  }
+
+  bool isSoundSettingEnabled(String key) {
+    return state.isGameSoundEnabled && (state.soundSettings[key] ?? true);
+  }
+
+  void toggleAcademySound() {
+    final newEnabled = !state.isAcademySoundEnabled;
+    state = state.copyWith(isAcademySoundEnabled: newEnabled);
+    _soundService.updateSettings(
+      sfxEnabled: state.isSoundEnabled,
+      bgmEnabled: state.isMusicEnabled,
+      gameSoundEnabled: state.isGameSoundEnabled,
+      soundSettings: state.soundSettings,
+      academySoundEnabled: newEnabled,
+      academySoundSettings: state.academySoundSettings,
+      isAcademyActive: state.isAcademyActive,
+      isRatedMode: state.isRatedMode,
+    );
+    _saveSettings();
+  }
+
+  void updateAcademySoundSetting(String key, bool enabled) {
+    final newSettings = Map<String, bool>.from(state.academySoundSettings);
+    newSettings[key] = enabled;
+    state = state.copyWith(academySoundSettings: newSettings);
+    _soundService.updateSettings(
+      sfxEnabled: state.isSoundEnabled,
+      bgmEnabled: state.isMusicEnabled,
+      gameSoundEnabled: state.isGameSoundEnabled,
+      soundSettings: state.soundSettings,
+      academySoundEnabled: state.isAcademySoundEnabled,
+      academySoundSettings: newSettings,
+      isAcademyActive: state.isAcademyActive,
+      isRatedMode: state.isRatedMode,
+    );
+    _saveSettings();
+  }
+
+  bool isAcademySoundSettingEnabled(String key) {
+    return state.isAcademySoundEnabled && (state.academySoundSettings[key] ?? true);
   }
 
   void toggleLog() {
@@ -1982,6 +2115,8 @@ class ChessNotifier extends StateNotifier<ChessState> {
       // Preserve existing user interface & environment preferences
       boardThemeId: state.boardThemeId,
       isSoundEnabled: state.isSoundEnabled,
+      isGameSoundEnabled: state.isGameSoundEnabled,
+      isAcademySoundEnabled: state.isAcademySoundEnabled,
       isMusicEnabled: state.isMusicEnabled,
       isHapticsEnabled: state.isHapticsEnabled,
       showCoordinates: state.showCoordinates,
@@ -1992,6 +2127,8 @@ class ChessNotifier extends StateNotifier<ChessState> {
       isEngineVsEngine: state.isEngineVsEngine,
       isAnimationsEnabled: state.isAnimationsEnabled,
       animationSettings: state.animationSettings,
+      soundSettings: state.soundSettings,
+      academySoundSettings: state.academySoundSettings,
       loadedSaveId: entry.id,
       gameMode: entry.gameMode,
       isRatedMode: entry.isRatedMode,
@@ -2355,11 +2492,15 @@ class ChessNotifier extends StateNotifier<ChessState> {
       puzzleMovesRemaining: remainingMoves,
       boardThemeId: state.boardThemeId,
       isSoundEnabled: state.isSoundEnabled,
+      isGameSoundEnabled: state.isGameSoundEnabled,
+      isAcademySoundEnabled: state.isAcademySoundEnabled,
       isMusicEnabled: state.isMusicEnabled,
       isHapticsEnabled: state.isHapticsEnabled,
       showCoordinates: state.showCoordinates,
       isAnimationsEnabled: state.isAnimationsEnabled,
       animationSettings: state.animationSettings,
+      soundSettings: state.soundSettings,
+      academySoundSettings: state.academySoundSettings,
       gameMode: 'classic',
       isRatedMode: false,
     );
@@ -3627,8 +3768,13 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
     final preserveTheme = state.boardThemeId;
     final preserveSound = state.isSoundEnabled;
+    final preserveGameSound = state.isGameSoundEnabled;
+    final preserveAcademySound = state.isAcademySoundEnabled;
     final preserveMusic = state.isMusicEnabled;
     final preserveAnimations = state.isAnimationsEnabled;
+    final preserveAnimationSettings = state.animationSettings;
+    final preserveSoundSettings = state.soundSettings;
+    final preserveAcademySoundSettings = state.academySoundSettings;
     final preserveHaptics = state.isHapticsEnabled;
     final preserveCoordinates = state.showCoordinates;
     final preserveAiOperational = state.isAiOperational;
@@ -3654,8 +3800,13 @@ class ChessNotifier extends StateNotifier<ChessState> {
       bottomAvatarId: preserveBottomLevel,
       boardThemeId: preserveTheme,
       isSoundEnabled: preserveSound,
+      isGameSoundEnabled: preserveGameSound,
+      isAcademySoundEnabled: preserveAcademySound,
       isMusicEnabled: preserveMusic,
       isAnimationsEnabled: preserveAnimations,
+      animationSettings: preserveAnimationSettings,
+      soundSettings: preserveSoundSettings,
+      academySoundSettings: preserveAcademySoundSettings,
       isHapticsEnabled: preserveHaptics,
       showCoordinates: preserveCoordinates,
       isAiOperational: preserveAiOperational,
@@ -3706,6 +3857,17 @@ class ChessNotifier extends StateNotifier<ChessState> {
           multiPV: 1); // Reset MultiPV for normal play
       state = state.copyWith(isEngineThinking: state.engineReady);
     }
+
+    _soundService.updateSettings(
+      sfxEnabled: state.isSoundEnabled,
+      bgmEnabled: state.isMusicEnabled,
+      gameSoundEnabled: state.isGameSoundEnabled,
+      soundSettings: state.soundSettings,
+      academySoundEnabled: state.isAcademySoundEnabled,
+      academySoundSettings: state.academySoundSettings,
+      isAcademyActive: false,
+      isRatedMode: state.isRatedMode,
+    );
   }
 
   Future<void> initializeAcademySession({String? customFen}) async {
@@ -3722,8 +3884,13 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
     final preserveTheme = state.boardThemeId;
     final preserveSound = state.isSoundEnabled;
+    final preserveGameSound = state.isGameSoundEnabled;
+    final preserveAcademySound = state.isAcademySoundEnabled;
     final preserveMusic = state.isMusicEnabled;
     final preserveAnimations = state.isAnimationsEnabled;
+    final preserveAnimationSettings = state.animationSettings;
+    final preserveSoundSettings = state.soundSettings;
+    final preserveAcademySoundSettings = state.academySoundSettings;
     final preserveHaptics = state.isHapticsEnabled;
     final preserveCoordinates = state.showCoordinates;
     final preserveAiOperational = state.isAiOperational;
@@ -3739,8 +3906,13 @@ class ChessNotifier extends StateNotifier<ChessState> {
       bottomAvatarId: preserveBottomLevel,
       boardThemeId: preserveTheme,
       isSoundEnabled: preserveSound,
+      isGameSoundEnabled: preserveGameSound,
+      isAcademySoundEnabled: preserveAcademySound,
       isMusicEnabled: preserveMusic,
       isAnimationsEnabled: preserveAnimations,
+      animationSettings: preserveAnimationSettings,
+      soundSettings: preserveSoundSettings,
+      academySoundSettings: preserveAcademySoundSettings,
       isHapticsEnabled: preserveHaptics,
       showCoordinates: preserveCoordinates,
       isAiOperational: preserveAiOperational,
@@ -3774,6 +3946,17 @@ class ChessNotifier extends StateNotifier<ChessState> {
     await _engine.setSkillLevel(AiAvatar.getAvatar(preserveLevel).skillLevel,
         multiPV: 3); // Academy uses MultiPV=3
     state = state.copyWith(isEngineThinking: state.engineReady);
+
+    _soundService.updateSettings(
+      sfxEnabled: state.isSoundEnabled,
+      bgmEnabled: state.isMusicEnabled,
+      gameSoundEnabled: state.isGameSoundEnabled,
+      soundSettings: state.soundSettings,
+      academySoundEnabled: state.isAcademySoundEnabled,
+      academySoundSettings: state.academySoundSettings,
+      isAcademyActive: true,
+      isRatedMode: state.isRatedMode,
+    );
   }
 
   Future<void> shutdown() async {

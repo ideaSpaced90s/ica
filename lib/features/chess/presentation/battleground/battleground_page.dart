@@ -9,7 +9,6 @@ import '../widgets/game_controls.dart';
 import 'battleground_board.dart';
 import '../../domain/models/ai_avatar.dart';
 import '../widgets/opponent_avatar_indicator.dart';
-import 'battleground_settings_page.dart';
 import '../widgets/arena_time_display.dart';
 import '../widgets/arena_turn_indicator.dart';
 import '../widgets/evaluation_bar.dart';
@@ -82,7 +81,7 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
         if (didPop) return;
         final isMatchActive = state.recentMoves.isNotEmpty && !state.game.gameOver;
         if (isMatchActive) {
-          final resigned = await _showRatedExitDialog(context);
+          final resigned = await showRatedExitDialog(context);
           if (resigned == true) {
             await ref.read(chessProvider.notifier).resignRatedGame();
             await ref.read(chessProvider.notifier).setRatedMode(false);
@@ -155,22 +154,23 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
               // Opponent Avatar Indicator (Top Left) with Inline Captured Pieces
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      ActiveAvatarWrapper(
-                        isActive: !isTurn,
-                        child: OpponentAvatarIndicator(
-                          avatar: AiAvatar.getAvatar(state.engineLevel),
-                          onTap: null, // Read-only from rated arena
-                        ),
+                child: Row(
+                  children: [
+                    ActiveAvatarWrapper(
+                      isActive: !isTurn,
+                      child: OpponentAvatarIndicator(
+                        avatar: AiAvatar.getAvatar(state.engineLevel),
+                        onTap: null, // Read-only from rated arena
                       ),
-                      const SizedBox(width: 12),
-                      CapturedPiecesInline(pieces: topPieces),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: CapturedPiecesInline(pieces: topPieces),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               // BoardStage centered
@@ -185,19 +185,20 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
               // User Avatar Indicator (Bottom Right) with Inline Captured Pieces
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
-                child: Align(
-                  alignment: Alignment.centerRight,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      CapturedPiecesInline(pieces: bottomPieces),
-                      const SizedBox(width: 12),
-                      ActiveAvatarWrapper(
-                        isActive: isTurn,
-                        child: const UserAvatarIndicator(),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: CapturedPiecesInline(pieces: bottomPieces),
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 12),
+                    ActiveAvatarWrapper(
+                      isActive: isTurn,
+                      child: const UserAvatarIndicator(),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 12),
@@ -299,14 +300,6 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Menu Icon for Exit/Resign
-                        IconButton(
-                          icon: const Icon(Icons.menu),
-                          onPressed: () {
-                            _showRatedExitDialog(context);
-                          },
-                        ),
-                        const SizedBox(width: 8), // Spacer for the new icon
                         ArenaTurnIndicator(isActive: isTurn, isWhite: state.isPlayerWhite),
                         const SizedBox(width: 8),
                         EvaluationBar(fillFraction: _getEvalFraction(state, true)),
@@ -334,22 +327,23 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
         // Opponent with inline captured pieces
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ActiveAvatarWrapper(
-                  isActive: !isTurn,
-                  child: OpponentAvatarIndicator(
-                    avatar: AiAvatar.getAvatar(state.engineLevel),
-                    onTap: null, // Read-only from rated arena
-                  ),
+          child: Row(
+            children: [
+              ActiveAvatarWrapper(
+                isActive: !isTurn,
+                child: OpponentAvatarIndicator(
+                  avatar: AiAvatar.getAvatar(state.engineLevel),
+                  onTap: null, // Read-only from rated arena
                 ),
-                const SizedBox(width: 12),
-                CapturedPiecesInline(pieces: topPieces),
-              ],
-            ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: CapturedPiecesInline(pieces: topPieces),
+                ),
+              ),
+            ],
           ),
         ),
         // Board
@@ -364,19 +358,20 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
         // User with inline captured pieces
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-          child: Align(
-            alignment: Alignment.centerRight,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CapturedPiecesInline(pieces: bottomPieces),
-                const SizedBox(width: 12),
-                ActiveAvatarWrapper(
-                  isActive: isTurn,
-                  child: const UserAvatarIndicator(),
+          child: Row(
+            children: [
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: CapturedPiecesInline(pieces: bottomPieces),
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 12),
+              ActiveAvatarWrapper(
+                isActive: isTurn,
+                child: const UserAvatarIndicator(),
+              ),
+            ],
           ),
         ),
         // Rated Actions (5 icons, Dice in middle, special sizes)
@@ -468,17 +463,6 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
             isActive: state.isPaused,
             size: 22,
             onTap: () => ref.read(chessProvider.notifier).togglePause(),
-          ),
-          const SizedBox(width: 8),
-          ActionIconButton(
-            icon: Icons.settings_suggest_rounded,
-            activeColor: ScholarlyTheme.accentBlue.withValues(alpha: 0.1),
-            activeIconColor: ScholarlyTheme.accentBlue,
-            isActive: true,
-            size: 22,
-            onTap: () {
-              Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BattlegroundSettingsPage()));
-            },
           ),
         ],
       ),
@@ -740,31 +724,6 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
   double _getEvalFraction(ChessState state, bool forPlayer) {
     final eval = forPlayer ? (state.isPlayerWhite ? state.currentEvaluation : -state.currentEvaluation) : (state.isPlayerWhite ? -state.currentEvaluation : state.currentEvaluation);
     return (eval.clamp(-5.0, 5.0) + 5.0) / 10.0;
-  }
-
-  Future<bool?> _showRatedExitDialog(BuildContext context) async {
-    return showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: ScholarlyTheme.panelBase,
-        surfaceTintColor: ScholarlyTheme.accentBlue,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28), side: BorderSide(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.2), width: 1)),
-        title: Column(mainAxisSize: MainAxisSize.min, children: [
-          Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.1), shape: BoxShape.circle), child: const Icon(Icons.logout_rounded, color: ScholarlyTheme.accentBlue, size: 24)),
-          const SizedBox(height: 16),
-          Text('Resign & Exit?', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary, fontSize: 20)),
-        ]),
-        content: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Text('Are you sure you wish to leave the match?', textAlign: TextAlign.center),
-          const SizedBox(height: 12),
-          Text('As this is a sanctioned Rated Arena game, exiting now will result in an automatic Loss and a deduction from your competitive ELO rating.', textAlign: TextAlign.center, style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 12, height: 1.5)),
-        ]),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('STAY & PLAY')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), style: FilledButton.styleFrom(backgroundColor: ScholarlyTheme.accentBlue, foregroundColor: Colors.white), child: const Text('RESIGN')),
-        ],
-      ),
-    );
   }
 
   Future<bool?> _showRatedNewGameDialog(BuildContext context) async {
@@ -1311,4 +1270,29 @@ class _SpringEntranceState extends State<_SpringEntrance>
       },
     );
   }
+}
+
+Future<bool?> showRatedExitDialog(BuildContext context) async {
+  return showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      backgroundColor: ScholarlyTheme.panelBase,
+      surfaceTintColor: ScholarlyTheme.accentBlue,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28), side: BorderSide(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.2), width: 1)),
+      title: Column(mainAxisSize: MainAxisSize.min, children: [
+        Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.1), shape: BoxShape.circle), child: const Icon(Icons.logout_rounded, color: ScholarlyTheme.accentBlue, size: 24)),
+        const SizedBox(height: 16),
+        Text('Resign & Exit?', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary, fontSize: 20)),
+      ]),
+      content: Column(mainAxisSize: MainAxisSize.min, children: [
+        const Text('Are you sure you wish to leave the match?', textAlign: TextAlign.center),
+        const SizedBox(height: 12),
+        Text('As this is a sanctioned Rated Arena game, exiting now will result in an automatic Loss and a deduction from your competitive ELO rating.', textAlign: TextAlign.center, style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 12, height: 1.5)),
+      ]),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('STAY & PLAY')),
+        FilledButton(onPressed: () => Navigator.pop(context, true), style: FilledButton.styleFrom(backgroundColor: ScholarlyTheme.accentBlue, foregroundColor: Colors.white), child: const Text('RESIGN')),
+      ],
+    ),
+  );
 }

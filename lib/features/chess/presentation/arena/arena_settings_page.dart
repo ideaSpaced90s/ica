@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../application/chess_provider.dart';
-import '../../application/tutorial_provider.dart';
 import '../../services/chess_sound_service.dart';
 import '../scholarly_theme.dart';
 import 'themes/theme_registry.dart';
@@ -10,8 +9,6 @@ import '../shared/themes/chess_theme.dart';
 import '../../domain/models/ai_avatar.dart';
 import '../widgets/avatar_selection_sheet.dart';
 import '../widgets/ambient_scaffold.dart';
-import '../sign_in_page.dart';
-import '../mobile_navigation_shell.dart';
 import 'dart:ui';
 
 class ArenaSettingsPage extends ConsumerStatefulWidget {
@@ -106,39 +103,7 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
                     ],
                   ),
 
-                  // PREFERENCES
-                  _SettingsCategory(
-                    title: 'PREFERENCES',
-                    children: [
-                      _SettingsSwitchTile(
-                        label: 'Music',
-                        description: 'Background music during gameplay',
-                        icon: state.isMusicEnabled
-                            ? Icons.music_note_rounded
-                            : Icons.music_off_rounded,
-                        value: state.isMusicEnabled,
-                        onChanged: (v) => notifier.toggleMusic(),
-                      ),
-                      _SettingsSwitchTile(
-                        label: 'Sound Effects',
-                        description: 'Move sounds and capture alerts',
-                        icon: state.isSoundEnabled
-                            ? Icons.volume_up_rounded
-                            : Icons.volume_off_rounded,
-                        value: state.isSoundEnabled,
-                        onChanged: (v) => notifier.toggleSound(),
-                      ),
-                      _SettingsSwitchTile(
-                        label: 'Haptic Feedback',
-                        description: 'Vibrations for physical impact',
-                        icon: state.isHapticsEnabled
-                            ? Icons.vibration_rounded
-                            : Icons.vibration_outlined,
-                        value: state.isHapticsEnabled,
-                        onChanged: (v) => notifier.toggleHaptics(),
-                      ),
-                    ],
-                  ),
+
 
                   // VISUALS
                   _SettingsCategory(
@@ -175,6 +140,34 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
                         ),
                       ],
                     ),
+
+                  // SOUNDS
+                  _SettingsCategory(
+                    title: 'SOUNDS',
+                    children: [
+                      _SettingsTile(
+                        label: 'Sound Engine',
+                        description: 'Configure board, checks, captures & outcome audio',
+                        icon: Icons.tune_rounded,
+                        onTap: () => _showSoundSettingsOverlay(context, ref),
+                        enabled: state.isGameSoundEnabled,
+                        trailing: const Icon(
+                          Icons.chevron_right_rounded,
+                          color: ScholarlyTheme.textMuted,
+                        ),
+                      ),
+                      _SettingsSwitchTile(
+                        label: 'Game Sounds',
+                        description: 'Enable or disable all chessboard sounds locally',
+                        icon: state.isGameSoundEnabled
+                            ? Icons.volume_up_rounded
+                            : Icons.volume_off_rounded,
+                        value: state.isGameSoundEnabled,
+                        onChanged: (v) => notifier.toggleGameSound(),
+                        enabled: true,
+                      ),
+                    ],
+                  ),
 
                   // GAMEPLAY
                   _SettingsCategory(
@@ -256,42 +249,7 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
                       ],
                     ),
 
-                  // ACCOUNT
-                  _SettingsCategory(
-                    title: 'ACCOUNT',
-                    children: [
-                      _SettingsTile(
-                        label: 'Sign Out',
-                        description: 'Return to the sign in screen',
-                        icon: Icons.logout_rounded,
-                        onTap: () async {
-                          ref.read(chessSoundServiceProvider).playSfx(SoundEffect.click);
-                          final repo = ref.read(tutorialProgressRepositoryProvider);
-                          await repo.setIsGoogleSignedIn(false);
-                          await repo.setWelcomeGuideSeen(false);
-                          ref.read(mobileNavIndexProvider.notifier).state = 0;
-                          if (context.mounted) {
-                            Navigator.of(context).pushReplacement(
-                              PageRouteBuilder(
-                                pageBuilder: (context, animation, secondaryAnimation) =>
-                                    const SignInPage(),
-                                transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                                  return FadeTransition(opacity: animation, child: child);
-                                },
-                                transitionDuration: const Duration(milliseconds: 800),
-                              ),
-                            );
-                          }
-                        },
-                        trailing: const Icon(
-                          Icons.chevron_right_rounded,
-                          color: Colors.redAccent,
-                          size: 18,
-                        ),
-                        accentColor: Colors.redAccent,
-                      ),
-                    ],
-                  ),
+
 
                   const SizedBox(height: 120), // Bottom padding
                 ]),
@@ -783,6 +741,147 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
       },
     );
   }
+
+  Future<void> _showSoundSettingsOverlay(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    await showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Dismiss',
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 300),
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return Center(
+          child: Material(
+            color: Colors.transparent,
+            child: Consumer(
+              builder: (context, ref, _) {
+                final state = ref.watch(chessProvider);
+                final notifier = ref.read(chessProvider.notifier);
+
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(24),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                      child: Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.45),
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.6),
+                            width: 1.5,
+                          ),
+                        ),
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxHeight: MediaQuery.of(context).size.height * 0.85,
+                          ),
+                          child: SingleChildScrollView(
+                            physics: const BouncingScrollPhysics(),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'Sound Engine',
+                                      style: GoogleFonts.inter(
+                                        color: ScholarlyTheme.textPrimary,
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.close,
+                                        color: ScholarlyTheme.textMuted,
+                                      ),
+                                      onPressed: () => Navigator.of(context).pop(),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Fine-tune your audio experience',
+                                  style: GoogleFonts.inter(
+                                    color: ScholarlyTheme.textMuted,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                const SizedBox(height: 24),
+                                _SoundToggle(
+                                  icon: Icons.directions_run_rounded,
+                                  label: 'Piece Movement',
+                                  description: 'Taps, sliding sounds, castle clangs & promotions',
+                                  value: state.soundSettings['moveSounds'] ?? true,
+                                  onChanged: (v) => notifier.updateSoundSetting('moveSounds', v),
+                                  enabled: state.isGameSoundEnabled,
+                                ),
+                                const SizedBox(height: 4),
+                                _SoundToggle(
+                                  icon: Icons.flash_on_rounded,
+                                  label: 'Piece Captures',
+                                  description: 'Capture sounds and arcade burst SFX',
+                                  value: state.soundSettings['captureSounds'] ?? true,
+                                  onChanged: (v) => notifier.updateSoundSetting('captureSounds', v),
+                                  enabled: state.isGameSoundEnabled,
+                                ),
+                                const SizedBox(height: 4),
+                                _SoundToggle(
+                                  icon: Icons.notifications_active_rounded,
+                                  label: 'Alerts & Indicators',
+                                  description: 'Check alerts, piece drops & invalid move thuds',
+                                  value: state.soundSettings['alertSounds'] ?? true,
+                                  onChanged: (v) => notifier.updateSoundSetting('alertSounds', v),
+                                  enabled: state.isGameSoundEnabled,
+                                ),
+                                const SizedBox(height: 16),
+                                FilledButton(
+                                  onPressed: () => Navigator.of(context).pop(),
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: ScholarlyTheme.accentBlue,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    'Done',
+                                    style: GoogleFonts.inter(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      },
+      transitionBuilder: (context, a1, a2, child) {
+        return Transform.scale(
+          scale: Curves.easeOutBack.transform(a1.value),
+          child: FadeTransition(opacity: a1, child: child),
+        );
+      },
+    );
+  }
 }
 
 class _SettingsCategory extends StatelessWidget {
@@ -823,7 +922,7 @@ class _SettingsTile extends ConsumerWidget {
   final VoidCallback onTap;
   final Widget? trailing;
   final String? imagePath;
-  final Color? accentColor;
+  final bool enabled;
 
   const _SettingsTile({
     required this.label,
@@ -832,65 +931,70 @@ class _SettingsTile extends ConsumerWidget {
     required this.onTap,
     this.trailing,
     this.imagePath,
-    this.accentColor,
+    this.enabled = true,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final effectiveAccent = accentColor;
-    return ListTile(
-      onTap: () {
-        ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-        onTap();
-      },
-      leading: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: effectiveAccent != null
-              ? effectiveAccent.withValues(alpha: 0.1)
-              : Colors.white.withValues(alpha: 0.35),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
+    const Color? effectiveAccent = null;
+    return Opacity(
+      opacity: enabled ? 1.0 : 0.4,
+      child: ListTile(
+        onTap: enabled
+            ? () {
+                ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                onTap();
+              }
+            : null,
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
             color: effectiveAccent != null
-                ? effectiveAccent.withValues(alpha: 0.35)
-                : Colors.white.withValues(alpha: 0.5),
-            width: 1,
+                ? effectiveAccent.withValues(alpha: 0.1)
+                : Colors.white.withValues(alpha: 0.35),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: effectiveAccent != null
+                  ? effectiveAccent.withValues(alpha: 0.35)
+                  : Colors.white.withValues(alpha: 0.5),
+              width: 1,
+            ),
           ),
-        ),
-        child: imagePath != null
-            ? ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: Image.asset(
-                  imagePath!,
-                  width: 20,
-                  height: 20,
-                  fit: BoxFit.cover,
+          child: imagePath != null
+              ? ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: Image.asset(
+                    imagePath!,
+                    width: 20,
+                    height: 20,
+                    fit: BoxFit.cover,
+                  ),
+                )
+              : Icon(
+                  icon,
+                  color: effectiveAccent ?? ScholarlyTheme.textPrimary,
+                  size: 20,
                 ),
-              )
-            : Icon(
-                icon,
-                color: effectiveAccent ?? ScholarlyTheme.textPrimary,
-                size: 20,
-              ),
-      ),
-      title: Text(
-        label,
-        style: GoogleFonts.inter(
-          color: effectiveAccent ?? ScholarlyTheme.textPrimary,
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
         ),
-      ),
-      subtitle: Text(
-        description,
-        style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 11),
-      ),
-      trailing: trailing ??
-          Icon(
-            Icons.chevron_right_rounded,
-            color: ScholarlyTheme.textSubtle,
-            size: 20,
+        title: Text(
+          label,
+          style: GoogleFonts.inter(
+            color: effectiveAccent ?? ScholarlyTheme.textPrimary,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
           ),
+        ),
+        subtitle: Text(
+          description,
+          style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 11),
+        ),
+        trailing: trailing ??
+            Icon(
+              Icons.chevron_right_rounded,
+              color: ScholarlyTheme.textSubtle,
+              size: 20,
+            ),
+      ),
     );
   }
 }
@@ -1001,6 +1105,103 @@ class _AnimationToggle extends ConsumerWidget {
   final bool enabled;
 
   const _AnimationToggle({
+    required this.icon,
+    required this.label,
+    required this.description,
+    required this.value,
+    required this.onChanged,
+    this.enabled = true,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Opacity(
+      opacity: enabled ? 1.0 : 0.4,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: InkWell(
+          onTap: () {
+            if (!enabled) return;
+            ref.read(chessSoundServiceProvider).playSfx(SoundEffect.switchToggle);
+            onChanged(!value);
+          },
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: value ? ScholarlyTheme.accentBlue.withValues(alpha: 0.1) : Colors.transparent,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: value ? ScholarlyTheme.accentBlue.withValues(alpha: 0.3) : Colors.transparent,
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: value ? ScholarlyTheme.accentBlue : ScholarlyTheme.textMuted,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        label,
+                        style: GoogleFonts.inter(
+                          color: ScholarlyTheme.textPrimary,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        description,
+                        style: GoogleFonts.inter(
+                          color: ScholarlyTheme.textMuted,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Switch(
+                  value: value,
+                  onChanged: (v) {
+                    if (!enabled) return;
+                    ref.read(chessSoundServiceProvider).playSfx(SoundEffect.switchToggle);
+                    onChanged(v);
+                  },
+                  activeThumbColor: ScholarlyTheme.accentBlue,
+                  activeTrackColor: ScholarlyTheme.accentBlue.withValues(
+                    alpha: 0.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SoundToggle extends ConsumerWidget {
+  final IconData icon;
+  final String label;
+  final String description;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+  final bool enabled;
+
+  const _SoundToggle({
     required this.icon,
     required this.label,
     required this.description,

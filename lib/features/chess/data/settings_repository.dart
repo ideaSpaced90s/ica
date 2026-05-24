@@ -7,6 +7,8 @@ import 'package:path_provider/path_provider.dart';
 class AppSettings {
   final String boardThemeId;
   final bool isSoundEnabled;
+  final bool isGameSoundEnabled;
+  final bool isAcademySoundEnabled;
   final bool isMusicEnabled;
   final bool isAnimationsEnabled;
   final bool isHapticsEnabled;
@@ -17,6 +19,8 @@ class AppSettings {
   final int totalTimeMinutes;
   final int incrementSeconds;
   final Map<String, bool> animationSettings;
+  final Map<String, bool> soundSettings;
+  final Map<String, bool> academySoundSettings;
   final String gameMode;
   final bool isRatedMode;
   final int consolidatedRating;
@@ -53,6 +57,8 @@ class AppSettings {
   AppSettings({
     this.boardThemeId = 'classic',
     this.isSoundEnabled = true,
+    this.isGameSoundEnabled = true,
+    this.isAcademySoundEnabled = true,
     this.isMusicEnabled = false,
     this.isAnimationsEnabled = true,
     this.isHapticsEnabled = true,
@@ -91,6 +97,19 @@ class AppSettings {
       'themeAmbience': true,
       'kineticImpact': true,
     },
+    this.soundSettings = const {
+      'moveSounds': true,
+      'captureSounds': true,
+      'alertSounds': true,
+    },
+    this.academySoundSettings = const {
+      'moveSounds': true,
+      'captureSounds': true,
+      'alertSounds': true,
+      'outcomeSounds': true,
+      'coachSounds': true,
+      'ambientClicks': true,
+    },
     this.bulletDominance = 0.0,
     this.blitzDominance = 0.0,
     this.rapidDominance = 0.0,
@@ -101,6 +120,8 @@ class AppSettings {
   AppSettings copyWith({
     String? boardThemeId,
     bool? isSoundEnabled,
+    bool? isGameSoundEnabled,
+    bool? isAcademySoundEnabled,
     bool? isMusicEnabled,
     bool? isAnimationsEnabled,
     bool? isHapticsEnabled,
@@ -111,6 +132,8 @@ class AppSettings {
     int? totalTimeMinutes,
     int? incrementSeconds,
     Map<String, bool>? animationSettings,
+    Map<String, bool>? soundSettings,
+    Map<String, bool>? academySoundSettings,
     String? gameMode,
     bool? isRatedMode,
     int? consolidatedRating,
@@ -141,6 +164,8 @@ class AppSettings {
     return AppSettings(
       boardThemeId: boardThemeId ?? this.boardThemeId,
       isSoundEnabled: isSoundEnabled ?? this.isSoundEnabled,
+      isGameSoundEnabled: isGameSoundEnabled ?? this.isGameSoundEnabled,
+      isAcademySoundEnabled: isAcademySoundEnabled ?? this.isAcademySoundEnabled,
       isMusicEnabled: isMusicEnabled ?? this.isMusicEnabled,
       isAnimationsEnabled: isAnimationsEnabled ?? this.isAnimationsEnabled,
       isHapticsEnabled: isHapticsEnabled ?? this.isHapticsEnabled,
@@ -151,6 +176,8 @@ class AppSettings {
       totalTimeMinutes: totalTimeMinutes ?? this.totalTimeMinutes,
       incrementSeconds: incrementSeconds ?? this.incrementSeconds,
       animationSettings: animationSettings ?? this.animationSettings,
+      soundSettings: soundSettings ?? this.soundSettings,
+      academySoundSettings: academySoundSettings ?? this.academySoundSettings,
       gameMode: gameMode ?? this.gameMode,
       isRatedMode: isRatedMode ?? this.isRatedMode,
       consolidatedRating: consolidatedRating ?? this.consolidatedRating,
@@ -183,6 +210,8 @@ class AppSettings {
   Map<String, dynamic> toJson() => {
     'boardThemeId': boardThemeId,
     'isSoundEnabled': isSoundEnabled,
+    'isGameSoundEnabled': isGameSoundEnabled,
+    'isAcademySoundEnabled': isAcademySoundEnabled,
     'isMusicEnabled': isMusicEnabled,
     'isAnimationsEnabled': isAnimationsEnabled,
     'isHapticsEnabled': isHapticsEnabled,
@@ -210,6 +239,8 @@ class AppSettings {
     'blitzStreak': blitzStreak,
     'rapidStreak': rapidStreak,
     'animationSettings': animationSettings,
+    'soundSettings': soundSettings,
+    'academySoundSettings': academySoundSettings,
     'academyHouseAnimations': academyHouseAnimations,
     'academyHouseColorFonts': academyHouseColorFonts,
     'academyHouseBoldEmphasis': academyHouseBoldEmphasis,
@@ -255,6 +286,8 @@ class AppSettings {
     return AppSettings(
       boardThemeId: json['boardThemeId'] ?? 'classic',
       isSoundEnabled: json['isSoundEnabled'] ?? true,
+      isGameSoundEnabled: json['isGameSoundEnabled'] ?? true,
+      isAcademySoundEnabled: json['isAcademySoundEnabled'] ?? true,
       isMusicEnabled: json['isMusicEnabled'] ?? false,
       isAnimationsEnabled: json['isAnimationsEnabled'] ?? true,
       isHapticsEnabled: json['isHapticsEnabled'] ?? true,
@@ -294,6 +327,23 @@ class AppSettings {
               'themeEffects': true,
               'themeAmbience': true,
               'kineticImpact': true,
+            },
+      soundSettings: json['soundSettings'] != null
+          ? Map<String, bool>.from(json['soundSettings'])
+          : const {
+              'moveSounds': true,
+              'captureSounds': true,
+              'alertSounds': true,
+            },
+      academySoundSettings: json['academySoundSettings'] != null
+          ? Map<String, bool>.from(json['academySoundSettings'])
+          : const {
+              'moveSounds': true,
+              'captureSounds': true,
+              'alertSounds': true,
+              'outcomeSounds': true,
+              'coachSounds': true,
+              'ambientClicks': true,
             },
       bulletDominance: (json['bulletDominance'] ?? 0.0).toDouble(),
       blitzDominance: (json['blitzDominance'] ?? 0.0).toDouble(),

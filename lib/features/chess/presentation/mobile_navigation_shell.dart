@@ -8,6 +8,7 @@ import 'scholarly_theme.dart';
 
 import 'dashboard_page.dart';
 import 'main_page.dart';
+import 'battleground/battleground_page.dart';
 import 'academy/academy_page.dart';
 import 'puzzles/puzzles_page.dart';
 import 'analysis/analysis_page.dart';
@@ -15,6 +16,7 @@ import 'history_page.dart';
 
 import 'tutorial_page.dart';
 import 'about_us_page.dart';
+import 'settings_page.dart';
 
 import 'widgets/welcome_guide_page.dart';
 import '../application/onboarding_provider.dart';
@@ -41,6 +43,7 @@ class MobileNavigationShell extends ConsumerWidget {
       const HistoryPage(),
       const TutorialPage(),
       const AboutUsPage(),
+      const SettingsPage(),
     ];
 
     // Determine logical title based on active tab
@@ -62,6 +65,8 @@ class MobileNavigationShell extends ConsumerWidget {
           return 'TUTORIAL';
         case 7:
           return 'ABOUT US';
+        case 8:
+          return 'SETTINGS';
         default:
           return 'IDEASPACE CHESS ACADEMY';
       }
@@ -88,9 +93,23 @@ class MobileNavigationShell extends ConsumerWidget {
           builder: (context) {
             return IconButton(
               icon: const Icon(Icons.menu_rounded, color: ScholarlyTheme.textPrimary),
-              onPressed: () {
+              onPressed: () async {
                 ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
-                Scaffold.of(context).openDrawer();
+                final isBattleground = currentIndex == 1 && state.isRatedMode;
+                final isMatchActive = isBattleground && state.recentMoves.isNotEmpty && !state.game.gameOver;
+                
+                if (isMatchActive) {
+                  final resigned = await showRatedExitDialog(context);
+                  if (resigned == true) {
+                    await ref.read(chessProvider.notifier).resignRatedGame();
+                    await ref.read(chessProvider.notifier).setRatedMode(false);
+                    if (context.mounted) {
+                      exitToDashboardWithSidebar(context, ref);
+                    }
+                  }
+                } else {
+                  Scaffold.of(context).openDrawer();
+                }
               },
             );
           },
@@ -226,6 +245,14 @@ class _MobileSidebarDrawer extends ConsumerWidget {
                   isSelected: currentIndex == 6,
                   onTap: () {
                     _navigate(ref, context, 6);
+                  },
+                ),
+                _DrawerTile(
+                  label: 'Settings',
+                  icon: Icons.settings_rounded,
+                  isSelected: currentIndex == 8,
+                  onTap: () {
+                    _navigate(ref, context, 8);
                   },
                 ),
                 _DrawerTile(

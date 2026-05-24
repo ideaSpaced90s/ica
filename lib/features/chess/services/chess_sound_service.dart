@@ -77,8 +77,26 @@ class ChessSoundService {
   final Map<String, AudioSource> _sfxSources = {};
 
   SoundHandle? _bgmHandle;
+  final List<SoundHandle> _activeBgmHandles = [];
   AudioSource? _currentBgmSource;
   bool isSfxEnabled = true;
+  bool isGameSoundEnabled = true;
+  bool isAcademySoundEnabled = true;
+  bool isAcademyActive = false;
+  bool isRatedMode = false;
+  Map<String, bool> soundSettings = const {
+    'moveSounds': true,
+    'captureSounds': true,
+    'alertSounds': true,
+  };
+  Map<String, bool> academySoundSettings = const {
+    'moveSounds': true,
+    'captureSounds': true,
+    'alertSounds': true,
+    'outcomeSounds': true,
+    'coachSounds': true,
+    'ambientClicks': true,
+  };
   bool isBgmEnabled = false;
   bool _isInitialized = false;
 
@@ -130,8 +148,27 @@ class ChessSoundService {
     }());
   }
 
-  void updateSettings({required bool sfxEnabled, required bool bgmEnabled}) {
+  void updateSettings({
+    required bool sfxEnabled,
+    required bool bgmEnabled,
+    bool gameSoundEnabled = true,
+    Map<String, bool> soundSettings = const {},
+    bool academySoundEnabled = true,
+    Map<String, bool> academySoundSettings = const {},
+    bool isAcademyActive = false,
+    bool isRatedMode = false,
+  }) {
     isSfxEnabled = sfxEnabled;
+    isGameSoundEnabled = gameSoundEnabled;
+    isAcademySoundEnabled = academySoundEnabled;
+    this.isAcademyActive = isAcademyActive;
+    this.isRatedMode = isRatedMode;
+    if (soundSettings.isNotEmpty) {
+      this.soundSettings = soundSettings;
+    }
+    if (academySoundSettings.isNotEmpty) {
+      this.academySoundSettings = academySoundSettings;
+    }
 
     if (isBgmEnabled != bgmEnabled) {
       isBgmEnabled = bgmEnabled;
@@ -157,11 +194,25 @@ class ChessSoundService {
       _currentBgmSource = nextSource;
 
       // Start playing the new BGM at volume 0
-      _bgmHandle = await SoLoud.instance.play(
+      final handle = await SoLoud.instance.play(
         nextSource,
         looping: true,
         volume: 0.0,
       );
+
+      if (!isBgmEnabled) {
+        // If BGM was disabled while we were awaiting, stop this handle immediately
+        try {
+          if (SoLoud.instance.isInitialized) {
+            SoLoud.instance.stop(handle);
+          }
+        } catch (_) {}
+        _currentBgmSource = null;
+        return;
+      }
+
+      _bgmHandle = handle;
+      _activeBgmHandles.add(handle);
 
       // Smooth C++ hardware-accelerated crossfade
       SoLoud.instance.fadeVolume(_bgmHandle!, _bgmVolumeScale, const Duration(seconds: 5));
@@ -175,6 +226,7 @@ class ChessSoundService {
               SoLoud.instance.stop(prevHandle);
             }
           } catch (_) {}
+          _activeBgmHandles.remove(prevHandle);
         });
       }
     } catch (e) {
@@ -183,15 +235,16 @@ class ChessSoundService {
   }
 
   void _stopBgm() {
-    if (_bgmHandle != null && SoLoud.instance.isInitialized) {
-      try {
-        SoLoud.instance.stop(_bgmHandle!);
-        _bgmHandle = null;
-        _currentBgmSource = null;
-      } catch (e) {
-        debugPrint('Error stopping BGM: $e');
+    if (SoLoud.instance.isInitialized && _activeBgmHandles.isNotEmpty) {
+      for (final handle in _activeBgmHandles) {
+        try {
+          SoLoud.instance.stop(handle);
+        } catch (_) {}
       }
     }
+    _activeBgmHandles.clear();
+    _bgmHandle = null;
+    _currentBgmSource = null;
   }
 
   Future<void> _playSound(String key) async {
@@ -207,18 +260,61 @@ class ChessSoundService {
     }
   }
 
-  Future<void> playMove() async => _playSound('move');
-  Future<void> playCapture() async => _playSound('capture');
-  Future<void> playNotify() async => _playSound('notify');
-  Future<void> playWhoosh() async => _playSound('whoosh');
-  Future<void> playPawnMove() async => _playSound('piecemove');
-  Future<void> playKingMove() async => _playSound('move');
+  bool _isCategoryEnabled(String key) {
+    if (isAcademyActive) {
+      if (!isAcademySoundEnabled) return false;
+      return academySoundSettings[key] ?? true;
+    } else {
+      if (!isGameSoundEnabled) return false;
+      if (key == 'outcomeSounds' || key == 'coachSounds' || key == 'ambientClicks') {
+        return false;
+      }
+      return soundSettings[key] ?? true;
+    }
+  }
+
+  Future<void> playMove() async {
+    if (isRatedMode) return;
+    if (!_isCategoryEnabled('moveSounds')) return;
+    await _playSound('move');
+  }
+
+  Future<void> playCapture() async {
+    if (isRatedMode) return;
+    if (!_isCategoryEnabled('captureSounds')) return;
+    await _playSound('capture');
+  }
+
+  Future<void> playNotify() async {
+    if (isRatedMode) return;
+    if (!_isCategoryEnabled('alertSounds')) return;
+    await _playSound('notify');
+  }
+
+  Future<void> playWhoosh() async {
+    if (isRatedMode) return;
+    if (!_isCategoryEnabled('outcomeSounds')) return;
+    await _playSound('whoosh');
+  }
+
+  Future<void> playPawnMove() async {
+    if (isRatedMode) return;
+    if (!_isCategoryEnabled('moveSounds')) return;
+    await _playSound('piecemove');
+  }
+
+  Future<void> playKingMove() async {
+    if (isRatedMode) return;
+    if (!_isCategoryEnabled('moveSounds')) return;
+    await _playSound('move');
+  }
 
   // Sequential state index to cycle through soft typing sounds organically
   int _writingSoundIndex = 0;
 
   Future<void> playWriting() async {
-    if (!isSfxEnabled || !_isInitialized || !SoLoud.instance.isInitialized) return;
+    if (isRatedMode) return;
+    if (!isSfxEnabled || !_isCategoryEnabled('ambientClicks') || !_isInitialized || !SoLoud.instance.isInitialized) return;
     
     // Cycle through 5 clicks to sound like real typing
     _writingSoundIndex = (_writingSoundIndex % 5) + 1;
@@ -233,7 +329,79 @@ class ChessSoundService {
     }
   }
 
+  bool _isGameSound(SoundEffect effect) {
+    switch (effect) {
+      case SoundEffect.move:
+      case SoundEffect.capture:
+      case SoundEffect.illegal:
+      case SoundEffect.check:
+      case SoundEffect.gameover:
+      case SoundEffect.captureImpact:
+      case SoundEffect.pieceLand:
+      case SoundEffect.checkAlert:
+      case SoundEffect.moveSoft:
+      case SoundEffect.gmchanakyaThinking:
+      case SoundEffect.gmchanakyaComplete:
+      case SoundEffect.victory:
+      case SoundEffect.defeat:
+      case SoundEffect.draw:
+      case SoundEffect.castle:
+      case SoundEffect.promote:
+        return true;
+      case SoundEffect.click:
+      case SoundEffect.uiClick:
+      case SoundEffect.uiNavigate:
+      case SoundEffect.uiToggle:
+      case SoundEffect.uiTap:
+      case SoundEffect.tabSwipe:
+      case SoundEffect.switchToggle:
+        return false;
+    }
+  }
+
   void playSfx(SoundEffect effect) {
+    if (!isSfxEnabled) return;
+    final isGame = _isGameSound(effect);
+    if (isGame && isRatedMode) return;
+    final enabled = isGame
+        ? (isAcademyActive ? isAcademySoundEnabled : isGameSoundEnabled)
+        : true;
+    if (!enabled) return;
+
+    // Check specific sub-categories for game sounds
+    if (isGame) {
+      switch (effect) {
+        case SoundEffect.move:
+        case SoundEffect.moveSoft:
+        case SoundEffect.castle:
+        case SoundEffect.promote:
+          if (!_isCategoryEnabled('moveSounds')) return;
+          break;
+        case SoundEffect.capture:
+        case SoundEffect.captureImpact:
+          if (!_isCategoryEnabled('captureSounds')) return;
+          break;
+        case SoundEffect.illegal:
+        case SoundEffect.check:
+        case SoundEffect.checkAlert:
+        case SoundEffect.pieceLand:
+          if (!_isCategoryEnabled('alertSounds')) return;
+          break;
+        case SoundEffect.gameover:
+        case SoundEffect.victory:
+        case SoundEffect.defeat:
+        case SoundEffect.draw:
+          if (!_isCategoryEnabled('outcomeSounds')) return;
+          break;
+        case SoundEffect.gmchanakyaThinking:
+        case SoundEffect.gmchanakyaComplete:
+          if (!_isCategoryEnabled('coachSounds')) return;
+          break;
+        default:
+          break;
+      }
+    }
+
     switch (effect) {
       case SoundEffect.move:
         playMove();

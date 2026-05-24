@@ -1,20 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../application/chess_provider.dart';
-import '../../services/chess_sound_service.dart';
-import '../scholarly_theme.dart';
-import '../widgets/game_controls.dart';
-import '../widgets/ambient_scaffold.dart';
 
-class BattlegroundSettingsPage extends ConsumerStatefulWidget {
-  const BattlegroundSettingsPage({super.key});
+import '../application/chess_provider.dart';
+import '../application/tutorial_provider.dart';
+import '../services/chess_sound_service.dart';
+import 'scholarly_theme.dart';
+import 'widgets/ambient_scaffold.dart';
+import 'sign_in_page.dart';
+import 'mobile_navigation_shell.dart';
+
+class SettingsPage extends ConsumerStatefulWidget {
+  const SettingsPage({super.key});
 
   @override
-  ConsumerState<BattlegroundSettingsPage> createState() => _BattlegroundSettingsPageState();
+  ConsumerState<SettingsPage> createState() => _SettingsPageState();
 }
 
-class _BattlegroundSettingsPageState extends ConsumerState<BattlegroundSettingsPage> {
+class _SettingsPageState extends ConsumerState<SettingsPage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
@@ -24,9 +27,9 @@ class _BattlegroundSettingsPageState extends ConsumerState<BattlegroundSettingsP
 
     return AmbientScaffold(
       scaffoldKey: _scaffoldKey,
-      blob1Color: const Color(0xFFE2E8F0),
-      blob2Color: const Color(0xFFDBEAFE),
-      blob3Color: const Color(0xFFD1FAE5),
+      blob1Color: const Color(0xFFDBEAFE), // Soft Blue
+      blob2Color: const Color(0xFFFEF3C7), // Soft Gold
+      blob3Color: const Color(0xFFF3E8FF), // Soft Purple
       body: Stack(
         children: [
           CustomScrollView(
@@ -37,24 +40,31 @@ class _BattlegroundSettingsPageState extends ConsumerState<BattlegroundSettingsP
               // SETTINGS SECTIONS
               SliverList(
                 delegate: SliverChildListDelegate([
-                  // CORE PREFERENCES
+                  // PREFERENCES
                   _SettingsCategory(
-                    title: 'PREFERENCES',
+                    title: 'GLOBAL PREFERENCES',
                     children: [
-                      // Sound Effects
+                      _SettingsSwitchTile(
+                        label: 'Music',
+                        description: 'Background music during gameplay',
+                        icon: state.isMusicEnabled
+                            ? Icons.music_note_rounded
+                            : Icons.music_off_rounded,
+                        value: state.isMusicEnabled,
+                        onChanged: (v) => notifier.toggleMusic(),
+                      ),
                       _SettingsSwitchTile(
                         label: 'Sound Effects',
-                        description: 'Tactical move audio',
+                        description: 'Move sounds and capture alerts',
                         icon: state.isSoundEnabled
                             ? Icons.volume_up_rounded
                             : Icons.volume_off_rounded,
                         value: state.isSoundEnabled,
                         onChanged: (v) => notifier.toggleSound(),
                       ),
-                      // Haptics
                       _SettingsSwitchTile(
                         label: 'Haptic Feedback',
-                        description: 'Physical impact response',
+                        description: 'Vibrations for physical impact',
                         icon: state.isHapticsEnabled
                             ? Icons.vibration_rounded
                             : Icons.vibration_outlined,
@@ -64,7 +74,43 @@ class _BattlegroundSettingsPageState extends ConsumerState<BattlegroundSettingsP
                     ],
                   ),
 
-                  // ACCOUNT/STATS RESET
+                  // ACCOUNT
+                  _SettingsCategory(
+                    title: 'ACCOUNT',
+                    children: [
+                      _SettingsTile(
+                        label: 'Sign Out',
+                        description: 'Return to the sign in screen',
+                        icon: Icons.logout_rounded,
+                        onTap: () async {
+                          ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                          final repo = ref.read(tutorialProgressRepositoryProvider);
+                          await repo.setIsGoogleSignedIn(false);
+                          await repo.setWelcomeGuideSeen(false);
+                          ref.read(mobileNavIndexProvider.notifier).state = 0;
+                          if (context.mounted) {
+                            Navigator.of(context).pushReplacement(
+                              PageRouteBuilder(
+                                pageBuilder: (context, animation, secondaryAnimation) =>
+                                    const SignInPage(),
+                                transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                                  return FadeTransition(opacity: animation, child: child);
+                                },
+                                transitionDuration: const Duration(milliseconds: 800),
+                              ),
+                            );
+                          }
+                        },
+                        trailing: const Icon(
+                          Icons.chevron_right_rounded,
+                          color: Colors.redAccent,
+                          size: 18,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  // DANGER ZONE
                   _SettingsCategory(
                     title: 'DANGER ZONE',
                     children: [
@@ -96,15 +142,10 @@ class _BattlegroundSettingsPageState extends ConsumerState<BattlegroundSettingsP
       left: 20,
       right: 20,
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          ActionIconButton(
-            icon: Icons.arrow_back_rounded,
-            size: 24,
-            onTap: () => Navigator.of(context).pop(),
-          ),
           Text(
-            'BATTLEGROUND SETTINGS',
+            'GLOBAL SETTINGS',
             style: GoogleFonts.inter(
               color: ScholarlyTheme.textSubtle,
               fontSize: 12,
@@ -221,6 +262,7 @@ class _SettingsTile extends ConsumerWidget {
   final IconData icon;
   final VoidCallback onTap;
   final Color? accentColor;
+  final Widget? trailing;
 
   const _SettingsTile({
     required this.label,
@@ -228,6 +270,7 @@ class _SettingsTile extends ConsumerWidget {
     required this.icon,
     required this.onTap,
     this.accentColor,
+    this.trailing,
   });
 
   @override
@@ -270,7 +313,7 @@ class _SettingsTile extends ConsumerWidget {
         description,
         style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 11),
       ),
-      trailing: Icon(
+      trailing: trailing ?? Icon(
         Icons.chevron_right_rounded,
         color: ScholarlyTheme.textSubtle,
         size: 20,
