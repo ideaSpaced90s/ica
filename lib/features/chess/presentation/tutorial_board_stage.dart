@@ -4,11 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:chess/chess.dart' as chess_lib;
 
 import 'scholarly_theme.dart';
-import 'orbiting_star_animation.dart';
+import 'shared/widgets/orbiting_star_animation.dart';
 import '../application/tutorial_provider.dart';
 import '../domain/models/tutorial_lesson.dart';
 import 'widgets/tutorial_board_overlay.dart';
-import 'themes/theme_registry.dart';
+import 'arena/themes/theme_registry.dart';
 
 class TutorialBoardStage extends ConsumerStatefulWidget {
   const TutorialBoardStage({super.key});

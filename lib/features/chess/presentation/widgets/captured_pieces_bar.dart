@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:chess/chess.dart' as chess_lib;
 import '../../application/chess_provider.dart';
-import '../themes/theme_registry.dart';
+import '../arena/themes/theme_registry.dart';
 import '../scholarly_theme.dart';
 
 class CapturedPiecesBar extends ConsumerWidget {

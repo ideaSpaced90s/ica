@@ -2,7 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../application/chess_provider.dart';
-import 'chess_piece_widget.dart';
+import 'shared/widgets/chess_piece_widget.dart';
 
 class TrailMovementOverlay extends ConsumerStatefulWidget {
   final MoveAnimationData data;

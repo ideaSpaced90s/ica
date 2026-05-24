@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../application/chess_provider.dart';
-import 'zen_arena_page.dart';
-import 'rated_arena_page.dart';
+import 'arena/arena_page.dart';
+import 'battleground/battleground_page.dart';
 
 class MainPage extends ConsumerWidget {
   const MainPage({super.key});
@@ -14,9 +14,9 @@ class MainPage extends ConsumerWidget {
 
     final Widget child;
     if (isRated) {
-      child = const RatedArenaPage();
+      child = const BattlegroundPage();
     } else {
-      child = const ZenArenaPage();
+      child = const ArenaPage();
     }
 
     return child;
