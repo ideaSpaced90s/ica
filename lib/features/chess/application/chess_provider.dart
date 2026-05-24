@@ -9,6 +9,8 @@ import 'package:kingslayer_chess/src/rust/api/threats.dart';
 
 import '../data/saved_game.dart';
 import '../data/saved_game_repository.dart';
+import '../domain/performance_ledger_entry.dart';
+import '../data/performance_ledger_repository.dart';
 import '../data/stockfish_service.dart';
 import '../data/chess_engine_service.dart';
 import '../data/crafty_service.dart';
@@ -284,6 +286,7 @@ class ChessState {
     this.cachedOpenings = const [],
     this.cachedEndgames,
     this.cachedDominanceHeatmap = const [],
+    this.cachedLedgerEntries = const [],
   });
 
   final ChessGame game;
@@ -386,6 +389,7 @@ class ChessState {
   final List<OpeningRepertoireStats> cachedOpenings;
   final EndgamePerformanceStats? cachedEndgames;
   final List<double> cachedDominanceHeatmap;
+  final List<PerformanceLedgerEntry> cachedLedgerEntries;
 
   bool get isChess960 => gameMode == 'chess960';
 
@@ -501,6 +505,7 @@ class ChessState {
     List<OpeningRepertoireStats>? cachedOpenings,
     EndgamePerformanceStats? cachedEndgames,
     List<double>? cachedDominanceHeatmap,
+    List<PerformanceLedgerEntry>? cachedLedgerEntries,
   }) {
     return ChessState(
       game: game ?? this.game,
@@ -642,6 +647,7 @@ class ChessState {
       cachedOpenings: cachedOpenings ?? this.cachedOpenings,
       cachedEndgames: cachedEndgames ?? this.cachedEndgames,
       cachedDominanceHeatmap: cachedDominanceHeatmap ?? this.cachedDominanceHeatmap,
+      cachedLedgerEntries: cachedLedgerEntries ?? this.cachedLedgerEntries,
     );
   }
 }
@@ -652,6 +658,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
     this._craftyEngine,
     this._commentaryEngine,
     this._savedGameRepository,
+    this._performanceLedgerRepository,
     this._soundService,
     this._hapticsService,
     this._aiContextService,
@@ -846,28 +853,35 @@ class ChessNotifier extends StateNotifier<ChessState> {
     await reset(skipAutoSave: true);
   }
 
-  void resetRatedStats() {
-    state = state.copyWith(
-      consolidatedRating: 1200,
-      bulletElo: 1200,
-      blitzElo: 1200,
-      rapidElo: 1200,
-      totalRatedGamesCount: 0,
-      bulletGamesClassic: 0,
-      bulletGames960: 0,
-      blitzGamesClassic: 0,
-      blitzGames960: 0,
-      rapidGamesClassic: 0,
-      rapidGames960: 0,
-      totalWinningStreak: 0,
-      bulletStreak: 0,
-      blitzStreak: 0,
-      rapidStreak: 0,
-      bulletDominance: 0.0,
-      blitzDominance: 0.0,
-      rapidDominance: 0.0,
-    );
-    _saveSettings();
+  Future<void> resetRatedStats() async {
+    try {
+      await _performanceLedgerRepository.clearAll();
+      state = state.copyWith(
+        consolidatedRating: 1200,
+        bulletElo: 1200,
+        blitzElo: 1200,
+        rapidElo: 1200,
+        totalRatedGamesCount: 0,
+        bulletGamesClassic: 0,
+        bulletGames960: 0,
+        blitzGamesClassic: 0,
+        blitzGames960: 0,
+        rapidGamesClassic: 0,
+        rapidGames960: 0,
+        totalWinningStreak: 0,
+        bulletStreak: 0,
+        blitzStreak: 0,
+        rapidStreak: 0,
+        bulletDominance: 0.0,
+        blitzDominance: 0.0,
+        rapidDominance: 0.0,
+        cachedLedgerEntries: const [],
+      );
+      _refreshDashboardStats();
+      await _saveSettings();
+    } catch (e) {
+      debugPrint('Failed to reset rated stats & ledger: $e');
+    }
   }
 
   void toggleSound() {
@@ -1141,6 +1155,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
   final CommentaryEngine _commentaryEngine;
   final SavedGameRepository _savedGameRepository;
+  final PerformanceLedgerRepository _performanceLedgerRepository;
   final ChessSoundService _soundService;
   final ChessHapticsService _hapticsService;
   final AiContextService _aiContextService;
@@ -1555,7 +1570,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
   }
 
   void _refreshDashboardStats() {
-    final ratedSaves = state.savedGames.where((s) => s.isRatedMode).toList();
+    final ratedSaves = state.cachedLedgerEntries;
 
     // 1. Analyze Scotoma via Rust FFI
     ScotomaResult? scotoma;
@@ -1564,10 +1579,10 @@ class ChessNotifier extends StateNotifier<ChessState> {
         return SavedGameUci(
           recentMoves: s.recentMoves,
           isPlayerWhite: s.isPlayerWhite,
-          result: s.result ?? 'D',
+          result: s.result,
           whiteTimeLeftMs: s.whiteTimeLeftMs,
           blackTimeLeftMs: s.blackTimeLeftMs,
-          ratingCategory: s.ratingCategory ?? 'rapid',
+          ratingCategory: s.ratingCategory,
         );
       }).toList();
       try {
@@ -1580,10 +1595,10 @@ class ChessNotifier extends StateNotifier<ChessState> {
     // 2. Playstyle calculations
     TacticalPlaystyleStats? playstyle;
     if (ratedSaves.isNotEmpty) {
-      final avgDom = ratedSaves.map((s) => s.dominanceSnapshot ?? 0.0).reduce((a, b) => a + b) / ratedSaves.length;
+      final avgDom = ratedSaves.map((s) => s.dominance).reduce((a, b) => a + b) / ratedSaves.length;
       final aggression = math.min(1.0, math.max(0.0, (avgDom + 5) / 10));
 
-      final maxElo = ratedSaves.map((s) => s.ratingSnapshot ?? 1200).reduce(math.max);
+      final maxElo = ratedSaves.map((s) => s.ratingSnapshot).reduce(math.max);
       final power = math.min(1.0, (maxElo - 400) / 2000);
 
       final count960 = ratedSaves.where((s) => s.gameMode == 'chess960').length;
@@ -1727,24 +1742,24 @@ class ChessNotifier extends StateNotifier<ChessState> {
     final now = DateTime.now();
     final thirtyDaysAgo = now.subtract(const Duration(days: 30));
     
-    // Group by day
+    // Group by day (ascending order: oldest first, newest last)
     final Map<String, List<double>> dailyDom = {};
-    for (int i = 0; i < 30; i++) {
+    for (int i = 29; i >= 0; i--) {
       final date = now.subtract(Duration(days: i));
       final dateKey = '${date.year}-${date.month}-${date.day}';
       dailyDom[dateKey] = [];
     }
 
-    for (final s in state.savedGames) {
-      if (s.savedAt.isAfter(thirtyDaysAgo)) {
-        final dateKey = '${s.savedAt.year}-${s.savedAt.month}-${s.savedAt.day}';
-        if (dailyDom.containsKey(dateKey) && s.dominanceSnapshot != null) {
-          dailyDom[dateKey]!.add(s.dominanceSnapshot!);
+    for (final s in state.cachedLedgerEntries) {
+      if (s.timestamp.isAfter(thirtyDaysAgo)) {
+        final dateKey = '${s.timestamp.year}-${s.timestamp.month}-${s.timestamp.day}';
+        if (dailyDom.containsKey(dateKey)) {
+          dailyDom[dateKey]!.add(s.dominance);
         }
       }
     }
 
-    final List<String> sortedKeys = dailyDom.keys.toList()..sort((a, b) => b.compareTo(a));
+    final List<String> sortedKeys = dailyDom.keys.toList()..sort((a, b) => a.compareTo(b));
     for (final key in sortedKeys) {
       final doms = dailyDom[key]!;
       final avg = doms.isEmpty ? 0.0 : doms.reduce((a, b) => a + b) / doms.length;
@@ -1764,7 +1779,12 @@ class ChessNotifier extends StateNotifier<ChessState> {
     state = state.copyWith(isSavedGamesLoading: true);
     try {
       final saves = await _savedGameRepository.listSaves();
-      state = state.copyWith(savedGames: saves, isSavedGamesLoading: false);
+      final ledgerEntries = await _performanceLedgerRepository.listEntries();
+      state = state.copyWith(
+        savedGames: saves,
+        cachedLedgerEntries: ledgerEntries,
+        isSavedGamesLoading: false,
+      );
       _refreshDashboardStats();
       return saves;
     } catch (error, stackTrace) {
@@ -1839,8 +1859,30 @@ class ChessNotifier extends StateNotifier<ChessState> {
         finalSaves = await _savedGameRepository.save(entry);
       }
 
+      List<PerformanceLedgerEntry> updatedLedger = state.cachedLedgerEntries;
+      if (entry.isRatedMode && entry.result != null) {
+        final avatar = AiAvatar.getAvatar(state.engineLevel);
+        final ledgerEntry = PerformanceLedgerEntry(
+          id: entry.id,
+          timestamp: entry.savedAt,
+          ratingCategory: entry.ratingCategory ?? _getRatingCategory(state.baseTimeDuration, state.incrementDuration),
+          gameMode: entry.gameMode,
+          result: entry.result!,
+          dominance: entry.dominanceSnapshot ?? 0.0,
+          opponentName: avatar.name,
+          ratingSnapshot: entry.ratingSnapshot ?? 1200,
+          fen: entry.fen,
+          recentMoves: List<String>.from(entry.recentMoves),
+          isPlayerWhite: entry.isPlayerWhite,
+          whiteTimeLeftMs: entry.whiteTimeLeftMs,
+          blackTimeLeftMs: entry.blackTimeLeftMs,
+        );
+        updatedLedger = await _performanceLedgerRepository.addEntry(ledgerEntry);
+      }
+
       state = state.copyWith(
         savedGames: finalSaves,
+        cachedLedgerEntries: updatedLedger,
         isSavingGame: false,
         commentaryError: null,
       );
@@ -1895,7 +1937,11 @@ class ChessNotifier extends StateNotifier<ChessState> {
   Future<void> clearAllHistory() async {
     try {
       await _savedGameRepository.clearAll();
-      state = state.copyWith(savedGames: const []);
+      await _performanceLedgerRepository.clearAll();
+      state = state.copyWith(
+        savedGames: const [],
+        cachedLedgerEntries: const [],
+      );
       _refreshDashboardStats();
     } catch (e) {
       debugPrint('Failed to clear history: $e');
@@ -2261,12 +2307,22 @@ class ChessNotifier extends StateNotifier<ChessState> {
   Future<void> nextPuzzle({bool silent = false}) async {
     if (!state.isPuzzleMode) return;
     
-    final puzzle = await _puzzleRepository.getRandomPuzzle();
-    if (puzzle != null) {
-      await loadPuzzle(puzzle, silent: silent);
-    } else {
+    debugPrint('ChessNotifier: Requesting next puzzle...');
+    try {
+      final puzzle = await _puzzleRepository.getRandomPuzzle();
+      if (puzzle != null) {
+        debugPrint('ChessNotifier: Loading puzzle #${puzzle.id}');
+        await loadPuzzle(puzzle, silent: silent);
+      } else {
+        debugPrint('ChessNotifier: Puzzle repository returned null');
+        state = state.copyWith(
+          commentaryError: 'Could not fetch a puzzle from the archives.',
+        );
+      }
+    } catch (e) {
+      debugPrint('ChessNotifier: Failed to get next puzzle: $e');
       state = state.copyWith(
-        commentaryError: 'Could not fetch a puzzle from the archives.',
+        commentaryError: 'An error occurred while fetching a puzzle.',
       );
     }
   }
@@ -3815,6 +3871,7 @@ final chessSoundServiceProvider = Provider((ref) {
 final chessHapticsServiceProvider = Provider((ref) => ChessHapticsService());
 final commentaryEngineProvider = Provider((ref) => CommentaryEngine());
 final savedGameRepositoryProvider = Provider((ref) => SavedGameRepository());
+final performanceLedgerRepositoryProvider = Provider((ref) => PerformanceLedgerRepository());
 final settingsRepositoryProvider = Provider((ref) => SettingsRepository());
 
 final chessProvider = StateNotifierProvider<ChessNotifier, ChessState>((ref) {
@@ -3822,6 +3879,7 @@ final chessProvider = StateNotifierProvider<ChessNotifier, ChessState>((ref) {
   final craftyEngine = ref.watch(craftyServiceProvider);
   final commentaryEngine = ref.watch(commentaryEngineProvider);
   final savedGameRepository = ref.watch(savedGameRepositoryProvider);
+  final performanceLedgerRepository = ref.watch(performanceLedgerRepositoryProvider);
   final soundService = ref.watch(chessSoundServiceProvider);
   final hapticsService = ref.watch(chessHapticsServiceProvider);
   final aiContextService = ref.watch(aiContextServiceProvider);
@@ -3832,6 +3890,7 @@ final chessProvider = StateNotifierProvider<ChessNotifier, ChessState>((ref) {
     craftyEngine,
     commentaryEngine,
     savedGameRepository,
+    performanceLedgerRepository,
     soundService,
     hapticsService,
     aiContextService,

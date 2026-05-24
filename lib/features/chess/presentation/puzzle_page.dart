@@ -416,13 +416,13 @@ class _PuzzlePageState extends ConsumerState<PuzzlePage> {
   }
 }
 
-class _PuzzleStatusHeader extends StatelessWidget {
+class _PuzzleStatusHeader extends ConsumerWidget {
   final ChessState state;
 
   const _PuzzleStatusHeader({required this.state});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final p = state.currentPuzzle;
     final bool isSolved = state.puzzleMovesRemaining.isEmpty;
 
@@ -471,15 +471,69 @@ class _PuzzleStatusHeader extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      isSolved ? 'SOLVED' : (p != null ? 'PUZZLE #${p.id}' : 'LOADING...'),
+                      isSolved
+                          ? 'SOLVED'
+                          : (p != null
+                              ? 'PUZZLE #${p.id}'
+                              : (state.commentaryError != null
+                                  ? 'ERROR'
+                                  : 'LOADING...')),
                       style: GoogleFonts.outfit(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: isSolved ? Colors.green.shade700 : ScholarlyTheme.textPrimary,
+                        color: isSolved
+                            ? Colors.green.shade700
+                            : (state.commentaryError != null
+                                ? Colors.redAccent
+                                : ScholarlyTheme.textPrimary),
                         letterSpacing: 0.5,
                       ),
                     ),
-                    if (p != null)
+                    if (state.commentaryError != null && p == null)
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              state.commentaryError!,
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: Colors.redAccent.withValues(alpha: 0.8),
+                                fontWeight: FontWeight.w500,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          GestureDetector(
+                            onTap: () => ref
+                                .read(chessProvider.notifier)
+                                .nextPuzzle(silent: true),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.redAccent.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(
+                                  color: Colors.redAccent.withValues(alpha: 0.2),
+                                ),
+                              ),
+                              child: Text(
+                                'RETRY',
+                                style: GoogleFonts.inter(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.redAccent,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
+                    else if (p != null)
                       Text(
                         'Rating: ${p.rating} • ${state.isPlayerWhite ? "White" : "Black"} to move',
                         style: GoogleFonts.inter(

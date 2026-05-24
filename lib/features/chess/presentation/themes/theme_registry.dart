@@ -11,6 +11,7 @@ import 'shadow_theme.dart';
 import 'rated_classic_theme.dart';
 import 'academy_classic_theme.dart';
 import 'puzzles_classic_theme.dart';
+import 'scholar_theme.dart';
 import '../../application/chess_provider.dart';
 
 class ThemeRegistry {
@@ -24,6 +25,7 @@ class ThemeRegistry {
     'theme8': const WalnutTheme(),
     'theme9': const ToyTheme(),
     'theme10': const ShadowTheme(),
+    'scholar': const ScholarTheme(),
     'rated_classic': const RatedClassicTheme(),
     'academy_classic': const AcademyClassicTheme(),
     'puzzles_classic': const PuzzlesClassicTheme(),
@@ -43,6 +45,7 @@ class ThemeRegistry {
         _themes['theme8']!,
         _themes['theme9']!,
         _themes['theme10']!,
+        _themes['scholar']!,
       ];
 
   static String resolveThemeId(ChessState state) {

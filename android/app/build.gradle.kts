@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -5,8 +7,14 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
+}
+
 android {
-    namespace = "com.dsamok.kingslayer"
+    namespace = "com.dsamok.ideaspacechess"
     compileSdk = 36
     ndkVersion = "28.2.13676358"
 
@@ -20,7 +28,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.dsamok.kingslayer"
+        applicationId = "com.dsamok.ideaspacechess"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 26
@@ -29,11 +37,25 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        create("release") {
+            keyAlias = keystoreProperties.getProperty("keyAlias")
+            keyPassword = keystoreProperties.getProperty("keyPassword")
+            storeFile = keystoreProperties.getProperty("storeFile")?.let { keystorePropertiesFile: String ->
+                val keystoreFile = file(keystorePropertiesFile)
+                if (keystoreFile.exists()) {
+                    keystoreFile
+                } else {
+                    rootProject.file(keystorePropertiesFile)
+                }
+            }
+            storePassword = keystoreProperties.getProperty("storePassword")
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 

@@ -289,6 +289,25 @@ class _UnratedSettingsPageState extends ConsumerState<UnratedSettingsPage> {
                     ],
                   ),
 
+                  // RESET PROGRESS
+                  _SettingsCategory(
+                    title: 'RESET PROGRESS',
+                    children: [
+                      _SettingsTile(
+                        label: 'Reset Rated Stats & Ledger',
+                        description: 'Permanently wipe rating progress, playstyle, and dominance stats',
+                        icon: Icons.refresh_rounded,
+                        onTap: () => _confirmResetRatedStats(context, ref),
+                        trailing: const Icon(
+                          Icons.chevron_right_rounded,
+                          color: Colors.redAccent,
+                          size: 18,
+                        ),
+                        accentColor: Colors.redAccent,
+                      ),
+                    ],
+                  ),
+
                   const SizedBox(height: 120), // Bottom padding for floating bar
                 ]),
               ),
@@ -781,7 +800,145 @@ class _UnratedSettingsPageState extends ConsumerState<UnratedSettingsPage> {
     );
   }
 
+  Future<void> _confirmResetRatedStats(BuildContext context, WidgetRef ref) async {
+    final proceed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: ScholarlyTheme.panelBase,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Text(
+            'Reset Stats & Ledger?',
+            style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: ScholarlyTheme.textPrimary),
+          ),
+          content: Text(
+            'This action will permanently wipe your official ELO rating progress, playstyle profile, scotoma diagnostics, and day-by-day dominance stats history ledger. Your archived saves will remain untouched. Are you sure you want to proceed?',
+            style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 14),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(
+                'No',
+                style: GoogleFonts.inter(color: ScholarlyTheme.textMuted),
+              ),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: FilledButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: Text(
+                'Yes',
+                style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.white),
+              ),
+            ),
+          ],
+        );
+      },
+    );
 
+    if (proceed != true) return;
+
+    if (!context.mounted) return;
+
+    final controller = TextEditingController();
+    final finalConfirm = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              backgroundColor: ScholarlyTheme.panelBase,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: Text(
+                'Re-verification Required',
+                style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: ScholarlyTheme.textPrimary),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Please type "reset" below to confirm factory reset.',
+                    style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 14),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: controller,
+                    style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary),
+                    decoration: InputDecoration(
+                      hintText: 'reset',
+                      hintStyle: GoogleFonts.inter(color: ScholarlyTheme.textSubtle),
+                      filled: true,
+                      fillColor: ScholarlyTheme.backgroundStart,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide.none,
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Colors.redAccent),
+                      ),
+                    ),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: Text(
+                    'Cancel',
+                    style: GoogleFonts.inter(color: ScholarlyTheme.textMuted),
+                  ),
+                ),
+                FilledButton(
+                  onPressed: controller.text.trim().toLowerCase() == 'reset'
+                      ? () => Navigator.of(context).pop(true)
+                      : null,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Colors.redAccent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: Text(
+                    'Confirm',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.white),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (finalConfirm == true) {
+      await ref.read(chessProvider.notifier).resetRatedStats();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Rated stats and performance ledger reset to factory defaults.',
+              style: GoogleFonts.inter(color: Colors.white),
+            ),
+            backgroundColor: ScholarlyTheme.accentBlue,
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
 }
 
 class _SettingsCategory extends StatelessWidget {

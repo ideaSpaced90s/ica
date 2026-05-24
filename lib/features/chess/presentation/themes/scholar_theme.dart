@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'chess_theme.dart';
 
-class AcademyClassicTheme extends ChessTheme {
-  const AcademyClassicTheme() : super(id: 'academy_classic', name: 'Classic');
+class ScholarTheme extends ChessTheme {
+  const ScholarTheme() : super(id: 'scholar', name: 'Scholar');
 
   @override
-  Color get lightSquare => const Color(0xFFE8D1B5);
+  Color get lightSquare => const Color(0xFFF0F2F5); // Soft White
 
   @override
-  Color get darkSquare => const Color(0xFFB58863);
+  Color get darkSquare => const Color(0xFF1E3A8A); // Navy Blue
 
   @override
   Color get lightCoordinateColor => Colors.black87.withValues(alpha: 0.7);
@@ -17,7 +17,7 @@ class AcademyClassicTheme extends ChessTheme {
   Color get darkCoordinateColor => Colors.white70;
 
   @override
-  Color get frameColor => const Color(0xFF8B4513);
+  Color get frameColor => const Color(0xFF0F172A); // Darker Slate/Navy Frame
 
   @override
   Widget buildBackground(BuildContext context, bool animationsEnabled) {
@@ -42,47 +42,38 @@ class AcademyClassicTheme extends ChessTheme {
     bool isHighlighted,
     double animationValue,
   ) {
-    final rowIndex = isWhite ? 0 : 1;
-    int colIndex;
+    final colorPrefix = isWhite ? 'w' : 'b';
+    String pieceName;
+    
     switch (type.toUpperCase()) {
       case 'K':
-        colIndex = 0;
+        pieceName = 'King';
         break;
       case 'Q':
-        colIndex = 1;
+        pieceName = 'Queen';
         break;
       case 'B':
-        colIndex = 2;
+        pieceName = 'Bishop';
         break;
       case 'N':
-        colIndex = 3;
+        pieceName = 'Knight';
         break;
       case 'R':
-        colIndex = 4;
+        pieceName = 'Rook';
         break;
       case 'P':
-        colIndex = 5;
+        pieceName = 'Pawn';
         break;
       default:
-        colIndex = 5;
+        pieceName = 'Pawn';
     }
-
-    return AspectRatio(
-      aspectRatio: 1,
-      child: ClipRect(
-        child: FractionallySizedBox(
-          widthFactor: 6.0,
-          heightFactor: 2.0,
-          alignment: Alignment(
-            (colIndex * 2.0 / 5.0) - 1.0,
-            (rowIndex * 2.0 / 1.0) - 1.0,
-          ),
-          child: Image.asset(
-            'assets/board/ideaspaceclassicchesssprite2.png',
-            fit: BoxFit.fill,
-            filterQuality: FilterQuality.high,
-          ),
-        ),
+    
+    return Padding(
+      padding: const EdgeInsets.all(4.0), // give it a little breathing room
+      child: Image.asset(
+        'assets/board/scholar_pieces/${pieceName}_$colorPrefix.png',
+        fit: BoxFit.contain,
+        filterQuality: FilterQuality.high,
       ),
     );
   }
@@ -108,7 +99,8 @@ class AcademyClassicTheme extends ChessTheme {
 
   @override
   Widget buildSelectionEffect(BuildContext context, double animationValue) {
-    return const SizedBox.shrink();
+    // Standard gold star animation or similar
+    return const SizedBox.shrink(); // Will be handled by the default OrbitingStar
   }
 
   @override

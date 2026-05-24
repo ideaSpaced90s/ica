@@ -1,6 +1,6 @@
-# KINGSLAYER: The Ultimate Grandmaster Experience
+# IdeaSpace Chess Academy: The Ultimate Grandmaster Experience
 
-KINGSLAYER is a state-of-the-art Android mobile chess application that blends a professional, modern "Scholarly" aesthetic with cutting-edge High Council AI and the world-class Stockfish S-engine.
+IdeaSpace Chess Academy is a state-of-the-art Android mobile chess application that blends a professional, modern "Scholarly" aesthetic with cutting-edge High Council AI and the world-class Stockfish S-engine.
 
 ---
 

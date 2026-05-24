@@ -24,7 +24,7 @@ class BoardTheme {
       lightSquare: Color(0xFFE8D1B5),
       darkSquare: Color(0xFFB58863),
       frameColor: Color(0xFF8B4513),
-      pieceSetAsset: 'assets/board/Chess_Pieces_Sprite.png',
+      pieceSetAsset: 'assets/board/ideaspaceclassicchesssprite2.png',
     ),
     BoardTheme(
       id: 'theme2',
@@ -32,7 +32,7 @@ class BoardTheme {
       lightSquare: Color(0xFFE6D3A3),
       darkSquare: Color(0xFF4F7942),
       frameColor: Color(0xFF2E4D23),
-      pieceSetAsset: 'assets/board/Chess_Pieces_Sprite.png',
+      pieceSetAsset: 'assets/board/ideaspaceclassicchesssprite2.png',
     ),
     BoardTheme(
       id: 'theme3',
@@ -40,7 +40,7 @@ class BoardTheme {
       lightSquare: Color(0xFFF5F5DC), // Rice Paper
       darkSquare: Color(0xFFD6D3D1), // Faded Ink Wash
       frameColor: Color(0xFF2C2C2C), // Dark Ink Frame
-      pieceSetAsset: 'assets/board/Chess_Pieces_Sprite.png',
+      pieceSetAsset: 'assets/board/ideaspaceclassicchesssprite2.png',
     ),
     BoardTheme(
       id: 'theme4',
@@ -48,7 +48,7 @@ class BoardTheme {
       lightSquare: Color(0xFFD1D5DB), // Brushed Steel
       darkSquare: Color(0xFF374151), // Gunmetal
       frameColor: Color(0xFF1F2933), // Cool Dark Grey
-      pieceSetAsset: 'assets/board/Chess_Pieces_Sprite.png',
+      pieceSetAsset: 'assets/board/ideaspaceclassicchesssprite2.png',
     ),
     BoardTheme(
       id: 'theme5',
@@ -56,7 +56,7 @@ class BoardTheme {
       lightSquare: Color(0xFF8D6E63),
       darkSquare: Color(0xFF4E342E),
       frameColor: Color(0xFF3E2723),
-      pieceSetAsset: 'assets/board/Chess_Pieces_Sprite.png',
+      pieceSetAsset: 'assets/board/ideaspaceclassicchesssprite2.png',
     ),
     BoardTheme(
       id: 'theme7',
@@ -64,7 +64,7 @@ class BoardTheme {
       lightSquare: Color(0xFFE5E7EB), // Soft neutral grey
       darkSquare: Color(0xFF374151), // Slate grey
       frameColor: Color(0xFF1F2937),
-      pieceSetAsset: 'assets/board/Chess_Pieces_Sprite.png',
+      pieceSetAsset: 'assets/board/ideaspaceclassicchesssprite2.png',
     ),
     BoardTheme(
       id: 'theme8',
@@ -72,7 +72,7 @@ class BoardTheme {
       lightSquare: Color(0xFFE6C9A8), // Light Maple
       darkSquare: Color(0xFF6B4F3A), // Walnut Brown
       frameColor: Color(0xFF4A3728),
-      pieceSetAsset: 'assets/board/Chess_Pieces_Sprite.png',
+      pieceSetAsset: 'assets/board/ideaspaceclassicchesssprite2.png',
     ),
     BoardTheme(
       id: 'theme9',
@@ -80,7 +80,7 @@ class BoardTheme {
       lightSquare: Color(0xFFFFF3E0),
       darkSquare: Color(0xFFFFB74D),
       frameColor: Color(0xFFE65100),
-      pieceSetAsset: 'assets/board/Chess_Pieces_Sprite.png',
+      pieceSetAsset: 'assets/board/ideaspaceclassicchesssprite2.png',
     ),
     BoardTheme(
       id: 'theme10',
@@ -88,7 +88,15 @@ class BoardTheme {
       lightSquare: Color(0xFF3C3C3C),
       darkSquare: Color(0xFF000000),
       frameColor: Color(0xFF000000),
-      pieceSetAsset: 'assets/board/Chess_Pieces_Sprite.png',
+      pieceSetAsset: 'assets/board/ideaspaceclassicchesssprite2.png',
+    ),
+    BoardTheme(
+      id: 'scholar',
+      name: 'Scholar',
+      lightSquare: Color(0xFFF0F2F5), // Soft White
+      darkSquare: Color(0xFF1E3A8A), // Navy Blue
+      frameColor: Color(0xFF0F172A), // Darker Slate/Navy Frame
+      pieceSetAsset: 'assets/board/sample2.png',
     ),
   ];
 

@@ -11,7 +11,7 @@ import 'chess_engine_service.dart';
 /// This implementation treats Stockfish as a separate, independent executable
 /// for GPL compliance and uses a platform channel to find the executable path on Android.
 class StockfishService implements ChessEngineService {
-  static const _channel = MethodChannel('com.dsamok.kingslayer/native_path');
+  static const _channel = MethodChannel('com.dsamok.ideaspacechess/native_path');
 
   bool _isReady = false;
   bool _isDisposed = false;

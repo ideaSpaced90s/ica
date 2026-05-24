@@ -16,10 +16,12 @@ class PuzzleRepository {
     final dbPath = p.join(directory.path, 'lichess_puzzles_50k.db');
     final file = File(dbPath);
 
+    debugPrint('PuzzleRepository: Checking database at $dbPath');
     if (!await file.exists()) {
-      debugPrint('PuzzleRepository: Copying pre-populated database from assets...');
+      debugPrint('PuzzleRepository: Database not found. Copying from assets...');
       try {
         final byteData = await rootBundle.load('assets/data/lichess_puzzles_50k.db');
+        debugPrint('PuzzleRepository: Asset loaded, size: ${byteData.lengthInBytes} bytes');
         final bytes = byteData.buffer.asUint8List(
           byteData.offsetInBytes,
           byteData.lengthInBytes,
@@ -30,6 +32,8 @@ class PuzzleRepository {
         debugPrint('PuzzleRepository: Failed to copy asset database: $e');
         rethrow;
       }
+    } else {
+      debugPrint('PuzzleRepository: Database already exists at $dbPath (size: ${await file.length()} bytes)');
     }
 
     _cachedDbPath = dbPath;
@@ -63,13 +67,20 @@ class PuzzleRepository {
   }) async {
     try {
       final path = await getDatabasePath();
-      return await rust_puzzles.getRandomPuzzle(
+      debugPrint('PuzzleRepository: Requesting random puzzle from Rust FFI (path: $path)...');
+      final puzzle = await rust_puzzles.getRandomPuzzle(
         dbPath: path,
         minRating: minRating,
         maxRating: maxRating,
       );
+      if (puzzle == null) {
+        debugPrint('PuzzleRepository: Rust FFI returned null puzzle');
+      } else {
+        debugPrint('PuzzleRepository: Received puzzle #${puzzle.id} from Rust FFI');
+      }
+      return puzzle;
     } catch (e) {
-      debugPrint('PuzzleRepository: Get random puzzle failed: $e');
+      debugPrint('PuzzleRepository: Get random puzzle failed with exception: $e');
       return null;
     }
   }

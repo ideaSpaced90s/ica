@@ -325,7 +325,7 @@ class _AboutUsPageState extends ConsumerState<AboutUsPage> {
                         _buildMathSectionHeader('6. SCOTOMA VISUAL BLIND SPOT ALGORITHMS'),
                         const SizedBox(height: 10),
                         _buildMathText(
-                          'A Scotoma (from the Greek "skotos", meaning darkness) is a visual blind spot. In Kingslayer, the '
+                          'A Scotoma (from the Greek "skotos", meaning darkness) is a visual blind spot. In IdeaSpace Chess Academy, the '
                           'Scotoma Diagnostic Engine analyzes the move logs of your rated games in a native Rust core to '
                           'compute your vulnerability indices across 8 distinct visual and psychological axes.',
                         ),

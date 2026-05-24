@@ -1,5 +1,5 @@
 name: kingslayer_chess
-description: "A new Flutter project."
+description: "IdeaSpace Chess Academy - A professional chess training application."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -74,6 +74,7 @@ flutter:
   assets:
     - assets/pieces/
     - assets/board/
+    - assets/board/scholar_pieces/
     - assets/persona/
     - assets/sfx/
     - assets/bgm/
