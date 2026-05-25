@@ -129,7 +129,12 @@ class MobileNavigationShell extends ConsumerWidget {
       drawer: const _MobileSidebarDrawer(),
       body: IndexedStack(
         index: currentIndex,
-        children: pages,
+        children: List.generate(pages.length, (index) {
+          return TickerMode(
+            enabled: currentIndex == index,
+            child: pages[index],
+          );
+        }),
       ),
     );
 

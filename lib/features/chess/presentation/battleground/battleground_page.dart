@@ -249,9 +249,9 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
                         ],
                       ),
                       const Spacer(),
-                      ArenaTimeDisplay(isActive: isTurn, timeLeft: state.isPlayerWhite ? state.whiteTimeLeft : state.blackTimeLeft),
+                      ArenaTimeDisplay(isWhite: state.isPlayerWhite, isActive: isTurn),
                       const SizedBox(width: 12),
-                      ArenaTimeDisplay(isActive: !isTurn, timeLeft: state.isPlayerWhite ? state.blackTimeLeft : state.whiteTimeLeft),
+                      ArenaTimeDisplay(isWhite: !state.isPlayerWhite, isActive: !isTurn),
                       const Spacer(),
                       Row(
                         mainAxisSize: MainAxisSize.min,
@@ -319,9 +319,9 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
                       ],
                     ),
                     const Spacer(),
-                    ArenaTimeDisplay(isActive: isTurn, timeLeft: state.isPlayerWhite ? state.whiteTimeLeft : state.blackTimeLeft),
+                    ArenaTimeDisplay(isWhite: state.isPlayerWhite, isActive: isTurn),
                     const SizedBox(width: 12),
-                    ArenaTimeDisplay(isActive: !isTurn, timeLeft: state.isPlayerWhite ? state.blackTimeLeft : state.whiteTimeLeft),
+                    ArenaTimeDisplay(isWhite: !state.isPlayerWhite, isActive: !isTurn),
                     const Spacer(),
                     Row(
                       mainAxisSize: MainAxisSize.min,

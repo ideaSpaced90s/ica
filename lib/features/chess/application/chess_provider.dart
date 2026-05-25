@@ -5,6 +5,7 @@ import 'package:chess/chess.dart' as chess_lib;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
+import 'game_clock_provider.dart';
 import 'package:kingslayer_chess/src/rust/api/threats.dart';
 
 import '../data/saved_game.dart';
@@ -690,7 +691,10 @@ class ChessState {
 }
 
 class ChessNotifier extends StateNotifier<ChessState> {
+  final Ref ref;
+
   ChessNotifier(
+    this.ref,
     this._stockfishEngine,
     this._craftyEngine,
     this._commentaryEngine,
@@ -824,6 +828,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
       // Automatically load saved games and populate dashboard caches on boot
       await loadSavedGames();
+      _syncTimesToClockProvider();
     } catch (e) {
       debugPrint('Failed to load settings: $e');
     }
@@ -1097,6 +1102,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
       activeClockSide: null,
     );
     _stopClock();
+    _syncTimesToClockProvider();
     _saveSettings();
   }
 
@@ -1334,7 +1340,6 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
   Timer? _engineMoveTimer;
   Timer? _commentaryRevealTimer;
-  Timer? _clockTimer;
   Timer? _maxThinkingTimer;
   DateTime? _engineStartTime;
   StreamSubscription<String>? _stockfishSubscription;
@@ -2403,6 +2408,13 @@ class ChessNotifier extends StateNotifier<ChessState> {
   }
 
   _BoardSnapshot _captureCurrentSnapshot() {
+    if (state.clockStarted) {
+      final clockState = ref.read(gameClockProvider);
+      state = state.copyWith(
+        whiteTimeLeft: clockState.whiteTimeLeft,
+        blackTimeLeft: clockState.blackTimeLeft,
+      );
+    }
     return _BoardSnapshot(
       fen: state.game.fen,
       lastMove: state.lastMove,
@@ -3328,6 +3340,14 @@ class ChessNotifier extends StateNotifier<ChessState> {
   }
 
   void _onMoveCompleted(String lastMove) {
+    if (state.clockStarted) {
+      final clockState = ref.read(gameClockProvider);
+      state = state.copyWith(
+        whiteTimeLeft: clockState.whiteTimeLeft,
+        blackTimeLeft: clockState.blackTimeLeft,
+      );
+    }
+
     final updatedMoves = state.game.moveHistoryLabels();
     final move = _lastMoveFromHistory();
 
@@ -3335,7 +3355,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
     // Apply Clock Increment
     if (state.clockStarted && !state.game.gameOver) {
-      if (player == 'White') {
+      final isWhite = player == 'White';
+      ref.read(gameClockProvider.notifier).applyIncrement(state.incrementDuration, isWhite);
+      if (isWhite) {
         state = state.copyWith(
           whiteTimeLeft: state.whiteTimeLeft + state.incrementDuration,
         );
@@ -3834,60 +3856,34 @@ class ChessNotifier extends StateNotifier<ChessState> {
     );
   }
 
+  void _syncTimesToClockProvider() {
+    ref.read(gameClockProvider.notifier).setClock(
+      whiteTime: state.whiteTimeLeft,
+      blackTime: state.blackTimeLeft,
+      started: state.clockStarted,
+      activeSide: state.activeClockSide,
+      timeOut: state.isTimeOut,
+    );
+  }
+
+  void handleClockTimeout(String side) {
+    _handleClockTimeout(side);
+  }
+
   void _startClockTicker() {
+    ref.read(gameClockProvider.notifier).setClock(
+      whiteTime: state.whiteTimeLeft,
+      blackTime: state.blackTimeLeft,
+      started: true,
+      activeSide: state.activeClockSide ?? _clockSideForTurn(),
+      timeOut: state.isTimeOut,
+    );
     if (!state.clockStarted || state.activeClockSide == null) {
-      _stopClock();
-      return;
+      state = state.copyWith(
+        clockStarted: true,
+        activeClockSide: state.activeClockSide ?? _clockSideForTurn(),
+      );
     }
-
-    _clockTimer?.cancel();
-    _clockTimer = Timer.periodic(const Duration(milliseconds: 100), (_) {
-      if (_isDisposed || !state.clockStarted || state.activeClockSide == null) {
-        return;
-      }
-
-      final side = state.activeClockSide;
-      if (side == _clockWhite) {
-        final next = state.whiteTimeLeft - const Duration(milliseconds: 100);
-        if (next <= Duration.zero) {
-          state = state.copyWith(
-            whiteTimeLeft: Duration.zero,
-            isTimeOut: true,
-            clockStarted: false,
-          );
-          _handleClockTimeout(_clockWhite);
-          return;
-        }
-        state = state.copyWith(whiteTimeLeft: next);
-
-        // Low time heartbeat (fire once per second when below 10s)
-        if (state.isHapticsEnabled && 
-            next <= const Duration(seconds: 10) && 
-            next.inMilliseconds % 1000 == 0) {
-          _hapticsService.heartbeat();
-        }
-        return;
-      }
-
-      final next = state.blackTimeLeft - const Duration(milliseconds: 100);
-      if (next <= Duration.zero) {
-        state = state.copyWith(
-          blackTimeLeft: Duration.zero,
-          isTimeOut: true,
-          clockStarted: false,
-        );
-        _handleClockTimeout(_clockBlack);
-        return;
-      }
-      state = state.copyWith(blackTimeLeft: next);
-
-      // Low time heartbeat
-      if (state.isHapticsEnabled && 
-          next <= const Duration(seconds: 10) && 
-          next.inMilliseconds % 1000 == 0) {
-        _hapticsService.heartbeat();
-      }
-    });
   }
 
   void _setActiveClockSide(String? side) {
@@ -3897,6 +3893,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
       return;
     }
     state = state.copyWith(activeClockSide: side);
+    ref.read(gameClockProvider.notifier).setActiveSide(side);
   }
 
   void _handleClockTimeout(String side) {
@@ -3944,8 +3941,13 @@ class ChessNotifier extends StateNotifier<ChessState> {
   }
 
   void _stopClock() {
-    _clockTimer?.cancel();
-    _clockTimer = null;
+    final clockState = ref.read(gameClockProvider);
+    ref.read(gameClockProvider.notifier).stopClock();
+    state = state.copyWith(
+      whiteTimeLeft: clockState.whiteTimeLeft,
+      blackTimeLeft: clockState.blackTimeLeft,
+      clockStarted: false,
+    );
   }
 
   String _clockSideForTurn() {
@@ -4391,6 +4393,7 @@ final chessProvider = StateNotifierProvider<ChessNotifier, ChessState>((ref) {
   final settingsRepository = ref.watch(settingsRepositoryProvider);
   final puzzleRepository = ref.watch(puzzleRepositoryProvider);
   return ChessNotifier(
+    ref,
     stockfishEngine,
     craftyEngine,
     commentaryEngine,

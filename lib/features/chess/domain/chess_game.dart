@@ -19,6 +19,8 @@ class ChessGame {
   String get fen => _chess.fen;
   GameTerminationStatus? _cachedStatus;
   String _cachedStatusFen = '';
+  List<String>? _cachedSanLabels;
+  int _cachedHistoryLength = 0;
 
   GameTerminationStatus _getStatus() {
     final currentFen = fen;
@@ -26,6 +28,16 @@ class ChessGame {
       return _cachedStatus!;
     }
     try {
+      if (!kDebugMode) {
+        final status = evaluateGameStatus(
+          fen: currentFen,
+          isChess960: isChess960,
+        );
+        _cachedStatusFen = currentFen;
+        _cachedStatus = status;
+        return status;
+      }
+
       final stopwatchRust = Stopwatch()..start();
       final status = evaluateGameStatus(
         fen: currentFen,
@@ -84,7 +96,7 @@ class ChessGame {
       }
     }
 
-    if (fromStr != null && toStr != null) {
+    if (kDebugMode && fromStr != null && toStr != null) {
       try {
         final stopwatchRust = Stopwatch()..start();
         final resultingFenRust = validateAndApplyMove(
@@ -255,7 +267,69 @@ class ChessGame {
     return _chess.generate_moves({'square': square});
   }
 
+  void _applyChess960CastlingDestinations(List<String> destinations, String fromSquare) {
+    final p = getPiece(fromSquare);
+    if (p != null && p.type == chess_lib.PieceType.KING) {
+      final myRank = p.color == chess_lib.Color.WHITE ? '1' : '8';
+      if (fromSquare.endsWith(myRank)) {
+        final fenParts = fen.split(' ');
+        if (fenParts.length > 2) {
+          final rights = fenParts[2];
+          final isWhite = p.color == chess_lib.Color.WHITE;
+
+          for (final f in files) {
+            final sq = '$f$myRank';
+            final rp = getPiece(sq);
+            if (rp != null &&
+                rp.type == chess_lib.PieceType.ROOK &&
+                rp.color == p.color) {
+              if (rights != '-') {
+                if (!destinations.contains(sq)) {
+                  destinations.add(sq);
+                }
+                final standardDest = f.compareTo(fromSquare[0]) > 0
+                    ? (isWhite ? 'g1' : 'g8')
+                    : (isWhite ? 'c1' : 'c8');
+                if (!destinations.contains(standardDest)) {
+                  destinations.add(standardDest);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
   List<String> legalDestinations(String fromSquare) {
+    if (!kDebugMode) {
+      List<String> destinationsRust = [];
+      try {
+        destinationsRust = getLegalDestinations(
+          fen: fen,
+          square: fromSquare,
+          isChess960: isChess960,
+        );
+      } catch (e) {
+        // Safe fallback
+      }
+      if (destinationsRust.isNotEmpty) {
+        if (isChess960) {
+          _applyChess960CastlingDestinations(destinationsRust, fromSquare);
+        }
+        return destinationsRust;
+      }
+      // Fallback to Dart
+      final moves = _chess.generate_moves({'square': fromSquare});
+      final destinations = moves
+          .map((m) => chess_lib.Chess.algebraic(m.to))
+          .toList();
+      if (isChess960) {
+        _applyChess960CastlingDestinations(destinations, fromSquare);
+      }
+      return destinations;
+    }
+
     // Run pure Dart engine
     final stopwatchDart = Stopwatch()..start();
     final moves = _chess.generate_moves({'square': fromSquare});
@@ -264,37 +338,7 @@ class ChessGame {
         .toList();
 
     if (isChess960) {
-      final p = getPiece(fromSquare);
-      if (p != null && p.type == chess_lib.PieceType.KING) {
-        final myRank = p.color == chess_lib.Color.WHITE ? '1' : '8';
-        if (fromSquare.endsWith(myRank)) {
-          final fenParts = fen.split(' ');
-          if (fenParts.length > 2) {
-            final rights = fenParts[2];
-            final isWhite = p.color == chess_lib.Color.WHITE;
-
-            for (final f in files) {
-              final sq = '$f$myRank';
-              final rp = getPiece(sq);
-              if (rp != null &&
-                  rp.type == chess_lib.PieceType.ROOK &&
-                  rp.color == p.color) {
-                if (rights != '-') {
-                  if (!destinations.contains(sq)) {
-                    destinations.add(sq);
-                  }
-                  final standardDest = f.compareTo(fromSquare[0]) > 0
-                      ? (isWhite ? 'g1' : 'g8')
-                      : (isWhite ? 'c1' : 'c8');
-                  if (!destinations.contains(standardDest)) {
-                    destinations.add(standardDest);
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
+      _applyChess960CastlingDestinations(destinations, fromSquare);
     }
     stopwatchDart.stop();
 
@@ -327,52 +371,84 @@ class ChessGame {
   }
 
   List<String> moveHistoryLabels() {
-    final stopwatchDart = Stopwatch()..start();
-    final tempGame = chess_lib.Chess.fromFEN(initialFen);
-    final labels = <String>[];
-    for (final h in _chess.history) {
-      final move = h.move;
-      labels.add(tempGame.move_to_san(move));
-      tempGame.move(move);
-    }
-    stopwatchDart.stop();
-
-    // Run bare-metal native Rust SAN generator
-    final stopwatchRust = Stopwatch()..start();
-    List<String> labelsRust = [];
-    try {
-      final uciMoves = _chess.history.map((h) {
-        final m = h.move;
-        final from = chess_lib.Chess.algebraic(m.from);
-        final to = chess_lib.Chess.algebraic(m.to);
-        final promotion = m.promotion != null
-            ? m.promotion.toString().split('.').last.toLowerCase()[0]
-            : '';
-        return '$from$to$promotion';
-      }).toList();
-
-      labelsRust = getSanHistory(
-        initialFen: initialFen,
-        uciMoves: uciMoves,
-        isChess960: isChess960,
-      );
-    } catch (e) {
-      debugPrint('Rust SAN History Tape Error: $e');
-    }
-    stopwatchRust.stop();
-
-    if (_chess.history.isNotEmpty) {
-      debugPrint(
-        'SAN History Tape Benchmark (Moves: ${_chess.history.length}):\n'
-        '  Dart tape assembly: ${stopwatchDart.elapsedMicroseconds} μs\n'
-        '  Rust tape assembly: ${stopwatchRust.elapsedMicroseconds} μs\n'
-        '  Parity Check: Dart: ${labels.length} labels | Rust: ${labelsRust.length} labels',
-      );
+    final currentHistory = _chess.history;
+    if (_cachedSanLabels != null && _cachedHistoryLength == currentHistory.length) {
+      return _cachedSanLabels!;
     }
 
-    return labelsRust.isNotEmpty && labelsRust.length == labels.length
-        ? labelsRust
-        : labels;
+    if (_cachedSanLabels == null) {
+      _cachedSanLabels = <String>[];
+      _cachedHistoryLength = 0;
+    }
+
+    if (currentHistory.length > _cachedHistoryLength) {
+      final tempGame = chess_lib.Chess.fromFEN(initialFen);
+      for (int i = 0; i < _cachedHistoryLength; i++) {
+        tempGame.move(currentHistory[i].move);
+      }
+      for (int i = _cachedHistoryLength; i < currentHistory.length; i++) {
+        final move = currentHistory[i].move;
+        _cachedSanLabels!.add(tempGame.move_to_san(move));
+        tempGame.move(move);
+      }
+      _cachedHistoryLength = currentHistory.length;
+    } else if (currentHistory.length < _cachedHistoryLength) {
+      _cachedSanLabels = <String>[];
+      final tempGame = chess_lib.Chess.fromFEN(initialFen);
+      for (final h in currentHistory) {
+        final move = h.move;
+        _cachedSanLabels!.add(tempGame.move_to_san(move));
+        tempGame.move(move);
+      }
+      _cachedHistoryLength = currentHistory.length;
+    }
+
+    if (kDebugMode) {
+      final stopwatchDart = Stopwatch()..start();
+      final tempGame = chess_lib.Chess.fromFEN(initialFen);
+      final debugLabels = <String>[];
+      for (final h in currentHistory) {
+        final move = h.move;
+        debugLabels.add(tempGame.move_to_san(move));
+        tempGame.move(move);
+      }
+      stopwatchDart.stop();
+
+      // Run bare-metal native Rust SAN generator
+      final stopwatchRust = Stopwatch()..start();
+      List<String> labelsRust = [];
+      try {
+        final uciMoves = currentHistory.map((h) {
+          final m = h.move;
+          final from = chess_lib.Chess.algebraic(m.from);
+          final to = chess_lib.Chess.algebraic(m.to);
+          final promotion = m.promotion != null
+              ? m.promotion.toString().split('.').last.toLowerCase()[0]
+              : '';
+          return '$from$to$promotion';
+        }).toList();
+
+        labelsRust = getSanHistory(
+          initialFen: initialFen,
+          uciMoves: uciMoves,
+          isChess960: isChess960,
+        );
+      } catch (e) {
+        debugPrint('Rust SAN History Tape Error: $e');
+      }
+      stopwatchRust.stop();
+
+      if (currentHistory.isNotEmpty) {
+        debugPrint(
+          'SAN History Tape Benchmark (Moves: ${currentHistory.length}):\n'
+          '  Dart tape assembly: ${stopwatchDart.elapsedMicroseconds} μs\n'
+          '  Rust tape assembly: ${stopwatchRust.elapsedMicroseconds} μs\n'
+          '  Parity Check: Dart: ${debugLabels.length} labels | Rust: ${labelsRust.length} labels',
+        );
+      }
+    }
+
+    return _cachedSanLabels!;
   }
 
   List<chess_lib.Color?> get board {
@@ -391,10 +467,14 @@ class ChessGame {
 
   void undo() {
     _chess.undo();
+    _cachedSanLabels = null;
+    _cachedHistoryLength = 0;
   }
 
   void load(String fen) {
     _chess.load(fen);
+    _cachedSanLabels = null;
+    _cachedHistoryLength = 0;
   }
 
   List<chess_lib.Piece> get capturedByWhite {
