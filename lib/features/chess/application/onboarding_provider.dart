@@ -1,11 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'tutorial_provider.dart';
+
+import '../domain/models/tutorial_constants.dart';
 import '../presentation/mobile_navigation_shell.dart';
+import 'tutorial_provider.dart';
 
 /// Provider tracking whether the user is currently in the active onboarding tutorial flow.
 final isOnboardingProvider = StateProvider<bool>((ref) => false);
 
-/// Provider tracking the active target chapter during onboarding (1, 10, or 14).
+/// Provider tracking the active target chapter during onboarding.
 final onboardingTargetChapterProvider = StateProvider<int>((ref) => 1);
 
 /// Provider tracking whether the chapter selection screen should be visible.
@@ -17,31 +21,80 @@ final showWelcomeDialogProvider = StateProvider<bool>((ref) {
   return !repo.hasSeenWelcomeGuide();
 });
 
-/// Service class to handle the custom onboarding skip milestones.
+enum GuidedTutorialLevel {
+  basic(1),
+  intermediate(10),
+  advanced(24);
+
+  final int startChapter;
+
+  const GuidedTutorialLevel(this.startChapter);
+}
+
+class GuidedTutorialFlow {
+  static const int firstChapter = 1;
+  static const int lastChapter = kTutorialChapterCount;
+
+  static List<int> pathFor(GuidedTutorialLevel level) {
+    return List.generate(
+      lastChapter - level.startChapter + 1,
+      (index) => level.startChapter + index,
+    );
+  }
+
+  static int startChapterFor(GuidedTutorialLevel level) => level.startChapter;
+
+  static int? nextChapterAfter(int currentChapterId) {
+    final nextChapter = currentChapterId + 1;
+    if (nextChapter > lastChapter) return null;
+    return nextChapter;
+  }
+
+  static bool isCompleteAfter(int currentChapterId) {
+    return nextChapterAfter(currentChapterId) == null;
+  }
+}
+
+/// Service class to handle the guided onboarding tutorial path.
 class OnboardingService {
   final WidgetRef ref;
 
   OnboardingService(this.ref);
 
-  void skipToNextMilestone(int currentChapterId) {
-    if (currentChapterId < 10) {
-      // Milestone 1: Skip to Chapter 10 (Understanding Check)
-      ref.read(onboardingTargetChapterProvider.notifier).state = 10;
-      ref.read(showChapterSelectionProvider.notifier).state = true;
-    } else if (currentChapterId < 14) {
-      // Milestone 2: Skip to Chapter 14 (Kingside Castling)
-      ref.read(onboardingTargetChapterProvider.notifier).state = 14;
-      ref.read(showChapterSelectionProvider.notifier).state = true;
-    } else {
-      // Milestone 3: Onboarding complete — land directly on Dashboard
-      ref.read(isOnboardingProvider.notifier).state = false;
+  void startGuidedTour(GuidedTutorialLevel level) {
+    ref.read(isOnboardingProvider.notifier).state = true;
+    ref.read(showWelcomeDialogProvider.notifier).state = false;
+    ref.read(onboardingTargetChapterProvider.notifier).state =
+        GuidedTutorialFlow.startChapterFor(level);
+    ref.read(showChapterSelectionProvider.notifier).state = true;
+    ref.read(mobileNavIndexProvider.notifier).state = 6;
+  }
 
-      // Save welcome guide completed in SharedPreferences
-      final repo = ref.read(tutorialProgressRepositoryProvider);
-      repo.setWelcomeGuideSeen(true);
-
-      // Navigate directly to Dashboard (tab index 0)
-      ref.read(mobileNavIndexProvider.notifier).state = 0;
+  void advanceGuidedTutorial(int currentChapterId) {
+    final nextChapter = GuidedTutorialFlow.nextChapterAfter(currentChapterId);
+    if (nextChapter != null) {
+      ref.read(onboardingTargetChapterProvider.notifier).state = nextChapter;
+      ref.read(showChapterSelectionProvider.notifier).state = true;
+      return;
     }
+
+    endGuidedTour(markWelcomeSeen: true);
+  }
+
+  void endGuidedTour({bool markWelcomeSeen = true}) {
+    ref.read(isOnboardingProvider.notifier).state = false;
+    ref.read(showChapterSelectionProvider.notifier).state = true;
+
+    if (markWelcomeSeen) {
+      final repo = ref.read(tutorialProgressRepositoryProvider);
+      unawaited(repo.setWelcomeGuideSeen(true));
+    }
+
+    ref.read(mobileNavIndexProvider.notifier).state = 0;
+  }
+
+  @Deprecated('Use advanceGuidedTutorial instead.')
+  void skipToNextMilestone(int currentChapterId) {
+    advanceGuidedTutorial(currentChapterId);
   }
 }

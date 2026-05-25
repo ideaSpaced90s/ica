@@ -4,6 +4,9 @@
 /// Incremented whenever breaking changes are made to lesson structures or steps.
 const int kTutorialDataVersion = 1;
 
+/// Total number of tutorial chapters available in the academy flow.
+const int kTutorialChapterCount = 34;
+
 /// Represents the earned status/rank of the player in the Academy Tutorial.
 enum TutorialRank {
   beginner('Beginner', 0),

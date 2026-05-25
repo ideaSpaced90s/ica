@@ -85,11 +85,11 @@ class _TutorialMentorPanelState extends ConsumerState<TutorialMentorPanel> with 
       case MentorMood.calm:
         return ScholarlyTheme.accentBlue;
       case MentorMood.encouraging:
-        return Colors.greenAccent;
+        return const Color(0xFF059669);
       case MentorMood.correction:
-        return Colors.orangeAccent;
+        return const Color(0xFFD97706);
       case MentorMood.celebration:
-        return ScholarlyTheme.accentGold;
+        return ScholarlyTheme.realGold;
     }
   }
 
@@ -125,27 +125,26 @@ class _TutorialMentorPanelState extends ConsumerState<TutorialMentorPanel> with 
 
     return Stack(
       children: [
-        // Background container with glow effect
         AnimatedBuilder(
           animation: _glowController,
           builder: (context, child) {
             return Container(
               decoration: ScholarlyTheme.modernDecoration().copyWith(
-                borderRadius: BorderRadius.circular(16),
+                color: Colors.white.withValues(alpha: 0.94),
+                borderRadius: BorderRadius.circular(14),
                 border: Border.all(
-                  color: moodColor.withValues(alpha: 0.3 + (_glowController.value * 0.3)),
-                  width: 1.5,
+                  color: moodColor.withValues(alpha: 0.20 + (_glowController.value * 0.12)),
+                  width: 1.2,
                 ),
                 boxShadow: [
-                  ...ScholarlyTheme.modernDecoration().boxShadow!,
                   BoxShadow(
-                    color: moodColor.withValues(alpha: 0.1 + (_glowController.value * 0.1)),
-                    blurRadius: 16,
-                    spreadRadius: 1,
+                    color: ScholarlyTheme.shadowColor.withValues(alpha: 0.06),
+                    blurRadius: 18,
+                    offset: const Offset(0, 8),
                   ),
                 ],
               ),
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(16),
               child: child,
             );
           },
@@ -159,11 +158,10 @@ class _TutorialMentorPanelState extends ConsumerState<TutorialMentorPanel> with 
           ),
         ),
 
-        // Fixed Action Layer (Skip/Next or Instruction bar)
         Positioned(
-          bottom: 20,
-          left: 20,
-          right: 20,
+          bottom: 16,
+          left: 16,
+          right: 16,
           child: isActionableStep
               ? Align(
                   alignment: Alignment.bottomRight,
@@ -182,19 +180,19 @@ class _TutorialMentorPanelState extends ConsumerState<TutorialMentorPanel> with 
           animation: _glowController,
           builder: (context, child) {
             return Container(
-              width: 52,
-              height: 52,
+              width: 46,
+              height: 46,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: moodColor.withValues(alpha: 0.5 + (_glowController.value * 0.5)),
-                  width: 2.0,
+                  color: moodColor.withValues(alpha: 0.35 + (_glowController.value * 0.25)),
+                  width: 1.5,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: moodColor.withValues(alpha: 0.2 + (_glowController.value * 0.3)),
-                    blurRadius: 16,
-                    spreadRadius: 2,
+                    color: moodColor.withValues(alpha: 0.12 + (_glowController.value * 0.12)),
+                    blurRadius: 12,
+                    spreadRadius: 1,
                   ),
                 ],
               ),
@@ -216,7 +214,7 @@ class _TutorialMentorPanelState extends ConsumerState<TutorialMentorPanel> with 
                     'GM CHANAKYA',
                     style: GoogleFonts.inter(
                       color: moodColor,
-                      fontSize: 13,
+                  fontSize: 12,
                       fontWeight: FontWeight.w900,
                       letterSpacing: 1.5,
                     ),
@@ -244,7 +242,7 @@ class _TutorialMentorPanelState extends ConsumerState<TutorialMentorPanel> with 
                 state.currentLesson.title,
                 style: GoogleFonts.inter(
                   color: ScholarlyTheme.textMuted,
-                  fontSize: 12,
+                  fontSize: 11,
                   fontWeight: FontWeight.w600,
                 ),
                 maxLines: 1,
@@ -259,12 +257,12 @@ class _TutorialMentorPanelState extends ConsumerState<TutorialMentorPanel> with 
 
   Widget _buildDialogue(Color moodColor) {
     return Padding(
-      padding: const EdgeInsets.only(top: 16, bottom: 44), // Space for fixed buttons
+      padding: const EdgeInsets.only(top: 14, bottom: 50),
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: _isTyping ? _completeTypingInstantly : null,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 64),
+          constraints: const BoxConstraints(minHeight: 58),
           child: AnimatedSize(
             duration: const Duration(milliseconds: 200),
             curve: Curves.easeOutCubic,
@@ -276,14 +274,14 @@ class _TutorialMentorPanelState extends ConsumerState<TutorialMentorPanel> with 
                     text: _displayedText,
                     style: GoogleFonts.inter(
                       color: ScholarlyTheme.textPrimary,
-                      fontSize: 14,
+                      fontSize: 13.5,
                       fontWeight: FontWeight.w500,
                       height: 1.6,
                     ),
                   ),
                   if (_isTyping)
                     TextSpan(
-                      text: ' ┃',
+                      text: ' |',
                       style: GoogleFonts.inter(
                         color: moodColor,
                         fontSize: 14,
@@ -317,7 +315,7 @@ class _TutorialMentorPanelState extends ConsumerState<TutorialMentorPanel> with 
           backgroundColor: moodColor,
           foregroundColor: Colors.white,
           elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         icon: Icon(_isTyping ? Icons.fast_forward_rounded : Icons.arrow_forward_rounded, size: 16),
@@ -331,7 +329,7 @@ class _TutorialMentorPanelState extends ConsumerState<TutorialMentorPanel> with 
 
   Widget _buildInstructionBar(Color moodColor, TutorialState state) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 14),
       decoration: BoxDecoration(
         color: moodColor.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(12),

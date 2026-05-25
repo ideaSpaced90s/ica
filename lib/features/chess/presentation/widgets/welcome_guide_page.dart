@@ -1,12 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../scholarly_theme.dart';
 import 'ambient_flow_backdrop.dart';
+import '../../application/chess_provider.dart';
 import '../../application/onboarding_provider.dart';
 import '../../application/tutorial_provider.dart';
-import '../../application/chess_provider.dart';
 import '../../presentation/mobile_navigation_shell.dart';
 import '../../services/chess_sound_service.dart';
 
@@ -23,7 +25,7 @@ class _WelcomeGuidePageState extends ConsumerState<WelcomeGuidePage>
   late final AnimationController _glowController;
   String _displayedText = '';
   final String _introText =
-      'Welcome to the Academy. I\'m GM Chanakya — I\'ll be coaching you through your chess training here.\n\nBefore we get started, tell me where you\'re at right now:';
+      'Welcome to the Academy. I\'m GM Chanakya - I\'ll be coaching you through your chess training here.\n\nBefore we get started, tell me where you\'re at right now:';
   int _charIndex = 0;
   bool _isTyping = true;
 
@@ -69,15 +71,14 @@ class _WelcomeGuidePageState extends ConsumerState<WelcomeGuidePage>
 
   void _selectLevel(String level) {
     ref.read(chessSoundServiceProvider).playSfx(SoundEffect.click);
-    
-    // Set onboarding flags
-    ref.read(isOnboardingProvider.notifier).state = true;
-    ref.read(showWelcomeDialogProvider.notifier).state = false;
-    ref.read(onboardingTargetChapterProvider.notifier).state = 1;
-    ref.read(showChapterSelectionProvider.notifier).state = true;
 
-    // Switch to Tutorial Page (tab index 6)
-    ref.read(mobileNavIndexProvider.notifier).state = 6;
+    final guidedLevel = switch (level) {
+      'Intermediate' => GuidedTutorialLevel.intermediate,
+      'Advanced' => GuidedTutorialLevel.advanced,
+      _ => GuidedTutorialLevel.basic,
+    };
+
+    OnboardingService(ref).startGuidedTour(guidedLevel);
   }
 
   void _skipGuide() {
@@ -89,7 +90,7 @@ class _WelcomeGuidePageState extends ConsumerState<WelcomeGuidePage>
     // Mark as seen if Google user, else Guest gets it next time too
     final repo = ref.read(tutorialProgressRepositoryProvider);
     if (repo.getIsGoogleSignedIn()) {
-      repo.setWelcomeGuideSeen(true);
+      unawaited(repo.setWelcomeGuideSeen(true));
     }
 
     // Direct user to Dashboard (tab index 0)
@@ -208,7 +209,7 @@ class _WelcomeGuidePageState extends ConsumerState<WelcomeGuidePage>
             onTap: _isTyping ? _skipTypewriter : null,
             behavior: HitTestBehavior.opaque,
             child: Text(
-              _displayedText + (_isTyping ? ' ┃' : ''),
+              _displayedText + (_isTyping ? ' |' : ''),
               style: GoogleFonts.inter(
                 color: ScholarlyTheme.textPrimary,
                 fontSize: 13.5,
@@ -230,7 +231,7 @@ class _WelcomeGuidePageState extends ConsumerState<WelcomeGuidePage>
           index: 0,
           level: 'Basic',
           title: 'NEOPHYTE',
-          desc: 'I do not know piece movements or rules yet. Guide me from zero.',
+          desc: 'Start at Chapter 1 and build every rule from the board up.',
           accentColor: const Color(0xFF059669),
         ),
         const SizedBox(height: 12),
@@ -238,7 +239,7 @@ class _WelcomeGuidePageState extends ConsumerState<WelcomeGuidePage>
           index: 1,
           level: 'Intermediate',
           title: 'TACTICIAN',
-          desc: 'I know how pieces move, but need to master castling, en passant, and tactics.',
+          desc: 'Start at Chapter 10 with check, mate, special rules, and tactics.',
           accentColor: ScholarlyTheme.accentBlue,
         ),
         const SizedBox(height: 12),
@@ -246,7 +247,7 @@ class _WelcomeGuidePageState extends ConsumerState<WelcomeGuidePage>
           index: 2,
           level: 'Advanced',
           title: 'SCHOLAR',
-          desc: 'I know rules and tactics. Let us dive into opening strategy and endgames.',
+          desc: 'Start at Chapter 24 for openings, mating technique, and endgames.',
           accentColor: const Color(0xFFD97706),
         ),
       ],

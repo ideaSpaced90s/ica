@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../application/tutorial_provider.dart';
+import '../../data/tutorial_lessons.dart';
 import '../../domain/models/tutorial_constants.dart';
 import '../scholarly_theme.dart';
 
@@ -72,32 +73,37 @@ class _ChapterCompletionOverlayState extends ConsumerState<ChapterCompletionOver
   Widget build(BuildContext context) {
     final state = ref.watch(tutorialProvider);
     final xpEarned = TutorialRewards.calculateXp(_earnedStars);
+    final nextChapterId = state.currentLesson.chapterId + 1;
+    final hasNextChapter = nextChapterId <= kTutorialChapterCount;
+    final nextLesson = hasNextChapter ? TutorialLessonsDatabase.getLesson(nextChapterId) : null;
 
     return Scaffold(
       backgroundColor: ScholarlyTheme.backgroundStart.withValues(alpha: 0.85),
       body: Center(
-        child: FadeTransition(
-          opacity: CurvedAnimation(parent: _enterController, curve: Curves.easeOut),
-          child: ScaleTransition(
-            scale: CurvedAnimation(parent: _enterController, curve: Curves.easeOutBack),
-            child: Container(
-              width: 420,
-              padding: const EdgeInsets.all(32),
-              decoration: BoxDecoration(
-                color: ScholarlyTheme.backgroundStart,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: ScholarlyTheme.accentGold.withValues(alpha: 0.6), width: 2),
-                boxShadow: [
-                  BoxShadow(
-                    color: ScholarlyTheme.accentGold.withValues(alpha: 0.15),
-                    blurRadius: 32,
-                    spreadRadius: 4,
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: FadeTransition(
+            opacity: CurvedAnimation(parent: _enterController, curve: Curves.easeOut),
+            child: ScaleTransition(
+              scale: CurvedAnimation(parent: _enterController, curve: Curves.easeOutBack),
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 420),
+                padding: const EdgeInsets.all(32),
+                decoration: BoxDecoration(
+                  color: ScholarlyTheme.backgroundStart,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: ScholarlyTheme.accentGold.withValues(alpha: 0.6), width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: ScholarlyTheme.accentGold.withValues(alpha: 0.15),
+                      blurRadius: 32,
+                      spreadRadius: 4,
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
                   // Crown icon accent
                   Container(
                     padding: const EdgeInsets.all(16),
@@ -111,7 +117,7 @@ class _ChapterCompletionOverlayState extends ConsumerState<ChapterCompletionOver
                   const SizedBox(height: 20),
 
                   Text(
-                    'CHAPTER COMPLETE',
+                    hasNextChapter ? 'CHAPTER COMPLETE' : 'ACADEMY COMPLETE',
                     style: GoogleFonts.inter(
                       color: ScholarlyTheme.accentGold,
                       fontSize: 12,
@@ -152,6 +158,41 @@ class _ChapterCompletionOverlayState extends ConsumerState<ChapterCompletionOver
 
                   const SizedBox(height: 24),
 
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.72),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: ScholarlyTheme.panelStroke.withValues(alpha: 0.8)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          hasNextChapter ? Icons.route_rounded : Icons.workspace_premium_rounded,
+                          size: 18,
+                          color: hasNextChapter ? ScholarlyTheme.accentBlue : ScholarlyTheme.realGold,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            hasNextChapter
+                                ? 'Next: Chapter $nextChapterId - ${nextLesson!.title}'
+                                : 'You have completed all $kTutorialChapterCount guided chapters.',
+                            style: GoogleFonts.inter(
+                              color: ScholarlyTheme.textPrimary,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              height: 1.25,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
                   // XP summary bar
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -162,12 +203,12 @@ class _ChapterCompletionOverlayState extends ConsumerState<ChapterCompletionOver
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.stars_rounded, size: 20, color: ScholarlyTheme.accentBlueSoft),
+                        const Icon(Icons.stars_rounded, size: 20, color: ScholarlyTheme.accentBlue),
                         const SizedBox(width: 8),
                         Text(
                           '+$xpEarned XP Earned',
                           style: GoogleFonts.inter(
-                            color: ScholarlyTheme.accentBlueSoft,
+                            color: ScholarlyTheme.accentBlue,
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
                           ),
@@ -191,12 +232,13 @@ class _ChapterCompletionOverlayState extends ConsumerState<ChapterCompletionOver
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                       child: Text(
-                        'Continue Journey',
+                        hasNextChapter ? 'Next Chapter' : 'Finish Tutorial',
                         style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold),
                       ),
                     ),
                   ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

@@ -1,145 +1,272 @@
+import 'dart:async';
 import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../application/tutorial_provider.dart';
 import '../../application/chess_provider.dart';
-import '../../services/chess_sound_service.dart';
-// Constants mapped locally or internally via progress state objects
-import '../../domain/models/tutorial_lesson.dart';
-import '../../data/tutorial_lessons.dart';
-import '../scholarly_theme.dart';
-import 'game_controls.dart';
-import 'ambient_scaffold.dart';
-import '../mobile_navigation_shell.dart';
 import '../../application/onboarding_provider.dart';
-
+import '../../application/tutorial_provider.dart';
+import '../../data/tutorial_lessons.dart';
+import '../../domain/models/tutorial_constants.dart';
+import '../../domain/models/tutorial_lesson.dart';
+import '../../services/chess_sound_service.dart';
+import '../mobile_navigation_shell.dart';
+import '../scholarly_theme.dart';
+import 'ambient_scaffold.dart';
+import 'game_controls.dart';
 
 class ChapterSelectScreen extends ConsumerWidget {
   const ChapterSelectScreen({super.key, required this.onSelectChapter});
 
   final void Function(int) onSelectChapter;
 
-  String _getSkipLabel(int targetChapter) {
-    return 'Skip';
-  }
+  static const List<_ChapterGroup> _groups = [
+    _ChapterGroup(
+      title: 'Foundations',
+      subtitle: 'Board, coordinates, pieces, and capture rules',
+      start: 1,
+      end: 9,
+      icon: Icons.grid_on_rounded,
+      color: Color(0xFF059669),
+    ),
+    _ChapterGroup(
+      title: 'King Safety',
+      subtitle: 'Check, mate, stalemate, castling, and special rules',
+      start: 10,
+      end: 18,
+      icon: Icons.security_rounded,
+      color: ScholarlyTheme.accentBlue,
+    ),
+    _ChapterGroup(
+      title: 'Practice Core',
+      subtitle: 'Opening habits, material value, tactics, and graduation',
+      start: 19,
+      end: 23,
+      icon: Icons.psychology_rounded,
+      color: Color(0xFF7C3AED),
+    ),
+    _ChapterGroup(
+      title: 'Openings',
+      subtitle: 'Classic structures and first strategic plans',
+      start: 24,
+      end: 28,
+      icon: Icons.flag_rounded,
+      color: Color(0xFFD97706),
+    ),
+    _ChapterGroup(
+      title: 'Technique',
+      subtitle: 'Mating patterns and essential endgame positions',
+      start: 29,
+      end: 34,
+      icon: Icons.workspace_premium_rounded,
+      color: ScholarlyTheme.realGold,
+    ),
+  ];
 
-  Widget _buildOnboardingAdvisor(BuildContext context, WidgetRef ref, int targetChapter) {
-    String message = '';
-    switch (targetChapter) {
-      case 1:
-        message = 'Start here — Chapter 1 covers the board layout and how each piece moves. It\'s the foundation. Tap it to begin.';
-        break;
-      case 10:
-        message = 'Good. Now let\'s get to the real stuff — Check. This is where pressure starts. Tap Chapter 10.';
-        break;
-      case 14:
-        message = 'Castling is one of the most underused moves at this level. Learn it here. Tap Chapter 14.';
-        break;
-      default:
-        message = 'Tap the highlighted chapter to continue your training.';
-    }
-
-    return TweenAnimationBuilder<double>(
-      tween: Tween<double>(begin: 0.0, end: 1.0),
-      duration: const Duration(milliseconds: 600),
-      curve: Curves.easeOutBack,
-      builder: (context, value, child) {
-        return Transform.translate(
-          offset: Offset(0, 30 * (1 - value)),
-          child: Opacity(
-            opacity: value.clamp(0.0, 1.0),
-            child: child,
-          ),
-        );
-      },
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: Container(
-          decoration: ScholarlyTheme.glassPanelDecoration(radius: 16).copyWith(
-            color: Colors.white.withValues(alpha: 0.9),
-            border: Border.all(
-              color: ScholarlyTheme.accentBlue.withValues(alpha: 0.3),
-              width: 1.5,
-            ),
-          ),
-          padding: const EdgeInsets.all(16),
-          child: Column(
+  Widget _buildHeader({
+    required WidgetRef ref,
+    required int completedCount,
+    required int totalXp,
+    required TutorialRank rank,
+    required bool isOnboarding,
+    required TutorialLesson targetLesson,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: ScholarlyTheme.accentBlue, width: 1.5),
-                      image: const DecorationImage(
-                        image: AssetImage('assets/persona/gm_chanakya.png'),
-                        fit: BoxFit.cover,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Tutorial',
+                      style: GoogleFonts.outfit(
+                        fontSize: 32,
+                        fontWeight: FontWeight.w800,
+                        color: ScholarlyTheme.textPrimary,
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'GM CHANAKYA',
-                          style: GoogleFonts.inter(
-                            color: ScholarlyTheme.accentBlue,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 1.2,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          message,
-                          style: GoogleFonts.inter(
-                            color: ScholarlyTheme.textPrimary,
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w600,
-                            height: 1.4,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton.icon(
-                    onPressed: () {
-                      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.click);
-                      OnboardingService(ref).skipToNextMilestone(targetChapter);
-                    },
-                    style: TextButton.styleFrom(
-                      foregroundColor: ScholarlyTheme.accentBlue,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                    icon: const Icon(Icons.skip_next_rounded, size: 15),
-                    label: Text(
-                      _getSkipLabel(targetChapter),
+                    const SizedBox(height: 4),
+                    Text(
+                      isOnboarding
+                          ? 'Guided target: Chapter ${targetLesson.chapterId} - ${targetLesson.title}'
+                          : 'Choose a lesson, resume a checkpoint, or replay the guided path.',
                       style: GoogleFonts.inter(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
+                        color: ScholarlyTheme.textMuted,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        height: 1.35,
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              ActionIconButton(
+                icon: Icons.explore_rounded,
+                size: 24,
+                onTap: () {
+                  ref.read(chessSoundServiceProvider).playSfx(SoundEffect.click);
+                  final repo = ref.read(tutorialProgressRepositoryProvider);
+                  unawaited(repo.setWelcomeGuideSeen(false));
+                  ref.read(showWelcomeDialogProvider.notifier).state = true;
+                  ref.read(mobileNavIndexProvider.notifier).state = 0;
+                },
               ),
             ],
           ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _MetricTile(
+                  label: 'Rank',
+                  value: rank.displayName,
+                  icon: Icons.military_tech_rounded,
+                  color: ScholarlyTheme.accentBlue,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _MetricTile(
+                  label: 'XP',
+                  value: '$totalXp',
+                  icon: Icons.stars_rounded,
+                  color: ScholarlyTheme.realGold,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _MetricTile(
+                  label: 'Done',
+                  value: '$completedCount/$kTutorialChapterCount',
+                  icon: Icons.check_circle_rounded,
+                  color: const Color(0xFF059669),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOnboardingAdvisor({
+    required WidgetRef ref,
+    required TutorialLesson targetLesson,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.94),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.22)),
+          boxShadow: [
+            BoxShadow(
+              color: ScholarlyTheme.shadowColor.withValues(alpha: 0.06),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.45)),
+                    image: const DecorationImage(
+                      image: AssetImage('assets/persona/gm_chanakya.png'),
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'GM CHANAKYA',
+                        style: GoogleFonts.inter(
+                          color: ScholarlyTheme.accentBlue,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Your guided path continues with Chapter ${targetLesson.chapterId}: ${targetLesson.title}. Complete it to unlock the next guided stop.',
+                        style: GoogleFonts.inter(
+                          color: ScholarlyTheme.textPrimary,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                          height: 1.35,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.click);
+                      OnboardingService(ref).endGuidedTour(markWelcomeSeen: true);
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: ScholarlyTheme.textMuted,
+                      side: BorderSide(color: ScholarlyTheme.panelStroke.withValues(alpha: 0.9)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    icon: const Icon(Icons.close_rounded, size: 16),
+                    label: Text(
+                      'End Guide',
+                      style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
+                      onSelectChapter(targetLesson.chapterId);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: ScholarlyTheme.accentBlue,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    icon: const Icon(Icons.play_arrow_rounded, size: 18),
+                    label: Text(
+                      'Continue',
+                      style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w900),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -149,149 +276,245 @@ class ChapterSelectScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
     final state = ref.watch(tutorialProvider);
-    final p = state.progress;
+    final progress = state.progress;
     final lessons = TutorialLessonsDatabase.lessons;
     final isOnboarding = ref.watch(isOnboardingProvider);
     final targetChapter = ref.watch(onboardingTargetChapterProvider);
+    final targetLesson = TutorialLessonsDatabase.getLesson(targetChapter);
 
     return AmbientScaffold(
       scaffoldKey: scaffoldKey,
-      blob1Color: const Color(0xFFFEF9C3), // Soft Gold
-      blob2Color: const Color(0xFFDBEAFE), // Soft Blue
-      blob3Color: const Color(0xFFF3E8FF), // Soft Purple
-      body: Stack(
-        children: [
-          // 1. Dashboard Content Layer
-          SafeArea(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Top margin since header is gone
-                const SizedBox(height: 60),
-
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                  child: Text(
-                    'TUTORIAL',
-                    style: GoogleFonts.outfit(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 2,
-                      color: ScholarlyTheme.textPrimary,
-                    ),
-                  ),
-                ),
-
-                if (isOnboarding)
-                  _buildOnboardingAdvisor(context, ref, targetChapter),
-
-                const Divider(height: 1, color: Colors.white30),
-
-                // Main horizontal browser grid
-                Expanded(
-                  child: GridView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      mainAxisExtent: 116,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                    ),
-                    itemCount: lessons.length,
-                    itemBuilder: (context, index) {
-                      final lesson = lessons[index];
-                      final isUnlocked = !isOnboarding || lesson.chapterId == targetChapter;
-                      final isCompleted = p.completedChapters.contains(lesson.chapterId);
-                      final stars = p.stars[lesson.chapterId] ?? 0;
-                      final isActiveCheckpoint = p.activeChapterIndex == lesson.chapterId;
-
-                      final animIndex = index < 8 ? index : 8;
-                      return TweenAnimationBuilder<double>(
-                        tween: Tween<double>(begin: 0.0, end: 1.0),
-                        duration: Duration(milliseconds: 400 + animIndex * 80),
-                        curve: Curves.easeOutCubic,
-                        builder: (context, value, child) {
-                          return Transform.translate(
-                            offset: Offset(0, 20 * (1.0 - value)),
-                            child: Opacity(
-                              opacity: value.clamp(0.0, 1.0),
-                              child: child,
-                            ),
-                          );
-                        },
-                        child: PulsingGlowWrapper(
-                          isActive: isOnboarding && lesson.chapterId == targetChapter,
-                          child: _ChapterCard(
-                            lesson: lesson,
-                            isUnlocked: isUnlocked,
-                            isCompleted: isCompleted,
-                            stars: stars,
-                            isActiveCheckpoint: isActiveCheckpoint,
-                            onTap: () {
-                              ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
-                              onSelectChapter(lesson.chapterId);
-                            },
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // 2. Absolute Utility Layer (Outside primary safe area flow)
-          // XP count container
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 16,
-            left: 16,
-            child: JuicyGlassCard(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              borderRadius: 12,
-              borderColor: ScholarlyTheme.accentBlue.withValues(alpha: 0.25),
-              shadows: [
-                BoxShadow(
-                  color: ScholarlyTheme.accentBlue.withValues(alpha: 0.08),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.school_rounded, color: ScholarlyTheme.accentBlue, size: 14),
-                  const SizedBox(width: 6),
-                  Text(
-                    '${p.totalXp} XP',
-                    style: GoogleFonts.inter(
-                      color: ScholarlyTheme.accentBlue,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ],
+      blob1Color: const Color(0xFFFEF9C3),
+      blob2Color: const Color(0xFFDBEAFE),
+      blob3Color: const Color(0xFFE0F2FE),
+      body: SafeArea(
+        child: CustomScrollView(
+          slivers: [
+            SliverToBoxAdapter(
+              child: _buildHeader(
+                ref: ref,
+                completedCount: progress.completedChapters.length,
+                totalXp: progress.totalXp,
+                rank: progress.currentRank,
+                isOnboarding: isOnboarding,
+                targetLesson: targetLesson,
               ),
             ),
-          ),
+            if (isOnboarding)
+              SliverToBoxAdapter(
+                child: _buildOnboardingAdvisor(
+                  ref: ref,
+                  targetLesson: targetLesson,
+                ),
+              ),
+            for (final group in _groups)
+              ..._buildChapterGroup(
+                ref: ref,
+                group: group,
+                lessons: lessons
+                    .where((lesson) => lesson.chapterId >= group.start && lesson.chapterId <= group.end)
+                    .toList(),
+                isOnboarding: isOnboarding,
+                targetChapter: targetChapter,
+                completedChapters: progress.completedChapters,
+                unlockedChapters: progress.unlockedChapters,
+                stars: progress.stars,
+                activeChapter: progress.activeChapterIndex,
+              ),
+            const SliverToBoxAdapter(child: SizedBox(height: 28)),
+          ],
+        ),
+      ),
+    );
+  }
 
-          // Replay App Tour (Walkthrough) button - aligned to top right
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 12,
-            right: 16,
-            child: ActionIconButton(
-              icon: Icons.explore_rounded,
-              size: 24,
-              onTap: () {
-                ref.read(chessSoundServiceProvider).playSfx(SoundEffect.click);
-                // Clear guide flags and activate the welcome guide dialog overlay
-                final repo = ref.read(tutorialProgressRepositoryProvider);
-                repo.setWelcomeGuideSeen(false);
-                ref.read(showWelcomeDialogProvider.notifier).state = true;
-                // Navigate to home dashboard screen where guide overlays render
-                ref.read(mobileNavIndexProvider.notifier).state = 0;
-              },
+  List<Widget> _buildChapterGroup({
+    required WidgetRef ref,
+    required _ChapterGroup group,
+    required List<TutorialLesson> lessons,
+    required bool isOnboarding,
+    required int targetChapter,
+    required Set<int> completedChapters,
+    required Set<int> unlockedChapters,
+    required Map<int, int> stars,
+    required int? activeChapter,
+  }) {
+    return [
+      SliverToBoxAdapter(child: _GroupHeader(group: group)),
+      SliverPadding(
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 20),
+        sliver: SliverLayoutBuilder(
+          builder: (context, constraints) {
+            final width = constraints.crossAxisExtent;
+            final crossAxisCount = width >= 700 ? 4 : (width >= 480 ? 3 : 2);
+            return SliverGrid(
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: crossAxisCount,
+                mainAxisExtent: 122,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+              ),
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  final lesson = lessons[index];
+                  final isTarget = isOnboarding && lesson.chapterId == targetChapter;
+                  final isUnlocked = isOnboarding
+                      ? isTarget
+                      : unlockedChapters.contains(lesson.chapterId);
+                  final isCompleted = completedChapters.contains(lesson.chapterId);
+
+                  return PulsingGlowWrapper(
+                    isActive: isTarget,
+                    glowColor: group.color,
+                    child: _ChapterCard(
+                      lesson: lesson,
+                      groupColor: group.color,
+                      isUnlocked: isUnlocked,
+                      isCompleted: isCompleted,
+                      stars: stars[lesson.chapterId] ?? 0,
+                      isActiveCheckpoint: activeChapter == lesson.chapterId,
+                      isGuidedTarget: isTarget,
+                      onTap: () {
+                        ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
+                        onSelectChapter(lesson.chapterId);
+                      },
+                    ),
+                  );
+                },
+                childCount: lessons.length,
+              ),
+            );
+          },
+        ),
+      ),
+    ];
+  }
+}
+
+class _ChapterGroup {
+  final String title;
+  final String subtitle;
+  final int start;
+  final int end;
+  final IconData icon;
+  final Color color;
+
+  const _ChapterGroup({
+    required this.title,
+    required this.subtitle,
+    required this.start,
+    required this.end,
+    required this.icon,
+    required this.color,
+  });
+}
+
+class _MetricTile extends StatelessWidget {
+  const _MetricTile({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.color,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(minHeight: 58),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.90),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.16)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  label,
+                  style: GoogleFonts.inter(
+                    color: ScholarlyTheme.textMuted,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: GoogleFonts.inter(
+                    color: ScholarlyTheme.textPrimary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GroupHeader extends StatelessWidget {
+  const _GroupHeader({required this.group});
+
+  final _ChapterGroup group;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+      child: Row(
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: group.color.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: group.color.withValues(alpha: 0.20)),
+            ),
+            child: Icon(group.icon, color: group.color, size: 18),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  group.title,
+                  style: GoogleFonts.inter(
+                    color: ScholarlyTheme.textPrimary,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  group.subtitle,
+                  style: GoogleFonts.inter(
+                    color: ScholarlyTheme.textMuted,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
           ),
         ],
@@ -303,18 +526,22 @@ class ChapterSelectScreen extends ConsumerWidget {
 class _ChapterCard extends StatelessWidget {
   const _ChapterCard({
     required this.lesson,
+    required this.groupColor,
     required this.isUnlocked,
     required this.isCompleted,
     required this.stars,
     required this.isActiveCheckpoint,
+    required this.isGuidedTarget,
     required this.onTap,
   });
 
   final TutorialLesson lesson;
+  final Color groupColor;
   final bool isUnlocked;
   final bool isCompleted;
   final int stars;
   final bool isActiveCheckpoint;
+  final bool isGuidedTarget;
   final VoidCallback onTap;
 
   IconData _getChapterIcon(int chapterId) {
@@ -365,6 +592,28 @@ class _ChapterCard extends StatelessWidget {
         return Icons.fitness_center_rounded;
       case 23:
         return Icons.school_rounded;
+      case 24:
+        return Icons.flag_rounded;
+      case 25:
+        return Icons.account_tree_rounded;
+      case 26:
+        return Icons.call_split_rounded;
+      case 27:
+        return Icons.diamond_rounded;
+      case 28:
+        return Icons.shield_rounded;
+      case 29:
+        return Icons.workspace_premium_rounded;
+      case 30:
+        return Icons.vertical_align_top_rounded;
+      case 31:
+        return Icons.compare_arrows_rounded;
+      case 32:
+        return Icons.architecture_rounded;
+      case 33:
+        return Icons.horizontal_rule_rounded;
+      case 34:
+        return Icons.auto_awesome_rounded;
       default:
         return Icons.help_outline_rounded;
     }
@@ -372,199 +621,135 @@ class _ChapterCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final borderColor = isActiveCheckpoint
-        ? ScholarlyTheme.accentYellow
-        : (isCompleted ? ScholarlyTheme.accentBlue.withValues(alpha: 0.4) : Colors.white.withValues(alpha: 0.45));
-
-    final cardBg = isActiveCheckpoint
-        ? ScholarlyTheme.accentYellow.withValues(alpha: 0.08)
-        : (isCompleted
-            ? ScholarlyTheme.accentBlue.withValues(alpha: 0.05)
-            : Colors.white.withValues(alpha: 0.35));
-
-    final glowShadow = isActiveCheckpoint
-        ? [
-            BoxShadow(
-              color: ScholarlyTheme.accentYellow.withValues(alpha: 0.15),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            )
-          ]
-        : (isCompleted
-            ? [
-                BoxShadow(
-                  color: ScholarlyTheme.accentBlue.withValues(alpha: 0.08),
-                  blurRadius: 10,
-                  offset: const Offset(0, 3),
-                )
-              ]
-            : [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.03),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                )
-              ]);
+    final borderColor = isGuidedTarget
+        ? groupColor
+        : isActiveCheckpoint
+            ? ScholarlyTheme.realGold
+            : isCompleted
+                ? groupColor.withValues(alpha: 0.36)
+                : ScholarlyTheme.panelStroke.withValues(alpha: 0.72);
 
     return Opacity(
-      opacity: isUnlocked ? 1.0 : 0.3,
+      opacity: isUnlocked ? 1.0 : 0.38,
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(12),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: cardBg,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: borderColor, width: isActiveCheckpoint ? 1.8 : 1.2),
-              boxShadow: glowShadow,
-            ),
+          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+          child: Material(
+            color: Colors.white.withValues(alpha: isUnlocked ? 0.92 : 0.62),
             child: InkWell(
               onTap: isUnlocked ? onTap : null,
-              borderRadius: BorderRadius.circular(18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: isCompleted
-                              ? ScholarlyTheme.accentBlue.withValues(alpha: 0.15)
-                              : Colors.white.withValues(alpha: 0.25),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(
-                            color: isCompleted
-                                ? ScholarlyTheme.accentBlue.withValues(alpha: 0.3)
-                                : Colors.white.withValues(alpha: 0.4),
-                            width: 1.0,
-                          ),
-                        ),
-                        child: Text(
+              child: Container(
+                padding: const EdgeInsets.all(11),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: borderColor, width: isGuidedTarget ? 1.8 : 1.0),
+                  boxShadow: [
+                    BoxShadow(
+                      color: groupColor.withValues(alpha: isGuidedTarget ? 0.14 : 0.04),
+                      blurRadius: isGuidedTarget ? 18 : 10,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
                           'CH. ${lesson.chapterId}',
                           style: GoogleFonts.inter(
-                            color: isCompleted ? ScholarlyTheme.accentBlue : ScholarlyTheme.textPrimary,
+                            color: groupColor,
                             fontSize: 9,
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w900,
                           ),
                         ),
+                        const Spacer(),
+                        _buildStatusIcon(),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      lesson.title,
+                      style: GoogleFonts.inter(
+                        color: ScholarlyTheme.textPrimary,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w800,
+                        height: 1.15,
                       ),
-                      const Spacer(),
-                      if (isActiveCheckpoint)
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const Spacer(),
+                    Row(
+                      children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          width: 30,
+                          height: 30,
                           decoration: BoxDecoration(
-                            color: ScholarlyTheme.accentYellow.withValues(alpha: 0.25),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: ScholarlyTheme.accentYellow.withValues(alpha: 0.5)),
+                            color: groupColor.withValues(alpha: 0.10),
+                            borderRadius: BorderRadius.circular(9),
                           ),
-                          child: Text(
-                            'ACTIVE',
-                            style: GoogleFonts.inter(
-                              color: ScholarlyTheme.realGold,
-                              fontSize: 8,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        )
-                      else if (isCompleted)
-                        const Icon(Icons.check_circle_rounded, size: 14, color: ScholarlyTheme.accentBlue)
-                      else if (!isUnlocked)
-                        const Icon(Icons.lock_rounded, size: 14, color: ScholarlyTheme.textSubtle),
-                    ],
-                  ),
-                  
-                  const Spacer(),
-
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              lesson.title,
-                              style: GoogleFonts.inter(
-                                color: ScholarlyTheme.textPrimary,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                height: 1.2,
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 6),
-                            if (isCompleted)
-                              Row(
-                                children: List.generate(3, (idx) {
-                                  final earned = idx < stars;
-                                  return Padding(
-                                    padding: const EdgeInsets.only(right: 2),
-                                    child: Icon(
-                                      earned ? Icons.star_rounded : Icons.star_outline_rounded,
-                                      size: 13,
-                                      color: earned ? ScholarlyTheme.realGold : ScholarlyTheme.textSubtle.withValues(alpha: 0.5),
-                                    ),
-                                  );
-                                }),
-                              )
-                            else
-                              Text(
-                                  '${lesson.steps.length} Steps',
-                                style: GoogleFonts.inter(
-                                  color: ScholarlyTheme.textSubtle,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                          ],
+                          child: Icon(_getChapterIcon(lesson.chapterId), size: 17, color: groupColor),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(
-                          color: isCompleted
-                              ? ScholarlyTheme.accentBlue.withValues(alpha: 0.15)
-                              : (isUnlocked
-                                  ? ScholarlyTheme.accentBlue.withValues(alpha: 0.08)
-                                  : Colors.white.withValues(alpha: 0.15)),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: isCompleted
-                                ? ScholarlyTheme.accentBlue.withValues(alpha: 0.35)
-                                : (isUnlocked
-                                    ? ScholarlyTheme.accentBlue.withValues(alpha: 0.2)
-                                    : Colors.transparent),
-                            width: 1.0,
-                          ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: isCompleted ? _buildStars() : _buildStepCount(),
                         ),
-                        child: Center(
-                          child: Icon(
-                            _getChapterIcon(lesson.chapterId),
-                            size: 18,
-                            color: isCompleted
-                                ? ScholarlyTheme.accentBlue
-                                : (isUnlocked
-                                    ? ScholarlyTheme.accentBlue
-                                    : ScholarlyTheme.textSubtle),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildStatusIcon() {
+    if (isGuidedTarget) {
+      return Icon(Icons.play_circle_fill_rounded, size: 16, color: groupColor);
+    }
+    if (isActiveCheckpoint) {
+      return const Icon(Icons.bookmark_rounded, size: 15, color: ScholarlyTheme.realGold);
+    }
+    if (isCompleted) {
+      return Icon(Icons.check_circle_rounded, size: 15, color: groupColor);
+    }
+    if (!isUnlocked) {
+      return const Icon(Icons.lock_rounded, size: 14, color: ScholarlyTheme.textSubtle);
+    }
+    return const Icon(Icons.radio_button_unchecked_rounded, size: 14, color: ScholarlyTheme.textSubtle);
+  }
+
+  Widget _buildStars() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: List.generate(3, (idx) {
+        final earned = idx < stars;
+        return Icon(
+          earned ? Icons.star_rounded : Icons.star_outline_rounded,
+          size: 13,
+          color: earned ? ScholarlyTheme.realGold : ScholarlyTheme.textSubtle.withValues(alpha: 0.55),
+        );
+      }),
+    );
+  }
+
+  Widget _buildStepCount() {
+    return Text(
+      '${lesson.steps.length} steps',
+      textAlign: TextAlign.right,
+      style: GoogleFonts.inter(
+        color: ScholarlyTheme.textMuted,
+        fontSize: 10,
+        fontWeight: FontWeight.w700,
+      ),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
     );
   }
 }
@@ -599,11 +784,11 @@ class _PulsingGlowWrapperState extends State<PulsingGlowWrapper>
       duration: const Duration(milliseconds: 1200),
     );
 
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.025).animate(
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.018).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
 
-    _glowAnimation = Tween<double>(begin: 4.0, end: 18.0).animate(
+    _glowAnimation = Tween<double>(begin: 4.0, end: 16.0).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
 
@@ -640,14 +825,14 @@ class _PulsingGlowWrapperState extends State<PulsingGlowWrapper>
           scale: _scaleAnimation.value,
           child: Container(
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
                   color: widget.glowColor.withValues(
-                    alpha: 0.4 * (1.0 - _controller.value),
+                    alpha: 0.28 * (1.0 - _controller.value),
                   ),
                   blurRadius: _glowAnimation.value,
-                  spreadRadius: _controller.value * 2.5,
+                  spreadRadius: _controller.value * 2.0,
                 ),
               ],
             ),

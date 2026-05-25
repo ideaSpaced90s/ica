@@ -833,6 +833,599 @@ class TutorialLessonsDatabase {
         ),
       ],
     ),
+
+    // Chapter 24: Italian Game
+    TutorialLesson(
+      chapterId: 24,
+      title: 'Italian Game',
+      setupFen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+      steps: [
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "Italian Game. Fast development, quick pressure on the center.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Begin with the king pawn. Play e2 to e4.",
+          highlightSquares: ['e2', 'e4'],
+          expectedMove: 'e2e4',
+          reactionCorrect: MentorReaction(
+            dialogue: "Good. White claims space and opens the bishop.",
+            mood: MentorMood.encouraging,
+          ),
+          reactionIllegal: MentorReaction(
+            dialogue: "Start with e2 to e4.",
+            mood: MentorMood.correction,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black meets the center directly.",
+          scriptedMove: 'e7e5',
+          highlightSquares: ['e7', 'e5'],
+          animatePathSquares: ['e7', 'e5'],
+          overlayEffect: TutorialOverlayEffect.animatePath,
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Develop with tempo. Knight g1 to f3.",
+          highlightSquares: ['g1', 'f3'],
+          expectedMove: 'g1f3',
+          reactionCorrect: MentorReaction(
+            dialogue: "The knight attacks e5 and prepares castling.",
+            mood: MentorMood.encouraging,
+          ),
+          reactionIllegal: MentorReaction(
+            dialogue: "Bring the knight from g1 to f3.",
+            mood: MentorMood.correction,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black defends with natural development.",
+          scriptedMove: 'b8c6',
+          highlightSquares: ['b8', 'c6'],
+          animatePathSquares: ['b8', 'c6'],
+          overlayEffect: TutorialOverlayEffect.knightLPath,
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Now the Italian bishop. Move f1 to c4.",
+          highlightSquares: ['f1', 'c4'],
+          expectedMove: 'f1c4',
+          reactionCorrect: MentorReaction(
+            dialogue: "Classical. The bishop eyes f7, the soft point.",
+            mood: MentorMood.celebration,
+          ),
+          reactionIllegal: MentorReaction(
+            dialogue: "Italian setup: bishop f1 to c4.",
+            mood: MentorMood.correction,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.celebration,
+          dialogue: "Italian Game loaded. Develop quickly, aim clearly.",
+          mentorMood: MentorMood.celebration,
+        ),
+      ],
+    ),
+
+    // Chapter 25: Ruy Lopez
+    TutorialLesson(
+      chapterId: 25,
+      title: 'Ruy Lopez',
+      setupFen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+      steps: [
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "Ruy Lopez. Pressure the defender before striking the center.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Open with e2 to e4.",
+          highlightSquares: ['e2', 'e4'],
+          expectedMove: 'e2e4',
+          reactionCorrect: MentorReaction(
+            dialogue: "Center claimed.",
+            mood: MentorMood.encouraging,
+          ),
+          reactionIllegal: MentorReaction(
+            dialogue: "Play e2 to e4.",
+            mood: MentorMood.correction,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black mirrors the center.",
+          scriptedMove: 'e7e5',
+          highlightSquares: ['e7', 'e5'],
+          animatePathSquares: ['e7', 'e5'],
+          overlayEffect: TutorialOverlayEffect.animatePath,
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Knight g1 to f3. Attack the e5 pawn.",
+          highlightSquares: ['g1', 'f3'],
+          expectedMove: 'g1f3',
+          reactionCorrect: MentorReaction(
+            dialogue: "Pressure begins.",
+            mood: MentorMood.encouraging,
+          ),
+          reactionIllegal: MentorReaction(
+            dialogue: "Move the knight from g1 to f3.",
+            mood: MentorMood.correction,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black defends e5 with Nc6.",
+          scriptedMove: 'b8c6',
+          highlightSquares: ['b8', 'c6'],
+          animatePathSquares: ['b8', 'c6'],
+          overlayEffect: TutorialOverlayEffect.knightLPath,
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Pin the defender. Bishop f1 to b5.",
+          highlightSquares: ['f1', 'b5', 'c6'],
+          expectedMove: 'f1b5',
+          reactionCorrect: MentorReaction(
+            dialogue: "Ruy Lopez formed. Attack the guard, then the center.",
+            mood: MentorMood.celebration,
+          ),
+          reactionIllegal: MentorReaction(
+            dialogue: "The Spanish bishop goes from f1 to b5.",
+            mood: MentorMood.correction,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.celebration,
+          dialogue: "The Ruy Lopez teaches long pressure. Elegant and dangerous.",
+          mentorMood: MentorMood.celebration,
+        ),
+      ],
+    ),
+
+    // Chapter 26: Sicilian Defense
+    TutorialLesson(
+      chapterId: 26,
+      title: 'Sicilian Defense',
+      setupFen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+      steps: [
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "Sicilian Defense. Black refuses symmetry and attacks from the flank.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "White begins with e2 to e4.",
+          highlightSquares: ['e2', 'e4'],
+          expectedMove: 'e2e4',
+          reactionCorrect: MentorReaction(
+            dialogue: "The open-game invitation is sent.",
+            mood: MentorMood.encouraging,
+          ),
+          reactionIllegal: MentorReaction(
+            dialogue: "Play e2 to e4.",
+            mood: MentorMood.correction,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black answers c7 to c5. The Sicilian begins.",
+          scriptedMove: 'c7c5',
+          highlightSquares: ['c7', 'c5', 'd4'],
+          animatePathSquares: ['c7', 'c5'],
+          overlayEffect: TutorialOverlayEffect.animatePath,
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Develop and prepare d4. Knight g1 to f3.",
+          highlightSquares: ['g1', 'f3', 'd4'],
+          expectedMove: 'g1f3',
+          reactionCorrect: MentorReaction(
+            dialogue: "Correct. White prepares the central break.",
+            mood: MentorMood.encouraging,
+          ),
+          reactionIllegal: MentorReaction(
+            dialogue: "In the main Sicilian path, play Ng1-f3.",
+            mood: MentorMood.correction,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.celebration,
+          dialogue: "Sicilian recognized. Asymmetry creates counterplay.",
+          mentorMood: MentorMood.celebration,
+        ),
+      ],
+    ),
+
+    // Chapter 27: Queen's Gambit
+    TutorialLesson(
+      chapterId: 27,
+      title: "Queen's Gambit",
+      setupFen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+      steps: [
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "Queen's Gambit. Offer a wing pawn to pressure the center.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Start with d2 to d4.",
+          highlightSquares: ['d2', 'd4'],
+          expectedMove: 'd2d4',
+          reactionCorrect: MentorReaction(
+            dialogue: "A queen-pawn game. Solid and ambitious.",
+            mood: MentorMood.encouraging,
+          ),
+          reactionIllegal: MentorReaction(
+            dialogue: "Begin with d2 to d4.",
+            mood: MentorMood.correction,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black contests the center with d5.",
+          scriptedMove: 'd7d5',
+          highlightSquares: ['d7', 'd5'],
+          animatePathSquares: ['d7', 'd5'],
+          overlayEffect: TutorialOverlayEffect.animatePath,
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Offer the gambit pawn. Move c2 to c4.",
+          highlightSquares: ['c2', 'c4', 'd5'],
+          expectedMove: 'c2c4',
+          reactionCorrect: MentorReaction(
+            dialogue: "Queen's Gambit formed. You ask Black to solve the center.",
+            mood: MentorMood.celebration,
+          ),
+          reactionIllegal: MentorReaction(
+            dialogue: "The gambit move is c2 to c4.",
+            mood: MentorMood.correction,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.celebration,
+          dialogue: "A classic weapon. The pawn is bait; the center is the prize.",
+          mentorMood: MentorMood.celebration,
+        ),
+      ],
+    ),
+
+    // Chapter 28: King's Indian Setup
+    TutorialLesson(
+      chapterId: 28,
+      title: "King's Indian Setup",
+      setupFen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+      steps: [
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "King's Indian. Black invites a big center, then attacks it later.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "White builds the center. Play d2 to d4.",
+          highlightSquares: ['d2', 'd4'],
+          expectedMove: 'd2d4',
+          reactionCorrect: MentorReaction(
+            dialogue: "White takes space.",
+            mood: MentorMood.encouraging,
+          ),
+          reactionIllegal: MentorReaction(
+            dialogue: "Start with d2 to d4.",
+            mood: MentorMood.correction,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black develops the king knight to f6.",
+          scriptedMove: 'g8f6',
+          highlightSquares: ['g8', 'f6'],
+          animatePathSquares: ['g8', 'f6'],
+          overlayEffect: TutorialOverlayEffect.knightLPath,
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "White supports the center. Play c2 to c4.",
+          highlightSquares: ['c2', 'c4', 'd4'],
+          expectedMove: 'c2c4',
+          reactionCorrect: MentorReaction(
+            dialogue: "The broad pawn center appears.",
+            mood: MentorMood.encouraging,
+          ),
+          reactionIllegal: MentorReaction(
+            dialogue: "Play c2 to c4.",
+            mood: MentorMood.correction,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black prepares the fianchetto with g6.",
+          scriptedMove: 'g7g6',
+          highlightSquares: ['g7', 'g6', 'g7'],
+          animatePathSquares: ['g7', 'g6'],
+          overlayEffect: TutorialOverlayEffect.animatePath,
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "White develops naturally.",
+          scriptedMove: 'g1f3',
+          highlightSquares: ['g1', 'f3'],
+          animatePathSquares: ['g1', 'f3'],
+          overlayEffect: TutorialOverlayEffect.knightLPath,
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "The bishop slides to g7. Long diagonal pressure begins.",
+          scriptedMove: 'f8g7',
+          highlightSquares: ['f8', 'g7', 'a1', 'h8'],
+          animatePathSquares: ['f8', 'g7'],
+          overlayEffect: TutorialOverlayEffect.bishopDiagonals,
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "White develops one more piece.",
+          scriptedMove: 'b1c3',
+          highlightSquares: ['b1', 'c3'],
+          animatePathSquares: ['b1', 'c3'],
+          overlayEffect: TutorialOverlayEffect.knightLPath,
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black castles. The King's Indian shell is complete.",
+          scriptedMove: 'e8g8',
+          highlightSquares: ['e8', 'g8', 'h8', 'f8'],
+          overlayEffect: TutorialOverlayEffect.castlingPath,
+        ),
+        TutorialStep(
+          type: TutorialStepType.celebration,
+          dialogue: "King's Indian setup understood. Let the center come, then undermine it.",
+          mentorMood: MentorMood.celebration,
+        ),
+      ],
+    ),
+
+    // Chapter 29: Queen Mate
+    TutorialLesson(
+      chapterId: 29,
+      title: 'Queen Mate',
+      setupFen: '7k/5Q2/6K1/8/8/8/8/8 w - - 0 1',
+      steps: [
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "Queen mate. The queen boxes the king; your king protects the final square.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black is trapped on the edge. The queen controls the escape line.",
+          highlightSquares: ['h8', 'f7', 'g6'],
+          overlayEffect: TutorialOverlayEffect.dangerZone,
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Finish it. Move queen f7 to f8.",
+          highlightSquares: ['f7', 'f8', 'h8'],
+          expectedMove: 'f7f8',
+          alternativeMoves: ['f7e8'],
+          reactionCorrect: MentorReaction(
+            dialogue: "Mate. Queen power, king support.",
+            mood: MentorMood.celebration,
+          ),
+          reactionIllegal: MentorReaction(
+            dialogue: "Use the queen to seal the edge. Qf8 or Qe8 mates.",
+            mood: MentorMood.correction,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.celebration,
+          dialogue: "Queen mate mastered. Never chase; restrict.",
+          mentorMood: MentorMood.celebration,
+        ),
+      ],
+    ),
+
+    // Chapter 30: Rook Mate
+    TutorialLesson(
+      chapterId: 30,
+      title: 'Rook Mate',
+      setupFen: '7k/5KR1/8/8/8/8/8/8 w - - 0 1',
+      steps: [
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "Rook mate. The rook cuts the board; the king guards the rook.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black is on the edge. Your king protects g8.",
+          highlightSquares: ['h8', 'g8', 'f7'],
+          overlayEffect: TutorialOverlayEffect.rookLanes,
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Deliver mate. Rook g7 to g8.",
+          highlightSquares: ['g7', 'g8'],
+          expectedMove: 'g7g8',
+          reactionCorrect: MentorReaction(
+            dialogue: "Clean rook mate. The king cannot capture a protected rook.",
+            mood: MentorMood.celebration,
+          ),
+          reactionIllegal: MentorReaction(
+            dialogue: "Lift the rook from g7 to g8.",
+            mood: MentorMood.correction,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.celebration,
+          dialogue: "Rook mate verified. Cut, approach, finish.",
+          mentorMood: MentorMood.celebration,
+        ),
+      ],
+    ),
+
+    // Chapter 31: Opposition
+    TutorialLesson(
+      chapterId: 31,
+      title: 'Opposition',
+      setupFen: '8/8/8/4k3/8/4K3/4P3/8 w - - 0 1',
+      steps: [
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "Opposition. Kings fight for entry squares in pawn endings.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Step to the side to force the enemy king to yield ground.",
+          highlightSquares: ['e3', 'f3', 'e5', 'e2'],
+          overlayEffect: TutorialOverlayEffect.glowSquare,
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Take the outside shoulder. King e3 to f3.",
+          highlightSquares: ['e3', 'f3'],
+          expectedMove: 'e3f3',
+          reactionCorrect: MentorReaction(
+            dialogue: "Excellent. The pawn ending is a king duel first.",
+            mood: MentorMood.encouraging,
+          ),
+          reactionIllegal: MentorReaction(
+            dialogue: "Move the king from e3 to f3.",
+            mood: MentorMood.correction,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.celebration,
+          dialogue: "Opposition understood. In pawn endings, one tempo can be the whole game.",
+          mentorMood: MentorMood.celebration,
+        ),
+      ],
+    ),
+
+    // Chapter 32: Lucena Position
+    TutorialLesson(
+      chapterId: 32,
+      title: 'Lucena Position',
+      setupFen: '6k1/3PK3/8/8/8/8/7r/4R3 w - - 0 1',
+      steps: [
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "Lucena Position. In rook endings, build a bridge for your king.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "The pawn is almost home. The rook must shield checks.",
+          highlightSquares: ['d7', 'e7', 'e1', 'e4'],
+          overlayEffect: TutorialOverlayEffect.rookLanes,
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Build the bridge. Rook e1 to e4.",
+          highlightSquares: ['e1', 'e4'],
+          expectedMove: 'e1e4',
+          reactionCorrect: MentorReaction(
+            dialogue: "Bridge built. The king can hide from rook checks.",
+            mood: MentorMood.celebration,
+          ),
+          reactionIllegal: MentorReaction(
+            dialogue: "The bridge move is Re1-e4.",
+            mood: MentorMood.correction,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.celebration,
+          dialogue: "Lucena learned. Passed pawn plus active rook can be decisive.",
+          mentorMood: MentorMood.celebration,
+        ),
+      ],
+    ),
+
+    // Chapter 33: Philidor Position
+    TutorialLesson(
+      chapterId: 33,
+      title: 'Philidor Position',
+      setupFen: '8/7r/8/8/8/3k4/3P4/3K4 b - - 0 1',
+      steps: [
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "Philidor Position. The defender survives by holding the third rank.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Keep the rook active and deny the attacking king shelter.",
+          highlightSquares: ['h7', 'h6', 'd2', 'd3'],
+          overlayEffect: TutorialOverlayEffect.rookLanes,
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Set the drawing wall. Rook h7 to h6.",
+          highlightSquares: ['h7', 'h6'],
+          expectedMove: 'h7h6',
+          reactionCorrect: MentorReaction(
+            dialogue: "Correct. The third rank defense holds the draw.",
+            mood: MentorMood.encouraging,
+          ),
+          reactionIllegal: MentorReaction(
+            dialogue: "Move the rook from h7 to h6.",
+            mood: MentorMood.correction,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.celebration,
+          dialogue: "Philidor secured. Defense is a skill, not a surrender.",
+          mentorMood: MentorMood.celebration,
+        ),
+      ],
+    ),
+
+    // Chapter 34: Saavedra Study
+    TutorialLesson(
+      chapterId: 34,
+      title: 'Saavedra Study',
+      setupFen: '8/2P5/1K1k4/3r4/8/8/8/8 w - - 0 1',
+      steps: [
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "Saavedra Study. Sometimes the strongest promotion is not a queen.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "The c-pawn reaches glory, but queen promotion allows defensive tricks.",
+          highlightSquares: ['c7', 'c8', 'd5', 'd6'],
+          overlayEffect: TutorialOverlayEffect.glowSquare,
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Find the famous move. Promote c7 to c8 as a rook.",
+          highlightSquares: ['c7', 'c8'],
+          expectedMove: 'c7c8r',
+          reactionCorrect: MentorReaction(
+            dialogue: "Brilliant. Underpromotion creates the win.",
+            mood: MentorMood.celebration,
+          ),
+          reactionIllegal: MentorReaction(
+            dialogue: "Choose rook promotion. c7 to c8 equals rook.",
+            mood: MentorMood.correction,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.celebration,
+          dialogue: "Saavedra remembered. Mastery means choosing the exact piece.",
+          mentorMood: MentorMood.celebration,
+        ),
+      ],
+    ),
   ];
 
   static TutorialLesson getLesson(int chapterId) {
