@@ -230,10 +230,10 @@ class _StudyLabChessBoardState extends ConsumerState<StudyLabChessBoard> {
                         // Sibling last played move highlights
                         if (isLastStart || isLastEnd)
                           Container(
-                            color: ScholarlyTheme.accentBlue.withValues(alpha: 0.12),
-                            decoration: isLastEnd ? BoxDecoration(
-                              border: Border.all(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.5), width: 1.5),
-                            ) : null,
+                            decoration: BoxDecoration(
+                              color: ScholarlyTheme.accentBlue.withValues(alpha: 0.12),
+                              border: isLastEnd ? Border.all(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.5), width: 1.5) : null,
+                            ),
                           ),
 
                         // Selection glowing overlay
