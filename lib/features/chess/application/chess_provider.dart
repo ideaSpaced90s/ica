@@ -158,6 +158,7 @@ class MoveAnimationData {
   final String to;
   final String pieceCode;
   final bool isCapture;
+  final bool isWrongMove;
 
   // Castling support: second piece (Rook)
   final String? rookFrom;
@@ -169,6 +170,7 @@ class MoveAnimationData {
     required this.to,
     required this.pieceCode,
     this.isCapture = false,
+    this.isWrongMove = false,
     this.rookFrom,
     this.rookTo,
     this.rookPieceCode,
@@ -2899,8 +2901,18 @@ class ChessNotifier extends StateNotifier<ChessState> {
         if (state.isHapticsEnabled) {
           _hapticsService.errorFeedback();
         }
+
+        final piece = state.game.getPiece(from);
+        final colorPrefix = piece?.color == chess_lib.Color.WHITE ? 'w' : 'b';
+        final pieceCode = piece != null ? '$colorPrefix${piece.type.toUpperCase()}' : 'wP';
         
         state = state.copyWith(
+          moveAnimation: MoveAnimationData(
+            from: from,
+            to: to,
+            pieceCode: pieceCode,
+            isWrongMove: true,
+          ),
           commentaryHistory: [
             ...state.commentaryHistory,
             CommentaryEntry(
@@ -3218,6 +3230,24 @@ class ChessNotifier extends StateNotifier<ChessState> {
     }
 
     _cancelCommentaryReveal();
+
+    if (state.isPuzzleMode) {
+      if (state.puzzleMovesRemaining.isEmpty) return;
+      final correctMove = state.puzzleMovesRemaining.first;
+      state = state.copyWith(
+        isHintLoading: true,
+        isHintVisible: false,
+        isHintBlinking: false,
+        isBulbGlowing: true,
+        hintBestMove: null,
+        hintFrom: null,
+        hintTo: null,
+        commentaryError: null,
+      );
+      await _runHintFlow(correctMove);
+      return;
+    }
+
     _pendingHintFen = state.game.fen;
     state = state.copyWith(
       isHintLoading: true,

@@ -59,16 +59,39 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
   late List<Offset>? _rookPath;
   late PieceMotionProfile? _rookProfile;
 
+  bool _isBlinkingRed = false;
+
+  static const PieceMotionProfile _puzzleStandardProfile = PieceMotionProfile(
+    moveDuration: Duration(milliseconds: 300),
+    moveCurve: Curves.easeOutCubic,
+    verticalArcFactor: 0.0,
+    midRotationDeg: 0.0,
+    hasGhostTrail: false,
+    isTeleport: false,
+    landingCompression: 0.0,
+    hasBreathingSelection: false,
+    selectionBreathScale: 0.0,
+    breathingPeriod: Duration(milliseconds: 1000),
+    levitationHeight: 0.0,
+    isInfantry: false,
+  );
+
   @override
   void initState() {
     super.initState();
     _squareSize = widget.boardSize / 8;
     _path = _calculatePath(widget.data.from, widget.data.to);
-    _profile = PieceMotionProfile.forCode(widget.data.pieceCode);
+    
+    final isPuzzle = ref.read(chessProvider).isPuzzleMode;
+    _profile = isPuzzle
+        ? _puzzleStandardProfile
+        : PieceMotionProfile.forCode(widget.data.pieceCode);
 
     if (widget.data.isCastle) {
       _rookPath = _calculatePath(widget.data.rookFrom!, widget.data.rookTo!);
-      _rookProfile = PieceMotionProfile.forCode(widget.data.rookPieceCode!);
+      _rookProfile = isPuzzle
+          ? _puzzleStandardProfile
+          : PieceMotionProfile.forCode(widget.data.rookPieceCode!);
     } else {
       _rookPath = null;
       _rookProfile = null;
@@ -78,14 +101,31 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
         AnimationController(vsync: this, duration: _effectiveMoveDuration)
           ..addStatusListener((status) {
             if (status == AnimationStatus.completed) {
-              // Fire landing callback before completing
-              widget.onLand?.call(
-                widget.data.from,
-                widget.data.to,
-                widget.data.pieceCode,
-                _profile,
-              );
-              widget.onComplete();
+              if (widget.data.isWrongMove) {
+                setState(() {
+                  _isBlinkingRed = true;
+                });
+                Future.delayed(const Duration(milliseconds: 400), () {
+                  if (!mounted) return;
+                  setState(() {
+                    _isBlinkingRed = false;
+                  });
+                  _controller.reverse();
+                });
+              } else {
+                // Fire landing callback before completing
+                widget.onLand?.call(
+                  widget.data.from,
+                  widget.data.to,
+                  widget.data.pieceCode,
+                  _profile,
+                );
+                widget.onComplete();
+              }
+            } else if (status == AnimationStatus.dismissed) {
+              if (widget.data.isWrongMove) {
+                widget.onComplete();
+              }
             }
           });
 
@@ -131,6 +171,10 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
   /// Returns the profile-aware curve, falling back to theme curve for
   /// theme-specific special modes (matrix, toy).
   Curve _profileAwareCurve(String themeId, PieceMotionProfile profile) {
+    final isPuzzle = ref.read(chessProvider).isPuzzleMode;
+    if (isPuzzle) {
+      return Curves.easeOutCubic;
+    }
     // Special themes keep their own curve logic (handled in build())
     if (themeId == 'theme9') {
       return _themeBaseCurve(themeId);
@@ -162,11 +206,17 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
     // Handle new move data if it changes while the overlay is still mounted
     if (widget.data != oldWidget.data) {
       _path = _calculatePath(widget.data.from, widget.data.to);
-      _profile = PieceMotionProfile.forCode(widget.data.pieceCode);
+      
+      final isPuzzle = ref.read(chessProvider).isPuzzleMode;
+      _profile = isPuzzle
+          ? _puzzleStandardProfile
+          : PieceMotionProfile.forCode(widget.data.pieceCode);
 
       if (widget.data.isCastle) {
         _rookPath = _calculatePath(widget.data.rookFrom!, widget.data.rookTo!);
-        _rookProfile = PieceMotionProfile.forCode(widget.data.rookPieceCode!);
+        _rookProfile = isPuzzle
+            ? _puzzleStandardProfile
+            : PieceMotionProfile.forCode(widget.data.rookPieceCode!);
       } else {
         _rookPath = null;
         _rookProfile = null;
@@ -299,7 +349,14 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
         Offset vibration = Offset.zero;
         double midRotation = 0.0; // radians
 
-        if (isToyTheme &&
+        final isPuzzle = ref.read(chessProvider).isPuzzleMode;
+
+        if (isPuzzle) {
+          pieceScale = 1.0;
+          verticalLift = 0.0;
+          vibration = Offset.zero;
+          midRotation = 0.0;
+        } else if (isToyTheme &&
             ref
                 .read(chessProvider.notifier)
                 .isAnimationTypeEnabled('themeEffects')) {
@@ -407,6 +464,25 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
               for (int i = 1; i <= 4; i++)
                 _buildGhostPiece(progress - (i * 0.05), 0.35 / (i * 1.6)),
 
+            // ── Wrong Move Red Blink Overlay ────────────────────────
+            if (_isBlinkingRed)
+              Positioned(
+                left: _path.last.dx - _squareSize / 2,
+                top: _path.last.dy - _squareSize / 2,
+                child: Container(
+                  width: _squareSize,
+                  height: _squareSize,
+                  decoration: BoxDecoration(
+                    color: Colors.red.withValues(alpha: 0.35),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: Colors.redAccent,
+                      width: 3.0,
+                    ),
+                  ),
+                ),
+              ),
+
             // ── Moving pieces ────────────────────────────────────────
 
             // Rook (if castling)
@@ -450,7 +526,13 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
     double lift = 0.0;
     Offset vib = Offset.zero;
 
-    if (isToyTheme &&
+    final isPuzzle = ref.read(chessProvider).isPuzzleMode;
+
+    if (isPuzzle) {
+      scale = 1.0;
+      lift = 0.0;
+      vib = Offset.zero;
+    } else if (isToyTheme &&
         ref
             .read(chessProvider.notifier)
             .isAnimationTypeEnabled('themeEffects')) {

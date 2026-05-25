@@ -421,22 +421,30 @@ class _PuzzleStatusHeader extends ConsumerWidget {
 
   const _PuzzleStatusHeader({required this.state});
 
+  String _getToughness(int rating) {
+    if (rating < 1100) return 'Beginner';
+    if (rating < 1500) return 'Easy';
+    if (rating < 1900) return 'Medium';
+    if (rating < 2300) return 'Hard';
+    return 'Expert';
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final p = state.currentPuzzle;
     final bool isSolved = state.puzzleMovesRemaining.isEmpty;
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(16),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
             color: isSolved 
                 ? Colors.green.withValues(alpha: 0.1) 
                 : ScholarlyTheme.accentBlue.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: isSolved 
                   ? Colors.greenAccent.withValues(alpha: 0.3) 
@@ -447,24 +455,24 @@ class _PuzzleStatusHeader extends ConsumerWidget {
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: isSolved ? Colors.greenAccent : ScholarlyTheme.accentBlue,
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
                       color: (isSolved ? Colors.greenAccent : ScholarlyTheme.accentBlue).withValues(alpha: 0.3),
-                      blurRadius: 10,
+                      blurRadius: 8,
                     ),
                   ],
                 ),
                 child: Icon(
                   isSolved ? Icons.check_rounded : Icons.extension_rounded,
-                  size: 20,
+                  size: 18,
                   color: Colors.white,
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -474,12 +482,12 @@ class _PuzzleStatusHeader extends ConsumerWidget {
                       isSolved
                           ? 'SOLVED'
                           : (p != null
-                              ? 'PUZZLE #${p.id}'
+                              ? '${_getToughness(p.rating).toUpperCase()} TOUGHNESS'
                               : (state.commentaryError != null
                                   ? 'ERROR'
                                   : 'LOADING...')),
                       style: GoogleFonts.outfit(
-                        fontSize: 16,
+                        fontSize: 14,
                         fontWeight: FontWeight.bold,
                         color: isSolved
                             ? Colors.green.shade700
@@ -489,6 +497,7 @@ class _PuzzleStatusHeader extends ConsumerWidget {
                         letterSpacing: 0.5,
                       ),
                     ),
+                    const SizedBox(height: 1),
                     if (state.commentaryError != null && p == null)
                       Row(
                         children: [
@@ -496,7 +505,7 @@ class _PuzzleStatusHeader extends ConsumerWidget {
                             child: Text(
                               state.commentaryError!,
                               style: GoogleFonts.inter(
-                                fontSize: 12,
+                                fontSize: 11,
                                 color: Colors.redAccent.withValues(alpha: 0.8),
                                 fontWeight: FontWeight.w500,
                               ),
@@ -535,9 +544,9 @@ class _PuzzleStatusHeader extends ConsumerWidget {
                       )
                     else if (p != null)
                       Text(
-                        'Rating: ${p.rating} • ${state.isPlayerWhite ? "White" : "Black"} to move',
+                        '${state.isPlayerWhite ? "White" : "Black"} to move',
                         style: GoogleFonts.inter(
-                          fontSize: 12,
+                          fontSize: 11,
                           color: ScholarlyTheme.textSubtle,
                           fontWeight: FontWeight.w500,
                         ),
@@ -547,15 +556,15 @@ class _PuzzleStatusHeader extends ConsumerWidget {
               ),
               if (!isSolved && p != null)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.5),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     '${(state.puzzleMovesRemaining.length / 2).ceil()} LEFT',
                     style: GoogleFonts.jetBrainsMono(
-                      fontSize: 12,
+                      fontSize: 11,
                       fontWeight: FontWeight.bold,
                       color: ScholarlyTheme.accentBlue,
                     ),

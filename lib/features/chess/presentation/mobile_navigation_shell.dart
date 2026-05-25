@@ -316,20 +316,13 @@ class _MobileSidebarDrawer extends ConsumerWidget {
               children: [
                 Text(
                   'IDEASPACE CHESS ACADEMY',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.outfit(
-                    fontSize: 14,
+                    fontSize: 13,
                     fontWeight: FontWeight.bold,
-                    letterSpacing: 1.0,
+                    letterSpacing: 0.5,
                     color: ScholarlyTheme.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'Master Chess',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: ScholarlyTheme.textMuted,
-                    fontWeight: FontWeight.w400,
                   ),
                 ),
               ],
