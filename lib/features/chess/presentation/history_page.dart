@@ -13,6 +13,8 @@ import 'scholarly_theme.dart';
 import 'widgets/history_card.dart';
 import 'widgets/ambient_scaffold.dart';
 import 'dashboard_page.dart';
+import '../application/study_lab_provider.dart';
+import 'mobile_navigation_shell.dart';
 
 enum HistoryFilter { all, favorites, rated, unrated }
 
@@ -190,10 +192,19 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
                                     game: game,
                                     onTap: () {
                                       ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                                      notifier.loadSavedGame(game);
-                                      Navigator.of(context).popUntil(
-                                        (route) => route.isFirst,
-                                      );
+                                      if (game.isLockedForAnalysis) {
+                                        _showLockedGameOptions(context, game);
+                                      } else if (game.isRatedMode) {
+                                        ref.read(studyLabProvider.notifier).loadGameEntry(game);
+                                        ref.read(mobileNavIndexProvider.notifier).state = 4;
+                                        Navigator.of(context).popUntil(
+                                          (route) => route.isFirst,
+                                        );
+                                      } else if (game.result == null) {
+                                        _showActiveArenaOptions(context, game, notifier);
+                                      } else {
+                                        _showCompletedArenaOptions(context, game, notifier);
+                                      }
                                     },
                                     onDelete: () {
                                       ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
@@ -559,6 +570,521 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  void _showCompletedArenaOptions(
+    BuildContext context,
+    SavedGameEntry game,
+    ChessNotifier notifier,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) => Padding(
+        padding: EdgeInsets.fromLTRB(
+          16,
+          16,
+          16,
+          MediaQuery.of(context).padding.bottom + 20,
+        ),
+        child: JuicyGlassCard(
+          borderRadius: 24,
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: ScholarlyTheme.accentBlue.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.sports_esports_rounded,
+                      color: ScholarlyTheme.accentBlue,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          game.customName?.isNotEmpty == true
+                              ? game.customName!
+                              : 'Completed Arena Game',
+                          style: GoogleFonts.outfit(
+                            color: ScholarlyTheme.textPrimary,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          'Select how you want to interact with this match',
+                          style: GoogleFonts.inter(
+                            color: ScholarlyTheme.textMuted,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(
+                      Icons.close_rounded,
+                      color: ScholarlyTheme.textMuted,
+                      size: 20,
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              // Option 1: REPLAY
+              InkWell(
+                onTap: game.isLockedForAnalysis
+                    ? null
+                    : () {
+                        ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                        notifier.loadSavedGame(game);
+                        notifier.setRatedMode(false);
+                        ref.read(mobileNavIndexProvider.notifier).state = 1;
+                        Navigator.pop(context); // Close bottom sheet
+                        Navigator.of(context).popUntil((route) => route.isFirst);
+                      },
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: game.isLockedForAnalysis
+                        ? Colors.black.withValues(alpha: 0.04)
+                        : Colors.white.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: game.isLockedForAnalysis
+                          ? Colors.black.withValues(alpha: 0.08)
+                          : Colors.white.withValues(alpha: 0.8),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: game.isLockedForAnalysis
+                              ? Colors.grey.withValues(alpha: 0.15)
+                              : ScholarlyTheme.realGold.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          game.isLockedForAnalysis ? Icons.lock_rounded : Icons.replay_rounded,
+                          color: game.isLockedForAnalysis ? Colors.grey : ScholarlyTheme.realGold,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              game.isLockedForAnalysis ? 'REPLAY MATCH (LOCKED)' : 'REPLAY MATCH',
+                              style: GoogleFonts.outfit(
+                                color: game.isLockedForAnalysis
+                                    ? ScholarlyTheme.textMuted
+                                    : ScholarlyTheme.textPrimary,
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              game.isLockedForAnalysis
+                                  ? 'This match is locked for analysis and cannot be replayed.'
+                                  : 'Load into Arena, rewinding moves to try a different outcome.',
+                              style: GoogleFonts.inter(
+                                color: ScholarlyTheme.textMuted,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(
+                        Icons.chevron_right_rounded,
+                        color: ScholarlyTheme.textMuted,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              // Option 2: ANALYZE
+              InkWell(
+                onTap: () async {
+                  ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                  if (!game.isLockedForAnalysis) {
+                    await notifier.lockGameForAnalysis(game.id);
+                  }
+                  ref.read(studyLabProvider.notifier).loadGameEntry(game);
+                  ref.read(mobileNavIndexProvider.notifier).state = 4;
+                  if (context.mounted) {
+                    Navigator.pop(context); // Close bottom sheet
+                    Navigator.of(context).popUntil((route) => route.isFirst);
+                  }
+                },
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.8),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: ScholarlyTheme.accentBlue.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.science_rounded,
+                          color: ScholarlyTheme.accentBlue,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'ANALYZE BOARD',
+                              style: GoogleFonts.outfit(
+                                color: ScholarlyTheme.textPrimary,
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Explore moves, search variations, and use engine analysis.',
+                              style: GoogleFonts.inter(
+                                color: ScholarlyTheme.textMuted,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(
+                        Icons.chevron_right_rounded,
+                        color: ScholarlyTheme.textMuted,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showLockedGameOptions(BuildContext context, SavedGameEntry game) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Padding(
+        padding: EdgeInsets.fromLTRB(16, 16, 16, MediaQuery.of(context).padding.bottom + 20),
+        child: JuicyGlassCard(
+          borderRadius: 24,
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.redAccent.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.lock_rounded,
+                      color: Colors.redAccent,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          game.customName?.isNotEmpty == true ? game.customName! : 'Locked Game',
+                          style: GoogleFonts.outfit(
+                            color: ScholarlyTheme.textPrimary,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          'Locked for Analysis',
+                          style: GoogleFonts.inter(
+                            color: ScholarlyTheme.textMuted,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded, color: ScholarlyTheme.textMuted, size: 20),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'This Arena game has been sent to the Analysis Board and is locked. It can no longer be played or resumed in the Arena.',
+                style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 13, height: 1.5),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: FilledButton.icon(
+                  onPressed: () {
+                    ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                    ref.read(studyLabProvider.notifier).loadGameEntry(game);
+                    ref.read(mobileNavIndexProvider.notifier).state = 4;
+                    Navigator.pop(context); // Close bottom sheet
+                    Navigator.of(context).popUntil((route) => route.isFirst);
+                  },
+                  icon: const Icon(Icons.science_rounded),
+                  label: const Text('OPEN IN ANALYSIS BOARD'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: ScholarlyTheme.accentBlue,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showActiveArenaOptions(BuildContext context, SavedGameEntry game, ChessNotifier notifier) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) => Padding(
+        padding: EdgeInsets.fromLTRB(16, 16, 16, MediaQuery.of(context).padding.bottom + 20),
+        child: JuicyGlassCard(
+          borderRadius: 24,
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: ScholarlyTheme.accentBlue.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.play_arrow_rounded,
+                      color: ScholarlyTheme.accentBlue,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          game.customName?.isNotEmpty == true ? game.customName! : 'Active Arena Game',
+                          style: GoogleFonts.outfit(
+                            color: ScholarlyTheme.textPrimary,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          'Choose an action for this active match',
+                          style: GoogleFonts.inter(
+                            color: ScholarlyTheme.textMuted,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded, color: ScholarlyTheme.textMuted, size: 20),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              // Option 1: RESUME MATCH
+              InkWell(
+                onTap: () {
+                  ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                  notifier.loadSavedGame(game);
+                  notifier.setRatedMode(false);
+                  ref.read(mobileNavIndexProvider.notifier).state = 1;
+                  Navigator.pop(context); // Close bottom sheet
+                  Navigator.of(context).popUntil((route) => route.isFirst);
+                },
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.8)),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: ScholarlyTheme.accentBlue.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.play_arrow_rounded,
+                          color: ScholarlyTheme.accentBlue,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'RESUME MATCH',
+                              style: GoogleFonts.outfit(
+                                color: ScholarlyTheme.textPrimary,
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Resume playing this match in the Arena.',
+                              style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right_rounded, color: ScholarlyTheme.textMuted),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              // Option 2: ANALYZE BOARD
+              InkWell(
+                onTap: () async {
+                  ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                  await notifier.lockGameForAnalysis(game.id);
+                  ref.read(studyLabProvider.notifier).loadGameEntry(game);
+                  ref.read(mobileNavIndexProvider.notifier).state = 4;
+                  if (context.mounted) {
+                    Navigator.pop(context); // Close bottom sheet
+                    Navigator.of(context).popUntil((route) => route.isFirst);
+                  }
+                },
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.8)),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: ScholarlyTheme.accentGold.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.science_rounded,
+                          color: ScholarlyTheme.accentGold,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'SEND TO ANALYSIS',
+                              style: GoogleFonts.outfit(
+                                color: ScholarlyTheme.textPrimary,
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Lock this game and send it to the Analysis Board.',
+                              style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right_rounded, color: ScholarlyTheme.textMuted),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -94,6 +94,7 @@ class _BoardSnapshot {
     required this.isPuzzleMode,
     this.currentPuzzle,
     required this.puzzleMovesRemaining,
+    this.activeRatedMatchId,
   });
 
   final String fen;
@@ -149,6 +150,7 @@ class _BoardSnapshot {
   final bool isPuzzleMode;
   final rust_puzzles.Puzzle? currentPuzzle;
   final List<String> puzzleMovesRemaining;
+  final String? activeRatedMatchId;
 }
 
 class MoveAnimationData {
@@ -217,6 +219,7 @@ class ChessState {
     this.isSavingGame = false,
     this.threatenedSquares = const [],
     this.loadedSaveId,
+    this.activeRatedMatchId,
     this.pendingEngineMove,
     this.engineSelectionSquare,
     this.moveAnimation,
@@ -343,6 +346,7 @@ class ChessState {
   final bool isSavingGame;
   final List<String> threatenedSquares;
   final String? loadedSaveId;
+  final String? activeRatedMatchId;
   final String? pendingEngineMove;
   final String? engineSelectionSquare;
   final MoveAnimationData? moveAnimation;
@@ -463,6 +467,7 @@ class ChessState {
     bool? isSavingGame,
     List<String>? threatenedSquares,
     Object? loadedSaveId = _sentinel,
+    Object? activeRatedMatchId = _sentinel,
     Object? pendingEngineMove = _sentinel,
     Object? engineSelectionSquare = _sentinel,
     Object? moveAnimation = _sentinel,
@@ -586,6 +591,9 @@ class ChessState {
       loadedSaveId: identical(loadedSaveId, _sentinel)
           ? this.loadedSaveId
           : loadedSaveId as String?,
+      activeRatedMatchId: identical(activeRatedMatchId, _sentinel)
+          ? this.activeRatedMatchId
+          : activeRatedMatchId as String?,
       pendingEngineMove: identical(pendingEngineMove, _sentinel)
           ? this.pendingEngineMove
           : pendingEngineMove as String?,
@@ -767,6 +775,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
         rapidDominance: s.rapidDominance,
         userName: s.userName,
         userAvatarPath: s.userAvatarPath,
+        activeRatedMatchId: s.activeRatedMatchId,
       );
       await _engine.setChess960Mode(is960);
       final avatar = AiAvatar.getAvatar(s.engineLevel);
@@ -785,6 +794,32 @@ class ChessNotifier extends StateNotifier<ChessState> {
         isRatedMode: s.isRatedMode,
       );
       _hapticsService.updateSettings(hapticsEnabled: s.isHapticsEnabled);
+
+      if (s.activeRatedMatchId != null) {
+        debugPrint('Active rated match ID found on boot: ${s.activeRatedMatchId}. Registering unfair exit loss.');
+        await _updateRating(0.0);
+        
+        final entry = SavedGameEntry(
+          id: s.activeRatedMatchId!,
+          savedAt: DateTime.now(),
+          fen: chess_lib.Chess.DEFAULT_POSITION,
+          recentMoves: const [],
+          isPlayerWhite: true,
+          isBoardFlipped: false,
+          whiteTimeLeftMs: 0,
+          blackTimeLeftMs: 0,
+          clockStarted: false,
+          activeClockSide: null,
+          customName: 'Rated Loss (Unfair Exit)',
+          isRatedMode: true,
+          result: 'L',
+        );
+        await _savedGameRepository.save(entry);
+        
+        state = state.copyWith(activeRatedMatchId: null);
+        await _saveSettings();
+      }
+
       // Automatically load saved games and populate dashboard caches on boot
       await loadSavedGames();
     } catch (e) {
@@ -837,6 +872,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
         rapidDominance: state.rapidDominance,
         userName: state.userName,
         userAvatarPath: state.userAvatarPath,
+        activeRatedMatchId: state.activeRatedMatchId,
       );
       await _settingsRepository.saveSettings(s);
     } catch (e) {
@@ -854,9 +890,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
   Future<void> setRatedMode(bool isRated) async {
     if (state.isRatedMode == isRated) return;
-    if (state.recentMoves.isNotEmpty) {
-      await saveCurrentGame();
-    }
+
     
     final newBoardThemeId = isRated ? 'classic' : state.boardThemeId;
     final newIsMusicEnabled = isRated ? false : state.isMusicEnabled;
@@ -1892,7 +1926,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
       }
     }
 
-    final List<String> sortedKeys = dailyDom.keys.toList()..sort((a, b) => a.compareTo(b));
+    final List<String> sortedKeys = dailyDom.keys.toList();
     for (final key in sortedKeys) {
       final doms = dailyDom[key]!;
       final avg = doms.isEmpty ? 0.0 : doms.reduce((a, b) => a + b) / doms.length;
@@ -1957,6 +1991,24 @@ class ChessNotifier extends StateNotifier<ChessState> {
         }
       }
 
+      // Automatically calculate results if game is over and resultOverride is null
+      String? result = resultOverride;
+      if (result == null && state.game.gameOver) {
+        if (state.game.inCheckmate) {
+          final lastMover = _playerWhoJustMoved();
+          final winnerIsWhite = lastMover == 'White';
+          result = (winnerIsWhite == state.isPlayerWhite) ? 'W' : 'L';
+        } else if (state.game.inDraw || state.game.inStalemate) {
+          result = 'D';
+        }
+      }
+      if (result == null && state.isTimeOut) {
+        final playerTimedOut = state.isPlayerWhite 
+            ? state.whiteTimeLeft <= Duration.zero 
+            : state.blackTimeLeft <= Duration.zero;
+        result = playerTimedOut ? 'L' : 'W';
+      }
+
       final entry = SavedGameEntry(
         id: targetId,
         savedAt: DateTime.now(),
@@ -1976,10 +2028,11 @@ class ChessNotifier extends StateNotifier<ChessState> {
         gameMode: state.gameMode,
         isRatedMode: state.isRatedMode,
         isAcademyActive: state.isAcademyActive,
-        result: resultOverride,
+        result: result,
         ratingSnapshot: ratingSnapshot ?? (state.isRatedMode ? _getCurrentCategoryElo() : null),
         dominanceSnapshot: dominanceSnapshot ?? (state.isRatedMode ? _getCurrentCategoryDominance() : null),
         ratingCategory: ratingCategory ?? (state.isRatedMode ? _getRatingCategory(state.baseTimeDuration, state.incrementDuration) : null),
+        initialFen: state.game.initialFen,
       );
 
       final saves = isUpdate
@@ -2018,7 +2071,12 @@ class ChessNotifier extends StateNotifier<ChessState> {
         cachedLedgerEntries: updatedLedger,
         isSavingGame: false,
         commentaryError: null,
+        loadedSaveId: entry.id,
+        activeRatedMatchId: (entry.isRatedMode && entry.result != null) ? null : state.activeRatedMatchId,
       );
+      if (entry.isRatedMode && entry.result != null) {
+        await _saveSettings();
+      }
       _refreshDashboardStats();
       debugPrint('Game saved successfully: ${entry.id}');
       return entry;
@@ -2067,6 +2125,20 @@ class ChessNotifier extends StateNotifier<ChessState> {
     }
   }
 
+  Future<void> lockGameForAnalysis(String id) async {
+    final entryIndex = state.savedGames.indexWhere((e) => e.id == id);
+    if (entryIndex == -1) return;
+    final entry = state.savedGames[entryIndex];
+    final updated = entry.copyWith(isLockedForAnalysis: true);
+    try {
+      final saves = await _savedGameRepository.update(updated);
+      state = state.copyWith(savedGames: saves);
+      _refreshDashboardStats();
+    } catch (e) {
+      debugPrint('Failed to lock game for analysis: $e');
+    }
+  }
+
   Future<void> clearAllHistory() async {
     try {
       await _savedGameRepository.clearAll();
@@ -2078,6 +2150,145 @@ class ChessNotifier extends StateNotifier<ChessState> {
       _refreshDashboardStats();
     } catch (e) {
       debugPrint('Failed to clear history: $e');
+    }
+  }
+
+  void _reconstructUndoStack(SavedGameEntry entry) {
+    _undoStack.clear();
+    _redoStack.clear();
+
+    final is960 = entry.gameMode == 'chess960';
+    final startFen = entry.initialFen ?? (is960 ? entry.fen : chess_lib.Chess.DEFAULT_POSITION);
+
+    final localChess = chess_lib.Chess.fromFEN(startFen);
+    final List<String> currentRecentMoves = [];
+
+    // 1. Add starting position snapshot
+    _undoStack.add(_BoardSnapshot(
+      fen: startFen,
+      lastMove: null,
+      recentMoves: const [],
+      previousEvaluation: 0.0,
+      currentEvaluation: 0.0,
+      commentaryHistory: const [],
+      isCommentaryStreaming: false,
+      isCommentaryLoading: false,
+      isCommentaryEngineLoading: false,
+      commentaryError: null,
+      isEngineThinking: false,
+      hintBestMove: null,
+      hintFrom: null,
+      hintTo: null,
+      isHintVisible: false,
+      isHintLoading: false,
+      isHintBlinking: false,
+      isBulbGlowing: false,
+      whiteTimeLeft: Duration(milliseconds: entry.whiteTimeLeftMs),
+      blackTimeLeft: Duration(milliseconds: entry.blackTimeLeftMs),
+      clockStarted: false,
+      activeClockSide: null,
+      threatenedSquares: const [],
+      pendingEngineMove: null,
+      engineSelectionSquare: null,
+      moveAnimation: null,
+      isAiOperational: state.isAiOperational,
+      isAnimationsEnabled: state.isAnimationsEnabled,
+      isPlayerWhite: entry.isPlayerWhite,
+      isBoardFlipped: entry.isBoardFlipped,
+      gameMode: entry.gameMode,
+      isRatedMode: entry.isRatedMode,
+      consolidatedRating: state.consolidatedRating,
+      bulletElo: state.bulletElo,
+      blitzElo: state.blitzElo,
+      rapidElo: state.rapidElo,
+      totalRatedGamesCount: state.totalRatedGamesCount,
+      bulletGamesClassic: state.bulletGamesClassic,
+      bulletGames960: state.bulletGames960,
+      blitzGamesClassic: state.blitzGamesClassic,
+      blitzGames960: state.blitzGames960,
+      rapidGamesClassic: state.rapidGamesClassic,
+      rapidGames960: state.rapidGames960,
+      totalWinningStreak: state.totalWinningStreak,
+      bulletStreak: state.bulletStreak,
+      blitzStreak: state.blitzStreak,
+      rapidStreak: state.rapidStreak,
+      bulletDominance: state.bulletDominance,
+      blitzDominance: state.blitzDominance,
+      rapidDominance: state.rapidDominance,
+      isPuzzleMode: false,
+      currentPuzzle: null,
+      puzzleMovesRemaining: const [],
+      activeRatedMatchId: state.activeRatedMatchId,
+    ));
+
+    // 2. Replay all moves and add snapshots
+    for (final moveSan in entry.recentMoves) {
+      final success = localChess.move(moveSan);
+      if (!success) continue;
+
+      currentRecentMoves.add(moveSan);
+
+      _undoStack.add(_BoardSnapshot(
+        fen: localChess.fen,
+        lastMove: moveSan,
+        recentMoves: List<String>.from(currentRecentMoves),
+        previousEvaluation: 0.0,
+        currentEvaluation: 0.0,
+        commentaryHistory: const [],
+        isCommentaryStreaming: false,
+        isCommentaryLoading: false,
+        isCommentaryEngineLoading: false,
+        commentaryError: null,
+        isEngineThinking: false,
+        hintBestMove: null,
+        hintFrom: null,
+        hintTo: null,
+        isHintVisible: false,
+        isHintLoading: false,
+        isHintBlinking: false,
+        isBulbGlowing: false,
+        whiteTimeLeft: Duration(milliseconds: entry.whiteTimeLeftMs),
+        blackTimeLeft: Duration(milliseconds: entry.blackTimeLeftMs),
+        clockStarted: false,
+        activeClockSide: null,
+        threatenedSquares: const [],
+        pendingEngineMove: null,
+        engineSelectionSquare: null,
+        moveAnimation: null,
+        isAiOperational: state.isAiOperational,
+        isAnimationsEnabled: state.isAnimationsEnabled,
+        isPlayerWhite: entry.isPlayerWhite,
+        isBoardFlipped: entry.isBoardFlipped,
+        gameMode: entry.gameMode,
+        isRatedMode: entry.isRatedMode,
+        consolidatedRating: state.consolidatedRating,
+        bulletElo: state.bulletElo,
+        blitzElo: state.blitzElo,
+        rapidElo: state.rapidElo,
+        totalRatedGamesCount: state.totalRatedGamesCount,
+        bulletGamesClassic: state.bulletGamesClassic,
+        bulletGames960: state.bulletGames960,
+        blitzGamesClassic: state.blitzGamesClassic,
+        blitzGames960: state.blitzGames960,
+        rapidGamesClassic: state.rapidGamesClassic,
+        rapidGames960: state.rapidGames960,
+        totalWinningStreak: state.totalWinningStreak,
+        bulletStreak: state.bulletStreak,
+        blitzStreak: state.blitzStreak,
+        rapidStreak: state.rapidStreak,
+        bulletDominance: state.bulletDominance,
+        blitzDominance: state.blitzDominance,
+        rapidDominance: state.rapidDominance,
+        isPuzzleMode: false,
+        currentPuzzle: null,
+        puzzleMovesRemaining: const [],
+        activeRatedMatchId: state.activeRatedMatchId,
+      ));
+    }
+
+    // 3. Remove the last snapshot since it is the current state
+    if (_undoStack.isNotEmpty) {
+      _undoStack.removeLast();
     }
   }
 
@@ -2151,8 +2362,17 @@ class ChessNotifier extends StateNotifier<ChessState> {
       blitzDominance: state.blitzDominance,
       rapidDominance: state.rapidDominance,
       isAcademyActive: entry.isAcademyActive,
+      userName: state.userName,
+      userAvatarPath: state.userAvatarPath,
+      cachedScotoma: state.cachedScotoma,
+      cachedPlaystyle: state.cachedPlaystyle,
+      cachedOpenings: state.cachedOpenings,
+      cachedEndgames: state.cachedEndgames,
+      cachedDominanceHeatmap: state.cachedDominanceHeatmap,
+      cachedLedgerEntries: state.cachedLedgerEntries,
     );
 
+    _reconstructUndoStack(entry);
     _syncUndoRedoFlags();
 
     if (state.clockStarted) {
@@ -2235,6 +2455,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
       isPuzzleMode: state.isPuzzleMode,
       currentPuzzle: state.currentPuzzle,
       puzzleMovesRemaining: List<String>.from(state.puzzleMovesRemaining),
+      activeRatedMatchId: state.activeRatedMatchId,
     );
   }
 
@@ -2299,6 +2520,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
       isPuzzleMode: snapshot.isPuzzleMode,
       currentPuzzle: snapshot.currentPuzzle,
       puzzleMovesRemaining: snapshot.puzzleMovesRemaining,
+      activeRatedMatchId: snapshot.activeRatedMatchId,
     );
     _syncUndoRedoFlags();
     if (state.clockStarted) {
@@ -2503,6 +2725,32 @@ class ChessNotifier extends StateNotifier<ChessState> {
       academySoundSettings: state.academySoundSettings,
       gameMode: 'classic',
       isRatedMode: false,
+      consolidatedRating: state.consolidatedRating,
+      bulletElo: state.bulletElo,
+      blitzElo: state.blitzElo,
+      rapidElo: state.rapidElo,
+      totalRatedGamesCount: state.totalRatedGamesCount,
+      bulletGamesClassic: state.bulletGamesClassic,
+      bulletGames960: state.bulletGames960,
+      blitzGamesClassic: state.blitzGamesClassic,
+      blitzGames960: state.blitzGames960,
+      rapidGamesClassic: state.rapidGamesClassic,
+      rapidGames960: state.rapidGames960,
+      totalWinningStreak: state.totalWinningStreak,
+      bulletStreak: state.bulletStreak,
+      blitzStreak: state.blitzStreak,
+      rapidStreak: state.rapidStreak,
+      bulletDominance: state.bulletDominance,
+      blitzDominance: state.blitzDominance,
+      rapidDominance: state.rapidDominance,
+      userName: state.userName,
+      userAvatarPath: state.userAvatarPath,
+      cachedScotoma: state.cachedScotoma,
+      cachedPlaystyle: state.cachedPlaystyle,
+      cachedOpenings: state.cachedOpenings,
+      cachedEndgames: state.cachedEndgames,
+      cachedDominanceHeatmap: state.cachedDominanceHeatmap,
+      cachedLedgerEntries: state.cachedLedgerEntries,
     );
 
     _syncUndoRedoFlags();
@@ -3138,16 +3386,26 @@ class ChessNotifier extends StateNotifier<ChessState> {
     }
     _applyRatedRatingAdjustments(player);
 
-    if (state.game.gameOver) {
-      String? result;
-      if (state.game.inCheckmate) {
-        final winnerIsWhite = player == 'White';
-        final humanWon = winnerIsWhite == state.isPlayerWhite;
-        result = humanWon ? 'W' : 'L';
-      } else if (state.game.inDraw || state.game.inStalemate) {
-        result = 'D';
+    if (state.isRatedMode) {
+      if (state.game.gameOver) {
+        state = state.copyWith(activeRatedMatchId: null);
+        _saveSettings();
+        
+        String? result;
+        if (state.game.inCheckmate) {
+          final winnerIsWhite = player == 'White';
+          final humanWon = winnerIsWhite == state.isPlayerWhite;
+          result = humanWon ? 'W' : 'L';
+        } else if (state.game.inDraw || state.game.inStalemate) {
+          result = 'D';
+        }
+        saveCurrentGame(resultOverride: result);
+      } else {
+        if (state.activeRatedMatchId == null) {
+          state = state.copyWith(activeRatedMatchId: state.loadedSaveId ?? _uuid.v4());
+          _saveSettings();
+        }
       }
-      saveCurrentGame(resultOverride: result);
     }
   }
 
@@ -3642,9 +3900,12 @@ class ChessNotifier extends StateNotifier<ChessState> {
       final timedOutSideIsWhite = side == _clockWhite;
       final playerIsWhite = state.isPlayerWhite;
       result = (playerIsWhite == timedOutSideIsWhite) ? 'L' : 'W';
+      
+      state = state.copyWith(activeRatedMatchId: null);
+      _saveSettings();
+      
+      saveCurrentGame(resultOverride: result);
     }
-
-    saveCurrentGame(resultOverride: result);
 
     final timedOutSideIsWhite = side == _clockWhite;
     final playerIsWhite = state.isPlayerWhite;
@@ -3748,10 +4009,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
       state = state.copyWith(servicesStarted: false, engineReady: false);
     }
 
-    // Auto-save current game before resetting if there is progress
-    if (!skipAutoSave && state.recentMoves.isNotEmpty) {
-      await saveCurrentGame();
-    }
+
 
     final preservePlayerWhite = forcedPlayerWhite ?? state.isPlayerWhite;
     final preserveBoardFlipped = forcedPlayerWhite != null ? !forcedPlayerWhite : state.isBoardFlipped;
@@ -3842,6 +4100,14 @@ class ChessNotifier extends StateNotifier<ChessState> {
       rapidStreak: state.rapidStreak,
       isAcademyActive: false,
       isTimeOut: false,
+      userName: state.userName,
+      userAvatarPath: state.userAvatarPath,
+      cachedScotoma: state.cachedScotoma,
+      cachedPlaystyle: state.cachedPlaystyle,
+      cachedOpenings: state.cachedOpenings,
+      cachedEndgames: state.cachedEndgames,
+      cachedDominanceHeatmap: state.cachedDominanceHeatmap,
+      cachedLedgerEntries: state.cachedLedgerEntries,
     );
 
     if (preserveRated) {
@@ -3927,6 +4193,32 @@ class ChessNotifier extends StateNotifier<ChessState> {
       commentaryError: _commentaryEngine.lastError,
       savedGames: state.savedGames,
       isAcademyActive: true,
+      consolidatedRating: state.consolidatedRating,
+      bulletElo: state.bulletElo,
+      blitzElo: state.blitzElo,
+      rapidElo: state.rapidElo,
+      totalRatedGamesCount: state.totalRatedGamesCount,
+      bulletGamesClassic: state.bulletGamesClassic,
+      bulletGames960: state.bulletGames960,
+      blitzGamesClassic: state.blitzGamesClassic,
+      blitzGames960: state.blitzGames960,
+      rapidGamesClassic: state.rapidGamesClassic,
+      rapidGames960: state.rapidGames960,
+      totalWinningStreak: state.totalWinningStreak,
+      bulletStreak: state.bulletStreak,
+      blitzStreak: state.blitzStreak,
+      rapidStreak: state.rapidStreak,
+      bulletDominance: state.bulletDominance,
+      blitzDominance: state.blitzDominance,
+      rapidDominance: state.rapidDominance,
+      userName: state.userName,
+      userAvatarPath: state.userAvatarPath,
+      cachedScotoma: state.cachedScotoma,
+      cachedPlaystyle: state.cachedPlaystyle,
+      cachedOpenings: state.cachedOpenings,
+      cachedEndgames: state.cachedEndgames,
+      cachedDominanceHeatmap: state.cachedDominanceHeatmap,
+      cachedLedgerEntries: state.cachedLedgerEntries,
       commentaryHistory: [
         CommentaryEntry(
           text: customFen != null

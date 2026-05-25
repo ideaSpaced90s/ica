@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 
 import '../widgets/ambient_scaffold.dart';
 import '../scholarly_theme.dart';
@@ -24,11 +25,13 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> with SingleTickerPr
   final TextEditingController _pgnController = TextEditingController();
   final TextEditingController _commentController = TextEditingController();
   int _lastSelectedNodeIndex = -999;
+  String _libraryFilter = 'All';
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
+    Future.microtask(() => ref.read(chessProvider.notifier).loadSavedGames());
   }
 
   @override
@@ -323,6 +326,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> with SingleTickerPr
             unselectedLabelStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500),
             tabs: const [
               Tab(text: 'Move Tree'),
+              Tab(text: 'Game Library'),
               Tab(text: 'Raw PGN'),
             ],
           ),
@@ -335,11 +339,258 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> with SingleTickerPr
             controller: _tabController,
             children: [
               _buildMoveTreeTab(context, state, notifier),
+              _buildSavedGamesTab(context, state, notifier),
               _buildRawPgnTab(context, state, notifier),
             ],
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildSavedGamesTab(
+    BuildContext context,
+    StudyLabState state,
+    StudyLabNotifier notifier,
+  ) {
+    final chessState = ref.watch(chessProvider);
+    final eligibleGames = chessState.savedGames.where((s) => s.recentMoves.isNotEmpty).toList();
+
+    var filteredGames = eligibleGames;
+    if (_libraryFilter == 'Arena') {
+      filteredGames = eligibleGames.where((g) => !g.isRatedMode).toList();
+    } else if (_libraryFilter == 'Battleground') {
+      filteredGames = eligibleGames.where((g) => g.isRatedMode).toList();
+    }
+
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Filter Chips Row
+          JuicyGlassCard(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            borderRadius: 16,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildLibraryFilterChip('All', _libraryFilter == 'All'),
+                _buildLibraryFilterChip('Arena', _libraryFilter == 'Arena'),
+                _buildLibraryFilterChip('Battleground', _libraryFilter == 'Battleground'),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          // Games List Box
+          JuicyGlassCard(
+            padding: const EdgeInsets.all(12),
+            borderRadius: 16,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.library_books_rounded, size: 14, color: ScholarlyTheme.accentBlue),
+                    const SizedBox(width: 4),
+                    Text(
+                      'AVAILABLE GAMES (${filteredGames.length})',
+                      style: GoogleFonts.inter(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: ScholarlyTheme.accentBlue,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                filteredGames.isEmpty
+                    ? Container(
+                        padding: const EdgeInsets.all(24),
+                        alignment: Alignment.center,
+                        child: Text(
+                          'No eligible saved games found in this category.',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontStyle: FontStyle.italic,
+                            color: ScholarlyTheme.textMuted,
+                          ),
+                        ),
+                      )
+                    : ListView.separated(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: filteredGames.length,
+                        separatorBuilder: (context, index) => Divider(
+                          color: ScholarlyTheme.panelStroke.withValues(alpha: 0.4),
+                          height: 16,
+                        ),
+                        itemBuilder: (context, index) {
+                          final game = filteredGames[index];
+                          final shortId = game.id.length >= 4 ? game.id.substring(0, 4) : game.id;
+                          final name = game.customName?.isNotEmpty == true ? game.customName! : 'Game #$shortId';
+                          final formattedDate = DateFormat('MMM d, h:mm a').format(game.savedAt);
+
+                          return Row(
+                            children: [
+                              // Icon for game type
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: game.isRatedMode
+                                      ? ScholarlyTheme.accentBlue.withValues(alpha: 0.1)
+                                      : ScholarlyTheme.realGold.withValues(alpha: 0.1),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  game.isRatedMode ? Icons.emoji_events_rounded : Icons.sports_esports_rounded,
+                                  color: game.isRatedMode ? ScholarlyTheme.accentBlue : ScholarlyTheme.realGold,
+                                  size: 18,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              // Game info details
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      name,
+                                      style: GoogleFonts.inter(
+                                        color: ScholarlyTheme.textPrimary,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Row(
+                                      children: [
+                                        Text(
+                                          '$formattedDate • ${game.recentMoves.length} moves',
+                                          style: GoogleFonts.inter(
+                                            color: ScholarlyTheme.textMuted,
+                                            fontSize: 10,
+                                          ),
+                                        ),
+                                        if (game.isLockedForAnalysis) ...[
+                                          const SizedBox(width: 6),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                            decoration: BoxDecoration(
+                                              color: Colors.redAccent.withValues(alpha: 0.1),
+                                              borderRadius: BorderRadius.circular(4),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                const Icon(Icons.lock_rounded, size: 8, color: Colors.redAccent),
+                                                const SizedBox(width: 2),
+                                                Text(
+                                                  'LOCKED',
+                                                  style: GoogleFonts.inter(
+                                                    color: Colors.redAccent,
+                                                    fontSize: 8,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              // Action button to load/pull
+                              ElevatedButton(
+                                onPressed: () async {
+                                  ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiToggle);
+                                  
+                                  // 1. Pull/load into study lab
+                                  notifier.loadGameEntry(game);
+                                  
+                                  // 2. Lock if Arena game and not locked
+                                  bool lockedNow = false;
+                                  if (!game.isRatedMode && !game.isLockedForAnalysis) {
+                                    await ref.read(chessProvider.notifier).lockGameForAnalysis(game.id);
+                                    lockedNow = true;
+                                  }
+
+                                  // 3. Switch back to Move Tree tab (index 0)
+                                  _tabController.animateTo(0);
+
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          lockedNow 
+                                              ? 'Arena game loaded and locked from replay.'
+                                              : 'Saved game loaded for analysis.',
+                                          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                                        ),
+                                        backgroundColor: ScholarlyTheme.accentBlue,
+                                        behavior: SnackBarBehavior.floating,
+                                        duration: const Duration(seconds: 2),
+                                      ),
+                                    );
+                                  }
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: ScholarlyTheme.accentBlue,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  minimumSize: Size.zero,
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                                child: Text(
+                                  'PULL',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLibraryFilterChip(String label, bool isSelected) {
+    return ChoiceChip(
+      label: Text(label),
+      selected: isSelected,
+      onSelected: (selected) {
+        if (selected) {
+          ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+          setState(() {
+            _libraryFilter = label;
+          });
+        }
+      },
+      selectedColor: ScholarlyTheme.accentBlue.withValues(alpha: 0.15),
+      labelStyle: GoogleFonts.inter(
+        color: isSelected ? ScholarlyTheme.accentBlue : ScholarlyTheme.textPrimary,
+        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        fontSize: 11,
+      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      side: BorderSide(color: isSelected ? ScholarlyTheme.accentBlue : Colors.transparent),
+      backgroundColor: Colors.transparent,
     );
   }
 

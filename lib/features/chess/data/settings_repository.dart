@@ -53,6 +53,7 @@ class AppSettings {
 
   final String userName;
   final String userAvatarPath;
+  final String? activeRatedMatchId;
 
   AppSettings({
     this.boardThemeId = 'classic',
@@ -115,6 +116,7 @@ class AppSettings {
     this.rapidDominance = 0.0,
     this.userName = 'Apprentice',
     this.userAvatarPath = 'assets/persona/user_profile_0.png',
+    this.activeRatedMatchId,
   });
 
   AppSettings copyWith({
@@ -160,6 +162,7 @@ class AppSettings {
     double? rapidDominance,
     String? userName,
     String? userAvatarPath,
+    String? activeRatedMatchId,
   }) {
     return AppSettings(
       boardThemeId: boardThemeId ?? this.boardThemeId,
@@ -204,6 +207,7 @@ class AppSettings {
       rapidDominance: rapidDominance ?? this.rapidDominance,
       userName: userName ?? this.userName,
       userAvatarPath: userAvatarPath ?? this.userAvatarPath,
+      activeRatedMatchId: activeRatedMatchId ?? this.activeRatedMatchId,
     );
   }
 
@@ -250,6 +254,7 @@ class AppSettings {
     'rapidDominance': rapidDominance,
     'userName': userName,
     'userAvatarPath': userAvatarPath,
+    'activeRatedMatchId': activeRatedMatchId,
   };
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
@@ -350,6 +355,7 @@ class AppSettings {
       rapidDominance: (json['rapidDominance'] ?? 0.0).toDouble(),
       userName: json['userName'] ?? 'Apprentice',
       userAvatarPath: json['userAvatarPath'] ?? 'assets/persona/user_profile_0.png',
+      activeRatedMatchId: json['activeRatedMatchId'] as String?,
     );
   }
 }

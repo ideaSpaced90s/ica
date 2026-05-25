@@ -149,6 +149,10 @@ class _HistoryCardState extends State<HistoryCard> {
                               const SizedBox(width: 8),
                               _buildResultBadge(widget.game.result!),
                             ],
+                            if (widget.game.isLockedForAnalysis) ...[
+                              const SizedBox(width: 8),
+                              _buildLockedBadge(),
+                            ],
                           ],
                         ),
                       ),
@@ -290,6 +294,38 @@ class _HistoryCardState extends State<HistoryCard> {
           fontSize: 10,
           fontWeight: FontWeight.w800,
         ),
+      ),
+    );
+  }
+
+  Widget _buildLockedBadge() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: Colors.redAccent.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(
+          color: Colors.redAccent.withValues(alpha: 0.4),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.lock_rounded,
+            size: 10,
+            color: Colors.redAccent,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            'LOCKED',
+            style: GoogleFonts.jetBrainsMono(
+              color: Colors.redAccent,
+              fontSize: 9,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
       ),
     );
   }

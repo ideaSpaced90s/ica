@@ -67,6 +67,8 @@ class SavedGameEntry {
     this.ratingSnapshot,
     this.dominanceSnapshot,
     this.ratingCategory,
+    this.initialFen,
+    this.isLockedForAnalysis = false,
   });
 
   final String id;
@@ -90,6 +92,8 @@ class SavedGameEntry {
   final int? ratingSnapshot;
   final double? dominanceSnapshot;
   final String? ratingCategory; // 'bullet', 'blitz', 'rapid'
+  final String? initialFen;
+  final bool isLockedForAnalysis;
 
   SavedGameEntry copyWith({
     String? id,
@@ -113,6 +117,8 @@ class SavedGameEntry {
     int? ratingSnapshot,
     double? dominanceSnapshot,
     String? ratingCategory,
+    String? initialFen,
+    bool? isLockedForAnalysis,
   }) {
     return SavedGameEntry(
       id: id ?? this.id,
@@ -142,6 +148,8 @@ class SavedGameEntry {
       ratingSnapshot: ratingSnapshot ?? this.ratingSnapshot,
       dominanceSnapshot: dominanceSnapshot ?? this.dominanceSnapshot,
       ratingCategory: ratingCategory ?? this.ratingCategory,
+      initialFen: initialFen ?? this.initialFen,
+      isLockedForAnalysis: isLockedForAnalysis ?? this.isLockedForAnalysis,
     );
   }
 
@@ -173,6 +181,8 @@ class SavedGameEntry {
       ratingSnapshot: json['ratingSnapshot'] as int?,
       dominanceSnapshot: (json['dominanceSnapshot'] as num?)?.toDouble(),
       ratingCategory: json['ratingCategory'] as String?,
+      initialFen: json['initialFen'] as String?,
+      isLockedForAnalysis: json['isLockedForAnalysis'] as bool? ?? false,
     );
   }
 
@@ -199,6 +209,8 @@ class SavedGameEntry {
       'ratingSnapshot': ratingSnapshot,
       'dominanceSnapshot': dominanceSnapshot,
       'ratingCategory': ratingCategory,
+      'initialFen': initialFen,
+      'isLockedForAnalysis': isLockedForAnalysis,
     };
   }
 }

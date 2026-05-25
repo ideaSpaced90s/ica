@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../application/chess_provider.dart';
+import '../../application/study_lab_provider.dart';
+import '../mobile_navigation_shell.dart';
 import '../scholarly_theme.dart';
 import '../widgets/game_controls.dart';
 import 'battleground_board.dart';
@@ -20,7 +22,6 @@ import '../widgets/ambient_scaffold.dart';
 import '../widgets/classic_windows_tabs.dart';
 import 'package:confetti/confetti.dart';
 import '../dashboard_page.dart';
-import '../mobile_navigation_shell.dart';
 
 class BattlegroundPage extends ConsumerStatefulWidget {
   const BattlegroundPage({super.key});
@@ -49,6 +50,18 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
     WidgetsBinding.instance.removeObserver(this);
     _confettiController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.detached) {
+      final chessState = ref.read(chessProvider);
+      if (chessState.isRatedMode && chessState.recentMoves.isNotEmpty && !chessState.game.gameOver) {
+        ref.read(chessProvider.notifier).resignRatedGame();
+      }
+    }
   }
 
   @override
@@ -640,6 +653,45 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
                                     letterSpacing: 1.2,
                                   ),
                                 ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 46,
+                            child: OutlinedButton.icon(
+                              onPressed: () async {
+                                final notifier = ref.read(chessProvider.notifier);
+                                final state = ref.read(chessProvider);
+                                final entry = state.savedGames.where((s) => s.id == state.loadedSaveId).firstOrNull;
+                                if (entry != null) {
+                                  ref.read(studyLabProvider.notifier).loadGameEntry(entry);
+                                  notifier.dismissGameOver();
+                                  await notifier.setRatedMode(false);
+                                  ref.read(mobileNavIndexProvider.notifier).state = 4;
+                                } else {
+                                  final newEntry = await notifier.saveCurrentGame();
+                                  if (newEntry != null) {
+                                    ref.read(studyLabProvider.notifier).loadGameEntry(newEntry);
+                                    notifier.dismissGameOver();
+                                    await notifier.setRatedMode(false);
+                                    ref.read(mobileNavIndexProvider.notifier).state = 4;
+                                  }
+                                }
+                              },
+                              icon: const Icon(Icons.science_rounded),
+                              label: Text(
+                                'ANALYZE GAME',
+                                style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: ScholarlyTheme.accentBlue,
+                                side: BorderSide(
+                                  color: ScholarlyTheme.accentBlue.withValues(alpha: 0.6),
+                                  width: 1.5,
+                                ),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                               ),
                             ),
                           ),

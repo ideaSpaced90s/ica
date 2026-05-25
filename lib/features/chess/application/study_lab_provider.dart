@@ -4,6 +4,7 @@ import 'package:chess/chess.dart' as chess_lib;
 import 'package:intl/intl.dart';
 import '../data/stockfish_service.dart';
 import '../data/uci_parser.dart';
+import '../data/saved_game.dart';
 
 class StudyLabMoveNode {
   final int index;
@@ -433,6 +434,58 @@ class StudyLabNotifier extends StateNotifier<StudyLabState> {
       }
     }
     return tokens;
+  }
+
+  void loadGameEntry(SavedGameEntry entry) {
+    final startPosition = entry.initialFen ?? chess_lib.Chess.DEFAULT_POSITION;
+    final localChess = chess_lib.Chess.fromFEN(startPosition);
+    final List<StudyLabMoveNode> currentNodes = [];
+    int? activeNodeIndex;
+
+    for (final moveSan in entry.recentMoves) {
+      final success = localChess.move(moveSan);
+      if (!success) continue;
+
+      final lastMove = localChess.history.last.move;
+      final fromSquare = chess_lib.Chess.algebraic(lastMove.from);
+      final toSquare = chess_lib.Chess.algebraic(lastMove.to);
+      final promo = lastMove.promotion != null ? lastMove.promotion.toString().split('.').last.toLowerCase()[0] : '';
+      final uci = '$fromSquare$toSquare$promo';
+      final fen = localChess.fen;
+      final newNodeIndex = currentNodes.length;
+
+      final newNode = StudyLabMoveNode(
+        index: newNodeIndex,
+        uci: uci,
+        san: moveSan,
+        fen: fen,
+        parentIndex: activeNodeIndex,
+        childIndices: const [],
+      );
+
+      currentNodes.add(newNode);
+
+      if (activeNodeIndex != null) {
+        final parentNode = currentNodes[activeNodeIndex];
+        currentNodes[activeNodeIndex] = parentNode.copyWith(
+          childIndices: [...parentNode.childIndices, newNodeIndex],
+        );
+      }
+
+      activeNodeIndex = newNodeIndex;
+    }
+
+    state = StudyLabState(
+      nodes: currentNodes,
+      currentNodeIndex: activeNodeIndex,
+      startFen: startPosition,
+      isAnalysisActive: state.isAnalysisActive,
+      engineDepth: state.engineDepth,
+      isBoardFlipped: entry.isBoardFlipped,
+    );
+
+    _updateOpeningRecognition();
+    _triggerAnalysis();
   }
 
   void importPgn(String pgn) {

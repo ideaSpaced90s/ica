@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../application/chess_provider.dart';
+import '../../application/study_lab_provider.dart';
+import '../mobile_navigation_shell.dart';
 import '../scholarly_theme.dart';
 import '../widgets/game_controls.dart';
 import 'arena_board.dart';
@@ -55,7 +57,9 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
         state == AppLifecycleState.detached) {
       final chessState = ref.read(chessProvider);
       if (chessState.recentMoves.isNotEmpty && !chessState.game.gameOver) {
-        ref.read(chessProvider.notifier).saveCurrentGame();
+        if (!chessState.isPaused) {
+          ref.read(chessProvider.notifier).togglePause();
+        }
       }
     }
   }
@@ -71,9 +75,6 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
         if (didPop) return;
         final bool? confirm = await _showExitConfirmation(context);
         if (confirm == true) {
-          if (state.recentMoves.isNotEmpty) {
-            await ref.read(chessProvider.notifier).saveCurrentGame();
-          }
           if (context.mounted) {
             exitToDashboardWithSidebar(context, ref);
           }
@@ -744,6 +745,66 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                                 letterSpacing: 1.2,
                               ),
                             ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 46,
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            _handleSaveGame(context, ref);
+                          },
+                          icon: const Icon(Icons.save_rounded),
+                          label: Text(
+                            'SAVE GAME',
+                            style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: ScholarlyTheme.accentBlue,
+                            side: BorderSide(
+                              color: ScholarlyTheme.accentBlue.withValues(alpha: 0.6),
+                              width: 1.5,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 46,
+                        child: OutlinedButton.icon(
+                          onPressed: () async {
+                            final notifier = ref.read(chessProvider.notifier);
+                            // 1. Save current game
+                            final entry = await notifier.saveCurrentGame();
+                            if (entry != null) {
+                              // 2. Lock for analysis
+                              await notifier.lockGameForAnalysis(entry.id);
+                              // 3. Load into study lab
+                              ref.read(studyLabProvider.notifier).loadGameEntry(entry);
+                              // 4. Reset Arena state to clean slate
+                              await notifier.reset(skipAutoSave: true);
+                              // 5. Navigate to analysis tab
+                              ref.read(mobileNavIndexProvider.notifier).state = 4;
+                            }
+                          },
+                          icon: const Icon(Icons.science_rounded),
+                          label: Text(
+                            'ANALYZE GAME',
+                            style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: ScholarlyTheme.accentGold,
+                            side: BorderSide(
+                              color: ScholarlyTheme.accentGold.withValues(alpha: 0.6),
+                              width: 1.5,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14)),
                           ),
                         ),
                       ),
