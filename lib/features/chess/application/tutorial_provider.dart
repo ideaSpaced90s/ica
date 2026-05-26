@@ -217,6 +217,11 @@ class TutorialNotifier extends StateNotifier<TutorialState> {
     _autosave();
   }
 
+  void dismissCompletionOverlay() {
+    state = state.copyWith(isChapterComplete: false);
+  }
+
+
   void advanceStep() {
     _cancelHesitationTimer();
 

@@ -81,7 +81,8 @@ class OnboardingService {
     final nextChapter = GuidedTutorialFlow.nextChapterAfter(currentChapterId);
     if (nextChapter != null) {
       ref.read(onboardingTargetChapterProvider.notifier).state = nextChapter;
-      ref.read(showChapterSelectionProvider.notifier).state = true;
+      ref.read(tutorialProvider.notifier).loadChapter(nextChapter);
+      ref.read(showChapterSelectionProvider.notifier).state = false;
       return;
     }
 
@@ -91,6 +92,7 @@ class OnboardingService {
 
   void endGuidedTour({bool markWelcomeSeen = true}) {
     ref.read(isOnboardingProvider.notifier).state = false;
+    ref.read(tutorialProvider.notifier).dismissCompletionOverlay();
     ref.read(showChapterSelectionProvider.notifier).state = true;
 
     if (markWelcomeSeen) {

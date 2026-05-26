@@ -62,6 +62,7 @@ class _TutorialPageState extends ConsumerState<TutorialPage> {
             if (nextChap <= kTutorialChapterCount) {
               _handleChapterSelected(nextChap);
             } else {
+              ref.read(tutorialProvider.notifier).dismissCompletionOverlay();
               ref.read(showChapterSelectionProvider.notifier).state = true;
             }
           }

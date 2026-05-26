@@ -115,8 +115,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     title: 'DANGER ZONE',
                     children: [
                       _SettingsTile(
-                        label: 'Reset Rated Stats & Ledger',
-                        description: 'Wipe ELO ratings, match ledger, and streaks',
+                        label: 'Reset',
+                        description: 'Wipe ratings, match history, and tutorial progress',
                         icon: Icons.delete_forever_rounded,
                         accentColor: Colors.redAccent,
                         onTap: () => _showResetConfirmationDialog(context, ref),
@@ -181,7 +181,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             ),
             const SizedBox(height: 16),
             Text(
-              'Reset Rated Stats?',
+              'Reset All Progress?',
               style: GoogleFonts.inter(
                 fontWeight: FontWeight.bold,
                 color: ScholarlyTheme.textPrimary,
@@ -191,7 +191,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           ],
         ),
         content: const Text(
-          'This action is irreversible. All your rating history, ELO changes, streaks, and performance ledger will be permanently deleted.',
+          'This action is irreversible. All your ratings, match history, and tutorial academy progress will be permanently deleted.',
           textAlign: TextAlign.center,
         ),
         actions: [
@@ -213,10 +213,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
     if (confirmed == true && context.mounted) {
       await ref.read(chessProvider.notifier).resetRatedStats();
+      await ref.read(tutorialProvider.notifier).resetAllProgress();
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Rated stats & performance ledger reset successfully.'),
+            content: Text('All progress, rated stats, and tutorial records have been reset.'),
             backgroundColor: Colors.redAccent,
           ),
         );
