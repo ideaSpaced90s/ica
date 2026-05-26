@@ -4,15 +4,37 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../application/chess_provider.dart';
+import '../../domain/chess_game.dart';
 import '../../domain/models/ai_avatar.dart';
 import '../../services/chess_sound_service.dart';
 import '../scholarly_theme.dart';
 import 'commentary_history.dart';
 
 class ClassicWindowsTabs extends ConsumerStatefulWidget {
-  const ClassicWindowsTabs({super.key, required this.state});
+  const ClassicWindowsTabs({
+    super.key,
+    required this.recentMoves,
+    required this.viewingMoveIndex,
+    required this.onMoveTap,
+    required this.game,
+    required this.gameMode,
+    required this.isRatedMode,
+    required this.engineLevel,
+    required this.isPlayerWhite,
+    required this.currentEvaluation,
+    this.academyState,
+  });
 
-  final ChessState state;
+  final List<String> recentMoves;
+  final int? viewingMoveIndex;
+  final ValueChanged<int> onMoveTap;
+  final ChessGame game;
+  final String gameMode;
+  final bool isRatedMode;
+  final String engineLevel;
+  final bool isPlayerWhite;
+  final double currentEvaluation;
+  final ChessState? academyState;
 
   @override
   ConsumerState<ClassicWindowsTabs> createState() => _ClassicWindowsTabsState();
@@ -23,8 +45,6 @@ class _ClassicWindowsTabsState extends ConsumerState<ClassicWindowsTabs> {
 
   @override
   Widget build(BuildContext context) {
-    final state = widget.state;
-
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFFF1F5F9), // Windows grey panel background
@@ -56,7 +76,7 @@ class _ClassicWindowsTabsState extends ConsumerState<ClassicWindowsTabs> {
                 ),
                 border: Border.all(color: const Color(0xFFCBD5E1), width: 1),
               ),
-              child: _buildTabContent(state),
+              child: _buildTabContent(),
             ),
           ),
         ],
@@ -65,8 +85,17 @@ class _ClassicWindowsTabsState extends ConsumerState<ClassicWindowsTabs> {
   }
 
   Widget _buildTabBar() {
-    final tabTitles = ['AI Coach', 'Move History', 'Game Metrics'];
-    final tabIcons = [Icons.psychology_rounded, Icons.history_edu_rounded, Icons.analytics_rounded];
+    final hasCoach = widget.academyState != null;
+    final tabTitles = [
+      if (hasCoach) 'AI Coach',
+      'Move History',
+      'Game Metrics',
+    ];
+    final tabIcons = [
+      if (hasCoach) Icons.psychology_rounded,
+      Icons.history_edu_rounded,
+      Icons.analytics_rounded,
+    ];
 
     return Container(
       padding: const EdgeInsets.fromLTRB(6, 6, 6, 0),
@@ -137,22 +166,23 @@ class _ClassicWindowsTabsState extends ConsumerState<ClassicWindowsTabs> {
     );
   }
 
-  Widget _buildTabContent(ChessState state) {
-    switch (_activeTab) {
+  Widget _buildTabContent() {
+    final hasCoach = widget.academyState != null;
+    final index = hasCoach ? _activeTab : _activeTab + 1;
+    switch (index) {
       case 0:
-        return CommentaryHistory(state: state);
+        return CommentaryHistory(state: widget.academyState!);
       case 1:
-        return _buildMoveHistoryTab(state);
+        return _buildMoveHistoryTab();
       case 2:
-        return _buildGameMetricsTab(state);
+        return _buildGameMetricsTab();
       default:
         return const SizedBox.shrink();
     }
   }
 
-  Widget _buildMoveHistoryTab(ChessState state) {
-    final moves = state.recentMoves;
-    final notifier = ref.read(chessProvider.notifier);
+  Widget _buildMoveHistoryTab() {
+    final moves = widget.recentMoves;
 
     if (moves.isEmpty) {
       return const Center(
@@ -180,6 +210,7 @@ class _ClassicWindowsTabsState extends ConsumerState<ClassicWindowsTabs> {
           color: const Color(0xFFF1F5F9),
           child: Row(
             children: [
+              Spacer(flex: 0),
               SizedBox(
                 width: 45,
                 child: Text(
@@ -229,8 +260,8 @@ class _ClassicWindowsTabsState extends ConsumerState<ClassicWindowsTabs> {
                 final whiteIdx = index * 2;
                 final blackIdx = index * 2 + 1;
 
-                final isWhiteViewing = state.viewingMoveIndex == whiteIdx;
-                final isBlackViewing = state.viewingMoveIndex == blackIdx;
+                final isWhiteViewing = widget.viewingMoveIndex == whiteIdx;
+                final isBlackViewing = widget.viewingMoveIndex == blackIdx;
 
                 return Container(
                   color: index % 2 == 0 ? Colors.transparent : const Color(0xFFF8FAFC),
@@ -252,7 +283,7 @@ class _ClassicWindowsTabsState extends ConsumerState<ClassicWindowsTabs> {
                       // White Move
                       Expanded(
                         child: GestureDetector(
-                          onTap: () => notifier.jumpToMove(whiteIdx),
+                          onTap: () => widget.onMoveTap(whiteIdx),
                           child: Align(
                             alignment: Alignment.centerLeft,
                             child: AnimatedContainer(
@@ -286,7 +317,7 @@ class _ClassicWindowsTabsState extends ConsumerState<ClassicWindowsTabs> {
                       Expanded(
                         child: pair.length > 1
                             ? GestureDetector(
-                                onTap: () => notifier.jumpToMove(blackIdx),
+                                onTap: () => widget.onMoveTap(blackIdx),
                                 child: Align(
                                   alignment: Alignment.centerLeft,
                                   child: AnimatedContainer(
@@ -326,7 +357,7 @@ class _ClassicWindowsTabsState extends ConsumerState<ClassicWindowsTabs> {
         ),
 
         // Live Position Helper
-        if (state.viewingMoveIndex != null)
+        if (widget.viewingMoveIndex != null)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: const BoxDecoration(
@@ -347,7 +378,7 @@ class _ClassicWindowsTabsState extends ConsumerState<ClassicWindowsTabs> {
                   ],
                 ),
                 TextButton(
-                  onPressed: () => notifier.jumpToMove(-1),
+                  onPressed: () => widget.onMoveTap(-1),
                   style: TextButton.styleFrom(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
                     minimumSize: Size.zero,
@@ -375,10 +406,10 @@ class _ClassicWindowsTabsState extends ConsumerState<ClassicWindowsTabs> {
     );
   }
 
-  Widget _buildGameMetricsTab(ChessState state) {
-    final avatar = AiAvatar.getAvatar(state.engineLevel);
-    final fen = state.game.fen;
-    final activePgn = _generateActivePgn(state);
+  Widget _buildGameMetricsTab() {
+    final avatar = AiAvatar.getAvatar(widget.engineLevel);
+    final fen = widget.game.fen;
+    final activePgn = _generateActivePgn();
 
     return Scrollbar(
       thickness: 6,
@@ -386,17 +417,17 @@ class _ClassicWindowsTabsState extends ConsumerState<ClassicWindowsTabs> {
         padding: const EdgeInsets.all(12),
         children: [
           _buildMetricsSectionHeader('MATCH CONFIGURATION'),
-          _buildMetricRow('Game Mode', state.gameMode.toUpperCase(), isMonospace: true),
-          _buildMetricRow('Match Type', state.isRatedMode ? 'RATED ELO MATCH' : 'UNRATED ZEN PRACTICE'),
+          _buildMetricRow('Game Mode', widget.gameMode.toUpperCase(), isMonospace: true),
+          _buildMetricRow('Match Type', widget.isRatedMode ? 'RATED ELO MATCH' : 'UNRATED ZEN PRACTICE'),
           _buildMetricRow('Opponent Engine', avatar.name, valueColor: ScholarlyTheme.accentBlue),
           _buildMetricRow('Engine Skill Level', 'Level ${avatar.skillLevel} (approx. ${avatar.rating} ELO)'),
-          _buildMetricRow('Your Color', state.isPlayerWhite ? 'WHITE' : 'BLACK'),
+          _buildMetricRow('Your Color', widget.isPlayerWhite ? 'WHITE' : 'BLACK'),
           
           const SizedBox(height: 12),
           _buildMetricsSectionHeader('GAME PROGRESS'),
-          _buildMetricRow('Moves Played', '${state.recentMoves.length}'),
-          _buildMetricRow('Active Turn', state.game.gameOver ? 'GAME OVER' : (state.game.turnColor == 'w' ? 'WHITE' : 'BLACK')),
-          _buildMetricRow('Evaluation Score', '${state.currentEvaluation.toStringAsFixed(2)} cp'),
+          _buildMetricRow('Moves Played', '${widget.recentMoves.length}'),
+          _buildMetricRow('Active Turn', widget.game.gameOver ? 'GAME OVER' : (widget.game.turnColor == 'w' ? 'WHITE' : 'BLACK')),
+          _buildMetricRow('Evaluation Score', '${widget.currentEvaluation.toStringAsFixed(2)} cp'),
 
           const SizedBox(height: 12),
           _buildMetricsSectionHeader('BOARD FEN'),
@@ -522,30 +553,30 @@ class _ClassicWindowsTabsState extends ConsumerState<ClassicWindowsTabs> {
     );
   }
 
-  String _generateActivePgn(ChessState state) {
+  String _generateActivePgn() {
     final buffer = StringBuffer();
     final dateStr = DateFormat('yyyy.MM.dd').format(DateTime.now());
-    final title = '${state.gameMode.toUpperCase()} MATCH';
+    final title = '${widget.gameMode.toUpperCase()} MATCH';
 
     buffer.writeln('[Event "$title"]');
     buffer.writeln('[Site "IdeaSpace Chess Academy"]');
     buffer.writeln('[Date "$dateStr"]');
     buffer.writeln('[Round "1"]');
-    buffer.writeln('[White "${state.isPlayerWhite ? "Player" : "Stockfish"}"]');
-    buffer.writeln('[Black "${state.isPlayerWhite ? "Stockfish" : "Player"}"]');
+    buffer.writeln('[White "${widget.isPlayerWhite ? "Player" : "Stockfish"}"]');
+    buffer.writeln('[Black "${widget.isPlayerWhite ? "Stockfish" : "Player"}"]');
     buffer.writeln('[Result "*"]');
-    if (state.gameMode == 'chess960') {
+    if (widget.gameMode == 'chess960') {
       buffer.writeln('[Variant "Chess960"]');
-      buffer.writeln('[FEN "${state.game.fen}"]');
+      buffer.writeln('[FEN "${widget.game.fen}"]');
       buffer.writeln('[SetUp "1"]');
     }
     buffer.writeln();
 
-    for (int i = 0; i < state.recentMoves.length; i++) {
+    for (int i = 0; i < widget.recentMoves.length; i++) {
       if (i % 2 == 0) {
         buffer.write('${(i ~/ 2) + 1}. ');
       }
-      buffer.write('${state.recentMoves[i]} ');
+      buffer.write('${widget.recentMoves[i]} ');
     }
     buffer.write('*');
     return buffer.toString();

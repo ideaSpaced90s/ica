@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../application/chess_provider.dart';
 import '../scholarly_theme.dart';
 
+import '../../application/battleground_provider.dart';
+
 class UserAvatarIndicator extends StatefulWidget {
-  const UserAvatarIndicator({super.key});
+  final bool isRated;
+  const UserAvatarIndicator({super.key, this.isRated = false});
 
   @override
   State<UserAvatarIndicator> createState() => _UserAvatarIndicatorState();
@@ -18,10 +20,16 @@ class _UserAvatarIndicatorState extends State<UserAvatarIndicator> {
   Widget build(BuildContext context) {
     return Consumer(
       builder: (context, ref, child) {
-        final state = ref.watch(chessProvider);
-        final isRated = state.isRatedMode;
         final primaryColor = ScholarlyTheme.accentBlue;
         final bgColor = ScholarlyTheme.accentBlue.withValues(alpha: 0.1);
+
+        int consolidatedRating = 1200;
+        int totalWinningStreak = 0;
+        if (widget.isRated) {
+          final bgState = ref.watch(battlegroundProvider);
+          consolidatedRating = bgState.consolidatedRating;
+          totalWinningStreak = bgState.totalWinningStreak;
+        }
 
         return GestureDetector(
           onTap: () => setState(() => _isExpanded = !_isExpanded),
@@ -61,7 +69,7 @@ class _UserAvatarIndicatorState extends State<UserAvatarIndicator> {
                     ),
                   ),
                   child: Icon(
-                    isRated ? Icons.emoji_events_rounded : Icons.person_outline_rounded,
+                    widget.isRated ? Icons.emoji_events_rounded : Icons.person_outline_rounded,
                     color: primaryColor,
                     size: 16,
                   ),
@@ -92,14 +100,14 @@ class _UserAvatarIndicatorState extends State<UserAvatarIndicator> {
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Text(
-                                      isRated ? '${state.consolidatedRating} MASTER' : 'UNRATED',
+                                      widget.isRated ? '$consolidatedRating MASTER' : 'UNRATED',
                                       style: GoogleFonts.jetBrainsMono(
                                         color: primaryColor,
                                         fontSize: 12,
                                         fontWeight: FontWeight.w800,
                                       ),
                                     ),
-                                    if (state.totalWinningStreak > 0 && isRated) ...[
+                                    if (totalWinningStreak > 0 && widget.isRated) ...[
                                       const SizedBox(width: 6),
                                       const Icon(
                                         Icons.local_fire_department_rounded,
@@ -107,7 +115,7 @@ class _UserAvatarIndicatorState extends State<UserAvatarIndicator> {
                                         size: 14,
                                       ),
                                       Text(
-                                        '${state.totalWinningStreak}',
+                                        '$totalWinningStreak',
                                         style: GoogleFonts.jetBrainsMono(
                                           color: Colors.deepOrangeAccent,
                                           fontSize: 11,

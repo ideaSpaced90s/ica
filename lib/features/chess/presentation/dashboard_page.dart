@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../application/chess_provider.dart';
+import '../application/battleground_provider.dart';
 import 'mobile_navigation_shell.dart';
 import 'scholarly_theme.dart';
 import 'widgets/progression_charts.dart';
@@ -19,6 +20,7 @@ class DashboardPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(chessProvider);
+    final bgState = ref.watch(battlegroundProvider);
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 900;
 
@@ -61,7 +63,7 @@ class DashboardPage extends ConsumerWidget {
             ),
           ),
         ),
-        _buildMasterCard(state),
+        _buildMasterCard(state, bgState),
         const SizedBox(height: 32),
         _buildSectionHeader('30D', icon: Icons.calendar_today_rounded),
         const SizedBox(height: 16),
@@ -93,29 +95,29 @@ class DashboardPage extends ConsumerWidget {
             _buildTierCard(
               'BULLET ARENA',
               Icons.bolt_rounded,
-              state.bulletElo,
-              state.bulletStreak,
-              state.bulletGamesClassic,
-              state.bulletGames960,
-              state.bulletDominance,
+              bgState.bulletElo,
+              bgState.bulletStreak,
+              bgState.bulletGamesClassic,
+              bgState.bulletGames960,
+              bgState.bulletDominance,
             ),
             _buildTierCard(
               'BLITZ ARENA',
               Icons.local_fire_department_rounded,
-              state.blitzElo,
-              state.blitzStreak,
-              state.blitzGamesClassic,
-              state.blitzGames960,
-              state.blitzDominance,
+              bgState.blitzElo,
+              bgState.blitzStreak,
+              bgState.blitzGamesClassic,
+              bgState.blitzGames960,
+              bgState.blitzDominance,
             ),
             _buildTierCard(
               'RAPID ARENA',
               Icons.timer_rounded,
-              state.rapidElo,
-              state.rapidStreak,
-              state.rapidGamesClassic,
-              state.rapidGames960,
-              state.rapidDominance,
+              bgState.rapidElo,
+              bgState.rapidStreak,
+              bgState.rapidGamesClassic,
+              bgState.rapidGames960,
+              bgState.rapidDominance,
             ),
           ],
         ),
@@ -200,17 +202,17 @@ class DashboardPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildMasterCard(ChessState state) {
-    final bulletCount = state.bulletGamesClassic + state.bulletGames960;
-    final blitzCount = state.blitzGamesClassic + state.blitzGames960;
-    final rapidCount = state.rapidGamesClassic + state.rapidGames960;
+  Widget _buildMasterCard(ChessState state, BattlegroundState bgState) {
+    final bulletCount = bgState.bulletGamesClassic + bgState.bulletGames960;
+    final blitzCount = bgState.blitzGamesClassic + bgState.blitzGames960;
+    final rapidCount = bgState.rapidGamesClassic + bgState.rapidGames960;
     final totalCount = bulletCount + blitzCount + rapidCount;
     
     double avgDominance = 0.0;
     if (totalCount > 0) {
-      avgDominance = (state.bulletDominance * bulletCount + 
-                      state.blitzDominance * blitzCount + 
-                      state.rapidDominance * rapidCount) / totalCount;
+      avgDominance = (bgState.bulletDominance * bulletCount + 
+                      bgState.blitzDominance * blitzCount + 
+                      bgState.rapidDominance * rapidCount) / totalCount;
     }
 
     return Container(
@@ -240,7 +242,7 @@ class DashboardPage extends ConsumerWidget {
                   ],
                 ),
               ),
-              if (state.totalWinningStreak > 0)
+              if (bgState.totalWinningStreak > 0)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
@@ -253,7 +255,7 @@ class DashboardPage extends ConsumerWidget {
                       const Icon(Icons.local_fire_department_rounded, color: Colors.deepOrangeAccent, size: 14),
                       const SizedBox(width: 4),
                       Text(
-                        'STREAK: ${state.totalWinningStreak}',
+                        'STREAK: ${bgState.totalWinningStreak}',
                         style: GoogleFonts.jetBrainsMono(
                           color: Colors.white,
                           fontSize: 10,
@@ -269,8 +271,8 @@ class DashboardPage extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildBigStat('ELO', '${state.consolidatedRating}'),
-              _buildBigStat('MATCHES', '${state.totalRatedGamesCount}'),
+              _buildBigStat('ELO', '${bgState.consolidatedRating}'),
+              _buildBigStat('MATCHES', '${bgState.totalRatedGamesCount}'),
               _buildBigStat('DOM', '${avgDominance >= 0 ? '+' : ''}${avgDominance.toStringAsFixed(1)}'),
             ],
           ),

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../application/chess_provider.dart';
+import '../../application/battleground_provider.dart';
 import '../../application/study_lab_provider.dart';
 import '../mobile_navigation_shell.dart';
 import '../scholarly_theme.dart';
@@ -57,19 +58,19 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive ||
         state == AppLifecycleState.detached) {
-      final chessState = ref.read(chessProvider);
-      if (chessState.isRatedMode && chessState.recentMoves.isNotEmpty && !chessState.game.gameOver) {
-        ref.read(chessProvider.notifier).resignRatedGame();
+      final bgState = ref.read(battlegroundProvider);
+      if (bgState.recentMoves.isNotEmpty && !bgState.game.gameOver) {
+        ref.read(battlegroundProvider.notifier).resignRatedGame();
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(chessProvider);
+    final state = ref.watch(battlegroundProvider);
     final isLandscape = MediaQuery.of(context).size.width > MediaQuery.of(context).size.height;
     final currentNavIndex = ref.watch(mobileNavIndexProvider);
-    final isVisible = currentNavIndex == 1; // Tab 1 in MobileNavigationShell is MainPage (Rated/Unrated)
+    final isVisible = currentNavIndex == 2; // Tab 2 in MobileNavigationShell is BattlegroundPage
 
     // One-time Rated Caution Popup, only show if this page/tab is currently active/visible to the user
     if (isVisible && !_hasShownRatedCaution) {
@@ -96,14 +97,12 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
         if (isMatchActive) {
           final resigned = await showRatedExitDialog(context);
           if (resigned == true) {
-            await ref.read(chessProvider.notifier).resignRatedGame();
-            await ref.read(chessProvider.notifier).setRatedMode(false);
+            await ref.read(battlegroundProvider.notifier).resignRatedGame();
             if (context.mounted) {
               exitToDashboardWithSidebar(context, ref);
             }
           }
         } else {
-          await ref.read(chessProvider.notifier).setRatedMode(false);
           if (context.mounted) {
             exitToDashboardWithSidebar(context, ref);
           }
@@ -148,11 +147,12 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
     );
   }
 
-  Widget _buildLandscapeLayout(BuildContext context, WidgetRef ref, ChessState state) {
+  Widget _buildLandscapeLayout(BuildContext context, WidgetRef ref, BattlegroundState state) {
     final isTurn = _isPlayerTurn(state);
     final isFlipped = state.isBoardFlipped;
     final topPieces = isFlipped ? state.game.capturedByWhite : state.game.capturedByBlack;
     final bottomPieces = isFlipped ? state.game.capturedByBlack : state.game.capturedByWhite;
+    final opponentAvatar = state.activeOpponent ?? AiAvatar.getBestMatch(state.consolidatedRating);
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -172,7 +172,7 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
                     ActiveAvatarWrapper(
                       isActive: !isTurn,
                       child: OpponentAvatarIndicator(
-                        avatar: AiAvatar.getAvatar(state.engineLevel),
+                        avatar: opponentAvatar,
                         onTap: null, // Read-only from rated arena
                       ),
                     ),
@@ -191,7 +191,6 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
                 child: Stack(
                   children: [
                     const BattlegroundBoard(alignment: Alignment.topCenter),
-                    if (state.isPaused) _buildPauseOverlay(context, ref),
                   ],
                 ),
               ),
@@ -209,7 +208,7 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
                     const SizedBox(width: 12),
                     ActiveAvatarWrapper(
                       isActive: isTurn,
-                      child: const UserAvatarIndicator(),
+                      child: const UserAvatarIndicator(isRated: true),
                     ),
                   ],
                 ),
@@ -249,9 +248,17 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
                         ],
                       ),
                       const Spacer(),
-                      ArenaTimeDisplay(isWhite: state.isPlayerWhite, isActive: isTurn),
+                      ArenaTimeDisplay(
+                        isWhite: state.isPlayerWhite,
+                        isActive: isTurn,
+                        timeLeft: state.isPlayerWhite ? state.whiteTimeLeft : state.blackTimeLeft,
+                      ),
                       const SizedBox(width: 12),
-                      ArenaTimeDisplay(isWhite: !state.isPlayerWhite, isActive: !isTurn),
+                      ArenaTimeDisplay(
+                        isWhite: !state.isPlayerWhite,
+                        isActive: !isTurn,
+                        timeLeft: state.isPlayerWhite ? state.blackTimeLeft : state.whiteTimeLeft,
+                      ),
                       const Spacer(),
                       Row(
                         mainAxisSize: MainAxisSize.min,
@@ -268,7 +275,20 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
 
                 // Center Section: Classic Tabbed Panel
                 Expanded(
-                  child: ClassicWindowsTabs(state: state),
+                  child: ClassicWindowsTabs(
+                    recentMoves: state.recentMoves,
+                    viewingMoveIndex: state.viewingMoveIndex,
+                    onMoveTap: (idx) {
+                      ref.read(battlegroundProvider.notifier).setViewingMoveIndex(idx == -1 ? null : idx);
+                    },
+                    game: state.game,
+                    gameMode: state.gameMode,
+                    isRatedMode: true,
+                    engineLevel: opponentAvatar.id,
+                    isPlayerWhite: state.isPlayerWhite,
+                    currentEvaluation: state.currentEvaluation,
+                    academyState: null,
+                  ),
                 ),
                 const SizedBox(height: 12),
 
@@ -286,12 +306,13 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
     );
   }
 
-  Widget _buildPortraitLayout(BuildContext context, WidgetRef ref, ChessState state) {
+  Widget _buildPortraitLayout(BuildContext context, WidgetRef ref, BattlegroundState state) {
     final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
     final isTurn = _isPlayerTurn(state);
     final isFlipped = state.isBoardFlipped;
     final topPieces = isFlipped ? state.game.capturedByWhite : state.game.capturedByBlack;
     final bottomPieces = isFlipped ? state.game.capturedByBlack : state.game.capturedByWhite;
+    final opponentAvatar = state.activeOpponent ?? AiAvatar.getBestMatch(state.consolidatedRating);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -319,9 +340,17 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
                       ],
                     ),
                     const Spacer(),
-                    ArenaTimeDisplay(isWhite: state.isPlayerWhite, isActive: isTurn),
+                    ArenaTimeDisplay(
+                      isWhite: state.isPlayerWhite,
+                      isActive: isTurn,
+                      timeLeft: state.isPlayerWhite ? state.whiteTimeLeft : state.blackTimeLeft,
+                    ),
                     const SizedBox(width: 12),
-                    ArenaTimeDisplay(isWhite: !state.isPlayerWhite, isActive: !isTurn),
+                    ArenaTimeDisplay(
+                      isWhite: !state.isPlayerWhite,
+                      isActive: !isTurn,
+                      timeLeft: state.isPlayerWhite ? state.blackTimeLeft : state.whiteTimeLeft,
+                    ),
                     const Spacer(),
                     Row(
                       mainAxisSize: MainAxisSize.min,
@@ -345,7 +374,7 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
               ActiveAvatarWrapper(
                 isActive: !isTurn,
                 child: OpponentAvatarIndicator(
-                  avatar: AiAvatar.getAvatar(state.engineLevel),
+                  avatar: opponentAvatar,
                   onTap: null, // Read-only from rated arena
                 ),
               ),
@@ -364,7 +393,6 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
           child: Stack(
             children: [
               const BattlegroundBoard(alignment: Alignment.topCenter),
-              if (state.isPaused) _buildPauseOverlay(context, ref),
             ],
           ),
         ),
@@ -382,7 +410,7 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
               const SizedBox(width: 12),
               ActiveAvatarWrapper(
                 isActive: isTurn,
-                child: const UserAvatarIndicator(),
+                child: const UserAvatarIndicator(isRated: true),
               ),
             ],
           ),
@@ -403,7 +431,7 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
     );
   }
 
-  Widget _buildRatedActionRow(BuildContext context, WidgetRef ref, ChessState state) {
+  Widget _buildRatedActionRow(BuildContext context, WidgetRef ref, BattlegroundState state) {
     final isMatchActive = state.recentMoves.isNotEmpty && !state.game.gameOver;
 
     return FittedBox(
@@ -419,7 +447,7 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
               if (isMatchActive) {
                 final resigned = await _showRatedNewGameDialog(context);
                 if (resigned == true) {
-                  await ref.read(chessProvider.notifier).resignRatedGame();
+                  await ref.read(battlegroundProvider.notifier).resignRatedGame();
                   if (context.mounted) {
                     await _showModeSelectionDialog(context);
                     if (context.mounted) {
@@ -443,7 +471,7 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
               if (isMatchActive) {
                 final resigned = await _showRatedNewGameDialog(context);
                 if (resigned == true) {
-                  await ref.read(chessProvider.notifier).resignRatedGame();
+                  await ref.read(battlegroundProvider.notifier).resignRatedGame();
                   if (context.mounted) {
                     await _showTimeArenaSelectionDialog(context);
                     _triggerDiceRoll();
@@ -462,7 +490,7 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
               if (isMatchActive) {
                 final resigned = await _showRatedNewGameDialog(context);
                 if (resigned == true) {
-                  await ref.read(chessProvider.notifier).resignRatedGame();
+                  await ref.read(battlegroundProvider.notifier).resignRatedGame();
                   _triggerDiceRoll();
                 }
               } else {
@@ -470,55 +498,13 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
               }
             },
           ),
-          const SizedBox(width: 8),
-          ActionIconButton(
-            icon: state.isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
-            isActive: state.isPaused,
-            size: 22,
-            onTap: () => ref.read(chessProvider.notifier).togglePause(),
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildPauseOverlay(BuildContext context, WidgetRef ref) {
-    return Positioned.fill(
-      child: ClipRRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
-          child: Container(
-            color: Colors.black.withValues(alpha: 0.3),
-            child: Center(
-              child: GestureDetector(
-                onTap: () => ref.read(chessProvider.notifier).togglePause(),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: ScholarlyTheme.accentBlue,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.4), blurRadius: 15, spreadRadius: 2),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 28),
-                      const SizedBox(width: 8),
-                      Text('RESUME GAME', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14, letterSpacing: 1.2)),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 
-  Widget _buildGameOverOverlay(BuildContext context, WidgetRef ref, ChessState state) {
+  Widget _buildGameOverOverlay(BuildContext context, WidgetRef ref, BattlegroundState state) {
     final isDraw = state.game.inDraw;
     final didWin = _didPlayerWin(state);
     
@@ -637,7 +623,7 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
                                   setState(() {
                                     _hasTriggeredConfetti = false;
                                   });
-                                  ref.read(chessProvider.notifier).dismissGameOver();
+                                  ref.read(battlegroundProvider.notifier).dismissGameOver();
                                   _triggerDiceRoll();
                                 },
                                 style: FilledButton.styleFrom(
@@ -662,22 +648,12 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
                             height: 46,
                             child: OutlinedButton.icon(
                               onPressed: () async {
-                                final notifier = ref.read(chessProvider.notifier);
-                                final state = ref.read(chessProvider);
-                                final entry = state.savedGames.where((s) => s.id == state.loadedSaveId).firstOrNull;
+                                final savedGames = ref.read(chessProvider).savedGames;
+                                final entry = savedGames.lastOrNull;
                                 if (entry != null) {
                                   ref.read(studyLabProvider.notifier).loadGameEntry(entry);
-                                  notifier.dismissGameOver();
-                                  await notifier.setRatedMode(false);
-                                  ref.read(mobileNavIndexProvider.notifier).state = 4;
-                                } else {
-                                  final newEntry = await notifier.saveCurrentGame();
-                                  if (newEntry != null) {
-                                    ref.read(studyLabProvider.notifier).loadGameEntry(newEntry);
-                                    notifier.dismissGameOver();
-                                    await notifier.setRatedMode(false);
-                                    ref.read(mobileNavIndexProvider.notifier).state = 4;
-                                  }
+                                  ref.read(battlegroundProvider.notifier).dismissGameOver();
+                                  ref.read(mobileNavIndexProvider.notifier).state = 5;
                                 }
                               },
                               icon: const Icon(Icons.science_rounded),
@@ -701,8 +677,7 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
                             height: 46,
                             child: OutlinedButton(
                               onPressed: () async {
-                                ref.read(chessProvider.notifier).dismissGameOver();
-                                await ref.read(chessProvider.notifier).setRatedMode(false);
+                                ref.read(battlegroundProvider.notifier).dismissGameOver();
                                 if (context.mounted) {
                                   exitToDashboardWithSidebar(context, ref);
                                 }
@@ -733,7 +708,7 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
     );
   }
 
-  bool _didPlayerWin(ChessState state) {
+  bool _didPlayerWin(BattlegroundState state) {
     if (state.game.inDraw) return false;
     
     if (state.isTimeOut) {
@@ -760,12 +735,12 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
 
   void _onDiceRollComplete() {
     if (mounted) {
-      ref.read(chessProvider.notifier).reset(forcedPlayerWhite: _assignedWhite);
+      ref.read(battlegroundProvider.notifier).reset(forcedPlayerWhite: _assignedWhite);
       setState(() => _isDiceRolling = false);
     }
   }
 
-  bool _isPlayerTurn(ChessState state) {
+  bool _isPlayerTurn(BattlegroundState state) {
     if (state.game.fen.split(' ').length > 1) {
       final turnWhite = state.game.fen.split(' ')[1] == 'w';
       return state.isPlayerWhite == turnWhite;
@@ -773,7 +748,7 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
     return true;
   }
 
-  double _getEvalFraction(ChessState state, bool forPlayer) {
+  double _getEvalFraction(BattlegroundState state, bool forPlayer) {
     final eval = forPlayer ? (state.isPlayerWhite ? state.currentEvaluation : -state.currentEvaluation) : (state.isPlayerWhite ? -state.currentEvaluation : state.currentEvaluation);
     return (eval.clamp(-5.0, 5.0) + 5.0) / 10.0;
   }

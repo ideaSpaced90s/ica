@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../application/chess_provider.dart';
+import '../application/battleground_provider.dart';
 import '../application/tutorial_provider.dart';
 import '../services/chess_sound_service.dart';
 import 'scholarly_theme.dart';
@@ -212,7 +213,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
 
     if (confirmed == true && context.mounted) {
-      await ref.read(chessProvider.notifier).resetRatedStats();
+      await ref.read(battlegroundProvider.notifier).resetRatedStats();
       await ref.read(tutorialProvider.notifier).resetAllProgress();
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

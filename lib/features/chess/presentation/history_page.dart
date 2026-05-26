@@ -8,6 +8,7 @@ import '../data/saved_game.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../application/chess_provider.dart';
+import '../application/arena_provider.dart';
 import '../services/chess_sound_service.dart';
 import 'scholarly_theme.dart';
 import 'widgets/history_card.dart';
@@ -658,9 +659,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
                 onTap: game.isLockedForAnalysis
                     ? null
                     : () {
-                        ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                        notifier.loadSavedGame(game);
-                        notifier.setRatedMode(false);
+                        ref.read(arenaProvider.notifier).loadSavedGame(game);
                         ref.read(mobileNavIndexProvider.notifier).state = 1;
                         Navigator.pop(context); // Close bottom sheet
                         Navigator.of(context).popUntil((route) => route.isFirst);
@@ -967,9 +966,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
               // Option 1: RESUME MATCH
               InkWell(
                 onTap: () {
-                  ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                  notifier.loadSavedGame(game);
-                  notifier.setRatedMode(false);
+                  ref.read(arenaProvider.notifier).loadSavedGame(game);
                   ref.read(mobileNavIndexProvider.notifier).state = 1;
                   Navigator.pop(context); // Close bottom sheet
                   Navigator.of(context).popUntil((route) => route.isFirst);

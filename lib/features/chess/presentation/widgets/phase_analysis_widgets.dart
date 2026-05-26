@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../scholarly_theme.dart';
-import '../../application/chess_provider.dart';
+import '../../application/battleground_provider.dart';
 import 'ambient_scaffold.dart';
 
 class OpeningRepertoireCard extends ConsumerWidget {
@@ -10,8 +10,8 @@ class OpeningRepertoireCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(chessProvider);
-    final openings = state.cachedOpenings;
+    final bgState = ref.watch(battlegroundProvider);
+    final openings = bgState.cachedOpenings;
     
     if (openings.isEmpty) {
       return _buildEmptyCard(
@@ -196,8 +196,8 @@ class EndgameTechniqueCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(chessProvider);
-    final endgames = state.cachedEndgames;
+    final bgState = ref.watch(battlegroundProvider);
+    final endgames = bgState.cachedEndgames;
 
     if (endgames == null) {
       return _buildEmptyCard(

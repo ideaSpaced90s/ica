@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../application/chess_provider.dart';
+import '../../application/arena_provider.dart';
 import '../../application/study_lab_provider.dart';
 import '../mobile_navigation_shell.dart';
 import '../scholarly_theme.dart';
@@ -55,10 +56,10 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive ||
         state == AppLifecycleState.detached) {
-      final chessState = ref.read(chessProvider);
-      if (chessState.recentMoves.isNotEmpty && !chessState.game.gameOver) {
-        if (!chessState.isPaused) {
-          ref.read(chessProvider.notifier).togglePause();
+      final arenaState = ref.read(arenaProvider);
+      if (arenaState.recentMoves.isNotEmpty && !arenaState.game.gameOver) {
+        if (!arenaState.isPaused) {
+          ref.read(arenaProvider.notifier).togglePause();
         }
       }
     }
@@ -66,7 +67,7 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(chessProvider);
+    final state = ref.watch(arenaProvider);
     final isLandscape = MediaQuery.of(context).size.width > MediaQuery.of(context).size.height;
 
     return PopScope(
@@ -158,7 +159,7 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
     );
   }
 
-  Widget _buildLandscapeLayout(BuildContext context, WidgetRef ref, ChessState state) {
+  Widget _buildLandscapeLayout(BuildContext context, WidgetRef ref, ArenaState state) {
     final isTurn = _isPlayerTurn(state);
     final isFlipped = state.isBoardFlipped;
     final topPieces = isFlipped ? state.game.capturedByWhite : state.game.capturedByBlack;
@@ -271,9 +272,17 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                             ],
                           ),
                           const Spacer(),
-                          ArenaTimeDisplay(isWhite: state.isPlayerWhite, isActive: isTurn),
+                          ArenaTimeDisplay(
+                            isWhite: state.isPlayerWhite,
+                            isActive: isTurn,
+                            timeLeft: state.isPlayerWhite ? state.whiteTimeLeft : state.blackTimeLeft,
+                          ),
                           const SizedBox(width: 12),
-                          ArenaTimeDisplay(isWhite: !state.isPlayerWhite, isActive: !isTurn),
+                          ArenaTimeDisplay(
+                            isWhite: !state.isPlayerWhite,
+                            isActive: !isTurn,
+                            timeLeft: !state.isPlayerWhite ? state.whiteTimeLeft : state.blackTimeLeft,
+                          ),
                           const Spacer(),
                           Row(
                             mainAxisSize: MainAxisSize.min,
@@ -292,7 +301,17 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
 
                 // Center Section: Classic Tabbed Panel
                 Expanded(
-                  child: ClassicWindowsTabs(state: state),
+                  child: ClassicWindowsTabs(
+                    recentMoves: state.recentMoves,
+                    viewingMoveIndex: state.viewingMoveIndex,
+                    onMoveTap: (idx) => ref.read(arenaProvider.notifier).setViewingMoveIndex(idx),
+                    game: state.game,
+                    gameMode: state.gameMode,
+                    isRatedMode: false,
+                    engineLevel: state.engineLevel,
+                    isPlayerWhite: state.isPlayerWhite,
+                    currentEvaluation: state.currentEvaluation,
+                  ),
                 ),
                 const SizedBox(height: 12),
 
@@ -306,7 +325,7 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
     );
   }
 
-  Widget _buildPortraitLayout(BuildContext context, WidgetRef ref, ChessState state) {
+  Widget _buildPortraitLayout(BuildContext context, WidgetRef ref, ArenaState state) {
     final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
     final isTurn = _isPlayerTurn(state);
     final isFlipped = state.isBoardFlipped;
@@ -357,9 +376,17 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                           ],
                         ),
                         const Spacer(),
-                        ArenaTimeDisplay(isWhite: state.isPlayerWhite, isActive: isTurn),
+                        ArenaTimeDisplay(
+                          isWhite: state.isPlayerWhite,
+                          isActive: isTurn,
+                          timeLeft: state.isPlayerWhite ? state.whiteTimeLeft : state.blackTimeLeft,
+                        ),
                         const SizedBox(width: 12),
-                        ArenaTimeDisplay(isWhite: !state.isPlayerWhite, isActive: !isTurn),
+                        ArenaTimeDisplay(
+                          isWhite: !state.isPlayerWhite,
+                          isActive: !isTurn,
+                          timeLeft: !state.isPlayerWhite ? state.whiteTimeLeft : state.blackTimeLeft,
+                        ),
                         const Spacer(),
                         Row(
                           mainAxisSize: MainAxisSize.min,
@@ -440,7 +467,7 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
     );
   }
 
-  Widget _buildActionRow(BuildContext context, WidgetRef ref, ChessState state) {
+  Widget _buildActionRow(BuildContext context, WidgetRef ref, ArenaState state) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(24),
       child: BackdropFilter(
@@ -475,31 +502,31 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                 ActionIconButton(
                   icon: Icons.undo_rounded,
                   isEnabled: state.canUndo,
-                  onTap: state.canUndo ? () => ref.read(chessProvider.notifier).undo() : null,
+                  onTap: state.canUndo ? () => ref.read(arenaProvider.notifier).undo() : null,
                 ),
                 const SizedBox(width: 8),
                 ActionIconButton(
                   icon: Icons.redo_rounded,
                   isEnabled: state.canRedo,
-                  onTap: state.canRedo ? () => ref.read(chessProvider.notifier).redo() : null,
+                  onTap: state.canRedo ? () => ref.read(arenaProvider.notifier).redo() : null,
                 ),
                 const SizedBox(width: 8),
                 ActionIconButton(
                   icon: Icons.flip_camera_android_outlined,
                   isActive: state.isBoardFlipped,
-                  onTap: () => ref.read(chessProvider.notifier).toggleBoardOrientation(),
+                  onTap: () => ref.read(arenaProvider.notifier).toggleBoardOrientation(),
                 ),
                 const SizedBox(width: 8),
                 ActionIconButton(
                   icon: state.isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
                   isActive: state.isPaused,
-                  onTap: () => ref.read(chessProvider.notifier).togglePause(),
+                  onTap: () => ref.read(arenaProvider.notifier).togglePause(),
                 ),
                 const SizedBox(width: 8),
                 ActionIconButton(
                   icon: state.isEngineVsEngine ? Icons.smart_toy_rounded : Icons.smart_toy_outlined,
                   isActive: state.isEngineVsEngine,
-                  onTap: () => ref.read(chessProvider.notifier).toggleEngineVsEngine(),
+                  onTap: () => ref.read(arenaProvider.notifier).toggleEngineVsEngine(),
                 ),
                 const SizedBox(width: 8),
                 ActionIconButton(
@@ -513,7 +540,7 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                   isActive: state.isBulbGlowing,
                   activeColor: ScholarlyTheme.accentYellowSoft,
                   activeIconColor: ScholarlyTheme.accentYellow,
-                  onTap: () => ref.read(chessProvider.notifier).requestHint(),
+                  onTap: () => ref.read(arenaProvider.notifier).requestHint(),
                 ),
                 const SizedBox(width: 8),
                 ActionIconButton(
@@ -543,7 +570,7 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
             color: Colors.black.withValues(alpha: 0.3),
             child: Center(
               child: GestureDetector(
-                onTap: () => ref.read(chessProvider.notifier).togglePause(),
+                onTap: () => ref.read(arenaProvider.notifier).togglePause(),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                   decoration: BoxDecoration(
@@ -582,7 +609,7 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
     );
   }
 
-  Widget _buildGameOverOverlay(BuildContext context, WidgetRef ref, ChessState state) {
+  Widget _buildGameOverOverlay(BuildContext context, WidgetRef ref, ArenaState state) {
     final isDraw = state.game.inDraw;
     final didWin = _didPlayerWin(state);
     
@@ -705,6 +732,7 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                       ),
                       const SizedBox(height: 28),
                       // Buttons
+                      Spacer(flex: 0),
                       SizedBox(
                         width: double.infinity,
                         height: 50,
@@ -730,7 +758,7 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                               setState(() {
                                 _hasTriggeredConfetti = false;
                               });
-                              ref.read(chessProvider.notifier).reset();
+                              ref.read(arenaProvider.notifier).reset();
                             },
                             style: FilledButton.styleFrom(
                               backgroundColor: Colors.transparent,
@@ -778,19 +806,17 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                         height: 46,
                         child: OutlinedButton.icon(
                           onPressed: () async {
-                            final notifier = ref.read(chessProvider.notifier);
+                            final notifier = ref.read(arenaProvider.notifier);
                             // 1. Save current game
                             final entry = await notifier.saveCurrentGame();
-                            if (entry != null) {
-                              // 2. Lock for analysis
-                              await notifier.lockGameForAnalysis(entry.id);
-                              // 3. Load into study lab
-                              ref.read(studyLabProvider.notifier).loadGameEntry(entry);
-                              // 4. Reset Arena state to clean slate
-                              await notifier.reset(skipAutoSave: true);
-                              // 5. Navigate to analysis tab
-                              ref.read(mobileNavIndexProvider.notifier).state = 4;
-                            }
+                            // 2. Lock for analysis
+                            await ref.read(chessProvider.notifier).lockGameForAnalysis(entry.id);
+                            // 3. Load into study lab
+                            ref.read(studyLabProvider.notifier).loadGameEntry(entry);
+                            // 4. Reset Arena state to clean slate
+                            notifier.reset();
+                            // 5. Navigate to analysis tab
+                            ref.read(mobileNavIndexProvider.notifier).state = 5;
                           },
                           icon: const Icon(Icons.science_rounded),
                           label: Text(
@@ -814,7 +840,7 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                         height: 46,
                         child: OutlinedButton(
                           onPressed: () {
-                            ref.read(chessProvider.notifier).dismissGameOver();
+                            ref.read(arenaProvider.notifier).dismissGameOver();
                           },
                           style: OutlinedButton.styleFrom(
                             foregroundColor: ScholarlyTheme.textMuted,
@@ -842,7 +868,7 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
   }
 
 
-  bool _didPlayerWin(ChessState state) {
+  bool _didPlayerWin(ArenaState state) {
     if (state.game.inDraw) return false;
     
     if (state.isTimeOut) {
@@ -856,7 +882,7 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
     return !_isPlayerTurn(state);
   }
 
-  bool _isPlayerTurn(ChessState state) {
+  bool _isPlayerTurn(ArenaState state) {
     if (state.game.fen.split(' ').length > 1) {
       final turnWhite = state.game.fen.split(' ')[1] == 'w';
       return state.isPlayerWhite == turnWhite;
@@ -864,13 +890,13 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
     return true;
   }
 
-  double _getEvalFraction(ChessState state, bool forPlayer) {
+  double _getEvalFraction(ArenaState state, bool forPlayer) {
     final eval = forPlayer ? (state.isPlayerWhite ? state.currentEvaluation : -state.currentEvaluation) : (state.isPlayerWhite ? -state.currentEvaluation : state.currentEvaluation);
     return (eval.clamp(-5.0, 5.0) + 5.0) / 10.0;
   }
 
   Future<void> _handleNewGame(BuildContext context, WidgetRef ref) async {
-    if (ref.read(chessProvider).recentMoves.isNotEmpty) {
+    if (ref.read(arenaProvider).recentMoves.isNotEmpty) {
       final confirm = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
@@ -885,13 +911,13 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
       );
       if (confirm != true) return;
     }
-    await ref.read(chessProvider.notifier).reset();
+    ref.read(arenaProvider.notifier).reset();
   }
 
   Future<void> _handleSaveGame(BuildContext context, WidgetRef ref) async {
-    final entry = await ref.read(chessProvider.notifier).saveCurrentGame();
+    await ref.read(arenaProvider.notifier).saveCurrentGame();
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(entry != null ? 'Saved' : 'Failed'), backgroundColor: ScholarlyTheme.accentBlue));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Saved'), backgroundColor: ScholarlyTheme.accentBlue));
     }
   }
 

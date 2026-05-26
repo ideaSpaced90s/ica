@@ -1,18 +1,18 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../scholarly_theme.dart';
 import '../chess_clock.dart';
-import '../../application/game_clock_provider.dart';
 
-class ArenaTimeDisplay extends ConsumerWidget {
+class ArenaTimeDisplay extends StatelessWidget {
   final bool isWhite;
   final bool isActive;
+  final Duration timeLeft;
 
   const ArenaTimeDisplay({
     super.key,
     required this.isWhite,
     required this.isActive,
+    required this.timeLeft,
   });
 
   Color _getBorderColor(Duration timeLeft) {
@@ -30,11 +30,7 @@ class ArenaTimeDisplay extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final timeLeft = ref.watch(gameClockProvider.select(
-      (s) => isWhite ? s.whiteTimeLeft : s.blackTimeLeft,
-    ));
-
+  Widget build(BuildContext context) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 400),
       curve: Curves.easeOutCubic,

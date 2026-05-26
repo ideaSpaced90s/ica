@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../scholarly_theme.dart';
-import '../../application/chess_provider.dart';
+import '../../application/battleground_provider.dart';
 import 'ambient_scaffold.dart';
 
 class ScotomaCard extends ConsumerWidget {
@@ -12,8 +12,8 @@ class ScotomaCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(chessProvider);
-    final scotoma = state.cachedScotoma;
+    final bgState = ref.watch(battlegroundProvider);
+    final scotoma = bgState.cachedScotoma;
 
     if (scotoma == null) {
       return JuicyGlassCard(
@@ -44,7 +44,7 @@ class ScotomaCard extends ConsumerWidget {
       );
     }
 
-    final values = [
+    final List<double> values = [
       scotoma.diagonalRetreats,
       scotoma.horizontalSwings,
       scotoma.knightForks,

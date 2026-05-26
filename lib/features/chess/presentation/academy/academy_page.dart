@@ -275,7 +275,18 @@ class _AcademyPageState extends ConsumerState<AcademyPage> {
 
                 // Center Section: Classic Windows Tabs (AI Coach, Moves, Metrics)
                 Expanded(
-                  child: ClassicWindowsTabs(state: state),
+                  child: ClassicWindowsTabs(
+                    recentMoves: state.recentMoves,
+                    viewingMoveIndex: state.viewingMoveIndex,
+                    onMoveTap: (idx) => notifier.jumpToMove(idx),
+                    game: state.game,
+                    gameMode: state.gameMode,
+                    isRatedMode: false,
+                    engineLevel: state.engineLevel,
+                    isPlayerWhite: state.isPlayerWhite,
+                    currentEvaluation: state.currentEvaluation,
+                    academyState: state,
+                  ),
                 ),
                 const SizedBox(height: 12),
 

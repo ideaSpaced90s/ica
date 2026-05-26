@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../scholarly_theme.dart';
-import '../../application/chess_provider.dart';
+import '../../application/battleground_provider.dart';
 import '../../domain/performance_ledger_entry.dart';
 import 'ambient_scaffold.dart';
 
@@ -14,7 +14,8 @@ class EloAscentChart extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final ledger = ref.watch(chessProvider).cachedLedgerEntries;
+    final bgState = ref.watch(battlegroundProvider);
+    final ledger = bgState.cachedLedgerEntries;
     final ratedSaves = List<PerformanceLedgerEntry>.from(ledger);
     ratedSaves.sort((a, b) => a.timestamp.compareTo(b.timestamp));
 
@@ -181,7 +182,8 @@ class TacticalRadarChart extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final playstyle = ref.watch(chessProvider).cachedPlaystyle;
+    final bgState = ref.watch(battlegroundProvider);
+    final playstyle = bgState.cachedPlaystyle;
     if (playstyle == null) return const SizedBox.shrink();
 
     final aggression = playstyle.aggression;
@@ -419,7 +421,8 @@ class ModeDistributionChart extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final ledger = ref.watch(chessProvider).cachedLedgerEntries;
+    final bgState = ref.watch(battlegroundProvider);
+    final ledger = bgState.cachedLedgerEntries;
     final classic = ledger.where((s) => s.gameMode == 'classic').length;
     final nineSixty = ledger.where((s) => s.gameMode == 'chess960').length;
     final total = classic + nineSixty;
@@ -496,9 +499,9 @@ class _DominanceHeatmapState extends ConsumerState<DominanceHeatmap> {
 
   @override
   Widget build(BuildContext context) {
-    final chessState = ref.watch(chessProvider);
-    final heatmap = chessState.cachedDominanceHeatmap;
-    final ledgerEntries = chessState.cachedLedgerEntries;
+    final bgState = ref.watch(battlegroundProvider);
+    final heatmap = bgState.cachedDominanceHeatmap;
+    final ledgerEntries = bgState.cachedLedgerEntries;
 
     // Heatmap color logic helper
     Color getTileColor(double avg) {

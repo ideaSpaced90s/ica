@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:chess/chess.dart' as chess_lib;
 
 import '../../application/chess_provider.dart';
+import '../../application/battleground_provider.dart';
 import '../../domain/chess_game.dart';
 import '../scholarly_theme.dart';
 
@@ -43,11 +44,12 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
   @override
   Widget build(BuildContext context) {
     final chessState = ref.watch(chessProvider);
+    final bgState = ref.watch(battlegroundProvider);
     // Rated mode always uses classic theme
     const chessTheme = RatedClassicTheme();
 
     // Use currentBoardFen for display during analysis/history viewing
-    final displayGame = ChessGame(fen: chessState.currentBoardFen);
+    final displayGame = ChessGame(fen: bgState.currentBoardFen);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -74,7 +76,7 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
                     ),
                   ),
 
-                  if (chessState.game.inCheck)
+                  if (bgState.game.inCheck)
                     chessTheme.buildCheckEffect(context),
 
                   RepaintBoundary(
@@ -93,37 +95,31 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
                         final squareName = _getSquareName(
                           row,
                           col,
-                          chessState.isBoardFlipped,
+                          bgState.isBoardFlipped,
                         );
 
                         final isSelected = _selectedSquare == squareName;
                         final isHint = _legalTargets.contains(squareName);
                         final isLastMoveStartOrEnd =
-                            _isStartOrEndSquare(squareName, chessState.lastMove);
+                            _isStartOrEndSquare(squareName, bgState.lastMove);
                         final isLastMoveInBetween =
-                            _isInBetweenSquare(squareName, chessState.lastMove);
-                        final isSuggestedFrom =
-                            chessState.isHintVisible &&
-                            chessState.hintFrom == squareName;
-                        final isSuggestedTo =
-                            chessState.isHintVisible &&
-                            chessState.hintTo == squareName;
-                        final isThreatened = chessState.threatenedSquares
+                            _isInBetweenSquare(squareName, bgState.lastMove);
+                        final isThreatened = bgState.threatenedSquares
                             .contains(squareName);
 
                         final piece = displayGame.getPiece(squareName);
 
                         return DragTarget<String>(
-                          onWillAcceptWithDetails: (details) =>
-                              _legalTargets.contains(squareName),
-                          onAcceptWithDetails: (details) {
-                            ref
-                                .read(chessProvider.notifier)
-                                .makeMove(details.data, squareName);
-                            _clearSelection();
-                          },
-                          builder: (context, candidateData, rejectedData) {
-                            final isDragHover = candidateData.isNotEmpty;
+                           onWillAcceptWithDetails: (details) =>
+                               _legalTargets.contains(squareName),
+                           onAcceptWithDetails: (details) {
+                             ref
+                                 .read(battlegroundProvider.notifier)
+                                 .makeMove(details.data, squareName);
+                             _clearSelection();
+                           },
+                           builder: (context, candidateData, rejectedData) {
+                             final isDragHover = candidateData.isNotEmpty;
                             return AnimatedOpacity(
                               duration: const Duration(milliseconds: 120),
                               opacity: 1.0,
@@ -196,21 +192,6 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
                                               context,
                                               piece != null,
                                             ),
-                                          if (chessState
-                                                      .engineSelectionSquare ==
-                                                  squareName &&
-                                              ref
-                                                  .read(
-                                                    chessProvider.notifier,
-                                                  )
-                                                  .isAnimationTypeEnabled(
-                                                    'indicators',
-                                                  ))
-                                            const OrbitingStarAnimation(
-                                              color:
-                                                  ScholarlyTheme.accentGold,
-                                              isActive: true,
-                                            ),
                                           if (isThreatened &&
                                               ref
                                                   .read(
@@ -227,7 +208,7 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
                                           if (isLastMoveStartOrEnd || isLastMoveInBetween)
                                             TweenAnimationBuilder<double>(
                                               key: ValueKey(
-                                                'lm_${chessState.lastMove}',
+                                                'lm_${bgState.lastMove}',
                                               ),
                                               tween: Tween(
                                                 begin: isLastMoveStartOrEnd ? 0.35 : 0.15,
@@ -254,41 +235,6 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
                                                     );
                                               },
                                             ),
-                                          if (isSuggestedFrom ||
-                                              isSuggestedTo)
-                                            Container(
-                                              decoration: BoxDecoration(
-                                                color:
-                                                    (isSuggestedTo
-                                                            ? ScholarlyTheme
-                                                                  .accentBlueSoft
-                                                            : ScholarlyTheme
-                                                                  .accentGold)
-                                                        .withValues(
-                                                          alpha: 0.16,
-                                                        ),
-                                                border: Border.all(
-                                                  color:
-                                                      (isSuggestedTo
-                                                              ? ScholarlyTheme
-                                                                    .accentBlueSoft
-                                                              : ScholarlyTheme
-                                                                    .accentGold)
-                                                          .withValues(
-                                                            alpha: 0.72,
-                                                          ),
-                                                  width: 2,
-                                                ),
-                                              ),
-                                            ),
-                                          if (chessState.isHintBlinking &&
-                                              (isSuggestedFrom ||
-                                                  isSuggestedTo))
-                                            const OrbitingStarAnimation(
-                                              color:
-                                                  ScholarlyTheme.accentYellow,
-                                              isActive: true,
-                                            ),
                                           ShakeAnimation(
                                             isActive:
                                                 ref
@@ -298,14 +244,15 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
                                                     )
                                                     .isAnimationTypeEnabled(
                                                       'feedback',
+                                                      isRated: true,
                                                     ) &&
                                                 piece?.type ==
                                                     chess_lib
                                                         .PieceType
                                                         .KING &&
-                                                ((chessState.game.inCheck &&
+                                                ((bgState.game.inCheck &&
                                                         piece?.color ==
-                                                            chessState
+                                                            bgState
                                                                 .game
                                                                 .turn) ||
                                                     isThreatened),
@@ -316,11 +263,11 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
                                                 rotation: 0.0,
                                                 theme: chessTheme,
                                                 isMoving:
-                                                    chessState
+                                                    bgState
                                                             .moveAnimation
                                                             ?.from ==
                                                         squareName ||
-                                                    chessState
+                                                    bgState
                                                             .moveAnimation
                                                             ?.to ==
                                                         squareName,
@@ -346,7 +293,7 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
                                               row,
                                               col,
                                               (row + col) % 2 == 0,
-                                              chessState.isBoardFlipped,
+                                              bgState.isBoardFlipped,
                                               chessTheme,
                                             ),
                                         ],
@@ -361,16 +308,16 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
                       },
                     ),
                   ),
-                  if (chessState.moveAnimation != null)
+                  if (bgState.moveAnimation != null)
                     SignatureMoveOverlay(
-                      data: chessState.moveAnimation!,
+                      data: bgState.moveAnimation!,
                       boardSize: boardSize,
-                      isFlipped: chessState.isBoardFlipped,
-                      isCheckmate: chessState.game.inCheckmate,
+                      isFlipped: bgState.isBoardFlipped,
+                      isCheckmate: bgState.game.inCheckmate,
                       theme: chessTheme,
                       onComplete: () {
                         ref
-                            .read(chessProvider.notifier)
+                            .read(battlegroundProvider.notifier)
                             .clearMoveAnimation();
                       },
                       onLand: (from, to, pieceCode, profile) =>
@@ -380,7 +327,7 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
                             pieceCode,
                             profile,
                             boardSize,
-                            isCritical: chessState.game.inCheckmate,
+                            isCritical: bgState.game.inCheckmate,
                           ),
                       onActionTrigger: (action, position) {},
                     ),
@@ -393,7 +340,7 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
                       squareSize: boardSize / 8,
                       squareRow: fb['row'] as int,
                       squareCol: fb['col'] as int,
-                      isFlipped: chessState.isBoardFlipped,
+                      isFlipped: bgState.isBoardFlipped,
                       isCritical: fb['critical'] as bool? ?? false,
                       onComplete: () =>
                           setState(() => _landingFeedbacks.remove(fb)),
@@ -406,7 +353,7 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
                       squareSize: boardSize / 8,
                       arcadeMode: ref
                           .read(chessProvider.notifier)
-                          .isAnimationTypeEnabled('arcadeMode'),
+                          .isAnimationTypeEnabled('arcadeMode', isRated: true),
                       onComplete: () =>
                           setState(() => _tapRipples.remove(pos)),
                     ),
@@ -427,8 +374,8 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
   }) {
     final haptics = ref.read(chessHapticsServiceProvider);
     haptics.selection();
-    final chessState = ref.read(chessProvider);
-    final displayGame = ChessGame(fen: chessState.currentBoardFen);
+    final bgState = ref.read(battlegroundProvider);
+    final displayGame = ChessGame(fen: bgState.currentBoardFen);
 
     // Tap ripple on every tap (gated by animations setting)
     if (ref.read(chessProvider.notifier).isAnimationTypeEnabled('feedback')) {
@@ -436,7 +383,7 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
     }
 
     if (_selectedSquare != null && _legalTargets.contains(squareName)) {
-      ref.read(chessProvider.notifier).makeMove(_selectedSquare!, squareName);
+      ref.read(battlegroundProvider.notifier).makeMove(_selectedSquare!, squareName);
       _clearSelection();
       return;
     }
@@ -449,7 +396,7 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
   }
 
   void _handlePieceSelection(String squareName, ChessGame displayGame) {
-    final chessState = ref.read(chessProvider);
+    final bgState = ref.read(battlegroundProvider);
     final piece = displayGame.getPiece(squareName);
     if (piece == null) {
       _clearSelection();
@@ -466,11 +413,10 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
       return;
     }
 
-    // Lock board controls if game is over, it's AI turn, or engine vs engine
-    final isGameOver = chessState.game.gameOver;
-    final isAiTurn = _isAiTurn(chessState);
-    final isEvE = chessState.isEngineVsEngine;
-    if (isGameOver || isAiTurn || isEvE) {
+    // Lock board controls if game is over or it's AI turn
+    final isGameOver = bgState.game.gameOver;
+    final isAiTurn = _isAiTurn(bgState);
+    if (isGameOver || isAiTurn) {
       _clearSelection();
       return;
     }
@@ -488,8 +434,7 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
     });
   }
 
-  bool _isAiTurn(ChessState state) {
-    if (!state.isAiOperational) return false;
+  bool _isAiTurn(BattlegroundState state) {
     final fenParts = state.game.fen.split(' ');
     if (fenParts.length > 1) {
       final turnWhite = fenParts[1] == 'w';
@@ -499,7 +444,7 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
   }
 
   void _triggerTapRipple(String squareName) {
-    final rowCol = _getSquareRowCol(squareName, ref.read(chessProvider).isBoardFlipped);
+    final rowCol = _getSquareRowCol(squareName, ref.read(battlegroundProvider).isBoardFlipped);
     if (rowCol != null) {
       final size = context.size?.width ?? 0;
       final squareSize = size / 8;
@@ -521,7 +466,7 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
     double boardSize, {
     bool isCritical = false,
   }) {
-    final isFlipped = ref.read(chessProvider).isBoardFlipped;
+    final isFlipped = ref.read(battlegroundProvider).isBoardFlipped;
     final toRowCol = _getSquareRowCol(to, isFlipped);
     if (toRowCol != null) {
       setState(() {

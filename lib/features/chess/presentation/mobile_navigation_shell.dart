@@ -3,11 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../application/chess_provider.dart';
+import '../application/battleground_provider.dart';
 import '../services/chess_sound_service.dart';
 import 'scholarly_theme.dart';
 
 import 'dashboard_page.dart';
-import 'main_page.dart';
+import 'arena/arena_page.dart';
 import 'battleground/battleground_page.dart';
 import 'academy/academy_page.dart';
 import 'puzzles/puzzles_page.dart';
@@ -31,12 +32,12 @@ class MobileNavigationShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentIndex = ref.watch(mobileNavIndexProvider);
-    final state = ref.watch(chessProvider);
 
     // IndexedStack children
     final List<Widget> pages = [
       const DashboardPage(),
-      const MainPage(), // Handles both Rated and Unrated based on state.isRatedMode
+      const ArenaPage(),
+      const BattlegroundPage(),
       const AcademyPage(),
       const PuzzlesPage(),
       const AnalysisPage(),
@@ -52,20 +53,22 @@ class MobileNavigationShell extends ConsumerWidget {
         case 0:
           return 'HOME';
         case 1:
-          return state.isRatedMode ? 'BATTLEGROUND' : 'ARENA';
+          return 'ARENA';
         case 2:
-          return 'ACADEMY';
+          return 'BATTLEGROUND';
         case 3:
-          return 'PUZZLES';
+          return 'ACADEMY';
         case 4:
-          return 'ANALYSIS';
+          return 'PUZZLES';
         case 5:
-          return 'ARCHIVE';
+          return 'ANALYSIS';
         case 6:
-          return 'TUTORIAL';
+          return 'ARCHIVE';
         case 7:
-          return 'ABOUT US';
+          return 'TUTORIAL';
         case 8:
+          return 'ABOUT US';
+        case 9:
           return 'SETTINGS';
         default:
           return 'IDEASPACE CHESS ACADEMY';
@@ -95,14 +98,14 @@ class MobileNavigationShell extends ConsumerWidget {
               icon: const Icon(Icons.menu_rounded, color: ScholarlyTheme.textPrimary),
               onPressed: () async {
                 ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
-                final isBattleground = currentIndex == 1 && state.isRatedMode;
-                final isMatchActive = isBattleground && state.recentMoves.isNotEmpty && !state.game.gameOver;
+                final isBattleground = currentIndex == 2;
+                final bgState = ref.read(battlegroundProvider);
+                final isMatchActive = isBattleground && bgState.recentMoves.isNotEmpty && !bgState.game.gameOver;
                 
                 if (isMatchActive) {
                   final resigned = await showRatedExitDialog(context);
                   if (resigned == true) {
-                    await ref.read(chessProvider.notifier).resignRatedGame();
-                    await ref.read(chessProvider.notifier).setRatedMode(false);
+                    await ref.read(battlegroundProvider.notifier).resignRatedGame();
                     if (context.mounted) {
                       exitToDashboardWithSidebar(context, ref);
                     }
@@ -157,8 +160,6 @@ class _MobileSidebarDrawer extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentIndex = ref.watch(mobileNavIndexProvider);
-    final state = ref.watch(chessProvider);
-    final notifier = ref.read(chessProvider.notifier);
 
     return Drawer(
       backgroundColor: ScholarlyTheme.backgroundStart,
@@ -193,51 +194,49 @@ class _MobileSidebarDrawer extends ConsumerWidget {
                 _DrawerTile(
                   label: 'Arena',
                   icon: Icons.sports_esports_rounded,
-                  isSelected: currentIndex == 1 && !state.isRatedMode,
+                  isSelected: currentIndex == 1,
                   onTap: () {
-                    notifier.setRatedMode(false);
                     _navigate(ref, context, 1);
                   },
                 ),
                 _DrawerTile(
                   label: 'Battleground',
                   icon: Icons.emoji_events_rounded,
-                  isSelected: currentIndex == 1 && state.isRatedMode,
-                  onTap: () {
-                    notifier.setRatedMode(true);
-                    _navigate(ref, context, 1);
-                  },
-                ),
-                _DrawerTile(
-                  label: 'Academy',
-                  icon: Icons.school_rounded,
                   isSelected: currentIndex == 2,
                   onTap: () {
                     _navigate(ref, context, 2);
                   },
                 ),
                 _DrawerTile(
-                  label: 'Puzzles',
-                  icon: Icons.extension_rounded,
+                  label: 'Academy',
+                  icon: Icons.school_rounded,
                   isSelected: currentIndex == 3,
                   onTap: () {
                     _navigate(ref, context, 3);
                   },
                 ),
                 _DrawerTile(
-                  label: 'Analysis',
-                  icon: Icons.science_rounded,
+                  label: 'Puzzles',
+                  icon: Icons.extension_rounded,
                   isSelected: currentIndex == 4,
                   onTap: () {
                     _navigate(ref, context, 4);
                   },
                 ),
                 _DrawerTile(
-                  label: 'Archive',
-                  icon: Icons.history_rounded,
+                  label: 'Analysis',
+                  icon: Icons.science_rounded,
                   isSelected: currentIndex == 5,
                   onTap: () {
                     _navigate(ref, context, 5);
+                  },
+                ),
+                _DrawerTile(
+                  label: 'Archive',
+                  icon: Icons.history_rounded,
+                  isSelected: currentIndex == 6,
+                  onTap: () {
+                    _navigate(ref, context, 6);
                   },
                 ),
                 const Padding(
@@ -247,25 +246,25 @@ class _MobileSidebarDrawer extends ConsumerWidget {
                 _DrawerTile(
                   label: 'Tutorial',
                   icon: Icons.menu_book_rounded,
-                  isSelected: currentIndex == 6,
+                  isSelected: currentIndex == 7,
                   onTap: () {
-                    _navigate(ref, context, 6);
+                    _navigate(ref, context, 7);
                   },
                 ),
                 _DrawerTile(
                   label: 'Settings',
                   icon: Icons.settings_rounded,
-                  isSelected: currentIndex == 8,
+                  isSelected: currentIndex == 9,
                   onTap: () {
-                    _navigate(ref, context, 8);
+                    _navigate(ref, context, 9);
                   },
                 ),
                 _DrawerTile(
                   label: 'About Us',
                   icon: Icons.info_outline_rounded,
-                  isSelected: currentIndex == 7,
+                  isSelected: currentIndex == 8,
                   onTap: () {
-                    _navigate(ref, context, 7);
+                    _navigate(ref, context, 8);
                   },
                 ),
               ],
