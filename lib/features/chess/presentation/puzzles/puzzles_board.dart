@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:chess/chess.dart' as chess_lib;
 
 import '../../application/chess_provider.dart';
+import '../../application/puzzles_provider.dart';
 import '../../domain/chess_game.dart';
 import '../scholarly_theme.dart';
 
@@ -42,11 +43,11 @@ class _PuzzlesBoardState extends ConsumerState<PuzzlesBoard>
 
   @override
   Widget build(BuildContext context) {
+    final puzzlesState = ref.watch(puzzlesProvider);
     final chessState = ref.watch(chessProvider);
     const chessTheme = PuzzlesClassicTheme();
 
-    // Use currentBoardFen for display during analysis/history viewing
-    final displayGame = ChessGame(fen: chessState.currentBoardFen);
+    final displayGame = puzzlesState.game;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -73,7 +74,7 @@ class _PuzzlesBoardState extends ConsumerState<PuzzlesBoard>
                     ),
                   ),
 
-                  if (chessState.game.inCheck)
+                  if (puzzlesState.game.inCheck)
                     chessTheme.buildCheckEffect(context),
 
                   RepaintBoundary(
@@ -92,22 +93,22 @@ class _PuzzlesBoardState extends ConsumerState<PuzzlesBoard>
                         final squareName = _getSquareName(
                           row,
                           col,
-                          chessState.isBoardFlipped,
+                          puzzlesState.isBoardFlipped,
                         );
 
                         final isSelected = _selectedSquare == squareName;
                         final isHint = _legalTargets.contains(squareName);
                         final isLastMoveStartOrEnd =
-                            _isStartOrEndSquare(squareName, chessState.lastMove);
+                            _isStartOrEndSquare(squareName, puzzlesState.lastMove);
                         final isLastMoveInBetween =
-                            _isInBetweenSquare(squareName, chessState.lastMove);
+                            _isInBetweenSquare(squareName, puzzlesState.lastMove);
                         final isSuggestedFrom =
-                            chessState.isHintVisible &&
-                            chessState.hintFrom == squareName;
+                            puzzlesState.isHintVisible &&
+                            puzzlesState.hintFrom == squareName;
                         final isSuggestedTo =
-                            chessState.isHintVisible &&
-                            chessState.hintTo == squareName;
-                        final isThreatened = chessState.threatenedSquares
+                            puzzlesState.isHintVisible &&
+                            puzzlesState.hintTo == squareName;
+                        final isThreatened = puzzlesState.threatenedSquares
                             .contains(squareName);
 
                         final piece = displayGame.getPiece(squareName);
@@ -117,7 +118,7 @@ class _PuzzlesBoardState extends ConsumerState<PuzzlesBoard>
                               _legalTargets.contains(squareName),
                           onAcceptWithDetails: (details) {
                             ref
-                                .read(chessProvider.notifier)
+                                .read(puzzlesProvider.notifier)
                                 .makeMove(details.data, squareName);
                             _clearSelection();
                           },
@@ -195,21 +196,7 @@ class _PuzzlesBoardState extends ConsumerState<PuzzlesBoard>
                                               context,
                                               piece != null,
                                             ),
-                                          if (chessState
-                                                      .engineSelectionSquare ==
-                                                  squareName &&
-                                              ref
-                                                  .read(
-                                                    chessProvider.notifier,
-                                                  )
-                                                  .isAnimationTypeEnabled(
-                                                    'indicators',
-                                                  ))
-                                            const OrbitingStarAnimation(
-                                              color:
-                                                  ScholarlyTheme.accentGold,
-                                              isActive: true,
-                                            ),
+
                                           if (isThreatened &&
                                               ref
                                                   .read(
@@ -226,7 +213,7 @@ class _PuzzlesBoardState extends ConsumerState<PuzzlesBoard>
                                           if (isLastMoveStartOrEnd || isLastMoveInBetween)
                                             TweenAnimationBuilder<double>(
                                               key: ValueKey(
-                                                'lm_${chessState.lastMove}',
+                                                'lm_${puzzlesState.lastMove}',
                                               ),
                                               tween: Tween(
                                                 begin: isLastMoveStartOrEnd ? 0.35 : 0.15,
@@ -280,7 +267,7 @@ class _PuzzlesBoardState extends ConsumerState<PuzzlesBoard>
                                                 ),
                                               ),
                                             ),
-                                          if (chessState.isHintBlinking &&
+                                          if (puzzlesState.isHintBlinking &&
                                               (isSuggestedFrom ||
                                                   isSuggestedTo))
                                             const OrbitingStarAnimation(
@@ -302,9 +289,9 @@ class _PuzzlesBoardState extends ConsumerState<PuzzlesBoard>
                                                     chess_lib
                                                         .PieceType
                                                         .KING &&
-                                                ((chessState.game.inCheck &&
+                                                ((puzzlesState.game.inCheck &&
                                                         piece?.color ==
-                                                            chessState
+                                                            puzzlesState
                                                                 .game
                                                                 .turn) ||
                                                     isThreatened),
@@ -315,11 +302,11 @@ class _PuzzlesBoardState extends ConsumerState<PuzzlesBoard>
                                                 rotation: 0.0,
                                                 theme: chessTheme,
                                                 isMoving:
-                                                    chessState
+                                                    puzzlesState
                                                             .moveAnimation
                                                             ?.from ==
                                                         squareName ||
-                                                    chessState
+                                                    puzzlesState
                                                             .moveAnimation
                                                             ?.to ==
                                                         squareName,
@@ -345,7 +332,7 @@ class _PuzzlesBoardState extends ConsumerState<PuzzlesBoard>
                                               row,
                                               col,
                                               (row + col) % 2 == 0,
-                                              chessState.isBoardFlipped,
+                                              puzzlesState.isBoardFlipped,
                                               chessTheme,
                                             ),
                                         ],
@@ -369,7 +356,7 @@ class _PuzzlesBoardState extends ConsumerState<PuzzlesBoard>
                       theme: chessTheme,
                       onComplete: () {
                         ref
-                            .read(chessProvider.notifier)
+                            .read(puzzlesProvider.notifier)
                             .clearMoveAnimation();
                       },
                       onLand: (from, to, pieceCode, profile) =>
@@ -379,7 +366,7 @@ class _PuzzlesBoardState extends ConsumerState<PuzzlesBoard>
                             pieceCode,
                             profile,
                             boardSize,
-                            isCritical: chessState.game.inCheckmate,
+                            isCritical: puzzlesState.game.inCheckmate,
                           ),
                       onActionTrigger: (action, position) {},
                     ),
@@ -392,7 +379,7 @@ class _PuzzlesBoardState extends ConsumerState<PuzzlesBoard>
                       squareSize: boardSize / 8,
                       squareRow: fb['row'] as int,
                       squareCol: fb['col'] as int,
-                      isFlipped: chessState.isBoardFlipped,
+                      isFlipped: puzzlesState.isBoardFlipped,
                       isCritical: fb['critical'] as bool? ?? false,
                       onComplete: () =>
                           setState(() => _landingFeedbacks.remove(fb)),
@@ -426,8 +413,8 @@ class _PuzzlesBoardState extends ConsumerState<PuzzlesBoard>
   }) {
     final haptics = ref.read(chessHapticsServiceProvider);
     haptics.selection();
-    final chessState = ref.read(chessProvider);
-    final displayGame = ChessGame(fen: chessState.currentBoardFen);
+    final puzzlesState = ref.read(puzzlesProvider);
+    final displayGame = puzzlesState.game;
 
     // Tap ripple on every tap (gated by animations setting)
     if (ref.read(chessProvider.notifier).isAnimationTypeEnabled('feedback')) {
@@ -435,7 +422,7 @@ class _PuzzlesBoardState extends ConsumerState<PuzzlesBoard>
     }
 
     if (_selectedSquare != null && _legalTargets.contains(squareName)) {
-      ref.read(chessProvider.notifier).makeMove(_selectedSquare!, squareName);
+      ref.read(puzzlesProvider.notifier).makeMove(_selectedSquare!, squareName);
       _clearSelection();
       return;
     }
@@ -448,7 +435,7 @@ class _PuzzlesBoardState extends ConsumerState<PuzzlesBoard>
   }
 
   void _handlePieceSelection(String squareName, ChessGame displayGame) {
-    final chessState = ref.read(chessProvider);
+    final puzzlesState = ref.read(puzzlesProvider);
     final piece = displayGame.getPiece(squareName);
     if (piece == null) {
       _clearSelection();
@@ -465,11 +452,10 @@ class _PuzzlesBoardState extends ConsumerState<PuzzlesBoard>
       return;
     }
 
-    // Lock board controls if game is over, it's AI turn, or engine vs engine
-    final isGameOver = chessState.game.gameOver;
-    final isAiTurn = _isAiTurn(chessState);
-    final isEvE = chessState.isEngineVsEngine;
-    if (isGameOver || isAiTurn || isEvE) {
+    // Lock board controls if game is over or it is not player's turn
+    final isGameOver = puzzlesState.game.gameOver;
+    final isPlayerTurn = displayGame.turn == (puzzlesState.isPlayerWhite ? chess_lib.Color.WHITE : chess_lib.Color.BLACK);
+    if (isGameOver || !isPlayerTurn) {
       _clearSelection();
       return;
     }
@@ -487,18 +473,8 @@ class _PuzzlesBoardState extends ConsumerState<PuzzlesBoard>
     });
   }
 
-  bool _isAiTurn(ChessState state) {
-    if (!state.isAiOperational) return false;
-    final fenParts = state.game.fen.split(' ');
-    if (fenParts.length > 1) {
-      final turnWhite = fenParts[1] == 'w';
-      return state.isPlayerWhite != turnWhite;
-    }
-    return false;
-  }
-
   void _triggerTapRipple(String squareName) {
-    final rowCol = _getSquareRowCol(squareName, ref.read(chessProvider).isBoardFlipped);
+    final rowCol = _getSquareRowCol(squareName, ref.read(puzzlesProvider).isBoardFlipped);
     if (rowCol != null) {
       final size = context.size?.width ?? 0;
       final squareSize = size / 8;
@@ -520,7 +496,7 @@ class _PuzzlesBoardState extends ConsumerState<PuzzlesBoard>
     double boardSize, {
     bool isCritical = false,
   }) {
-    final isFlipped = ref.read(chessProvider).isBoardFlipped;
+    final isFlipped = ref.read(puzzlesProvider).isBoardFlipped;
     final toRowCol = _getSquareRowCol(to, isFlipped);
     if (toRowCol != null) {
       setState(() {

@@ -3,7 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 
-import '../../application/chess_provider.dart';
+
+import '../../application/puzzles_provider.dart';
 import '../scholarly_theme.dart';
 import 'puzzles_board.dart';
 import '../widgets/ambient_scaffold.dart';
@@ -24,7 +25,7 @@ class _PuzzlesPageState extends ConsumerState<PuzzlesPage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await ref.read(chessProvider.notifier).startPuzzleMode(silent: true);
+      await ref.read(puzzlesProvider.notifier).startPuzzleMode(silent: true);
     });
   }
 
@@ -88,11 +89,13 @@ class _PuzzlesPageState extends ConsumerState<PuzzlesPage> {
 
     if (confirm == true) {
       if (!mounted) return;
+      await ref.read(puzzlesProvider.notifier).exitPuzzleMode();
+      if (!mounted) return;
       exitToDashboardWithSidebar(context, ref);
     }
   }
 
-  Widget _buildMoveLog(BuildContext context, ChessState state) {
+  Widget _buildMoveLog(BuildContext context, PuzzlesState state) {
     final moves = state.recentMoves;
     if (moves.isEmpty) {
       return const Center(
@@ -179,8 +182,8 @@ class _PuzzlesPageState extends ConsumerState<PuzzlesPage> {
 
   Widget _buildPortraitLayout(
     BuildContext context,
-    ChessState state,
-    ChessNotifier notifier,
+    PuzzlesState state,
+    PuzzlesNotifier notifier,
   ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -278,8 +281,8 @@ class _PuzzlesPageState extends ConsumerState<PuzzlesPage> {
 
   Widget _buildLandscapeLayout(
     BuildContext context,
-    ChessState state,
-    ChessNotifier notifier,
+    PuzzlesState state,
+    PuzzlesNotifier notifier,
   ) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -390,8 +393,8 @@ class _PuzzlesPageState extends ConsumerState<PuzzlesPage> {
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(chessProvider);
-    final notifier = ref.read(chessProvider.notifier);
+    final state = ref.watch(puzzlesProvider);
+    final notifier = ref.read(puzzlesProvider.notifier);
     final isLandscape = MediaQuery.of(context).size.width > MediaQuery.of(context).size.height;
 
     return PopScope(
@@ -417,7 +420,7 @@ class _PuzzlesPageState extends ConsumerState<PuzzlesPage> {
 }
 
 class _PuzzleStatusHeader extends ConsumerWidget {
-  final ChessState state;
+  final PuzzlesState state;
 
   const _PuzzleStatusHeader({required this.state});
 
@@ -516,7 +519,7 @@ class _PuzzleStatusHeader extends ConsumerWidget {
                           const SizedBox(width: 8),
                           GestureDetector(
                             onTap: () => ref
-                                .read(chessProvider.notifier)
+                                .read(puzzlesProvider.notifier)
                                 .nextPuzzle(silent: true),
                             child: Container(
                               padding: const EdgeInsets.symmetric(

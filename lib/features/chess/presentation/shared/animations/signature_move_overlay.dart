@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../application/chess_provider.dart';
+import '../../../application/puzzles_provider.dart';
 import '../widgets/chess_piece_widget.dart';
 import '../../trail_movement_overlay.dart' show TrailPainter;
 import 'piece_motion_profile.dart';
@@ -82,7 +83,7 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
     _squareSize = widget.boardSize / 8;
     _path = _calculatePath(widget.data.from, widget.data.to);
     
-    final isPuzzle = ref.read(chessProvider).isPuzzleMode;
+    final isPuzzle = ref.read(puzzlesProvider).isPuzzleMode;
     _profile = isPuzzle
         ? _puzzleStandardProfile
         : PieceMotionProfile.forCode(widget.data.pieceCode);
@@ -171,7 +172,7 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
   /// Returns the profile-aware curve, falling back to theme curve for
   /// theme-specific special modes (matrix, toy).
   Curve _profileAwareCurve(String themeId, PieceMotionProfile profile) {
-    final isPuzzle = ref.read(chessProvider).isPuzzleMode;
+    final isPuzzle = ref.read(puzzlesProvider).isPuzzleMode;
     if (isPuzzle) {
       return Curves.easeOutCubic;
     }
@@ -207,7 +208,7 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
     if (widget.data != oldWidget.data) {
       _path = _calculatePath(widget.data.from, widget.data.to);
       
-      final isPuzzle = ref.read(chessProvider).isPuzzleMode;
+      final isPuzzle = ref.read(puzzlesProvider).isPuzzleMode;
       _profile = isPuzzle
           ? _puzzleStandardProfile
           : PieceMotionProfile.forCode(widget.data.pieceCode);
@@ -349,7 +350,7 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
         Offset vibration = Offset.zero;
         double midRotation = 0.0; // radians
 
-        final isPuzzle = ref.read(chessProvider).isPuzzleMode;
+        final isPuzzle = ref.read(puzzlesProvider).isPuzzleMode;
 
         if (isPuzzle) {
           pieceScale = 1.0;
@@ -526,7 +527,7 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
     double lift = 0.0;
     Offset vib = Offset.zero;
 
-    final isPuzzle = ref.read(chessProvider).isPuzzleMode;
+    final isPuzzle = ref.read(puzzlesProvider).isPuzzleMode;
 
     if (isPuzzle) {
       scale = 1.0;
