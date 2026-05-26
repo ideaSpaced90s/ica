@@ -63,6 +63,22 @@ class ChapterSelectScreen extends ConsumerWidget {
       icon: Icons.workspace_premium_rounded,
       color: ScholarlyTheme.realGold,
     ),
+    _ChapterGroup(
+      title: 'Expert Mastery',
+      subtitle: 'Technical checkmates, breakthroughs, and tactical traps',
+      start: 35,
+      end: 39,
+      icon: Icons.history_edu_rounded,
+      color: Color(0xFF0284C7),
+    ),
+    _ChapterGroup(
+      title: 'Strategic Mastery',
+      subtitle: 'Mobility, pawn chains, backward pawns, doubled pawns, and open files',
+      start: 40,
+      end: 44,
+      icon: Icons.track_changes_rounded,
+      color: Color(0xFF0F766E),
+    ),
   ];
 
   Widget _buildHeader({
@@ -614,6 +630,26 @@ class _ChapterCard extends StatelessWidget {
         return Icons.horizontal_rule_rounded;
       case 34:
         return Icons.auto_awesome_rounded;
+      case 35:
+        return Icons.people_outline_rounded;
+      case 36:
+        return Icons.extension_rounded;
+      case 37:
+        return Icons.offline_bolt_rounded;
+      case 38:
+        return Icons.trending_up_rounded;
+      case 39:
+        return Icons.grid_off_rounded;
+      case 40:
+        return Icons.zoom_out_map_rounded;
+      case 41:
+        return Icons.link_rounded;
+      case 42:
+        return Icons.subdirectory_arrow_right_rounded;
+      case 43:
+        return Icons.layers_rounded;
+      case 44:
+        return Icons.view_week_rounded;
       default:
         return Icons.help_outline_rounded;
     }

@@ -1426,6 +1426,1067 @@ class TutorialLessonsDatabase {
         ),
       ],
     ),
+
+    // Chapter 35: Two Bishops Mate
+    TutorialLesson(
+      chapterId: 35,
+      title: 'Two Bishops Mate',
+      setupFen: '7k/8/8/8/8/8/8/2B1KB2 w - - 0 1',
+      steps: [
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "Two Bishops. They slice the board like scissors. To mate, the enemy King must be driven to a corner.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "We start by coordinating the Bishops to build a wall. Bishop to d3.",
+          animatePathSquares: ['f1', 'e2', 'd3'],
+          highlightSquares: ['f1', 'd3'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Command the light-squared bishop. Move f1 to d3.",
+          highlightSquares: ['f1'],
+          expectedMove: 'f1d3',
+          reactionCorrect: MentorReaction(
+            dialogue: "Good. The light squares are controlled.",
+            mood: MentorMood.encouraging,
+          ),
+          reactionIllegal: MentorReaction(
+            dialogue: "Play f1 to d3.",
+            mood: MentorMood.correction,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King begins to retreat towards the corner.",
+          scriptedMove: 'h8g7',
+          animatePathSquares: ['h8', 'g7'],
+          highlightSquares: ['h8', 'g7'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Now move the dark-squared bishop to g5 to restrict the King further.",
+          highlightSquares: ['c1'],
+          expectedMove: 'c1g5',
+          reactionCorrect: MentorReaction(
+            dialogue: "Excellent! The bishops now control a tight diagonal grid.",
+            mood: MentorMood.encouraging,
+          ),
+          reactionIllegal: MentorReaction(
+            dialogue: "Move c1 to g5.",
+            mood: MentorMood.correction,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King retreats further. King to f7.",
+          scriptedMove: 'g7f7',
+          animatePathSquares: ['g7', 'f7'],
+          highlightSquares: ['g7', 'f7'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Shift the light-squared bishop to f5 to lock the King in.",
+          highlightSquares: ['d3'],
+          expectedMove: 'd3f5',
+          reactionCorrect: MentorReaction(
+            dialogue: "Magnificent. The King is trapped on the back ranks.",
+            mood: MentorMood.encouraging,
+          ),
+          reactionIllegal: MentorReaction(
+            dialogue: "Move d3 to f5.",
+            mood: MentorMood.correction,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King runs to g7. Now we must bring our King up.",
+          scriptedMove: 'f7g7',
+          animatePathSquares: ['f7', 'g7'],
+          highlightSquares: ['f7', 'g7'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Bring your King. Move e1 to f2.",
+          highlightSquares: ['e1'],
+          expectedMove: 'e1f2',
+          reactionCorrect: MentorReaction(
+            dialogue: "Correct. King participation is vital.",
+            mood: MentorMood.encouraging,
+          ),
+          reactionIllegal: MentorReaction(
+            dialogue: "Play e1 to f2.",
+            mood: MentorMood.correction,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King shuffles to f7. We advance our King to g3.",
+          scriptedMove: 'g7f7',
+          animatePathSquares: ['g7', 'f7'],
+          highlightSquares: ['g7', 'f7'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "King to g3. Support your bishops.",
+          highlightSquares: ['f2'],
+          expectedMove: 'f2g3',
+          reactionCorrect: MentorReaction(
+            dialogue: "Perfect. Step by step, the net closes.",
+            mood: MentorMood.encouraging,
+          ),
+          reactionIllegal: MentorReaction(
+            dialogue: "Move your King to g3.",
+            mood: MentorMood.correction,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King to g7. King to h4.",
+          scriptedMove: 'f7g7',
+          animatePathSquares: ['f7', 'g7'],
+          highlightSquares: ['f7', 'g7'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "King to h4. Take space.",
+          highlightSquares: ['g3'],
+          expectedMove: 'g3h4',
+          reactionCorrect: MentorReaction(
+            dialogue: "Outstanding. The opposing King has very few squares left.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King to f7. King to h5.",
+          scriptedMove: 'g7f7',
+          animatePathSquares: ['g7', 'f7'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "King to h5.",
+          highlightSquares: ['h4'],
+          expectedMove: 'h4h5',
+          reactionCorrect: MentorReaction(
+            dialogue: "The White King is perfectly positioned.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King to g7. Now the bishops confine him to the edge: Bishop to g6.",
+          scriptedMove: 'f7g7',
+          animatePathSquares: ['f7', 'g7'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Seal him in. Move f5 to g6.",
+          highlightSquares: ['f5'],
+          expectedMove: 'f5g6',
+          reactionCorrect: MentorReaction(
+            dialogue: "Excellent. The King is trapped on h8 and g8.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King moves to g8.",
+          scriptedMove: 'g7g8',
+          animatePathSquares: ['g7', 'g8'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Position the King. Move h5 to h6.",
+          highlightSquares: ['h5'],
+          expectedMove: 'h5h6',
+          reactionCorrect: MentorReaction(
+            dialogue: "Almost there. The King is ready to support the final blow.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King moves to f8.",
+          scriptedMove: 'g8f8',
+          animatePathSquares: ['g8', 'f8'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Restrict him. Move g6 to h5.",
+          highlightSquares: ['g6'],
+          expectedMove: 'g6h5',
+          reactionCorrect: MentorReaction(
+            dialogue: "Brilliant. Now he must go back to g8.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King goes to g8.",
+          scriptedMove: 'f8g8',
+          animatePathSquares: ['f8', 'g8'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Drive him back. Move g5 to e7.",
+          highlightSquares: ['g5'],
+          expectedMove: 'g5e7',
+          reactionCorrect: MentorReaction(
+            dialogue: "Superb. Black King is forced back to h8.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King is forced to h8.",
+          scriptedMove: 'g8h8',
+          animatePathSquares: ['g8', 'h8'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Move your light bishop to g4.",
+          highlightSquares: ['h5'],
+          expectedMove: 'h5g4',
+          reactionCorrect: MentorReaction(
+            dialogue: "Perfect. Prepare the checks.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King goes to g8.",
+          scriptedMove: 'h8g8',
+          animatePathSquares: ['h8', 'g8'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Deliver the first check. Bishop g4 to e6.",
+          highlightSquares: ['g4'],
+          expectedMove: 'g4e6',
+          reactionCorrect: MentorReaction(
+            dialogue: "Check! Black King is forced to h8.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King is forced to h8.",
+          scriptedMove: 'g8h8',
+          animatePathSquares: ['g8', 'h8'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Deliver the final blow. Bishop e7 to f6 mate.",
+          highlightSquares: ['e7'],
+          expectedMove: 'e7f6',
+          reactionCorrect: MentorReaction(
+            dialogue: "Checkmate! The two bishops have successfully sealed the win.",
+            mood: MentorMood.celebration,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.celebration,
+          dialogue: "Two Bishops Mate complete. The ultimate demonstration of diagonal control.",
+          mentorMood: MentorMood.celebration,
+        ),
+      ],
+    ),
+
+    // Chapter 36: Knight & Bishop Mate
+    TutorialLesson(
+      chapterId: 36,
+      title: 'Knight & Bishop Mate',
+      setupFen: 'k7/8/2K5/3N4/5B2/8/8/8 w - - 0 1',
+      steps: [
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "Knight and Bishop Mate. The most difficult elementary mate. You must drive the King to the corner of the same color as your bishop.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "In this position, the light-squared bishop requires a light corner (a1 or h8) to mate. The King starts in the wrong corner (a8). We will use the W-maneuver to drive him to a1.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Begin by checking. Move the Knight d5 to b6.",
+          highlightSquares: ['d5'],
+          expectedMove: 'd5b6',
+          reactionCorrect: MentorReaction(
+            dialogue: "Check! Black King is forced to a7.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King is forced to a7.",
+          scriptedMove: 'a8a7',
+          animatePathSquares: ['a8', 'a7'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Now prevent the King from escaping back. Move bishop f4 to c7.",
+          highlightSquares: ['f4'],
+          expectedMove: 'f4c7',
+          reactionCorrect: MentorReaction(
+            dialogue: "Excellent. The King cannot return to a8. He must move to a6.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King moves to a6.",
+          scriptedMove: 'a7a6',
+          animatePathSquares: ['a7', 'a6'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Perfect. Now restrict him further. Move bishop c7 to b8.",
+          highlightSquares: ['c7'],
+          expectedMove: 'c7b8',
+          reactionCorrect: MentorReaction(
+            dialogue: "Great. Now he must move down the file to a5.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King moves to a5.",
+          scriptedMove: 'a6a5',
+          animatePathSquares: ['a6', 'a5'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Now redeploy the Knight to block escape squares. Move b6 to d5.",
+          highlightSquares: ['b6'],
+          expectedMove: 'b6d5',
+          reactionCorrect: MentorReaction(
+            dialogue: "Superb. Black King moves to a4.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King moves to a4.",
+          scriptedMove: 'a5a4',
+          animatePathSquares: ['a5', 'a4'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Bring your King. Move c6 to c5.",
+          highlightSquares: ['c6'],
+          expectedMove: 'c6c5',
+          reactionCorrect: MentorReaction(
+            dialogue: "Perfect. Black King must move to b3.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King moves to b3.",
+          scriptedMove: 'a4b3',
+          animatePathSquares: ['a4', 'b3'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Reposition the Knight. Move d5 to b4.",
+          highlightSquares: ['d5'],
+          expectedMove: 'd5b4',
+          reactionCorrect: MentorReaction(
+            dialogue: "Excellent. The Knight controls critical escape routes. Black King goes to c3.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King moves to c3.",
+          scriptedMove: 'b3c3',
+          animatePathSquares: ['b3', 'c3'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Return your Bishop to f4.",
+          highlightSquares: ['b8'],
+          expectedMove: 'b8f4',
+          reactionCorrect: MentorReaction(
+            dialogue: "Good. The Bishop takes control of the diagonal. Black King moves back to b3.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King moves to b3.",
+          scriptedMove: 'c3b3',
+          animatePathSquares: ['c3', 'b3'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Now move Bishop f4 to e5 to guard the d6 and c7 squares.",
+          highlightSquares: ['f4'],
+          expectedMove: 'f4e5',
+          reactionCorrect: MentorReaction(
+            dialogue: "Wonderful. Black King is driven back to a4.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King moves to a4.",
+          scriptedMove: 'b3a4',
+          animatePathSquares: ['b3', 'a4'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Bring the King down. Move c5 to c4.",
+          highlightSquares: ['c5'],
+          expectedMove: 'c5c4',
+          reactionCorrect: MentorReaction(
+            dialogue: "Excellent. The King takes the opposition. Black King moves to a5.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King moves to a5.",
+          scriptedMove: 'a4a5',
+          animatePathSquares: ['a4', 'a5'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Deliver check. Move Bishop e5 to c7.",
+          highlightSquares: ['e5'],
+          expectedMove: 'e5c7',
+          reactionCorrect: MentorReaction(
+            dialogue: "Check! The King must retreat to a4.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King retreats to a4.",
+          scriptedMove: 'a5a4',
+          animatePathSquares: ['a5', 'a4'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Move your Knight b4 to d3 to prepare the final corral.",
+          highlightSquares: ['b4'],
+          expectedMove: 'b4d3',
+          reactionCorrect: MentorReaction(
+            dialogue: "Perfect. Black King must go to a3.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King goes to a3.",
+          scriptedMove: 'a4a3',
+          animatePathSquares: ['a4', 'a3'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Bishop c7 to b6. Guard a5.",
+          highlightSquares: ['c7'],
+          expectedMove: 'c7b6',
+          reactionCorrect: MentorReaction(
+            dialogue: "Good. The King is forced to a4.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King moves to a4.",
+          scriptedMove: 'a3a4',
+          animatePathSquares: ['a3', 'a4'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Check! Knight d3 to b2.",
+          highlightSquares: ['d3'],
+          expectedMove: 'd3b2',
+          reactionCorrect: MentorReaction(
+            dialogue: "Check! Black King goes back to a3.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King goes to a3.",
+          scriptedMove: 'a4a3',
+          animatePathSquares: ['a4', 'a3'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Move King c4 to c3.",
+          highlightSquares: ['c4'],
+          expectedMove: 'c4c3',
+          reactionCorrect: MentorReaction(
+            dialogue: "Excellent. The King moves closer. Black King goes to a2.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King goes to a2.",
+          scriptedMove: 'a3a2',
+          animatePathSquares: ['a3', 'a2'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "King c3 to c2. Maintain the wall.",
+          highlightSquares: ['c3'],
+          expectedMove: 'c3c2',
+          reactionCorrect: MentorReaction(
+            dialogue: "Superb. Black King is forced to a3.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King goes to a3.",
+          scriptedMove: 'a2a3',
+          animatePathSquares: ['a2', 'a3'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Check! Bishop b6 to c5.",
+          highlightSquares: ['b6'],
+          expectedMove: 'b6c5',
+          reactionCorrect: MentorReaction(
+            dialogue: "Check! Black King goes back to a2.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King goes to a2.",
+          scriptedMove: 'a3a2',
+          animatePathSquares: ['a3', 'a2'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Now move your Knight b2 to d3. Prepare the final mate.",
+          highlightSquares: ['b2'],
+          expectedMove: 'b2d3',
+          reactionCorrect: MentorReaction(
+            dialogue: "Great. Black King is forced to a1 (the light corner!).",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King goes to a1.",
+          scriptedMove: 'a2a1',
+          animatePathSquares: ['a2', 'a1'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Bishop c5 to b4. Contain the King.",
+          highlightSquares: ['c5'],
+          expectedMove: 'c5b4',
+          reactionCorrect: MentorReaction(
+            dialogue: "Excellent. The King must go to a2.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King goes to a2.",
+          scriptedMove: 'a1a2',
+          animatePathSquares: ['a1', 'a2'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Knight d3 to c1 check! Force him back.",
+          highlightSquares: ['d3'],
+          expectedMove: 'd3c1',
+          reactionCorrect: MentorReaction(
+            dialogue: "Check! Black King must return to a1.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King is forced to a1.",
+          scriptedMove: 'a2a1',
+          animatePathSquares: ['a2', 'a1'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Deliver the final blow. Bishop b4 to c3 checkmate!",
+          highlightSquares: ['b4'],
+          expectedMove: 'b4c3',
+          reactionCorrect: MentorReaction(
+            dialogue: "Checkmate! The Knight and Bishop checkmate is complete.",
+            mood: MentorMood.celebration,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.celebration,
+          dialogue: "Masterful. You have successfully executed the most complex mate in chess.",
+          mentorMood: MentorMood.celebration,
+        ),
+      ],
+    ),
+
+    // Chapter 37: Légal's Mate
+    TutorialLesson(
+      chapterId: 37,
+      title: "Légal's Mate",
+      setupFen: 'rn1qk2r/ppp2ppp/3p1n2/4p3/2BPP1b1/2N2N2/PPP2PPP/R1BQK2R w KQkq - 0 1',
+      steps: [
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "Légal's Mate. A legendary opening trap in Philidor's Defense. White sacrifices the Queen to deliver a lightning-fast mate with minor pieces.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "The Black Bishop pins White's Knight on f3. White has a central break ready.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Capture the e5 pawn with your d4 pawn. Play d4xe5.",
+          highlightSquares: ['d4'],
+          expectedMove: 'd4e5',
+          reactionCorrect: MentorReaction(
+            dialogue: "Good. This tests Black's understanding of the pin.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black captures back on e5, thinking the pinned Knight cannot move.",
+          scriptedMove: 'd6e5',
+          animatePathSquares: ['d6', 'e5'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Shock them. Ignore the pin and capture the e5 Knight with your f3 Knight!",
+          highlightSquares: ['f3'],
+          expectedMove: 'f3e5',
+          reactionCorrect: MentorReaction(
+            dialogue: "Sensational! The Queen is offered as bait.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black takes the bait! Bishop takes Queen on d1.",
+          scriptedMove: 'g4d1',
+          animatePathSquares: ['g4', 'd1'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Deliver the first strike. Bishop c4 takes f7 with check.",
+          highlightSquares: ['c4'],
+          expectedMove: 'c4f7',
+          reactionCorrect: MentorReaction(
+            dialogue: "Check! Black King must step to e7.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King steps to e7.",
+          scriptedMove: 'e8e7',
+          animatePathSquares: ['e8', 'e7'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Deliver checkmate. Move Knight c3 to d5.",
+          highlightSquares: ['c3'],
+          expectedMove: 'c3d5',
+          reactionCorrect: MentorReaction(
+            dialogue: "Checkmate! The Queen is gone, but the two Knights and Bishop seal the victory.",
+            mood: MentorMood.celebration,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.celebration,
+          dialogue: "Légal's Mate complete. Always calculate concrete checkmates before worrying about material.",
+          mentorMood: MentorMood.celebration,
+        ),
+      ],
+    ),
+
+    // Chapter 38: Pawn Breakthrough
+    TutorialLesson(
+      chapterId: 38,
+      title: 'Pawn Breakthrough',
+      setupFen: '8/ppp5/8/PPP5/8/8/8/k6K w - - 0 1',
+      steps: [
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "Pawn Breakthrough. In late endgames, a group of pawns can breakthrough to create a passed pawn, even without King support.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "Here, White has 3 pawns against 3. We must sacrifice pawns to force one through.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Advance the center pawn to b6. Play b5 to b6.",
+          highlightSquares: ['b5'],
+          expectedMove: 'b5b6',
+          reactionCorrect: MentorReaction(
+            dialogue: "Correct. This center push divides the defense.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black captures the center pawn. axg6 (a7xb6).",
+          scriptedMove: 'a7b6',
+          animatePathSquares: ['a7', 'b6'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Now push the opposite pawn! Move c5 to c6.",
+          highlightSquares: ['c5'],
+          expectedMove: 'c5c6',
+          reactionCorrect: MentorReaction(
+            dialogue: "Brilliant! This blockades the b-pawn and opens the path for the a-pawn.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black is forced to capture: bxc6.",
+          scriptedMove: 'b7c6',
+          animatePathSquares: ['b7', 'c6'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Now the path is clear. Push the passed pawn: a5 to a6.",
+          highlightSquares: ['a5'],
+          expectedMove: 'a5a6',
+          reactionCorrect: MentorReaction(
+            dialogue: "Superb. The a-pawn is unstoppable and will queen.",
+            mood: MentorMood.celebration,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.celebration,
+          dialogue: "Breakthrough complete. Knowing when and how to break pawn walls is a master skill.",
+          mentorMood: MentorMood.celebration,
+        ),
+      ],
+    ),
+
+    // Chapter 39: Wrong Bishop Draw
+    TutorialLesson(
+      chapterId: 39,
+      title: 'Wrong Bishop Draw',
+      setupFen: '7k/8/7P/8/8/8/4B3/6K1 b - - 0 1',
+      steps: [
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "Wrong Bishop Draw. In chess endings, a Bishop and a Rook pawn cannot win if the Bishop cannot control the promotion square.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "Here, White has a light-squared Bishop, but the h8 corner (promotion square) is dark. Black can draw easily.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "As Black, play defensively to hold the draw.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Move your King to g8 to stay close to the corner.",
+          highlightSquares: ['h8'],
+          expectedMove: 'h8g8',
+          reactionCorrect: MentorReaction(
+            dialogue: "Excellent. Keep the King on the corner squares.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "White tries to push: Bishop to c4.",
+          scriptedMove: 'e2c4',
+          animatePathSquares: ['e2', 'c4'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Go back to the corner. King to h8.",
+          highlightSquares: ['g8'],
+          expectedMove: 'g8h8',
+          reactionCorrect: MentorReaction(
+            dialogue: "Spot on. White cannot check you on h8 since the bishop is light-squared.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "White pushes the pawn: h6 to h7. Since the light-squared bishop cannot control h8, Black King is trapped but not in check. This is Stalemate!",
+          scriptedMove: 'h6h7',
+          animatePathSquares: ['h6', 'h7'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.celebration,
+          dialogue: "Draw recognized! You successfully held the wrong Bishop corner to save a draw.",
+          mentorMood: MentorMood.celebration,
+        ),
+      ],
+    ),
+
+    // Chapter 40: The Principle of Mobility
+    TutorialLesson(
+      chapterId: 40,
+      title: 'The Principle of Mobility',
+      setupFen: '8/8/4k1p1/3p1p1p/3P1P1P/6PB/5K2/8 b - - 0 1',
+      steps: [
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "The Principle of Mobility. A piece's value is directly tied to its activity. A piece that cannot move is practically useless.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "In this position, White's Bishop is trapped on h3 behind its own pawn chain. Black's King and Knight are highly mobile and will dominate.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King begins to advance into the center. King to d6.",
+          scriptedMove: 'e6d6',
+          animatePathSquares: ['e6', 'd6'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Pace your Bishop. Move h3 to f1.",
+          highlightSquares: ['h3'],
+          expectedMove: 'h3f1',
+          reactionCorrect: MentorReaction(
+            dialogue: "Good. But note how the Bishop can only move back and forth, unable to cross the pawn wall.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King marches further to c6.",
+          scriptedMove: 'd6c6',
+          animatePathSquares: ['d6', 'c6'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.celebration,
+          dialogue: "Mobility concept complete. Always strive to keep your pieces active and avoid blockading your own bishops.",
+          mentorMood: MentorMood.celebration,
+        ),
+      ],
+    ),
+
+    // Chapter 41: The Pawn Chain
+    TutorialLesson(
+      chapterId: 41,
+      title: 'The Pawn Chain',
+      setupFen: '6k1/pp4pp/2p1p3/3pP3/3P4/2P1P3/PP3PPP/6K1 w - - 0 1',
+      steps: [
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "The Pawn Chain. Pawn chains control space and lock diagonals. To break them, you must target the base of the chain.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "Here, White has a strong pawn chain. We want to undermine Black's pawn structure by attacking its base.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Advance the f-pawn to challenge the chain. Play f2 to f3.",
+          highlightSquares: ['f2'],
+          expectedMove: 'f2f3',
+          reactionCorrect: MentorReaction(
+            dialogue: "Correct! This prepares to strike at the center chain.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black advances the King to protect the pawns.",
+          scriptedMove: 'g8f7',
+          animatePathSquares: ['g8', 'f7'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Now push further to establish space. Play f3 to f4.",
+          highlightSquares: ['f3'],
+          expectedMove: 'f3f4',
+          reactionCorrect: MentorReaction(
+            dialogue: "Excellent. White expands on the kingside and pressures the base.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.celebration,
+          dialogue: "Pawn Chain concept complete. Targeting the base is the key to breaking defensive lines.",
+          mentorMood: MentorMood.celebration,
+        ),
+      ],
+    ),
+
+    // Chapter 42: The Backward Pawn
+    TutorialLesson(
+      chapterId: 42,
+      title: 'The Backward Pawn',
+      setupFen: 'r4rk1/1pp1qppp/3p4/3Np3/4P3/1P1P4/1PP2PPP/R4RK1 w - - 0 1',
+      steps: [
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "The Backward Pawn. A pawn that has lagged behind its neighbors and cannot be protected by other pawns is a weakness.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "Black's d6 pawn is backward. The d5 square in front of it is a 'hole' (outpost) where White's Knight is perfectly placed.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Use your Knight outpost to attack the Queen. Move d5 to e7 check.",
+          highlightSquares: ['d5'],
+          expectedMove: 'd5e7',
+          reactionCorrect: MentorReaction(
+            dialogue: "Sensational! The Knight penetrates the defenses.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King is forced to step away. King to h8.",
+          scriptedMove: 'g8h8',
+          animatePathSquares: ['g8', 'h8'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Now capture the passive Rook on c8.",
+          highlightSquares: ['e7'],
+          expectedMove: 'e7c8',
+          reactionCorrect: MentorReaction(
+            dialogue: "Brilliant! The active outpost Knight wins material.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.celebration,
+          dialogue: "Backward Pawn lesson complete. Place pieces in weak holes to dominate the board.",
+          mentorMood: MentorMood.celebration,
+        ),
+      ],
+    ),
+
+    // Chapter 43: Doubled Pawns
+    TutorialLesson(
+      chapterId: 43,
+      title: 'Doubled Pawns',
+      setupFen: '6k1/pp1p1ppp/2p5/2P5/8/P7/1P1P1PPP/6K1 w - - 0 1',
+      steps: [
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "Doubled Pawns. Pawns of the same color on the same file have reduced mobility and cannot support one another.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "Black has doubled pawns on c6 and c7. The c7 pawn is blocked and cannot defend c6. We must fix and exploit this.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Advance your d-pawn to control the center. Move d2 to d4.",
+          highlightSquares: ['d2'],
+          expectedMove: 'd2d4',
+          reactionCorrect: MentorReaction(
+            dialogue: "Correct. We take control of the d-file.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black moves the King towards the center.",
+          scriptedMove: 'g8f8',
+          animatePathSquares: ['g8', 'f8'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Push to d5 to blockade the pawns. Move d4 to d5.",
+          highlightSquares: ['d4'],
+          expectedMove: 'd4d5',
+          reactionCorrect: MentorReaction(
+            dialogue: "Perfect. Black's pawns are completely locked and immobile.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.celebration,
+          dialogue: "Doubled Pawns lesson complete. Fix and restrict weak doubled pawns to stifle your opponent.",
+          mentorMood: MentorMood.celebration,
+        ),
+      ],
+    ),
+
+    // Chapter 44: Open Files & Penetration
+    TutorialLesson(
+      chapterId: 44,
+      title: 'Open Files & Penetration',
+      setupFen: 'r5k1/pp3ppp/8/8/8/8/PP3PPP/4R1K1 w - - 0 1',
+      steps: [
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "Open Files & Penetration. Rooks belong on open files. From there, they can invade the enemy camp.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "The e-file is completely open. White's Rook must seize it and invade the 7th rank.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Invade the 7th rank! Move Rook to e7.",
+          highlightSquares: ['e1'],
+          expectedMove: 'e1e7',
+          reactionCorrect: MentorReaction(
+            dialogue: "Superb! The Rook on the 7th rank attacks Black's pawns on a7 and b7.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black Rook moves to d8, creating checkmate threats on the back rank.",
+          scriptedMove: 'a8d8',
+          animatePathSquares: ['a8', 'd8'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Prevent back-rank mate by creating a flight square for your King. Move h2 to h3.",
+          highlightSquares: ['h2'],
+          expectedMove: 'h2h3',
+          reactionCorrect: MentorReaction(
+            dialogue: "Excellent. Creating 'luft' (a flight square) is essential for safety.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.celebration,
+          dialogue: "Open Files lesson complete. Control files and occupy the 7th rank to win games.",
+          mentorMood: MentorMood.celebration,
+        ),
+      ],
+    ),
   ];
 
   static TutorialLesson getLesson(int chapterId) {
