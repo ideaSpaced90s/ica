@@ -495,27 +495,37 @@ class DominanceHeatmap extends ConsumerStatefulWidget {
 }
 
 class _DominanceHeatmapState extends ConsumerState<DominanceHeatmap> {
-  bool _isExpanded = false;
+  int? _selectedTileIndex;
+
+  Widget _buildLegendDot(Color color) {
+    return Container(
+      width: 10,
+      height: 10,
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(2),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final bgState = ref.watch(battlegroundProvider);
-    final heatmap = bgState.cachedDominanceHeatmap;
     final ledgerEntries = bgState.cachedLedgerEntries;
 
-    // Heatmap color logic helper
+    // Heatmap color logic helper (Match Points based)
     Color getTileColor(double avg) {
       if (avg.isNaN) {
         return ScholarlyTheme.panelStroke.withValues(alpha: 0.3);
       }
-      if (avg > 5) {
-        return const Color(0xFF10B981); // Neon Emerald Green
-      } else if (avg > 0) {
-        return const Color(0xFF06B6D4); // Electric Cyan
-      } else if (avg > -5) {
-        return const Color(0xFFF59E0B); // Hot Amber
+      if (avg > 0.5) {
+        return const Color(0xFF10B981); // Neon Emerald Green (Win / Advantage)
+      } else if (avg == 0.5) {
+        return const Color(0xFF06B6D4); // Electric Cyan (Draws / Equal)
+      } else if (avg > 0.0) {
+        return const Color(0xFFF59E0B); // Hot Amber (Mixed / Disadvantage)
       } else {
-        return const Color(0xFFEF4444); // Deep Crimson
+        return const Color(0xFFEF4444); // Deep Crimson (Losses)
       }
     }
 
@@ -527,106 +537,176 @@ class _DominanceHeatmapState extends ConsumerState<DominanceHeatmap> {
     }
 
     final now = DateTime.now();
-    final List<Widget> dailyPerformanceWidgets = [];
-    for (int i = 0; i < 30; i++) {
+    final List<double> dailyPointsList = [];
+    for (int i = 29; i >= 0; i--) {
       final day = now.subtract(Duration(days: i));
       final dateKey = '${day.year}-${day.month}-${day.day}';
       final matches = dayMatches[dateKey];
-      if (matches == null || matches.isEmpty) continue;
+      if (matches == null || matches.isEmpty) {
+        dailyPointsList.add(double.nan);
+      } else {
+        final totalPoints = matches.map((m) {
+          if (m.result == 'W') return 1.0;
+          if (m.result == 'D') return 0.5;
+          return 0.0;
+        }).reduce((a, b) => a + b);
+        final avgPoints = totalPoints / matches.length;
+        dailyPointsList.add(avgPoints);
+      }
+    }
 
-      // Calculate daily average
-      final avgDom = matches.map((m) => m.dominance).reduce((a, b) => a + b) / matches.length;
+    // Default to the most recent active day if not selected yet
+    int? selectedIdx = _selectedTileIndex;
+    if (selectedIdx == null && dailyPointsList.isNotEmpty) {
+      for (int i = dailyPointsList.length - 1; i >= 0; i--) {
+        if (!dailyPointsList[i].isNaN) {
+          selectedIdx = i;
+          break;
+        }
+      }
+    }
 
-      // Group display for this active day
-      final formattedDayLabel = i == 0
-          ? 'Today, ${DateFormat('MMMM d').format(day)}'
-          : i == 1
-              ? 'Yesterday, ${DateFormat('MMMM d').format(day)}'
-              : DateFormat('EEEE, MMMM d').format(day);
+    Widget detailsWidget;
+    if (selectedIdx != null) {
+      final selectedDate = now.subtract(Duration(days: 29 - selectedIdx));
+      final dateKey = '${selectedDate.year}-${selectedDate.month}-${selectedDate.day}';
+      final matches = dayMatches[dateKey] ?? [];
 
-      dailyPerformanceWidgets.add(
-        Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(12),
+      final formattedDayLabel = (29 - selectedIdx) == 0
+          ? 'Today, ${DateFormat('MMM d').format(selectedDate)}'
+          : (29 - selectedIdx) == 1
+              ? 'Yesterday, ${DateFormat('MMM d').format(selectedDate)}'
+              : DateFormat('EEEE, MMM d').format(selectedDate);
+
+      if (matches.isNotEmpty) {
+        final totalPoints = matches.map((m) {
+          if (m.result == 'W') return 1.0;
+          if (m.result == 'D') return 0.5;
+          return 0.0;
+        }).reduce((a, b) => a + b);
+
+        detailsWidget = Container(
+          margin: const EdgeInsets.only(top: 16),
+          padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             color: ScholarlyTheme.panelBase.withValues(alpha: 0.4),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(color: ScholarlyTheme.panelStroke.withValues(alpha: 0.5)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Summary Header
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    formattedDayLabel,
-                    style: GoogleFonts.inter(
-                      color: ScholarlyTheme.textPrimary,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
+                  Expanded(
+                    child: Text(
+                      formattedDayLabel,
+                      style: GoogleFonts.inter(
+                        color: ScholarlyTheme.textPrimary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12.5,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: getTileColor(avgDom).withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: getTileColor(avgDom).withValues(alpha: 0.3)),
+                      color: ScholarlyTheme.accentBlue.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.15)),
                     ),
                     child: Text(
-                      'Avg: ${avgDom >= 0 ? '+' : ''}${avgDom.toStringAsFixed(1)}',
+                      'Score: ${totalPoints % 1 == 0 ? totalPoints.toInt() : totalPoints} / ${matches.length}',
                       style: GoogleFonts.jetBrainsMono(
-                        color: getTileColor(avgDom),
+                        color: ScholarlyTheme.accentBlue,
                         fontWeight: FontWeight.bold,
-                        fontSize: 10,
+                        fontSize: 10.5,
                       ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               ...matches.map((match) {
                 final matchTime = DateFormat('jm').format(match.timestamp);
                 final modeLabel = '${match.ratingCategory.toUpperCase()} ${match.gameMode == 'chess960' ? '960' : 'Classic'}';
-                Color outcomeColor = Colors.grey;
+                
+                Color outcomeColor;
+                String resultText;
                 if (match.result == 'W') {
-                  outcomeColor = Colors.green;
+                  outcomeColor = const Color(0xFF10B981);
+                  resultText = 'W';
                 } else if (match.result == 'L') {
-                  outcomeColor = Colors.red;
+                  outcomeColor = const Color(0xFFEF4444);
+                  resultText = 'L';
+                } else {
+                  outcomeColor = const Color(0xFF64748B);
+                  resultText = 'D';
                 }
 
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
+                return Container(
+                  margin: const EdgeInsets.symmetric(vertical: 4),
+                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: ScholarlyTheme.panelStroke.withValues(alpha: 0.25)),
+                  ),
                   child: Row(
                     children: [
-                      Icon(
-                        match.result == 'W'
-                            ? Icons.check_circle_outline_rounded
-                            : match.result == 'L'
-                                ? Icons.cancel_outlined
-                                : Icons.remove_circle_outline_rounded,
-                        size: 14,
-                        color: outcomeColor,
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
+                      Container(
+                        width: 20,
+                        height: 20,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: outcomeColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: outcomeColor.withValues(alpha: 0.25), width: 1),
+                        ),
                         child: Text(
-                          '$matchTime • $modeLabel vs ${match.opponentName}',
-                          style: GoogleFonts.inter(
-                            color: ScholarlyTheme.textMuted,
-                            fontSize: 11,
+                          resultText,
+                          style: GoogleFonts.jetBrainsMono(
+                            color: outcomeColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 10,
                           ),
-                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'vs ${match.opponentName}',
+                              style: GoogleFonts.inter(
+                                color: ScholarlyTheme.textPrimary,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '$matchTime • $modeLabel',
+                              style: GoogleFonts.inter(
+                                color: ScholarlyTheme.textMuted,
+                                fontSize: 9.5,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        'Dom: ${match.dominance >= 0 ? '+' : ''}${match.dominance.toStringAsFixed(1)}',
+                        '${match.ratingSnapshot} ELO',
                         style: GoogleFonts.jetBrainsMono(
-                          color: getTileColor(match.dominance),
-                          fontWeight: FontWeight.w600,
-                          fontSize: 10,
+                          color: ScholarlyTheme.textPrimary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 10.5,
                         ),
                       ),
                     ],
@@ -635,37 +715,126 @@ class _DominanceHeatmapState extends ConsumerState<DominanceHeatmap> {
               }),
             ],
           ),
+        );
+      } else {
+        detailsWidget = Container(
+          margin: const EdgeInsets.only(top: 16),
+          padding: const EdgeInsets.all(16),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: ScholarlyTheme.panelBase.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: ScholarlyTheme.panelStroke.withValues(alpha: 0.3)),
+          ),
+          child: Column(
+            children: [
+              Icon(Icons.calendar_today_rounded, color: ScholarlyTheme.textMuted.withValues(alpha: 0.4), size: 24),
+              const SizedBox(height: 8),
+              Text(
+                'No rated battles on this day.',
+                style: GoogleFonts.inter(
+                  color: ScholarlyTheme.textMuted,
+                  fontSize: 11,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+    } else {
+      detailsWidget = Container(
+        margin: const EdgeInsets.only(top: 16),
+        padding: const EdgeInsets.all(16),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: ScholarlyTheme.panelBase.withValues(alpha: 0.2),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: ScholarlyTheme.panelStroke.withValues(alpha: 0.3)),
+        ),
+        child: Column(
+          children: [
+            Icon(Icons.history_rounded, color: ScholarlyTheme.textMuted.withValues(alpha: 0.4), size: 24),
+            const SizedBox(height: 8),
+            Text(
+              'No matches played in the last 30 days.',
+              style: GoogleFonts.inter(
+                color: ScholarlyTheme.textMuted,
+                fontSize: 11.5,
+                fontStyle: FontStyle.italic,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
         ),
       );
     }
 
     return JuicyGlassCard(
-      borderColor: const Color(0xFF10B981), // Vibrant Emerald Green Border
+      borderColor: const Color(0xFF10B981),
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Timeline Wrap Grid
-          SizedBox(
-            width: double.infinity,
-            child: Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: heatmap.map((avg) {
-                return Container(
-                  width: 14,
-                  height: 14,
-                  decoration: BoxDecoration(
-                    color: getTileColor(avg),
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                );
-              }).toList(),
-            ),
+          // 10x3 Grid
+          Column(
+            children: List.generate(3, (rowIndex) {
+              return Padding(
+                padding: EdgeInsets.only(bottom: rowIndex == 2 ? 0 : 6),
+                child: Row(
+                  children: List.generate(10, (colIndex) {
+                    final index = rowIndex * 10 + colIndex;
+                    final avg = dailyPointsList[index];
+                    final isSelected = selectedIdx == index;
+                    final tileColor = getTileColor(avg);
+
+                    return Expanded(
+                      child: Padding(
+                        padding: EdgeInsets.only(right: colIndex == 9 ? 0 : 6),
+                        child: AspectRatio(
+                          aspectRatio: 1.0,
+                          child: GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _selectedTileIndex = index;
+                              });
+                            },
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: tileColor,
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(
+                                  color: isSelected
+                                      ? ScholarlyTheme.accentBlue
+                                      : ScholarlyTheme.panelStroke.withValues(alpha: 0.15),
+                                  width: isSelected ? 2.0 : 1.0,
+                                ),
+                                boxShadow: isSelected
+                                    ? [
+                                        BoxShadow(
+                                          color: (avg.isNaN
+                                                  ? ScholarlyTheme.accentBlue
+                                                  : tileColor)
+                                              .withValues(alpha: 0.6),
+                                          blurRadius: 8,
+                                          spreadRadius: 2,
+                                        ),
+                                      ]
+                                    : null,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
+                ),
+              );
+            }),
           ),
           const SizedBox(height: 8),
-          
-          // Timeline Labels (Oldest to Newest, chronologically corrected)
+
+          // Timeline Labels
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -673,7 +842,7 @@ class _DominanceHeatmapState extends ConsumerState<DominanceHeatmap> {
                 '30 days ago',
                 style: GoogleFonts.inter(
                   color: ScholarlyTheme.textMuted,
-                  fontSize: 9,
+                  fontSize: 9.5,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -681,7 +850,7 @@ class _DominanceHeatmapState extends ConsumerState<DominanceHeatmap> {
                 'Today',
                 style: GoogleFonts.inter(
                   color: ScholarlyTheme.textMuted,
-                  fontSize: 9,
+                  fontSize: 9.5,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -689,218 +858,64 @@ class _DominanceHeatmapState extends ConsumerState<DominanceHeatmap> {
           ),
           const SizedBox(height: 12),
           Divider(color: ScholarlyTheme.panelStroke.withValues(alpha: 0.5), height: 1),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
 
-          // Mini Legend Row
-          Wrap(
-            spacing: 12,
-            runSpacing: 6,
+          // Single-line Legend
+          Row(
             children: [
-              _buildLegendTag('■ No Play', ScholarlyTheme.panelStroke.withValues(alpha: 0.4)),
-              _buildLegendTag('■ Deficit', const Color(0xFFEF4444)),
-              _buildLegendTag('■ Disadvantage', const Color(0xFFF59E0B)),
-              _buildLegendTag('■ Close/Equal', const Color(0xFF06B6D4)),
-              _buildLegendTag('■ Dominant', const Color(0xFF10B981)),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          // Collapsible Trigger button
-          Center(
-            child: TextButton.icon(
-              onPressed: () {
-                setState(() {
-                  _isExpanded = !_isExpanded;
-                });
-              },
-              icon: Icon(
-                _isExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
-                size: 16,
-                color: ScholarlyTheme.accentBlue,
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: ScholarlyTheme.panelStroke.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                  border: Border.all(color: ScholarlyTheme.panelStroke.withValues(alpha: 0.5), width: 0.5),
+                ),
               ),
-              label: Text(
-                _isExpanded ? 'Hide Details' : 'Show Details & Formula',
+              const SizedBox(width: 4),
+              Text(
+                'No Play',
                 style: GoogleFonts.inter(
-                  color: ScholarlyTheme.accentBlue,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 11,
+                  color: ScholarlyTheme.textMuted,
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+              const Spacer(),
+              Text(
+                'Loss',
+                style: GoogleFonts.inter(
+                  color: ScholarlyTheme.textMuted,
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
-            ),
-          ),
-
-          // Collapsible Expanded Content
-          if (_isExpanded) ...[
-            const SizedBox(height: 12),
-            Divider(color: ScholarlyTheme.panelStroke.withValues(alpha: 0.5), height: 1),
-            const SizedBox(height: 16),
-
-            // 1. Traditional Piece Value / Formula Box
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: ScholarlyTheme.accentBlue.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: ScholarlyTheme.accentBlue.withValues(alpha: 0.15),
-                  width: 1,
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              const SizedBox(width: 6),
+              Row(
                 children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.info_outline_rounded, color: ScholarlyTheme.accentBlue, size: 16),
-                      const SizedBox(width: 8),
-                      Text(
-                        'HOW DOMINANCE IS CALCULATED',
-                        style: GoogleFonts.outfit(
-                          color: ScholarlyTheme.accentBlue,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.0,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Dominance measures your final material advantage at the end of rated matches. We evaluate remaining pieces using traditional values:',
-                    style: GoogleFonts.inter(
-                      color: ScholarlyTheme.textPrimary,
-                      fontSize: 11,
-                      height: 1.4,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  // Grid of values
-                  Wrap(
-                    spacing: 16,
-                    runSpacing: 8,
-                    children: [
-                      _buildPieceValueTile('♙ Pawn', '1.0'),
-                      _buildPieceValueTile('♘/♗ Knight/Bishop', '3.0'),
-                      _buildPieceValueTile('♖ Rook', '5.0'),
-                      _buildPieceValueTile('♕ Queen', '9.0'),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.6),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: ScholarlyTheme.panelStroke.withValues(alpha: 0.5)),
-                    ),
-                    child: Text(
-                      'Formula: Your Pieces Value - Opponent\'s Pieces Value',
-                      style: GoogleFonts.jetBrainsMono(
-                        color: ScholarlyTheme.textPrimary,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 10,
-                      ),
-                    ),
-                  ),
+                  _buildLegendDot(const Color(0xFFEF4444)),
+                  const SizedBox(width: 2),
+                  _buildLegendDot(const Color(0xFFF59E0B)),
+                  const SizedBox(width: 2),
+                  _buildLegendDot(const Color(0xFF06B6D4)),
+                  const SizedBox(width: 2),
+                  _buildLegendDot(const Color(0xFF10B981)),
                 ],
               ),
-            ),
-            const SizedBox(height: 16),
-
-            // 2. Day-by-Day Match Performance List
-            Text(
-              'DAILY PERFORMANCE LOG',
-              style: GoogleFonts.outfit(
-                color: ScholarlyTheme.textMuted,
-                fontSize: 9,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 1.0,
-              ),
-            ),
-            const SizedBox(height: 12),
-            if (dailyPerformanceWidgets.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Center(
-                  child: Text(
-                    'No match records found in the ledger for the last 30 days.',
-                    style: GoogleFonts.inter(
-                      color: ScholarlyTheme.textMuted,
-                      fontSize: 11.5,
-                      fontStyle: FontStyle.italic,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
+              const SizedBox(width: 6),
+              Text(
+                'Win',
+                style: GoogleFonts.inter(
+                  color: ScholarlyTheme.textMuted,
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.w500,
                 ),
-              )
-            else
-              ...dailyPerformanceWidgets,
-          ],
-        ],
-      ),
-    );
-  }
+              ),
+            ],
+          ),
 
-  Widget _buildLegendTag(String text, Color color) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ),
-        const SizedBox(width: 4),
-        Text(
-          text.replaceAll('■ ', ''),
-          style: GoogleFonts.inter(
-            color: ScholarlyTheme.textMuted,
-            fontSize: 9.5,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPieceValueTile(String label, String value) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: ScholarlyTheme.panelStroke.withValues(alpha: 0.4)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            label,
-            style: GoogleFonts.inter(
-              color: ScholarlyTheme.textPrimary,
-              fontWeight: FontWeight.w600,
-              fontSize: 10.5,
-            ),
-          ),
-          const SizedBox(width: 4),
-          Text(
-            '($value)',
-            style: GoogleFonts.jetBrainsMono(
-              color: ScholarlyTheme.accentBlue,
-              fontWeight: FontWeight.bold,
-              fontSize: 10,
-            ),
-          ),
+          // Daily details
+          detailsWidget,
         ],
       ),
     );
