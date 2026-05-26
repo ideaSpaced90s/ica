@@ -25,9 +25,10 @@ class _WelcomeGuidePageState extends ConsumerState<WelcomeGuidePage>
   late final AnimationController _glowController;
   String _displayedText = '';
   final String _introText =
-      'Welcome to the Academy. I\'m GM Chanakya - I\'ll be coaching you through your chess training here.\n\nBefore we get started, tell me where you\'re at right now:';
+      'I am GM Chanakya. I have spent decades mastering every facet of this game — the openings, the endgames, the tactics no one sees coming.\n\nHere, I will guide you through the Foundations. Nine chapters. Every rule you need to own this board.\n\nAfter that, the remaining chapters are yours to conquer on your own terms. I will be watching.';
   int _charIndex = 0;
   bool _isTyping = true;
+  bool _introComplete = false;
 
   @override
   void initState() {
@@ -47,10 +48,11 @@ class _WelcomeGuidePageState extends ConsumerState<WelcomeGuidePage>
         _charIndex++;
         _displayedText = _introText.substring(0, _charIndex);
       });
-      Future.delayed(const Duration(milliseconds: 15), _typeText);
+      Future.delayed(const Duration(milliseconds: 14), _typeText);
     } else {
       setState(() {
         _isTyping = false;
+        _introComplete = true;
       });
     }
   }
@@ -58,6 +60,7 @@ class _WelcomeGuidePageState extends ConsumerState<WelcomeGuidePage>
   void _skipTypewriter() {
     setState(() {
       _isTyping = false;
+      _introComplete = true;
       _displayedText = _introText;
     });
   }
@@ -69,16 +72,9 @@ class _WelcomeGuidePageState extends ConsumerState<WelcomeGuidePage>
     super.dispose();
   }
 
-  void _selectLevel(String level) {
-    ref.read(chessSoundServiceProvider).playSfx(SoundEffect.click);
-
-    final guidedLevel = switch (level) {
-      'Intermediate' => GuidedTutorialLevel.intermediate,
-      'Advanced' => GuidedTutorialLevel.advanced,
-      _ => GuidedTutorialLevel.basic,
-    };
-
-    OnboardingService(ref).startGuidedTour(guidedLevel);
+  void _beginTraining() {
+    ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
+    OnboardingService(ref).startGuidedTour(GuidedTutorialLevel.foundations);
   }
 
   void _skipGuide() {
@@ -87,13 +83,11 @@ class _WelcomeGuidePageState extends ConsumerState<WelcomeGuidePage>
     ref.read(isOnboardingProvider.notifier).state = false;
     ref.read(showWelcomeDialogProvider.notifier).state = false;
 
-    // Mark as seen if Google user, else Guest gets it next time too
     final repo = ref.read(tutorialProgressRepositoryProvider);
     if (repo.getIsGoogleSignedIn()) {
       unawaited(repo.setWelcomeGuideSeen(true));
     }
 
-    // Direct user to Dashboard (tab index 0)
     ref.read(mobileNavIndexProvider.notifier).state = 0;
   }
 
@@ -105,7 +99,6 @@ class _WelcomeGuidePageState extends ConsumerState<WelcomeGuidePage>
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // Ambient Background Glow
           const AmbientFlowBackdrop(),
 
           SafeArea(
@@ -114,13 +107,12 @@ class _WelcomeGuidePageState extends ConsumerState<WelcomeGuidePage>
               child: Column(
                 children: [
                   const Spacer(),
-                  // Chanakya bubble
                   _buildChanakyaBubble(),
-                  const SizedBox(height: 24),
-                  // Choices
-                  _buildChoicesSection(),
+                  if (_introComplete) ...[
+                    const SizedBox(height: 24),
+                    _buildActions(),
+                  ],
                   const Spacer(),
-                  // Centered Skip button at the bottom
                   TextButton.icon(
                     onPressed: _skipGuide,
                     style: TextButton.styleFrom(
@@ -128,7 +120,7 @@ class _WelcomeGuidePageState extends ConsumerState<WelcomeGuidePage>
                     ),
                     icon: const Icon(Icons.close_rounded, size: 16),
                     label: Text(
-                      'Skip',
+                      'Skip Tutorial',
                       style: GoogleFonts.inter(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
@@ -151,10 +143,10 @@ class _WelcomeGuidePageState extends ConsumerState<WelcomeGuidePage>
       builder: (context, child) {
         return Container(
           decoration: ScholarlyTheme.glassPanelDecoration(radius: 20).copyWith(
-            color: Colors.white.withValues(alpha: 0.9),
+            color: Colors.white.withValues(alpha: 0.92),
             border: Border.all(
               color: ScholarlyTheme.accentBlue.withValues(
-                alpha: 0.3 + 0.2 * _glowController.value,
+                alpha: 0.25 + 0.18 * _glowController.value,
               ),
               width: 1.5,
             ),
@@ -169,8 +161,8 @@ class _WelcomeGuidePageState extends ConsumerState<WelcomeGuidePage>
           Row(
             children: [
               Container(
-                width: 44,
-                height: 44,
+                width: 48,
+                height: 48,
                 decoration: const BoxDecoration(
                   shape: BoxShape.circle,
                   image: DecorationImage(
@@ -214,133 +206,70 @@ class _WelcomeGuidePageState extends ConsumerState<WelcomeGuidePage>
                 color: ScholarlyTheme.textPrimary,
                 fontSize: 13.5,
                 fontWeight: FontWeight.w500,
-                height: 1.5,
+                height: 1.6,
               ),
             ),
           ),
+          if (_isTyping) ...[
+            const SizedBox(height: 10),
+            Text(
+              'Tap to read faster',
+              style: GoogleFonts.inter(
+                color: ScholarlyTheme.textSubtle,
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildChoicesSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _buildChoiceCard(
-          index: 0,
-          level: 'Basic',
-          title: 'NEOPHYTE',
-          desc: 'Start at Chapter 1 and build every rule from the board up.',
-          accentColor: const Color(0xFF059669),
-        ),
-        const SizedBox(height: 12),
-        _buildChoiceCard(
-          index: 1,
-          level: 'Intermediate',
-          title: 'TACTICIAN',
-          desc: 'Start at Chapter 10 with check, mate, special rules, and tactics.',
-          accentColor: ScholarlyTheme.accentBlue,
-        ),
-        const SizedBox(height: 12),
-        _buildChoiceCard(
-          index: 2,
-          level: 'Advanced',
-          title: 'SCHOLAR',
-          desc: 'Start at Chapter 24 for openings, mating technique, and endgames.',
-          accentColor: const Color(0xFFD97706),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildChoiceCard({
-    required int index,
-    required String level,
-    required String title,
-    required String desc,
-    required Color accentColor,
-  }) {
+  Widget _buildActions() {
     return TweenAnimationBuilder<double>(
       tween: Tween<double>(begin: 0.0, end: 1.0),
-      duration: Duration(milliseconds: 600 + index * 150),
+      duration: const Duration(milliseconds: 500),
       curve: Curves.easeOutBack,
       builder: (context, value, child) {
         return Transform.translate(
-          offset: Offset(0, 40 * (1.0 - value)),
+          offset: Offset(0, 20 * (1.0 - value)),
           child: Opacity(
             opacity: value.clamp(0.0, 1.0),
             child: child,
           ),
         );
       },
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: Material(
-            color: Colors.white.withValues(alpha: 0.8),
-            child: InkWell(
-              onTap: () => _selectLevel(level),
-              splashColor: accentColor.withValues(alpha: 0.15),
-              highlightColor: accentColor.withValues(alpha: 0.05),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: ScholarlyTheme.panelStroke.withValues(alpha: 0.8),
-                    width: 1.2,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            title,
-                            style: GoogleFonts.inter(
-                              color: accentColor,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 1.2,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            desc,
-                            style: GoogleFonts.inter(
-                              color: ScholarlyTheme.textPrimary,
-                              fontSize: 11,
-                              height: 1.3,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Icon(
-                      Icons.arrow_forward_ios_rounded,
-                      color: accentColor.withValues(alpha: 0.8),
-                      size: 16,
-                    ),
-                  ],
-                ),
+      child: Column(
+        children: [
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _beginTraining,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: ScholarlyTheme.accentBlue,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              icon: const Icon(Icons.play_arrow_rounded, size: 20),
+              label: Text(
+                'Begin Training',
+                style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold),
               ),
             ),
           ),
-        ),
+          const SizedBox(height: 10),
+          Text(
+            'Covers Foundations — 9 chapters',
+            style: GoogleFonts.inter(
+              color: ScholarlyTheme.textMuted,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -123,53 +123,58 @@ class _TutorialMentorPanelState extends ConsumerState<TutorialMentorPanel> with 
                              state.currentStep.type == TutorialStepType.demonstrate ||
                              state.currentStep.type == TutorialStepType.celebration;
 
-    return Stack(
-      children: [
-        AnimatedBuilder(
-          animation: _glowController,
-          builder: (context, child) {
-            return Container(
-              decoration: ScholarlyTheme.modernDecoration().copyWith(
-                color: Colors.white.withValues(alpha: 0.94),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: moodColor.withValues(alpha: 0.20 + (_glowController.value * 0.12)),
-                  width: 1.2,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: ScholarlyTheme.shadowColor.withValues(alpha: 0.06),
-                    blurRadius: 18,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
+    return AnimatedBuilder(
+      animation: _glowController,
+      builder: (context, child) {
+        return Container(
+          decoration: ScholarlyTheme.modernDecoration().copyWith(
+            color: Colors.white.withValues(alpha: 0.94),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: moodColor.withValues(alpha: 0.20 + (_glowController.value * 0.12)),
+              width: 1.2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: ScholarlyTheme.shadowColor.withValues(alpha: 0.06),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
               ),
-              padding: const EdgeInsets.all(16),
-              child: child,
-            );
-          },
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+            ],
+          ),
+          padding: const EdgeInsets.all(16),
+          child: child,
+        );
+      },
+      child: Stack(
+        children: [
+          Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _buildHeader(moodColor, state),
-              _buildDialogue(moodColor),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.only(
+                    bottom: isActionableStep ? 44 : 0, // leave space so text is not covered by floating button
+                  ),
+                  physics: const BouncingScrollPhysics(),
+                  child: _buildDialogue(moodColor),
+                ),
+              ),
+              if (!isActionableStep) ...[
+                const SizedBox(height: 6),
+                _buildInstructionBar(moodColor, state),
+              ],
             ],
           ),
-        ),
-
-        Positioned(
-          bottom: 16,
-          left: 16,
-          right: 16,
-          child: isActionableStep
-              ? Align(
-                  alignment: Alignment.bottomRight,
-                  child: _buildActionButton(moodColor, state, notifier),
-                )
-              : _buildInstructionBar(moodColor, state),
-        ),
-      ],
+          if (isActionableStep)
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: _buildActionButton(moodColor, state, notifier),
+            ),
+        ],
+      ),
     );
   }
 
@@ -257,12 +262,12 @@ class _TutorialMentorPanelState extends ConsumerState<TutorialMentorPanel> with 
 
   Widget _buildDialogue(Color moodColor) {
     return Padding(
-      padding: const EdgeInsets.only(top: 14, bottom: 50),
+      padding: const EdgeInsets.only(top: 14, bottom: 12),
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: _isTyping ? _completeTypingInstantly : null,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 58),
+          constraints: const BoxConstraints(minHeight: 48),
           child: AnimatedSize(
             duration: const Duration(milliseconds: 200),
             curve: Curves.easeOutCubic,
@@ -328,35 +333,36 @@ class _TutorialMentorPanelState extends ConsumerState<TutorialMentorPanel> with 
   }
 
   Widget _buildInstructionBar(Color moodColor, TutorialState state) {
+    final isAwaitMove = state.currentStep.type == TutorialStepType.awaitMove;
+    final label = state.isAnimating
+        ? 'Processing move...'
+        : isAwaitMove
+            ? 'Make your move on the board above.'
+            : 'Tap the highlighted square.';
+
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 14),
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
       decoration: BoxDecoration(
-        color: moodColor.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: moodColor.withValues(alpha: 0.3), width: 1.5),
+        color: moodColor.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: moodColor.withValues(alpha: 0.18), width: 1.0),
       ),
       child: Row(
         children: [
           Icon(
-            state.currentStep.type == TutorialStepType.awaitMove
-                ? Icons.pan_tool_rounded
-                : Icons.touch_app_rounded,
-            size: 16,
-            color: moodColor,
+            isAwaitMove ? Icons.touch_app_outlined : Icons.radio_button_checked_rounded,
+            size: 15,
+            color: moodColor.withValues(alpha: 0.75),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           Expanded(
             child: Text(
-              state.isAnimating 
-                ? 'Processing...' 
-                : (state.currentStep.type == TutorialStepType.awaitMove
-                    ? 'Action Required: Execute the move described above.'
-                    : 'Target identification: Tap the correct square.'),
+              label,
               style: GoogleFonts.inter(
-                color: moodColor,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.2,
+                color: moodColor.withValues(alpha: 0.85),
+                fontSize: 11.5,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.1,
               ),
             ),
           ),

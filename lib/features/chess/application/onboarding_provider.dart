@@ -21,10 +21,11 @@ final showWelcomeDialogProvider = StateProvider<bool>((ref) {
   return !repo.hasSeenWelcomeGuide();
 });
 
+/// The guided tour now only covers Group 1: Foundations (Chapters 1–9).
+/// After the user completes Chapter 9, the guided tour ends with a farewell message.
 enum GuidedTutorialLevel {
-  basic(1),
-  intermediate(10),
-  advanced(24);
+  /// Foundations only — Chapters 1 through 9.
+  foundations(1);
 
   final int startChapter;
 
@@ -33,20 +34,26 @@ enum GuidedTutorialLevel {
 
 class GuidedTutorialFlow {
   static const int firstChapter = 1;
-  static const int lastChapter = kTutorialChapterCount;
+
+  /// The guided tour covers Foundations only: Chapters 1–9.
+  static const int lastGuidedChapter = 9;
+
+  /// Total chapters in the curriculum (used for non-guided navigation).
+  static const int totalChapters = kTutorialChapterCount;
 
   static List<int> pathFor(GuidedTutorialLevel level) {
     return List.generate(
-      lastChapter - level.startChapter + 1,
+      lastGuidedChapter - level.startChapter + 1,
       (index) => level.startChapter + index,
     );
   }
 
   static int startChapterFor(GuidedTutorialLevel level) => level.startChapter;
 
+  /// Returns the next chapter in the guided path, or null if Group 1 is complete.
   static int? nextChapterAfter(int currentChapterId) {
     final nextChapter = currentChapterId + 1;
-    if (nextChapter > lastChapter) return null;
+    if (nextChapter > lastGuidedChapter) return null;
     return nextChapter;
   }
 
@@ -78,6 +85,7 @@ class OnboardingService {
       return;
     }
 
+    // Group 1 (Foundations) is complete. End the guided tour.
     endGuidedTour(markWelcomeSeen: true);
   }
 

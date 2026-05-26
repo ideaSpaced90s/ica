@@ -178,7 +178,7 @@ class _ChapterCompletionOverlayState extends ConsumerState<ChapterCompletionOver
                           child: Text(
                             hasNextChapter
                                 ? 'Next: Chapter $nextChapterId - ${nextLesson!.title}'
-                                : 'You have completed all $kTutorialChapterCount guided chapters.',
+                                : 'You have mastered all $kTutorialChapterCount chapters.',
                             style: GoogleFonts.inter(
                               color: ScholarlyTheme.textPrimary,
                               fontSize: 12,

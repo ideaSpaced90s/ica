@@ -24,7 +24,8 @@ void main() {
   });
 
   test('advanced chapter scripted and expected moves are legal in sequence', () {
-    for (final lesson in TutorialLessonsDatabase.lessons.where((l) => l.chapterId >= 24)) {
+    // Group 5 onward (ch 30+) are scripted openings and tactics — validate move legality
+    for (final lesson in TutorialLessonsDatabase.lessons.where((l) => l.chapterId >= 30)) {
       final board = chess_lib.Chess();
       expect(board.load(lesson.setupFen), isTrue, reason: 'Chapter ${lesson.chapterId}');
 
@@ -56,27 +57,32 @@ void main() {
     }
   });
 
-  test('guided tutorial paths start at the selected level and end at chapter 54', () {
-    expect(GuidedTutorialFlow.pathFor(GuidedTutorialLevel.basic).first, 1);
-    expect(GuidedTutorialFlow.pathFor(GuidedTutorialLevel.basic).last, kTutorialChapterCount);
-    expect(GuidedTutorialFlow.pathFor(GuidedTutorialLevel.basic).length, 54);
-
-    expect(GuidedTutorialFlow.pathFor(GuidedTutorialLevel.intermediate).first, 10);
-    expect(GuidedTutorialFlow.pathFor(GuidedTutorialLevel.intermediate).last, kTutorialChapterCount);
-    expect(GuidedTutorialFlow.pathFor(GuidedTutorialLevel.intermediate).length, 45);
-
-    expect(GuidedTutorialFlow.pathFor(GuidedTutorialLevel.advanced).first, 24);
-    expect(GuidedTutorialFlow.pathFor(GuidedTutorialLevel.advanced).last, kTutorialChapterCount);
-    expect(GuidedTutorialFlow.pathFor(GuidedTutorialLevel.advanced).length, 31);
+  test('guided tutorial path covers Foundations only (Chapters 1–9)', () {
+    final path = GuidedTutorialFlow.pathFor(GuidedTutorialLevel.foundations);
+    expect(path.first, 1);
+    expect(path.last, GuidedTutorialFlow.lastGuidedChapter);
+    expect(path.length, 9);
   });
 
-  test('guided tutorial advances sequentially through all remaining chapters', () {
-    for (var chapterId = 1; chapterId < kTutorialChapterCount; chapterId++) {
+  test('guided tutorial advances through chapters 1–9 then stops', () {
+    for (var chapterId = 1; chapterId < GuidedTutorialFlow.lastGuidedChapter; chapterId++) {
       expect(GuidedTutorialFlow.nextChapterAfter(chapterId), chapterId + 1);
       expect(GuidedTutorialFlow.isCompleteAfter(chapterId), isFalse);
     }
 
-    expect(GuidedTutorialFlow.nextChapterAfter(kTutorialChapterCount), isNull);
-    expect(GuidedTutorialFlow.isCompleteAfter(kTutorialChapterCount), isTrue);
+    // Chapter 9 is the final guided chapter
+    expect(GuidedTutorialFlow.nextChapterAfter(GuidedTutorialFlow.lastGuidedChapter), isNull);
+    expect(GuidedTutorialFlow.isCompleteAfter(GuidedTutorialFlow.lastGuidedChapter), isTrue);
+  });
+
+  test('total chapter count is 53 (Practice Challenges removed)', () {
+    expect(kTutorialChapterCount, 53);
+    expect(TutorialLessonsDatabase.lessons.length, 53);
+  });
+
+  test('final chapter is Graduation Match (chapter 53)', () {
+    final lastLesson = TutorialLessonsDatabase.lessons.last;
+    expect(lastLesson.chapterId, 53);
+    expect(lastLesson.title, 'Graduation Match');
   });
 }
