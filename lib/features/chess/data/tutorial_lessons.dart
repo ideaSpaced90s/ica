@@ -2487,6 +2487,540 @@ class TutorialLessonsDatabase {
         ),
       ],
     ),
+
+    // Chapter 45: Undermining (Removing the Guard)
+    TutorialLesson(
+      chapterId: 45,
+      title: 'Undermining',
+      setupFen: 'r3k2r/pp3ppp/2n1b3/8/1b1q4/2N2B2/PP3PPP/R2QK1NR w KQkq - 0 10',
+      steps: [
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "Undermining is the tactical deletion of a defending piece. Look at Black's Queen on d4. It is defended by the Knight on c6.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "If we capture the c6 Knight with check, Black is forced to respond, leaving their Queen unprotected.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Eliminate the defender! Capture the Knight on c6 with your Bishop.",
+          highlightSquares: ['f3', 'c6'],
+          expectedMove: 'f3c6',
+          reactionCorrect: MentorReaction(
+            dialogue: "Correct. Black must deal with the check first.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black is forced to capture back with the pawn.",
+          scriptedMove: 'b7c6',
+          animatePathSquares: ['b7', 'c6'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Now, Black's Queen is undefended. Capture it with your Queen!",
+          highlightSquares: ['d1', 'd4'],
+          expectedMove: 'd1d4',
+          reactionCorrect: MentorReaction(
+            dialogue: "Superb. You won the Queen and simplified the position.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.celebration,
+          dialogue: "Undermining complete. By removing the guard, you won the enemy Queen.",
+          mentorMood: MentorMood.celebration,
+        ),
+      ],
+    ),
+
+    // Chapter 46: Overloading
+    TutorialLesson(
+      chapterId: 46,
+      title: 'Overloading',
+      setupFen: 'r2qk1nr/2pbbppp/2np4/1p6/2B1P3/1BN2N2/PP3PPP/R1BQ1RK1 w kq - 0 10',
+      steps: [
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "Overloading occurs when a single piece has too many defensive responsibilities. Black's Bishop on d7 is guarding the Knight on c6, but it also must block any threats to the f7 square.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Create the first threat! Move your Queen to d5, targeting the weak f7 square.",
+          highlightSquares: ['d1', 'd5'],
+          expectedMove: 'd1d5',
+          reactionCorrect: MentorReaction(
+            dialogue: "Outstanding. You are threatening mate on f7.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black attempts to defend f7 by blocking with the Bishop to e6.",
+          scriptedMove: 'd7e6',
+          animatePathSquares: ['d7', 'e6'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Black's Bishop has abandoned the Knight on c6 to protect f7. Capture the Knight on c6 with check!",
+          highlightSquares: ['d5', 'c6'],
+          expectedMove: 'd5c6',
+          reactionCorrect: MentorReaction(
+            dialogue: "Perfect! You win the Knight because the Bishop was overloaded.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.celebration,
+          dialogue: "Overloading lesson complete. By creating multiple threats, you overloaded the d7 defender.",
+          mentorMood: MentorMood.celebration,
+        ),
+      ],
+    ),
+
+    // Chapter 47: Decoy & Attraction
+    TutorialLesson(
+      chapterId: 47,
+      title: 'Decoy & Attraction',
+      setupFen: 'rnb1kbnr/ppp2ppp/5q2/4p3/2B1q3/5N2/PPPP1PPP/RNBQ1RK1 w kq - 0 5',
+      steps: [
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "Decoy and Attraction force an enemy piece onto a bad square using a sacrifice, setting up a follow-up double attack.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Lure the King! Sacrifice your Bishop by capturing on f7 with check.",
+          highlightSquares: ['c4', 'f7'],
+          expectedMove: 'c4f7',
+          reactionCorrect: MentorReaction(
+            dialogue: "Brilliant. The King is forced to capture the Bishop.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King is forced to capture the Bishop.",
+          scriptedMove: 'e8f7',
+          animatePathSquares: ['e8', 'f7'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "The King has been attracted to f7. Move your Knight to g5 check, setting up a fork on the King and the Queen.",
+          highlightSquares: ['f3', 'g5'],
+          expectedMove: 'f3g5',
+          reactionCorrect: MentorReaction(
+            dialogue: "Incredible check. The King must run, leaving the Queen behind.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King retreats to e8.",
+          scriptedMove: 'f7e8',
+          animatePathSquares: ['f7', 'e8'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Execute the fork! Capture Black's Queen on e4 with your Knight.",
+          highlightSquares: ['g5', 'e4'],
+          expectedMove: 'g5e4',
+          reactionCorrect: MentorReaction(
+            dialogue: "Excellent! You have successfully traded a Bishop for Black's Queen.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.celebration,
+          dialogue: "Decoy and Attraction complete. The sacrifice lured the King forward and won the Queen.",
+          mentorMood: MentorMood.celebration,
+        ),
+      ],
+    ),
+
+    // Chapter 48: Clearance & Vacating
+    TutorialLesson(
+      chapterId: 48,
+      title: 'Clearance & Vacating',
+      setupFen: 'rnbq1bnr/pp2k1pp/8/3QN3/2BPp3/8/PPP2PPP/RNB1K2R w KQ - 1 9',
+      steps: [
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "Clearance is the tactical vacating of a square or line to allow another piece to deploy a decisive threat.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "White wants to checkmate with the Queen on e5, but our own Knight on e5 blocks the path.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Clear the e5 square with a forcing check! Move Knight to g6 check.",
+          highlightSquares: ['e5', 'g6'],
+          expectedMove: 'e5g6',
+          reactionCorrect: MentorReaction(
+            dialogue: "Well played. The Knight vacates e5 with check.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black captures the Knight with the h7 pawn.",
+          scriptedMove: 'h7g6',
+          animatePathSquares: ['h7', 'g6'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "The e5 square is clear! Move your Queen to e5 to deliver a crushing check.",
+          highlightSquares: ['d5', 'e5'],
+          expectedMove: 'd5e5',
+          reactionCorrect: MentorReaction(
+            dialogue: "Excellent. The Queen occupies e5 and delivers a mating blow.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.celebration,
+          dialogue: "Clearance complete. By sacrificing the Knight, you cleared the path for the Queen's checkmate.",
+          mentorMood: MentorMood.celebration,
+        ),
+      ],
+    ),
+
+    // Chapter 49: Interference
+    TutorialLesson(
+      chapterId: 49,
+      title: 'Interference',
+      setupFen: 'r4bk1/pp1q2pp/2n1R3/6N1/2pp2P1/5Q2/PP3P1P/2B3K1 w - - 1 17',
+      steps: [
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "Interference breaks the defensive communication between two enemy pieces by placing a blocking piece in their path.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "Black's Queen on d7 and Bishop on f8 both defend the critical f7 square. We can disrupt this coordination.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Interfere! Sacrifice your Rook by moving it to e7.",
+          highlightSquares: ['e6', 'e7'],
+          expectedMove: 'e6e7',
+          reactionCorrect: MentorReaction(
+            dialogue: "Magnificent Rook placement. The Queen must capture it.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black's Queen is forced to capture the Rook.",
+          scriptedMove: 'd7e7',
+          animatePathSquares: ['d7', 'e7'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Now the communication is broken. Move your Queen to d5 to check the King.",
+          highlightSquares: ['f3', 'd5'],
+          expectedMove: 'f3d5',
+          reactionCorrect: MentorReaction(
+            dialogue: "Excellent check. Black's King is in massive trouble.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black blocks the check with the Queen on e6.",
+          scriptedMove: 'e7e6',
+          animatePathSquares: ['e7', 'e6'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Deliver checkmate! Capture the Queen on e6.",
+          highlightSquares: ['d5', 'e6'],
+          expectedMove: 'd5e6',
+          reactionCorrect: MentorReaction(
+            dialogue: "Checkmate! A spectacular finish.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.celebration,
+          dialogue: "Interference complete. The Rook sacrifice broke Black's defense and paved the way to victory.",
+          mentorMood: MentorMood.celebration,
+        ),
+      ],
+    ),
+
+    // Chapter 50: Zwischenzug (The In-Between Move)
+    TutorialLesson(
+      chapterId: 50,
+      title: 'Zwischenzug',
+      setupFen: 'r1bq1b1r/ppp3kp/2N2np1/3Q4/8/8/PPP2PPP/RNB1K2R w KQ - 1 10',
+      steps: [
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "Zwischenzug is German for 'in-between move'. It is an unexpected forcing move inserted before completing an exchange.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "Black has just played Knight to f6, hoping that if White captures on d8, Black can capture on d5. But we have a forcing check first.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Play the intermediate check! Move Bishop to h6 check.",
+          highlightSquares: ['c1', 'h6'],
+          expectedMove: 'c1h6',
+          reactionCorrect: MentorReaction(
+            dialogue: "Fantastic check. Black's King is forced to capture the Bishop.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King is forced to capture the Bishop.",
+          scriptedMove: 'g7h6',
+          animatePathSquares: ['g7', 'h6'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Follow up with another check! Move your Queen to d2.",
+          highlightSquares: ['d5', 'd2'],
+          expectedMove: 'd5d2',
+          reactionCorrect: MentorReaction(
+            dialogue: "Correct. The King must retreat to safety.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King retreats to g7.",
+          scriptedMove: 'h6g7',
+          animatePathSquares: ['h6', 'g7'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Now, capture the Black Queen on d8 with your Knight!",
+          highlightSquares: ['c6', 'd8'],
+          expectedMove: 'c6d8',
+          reactionCorrect: MentorReaction(
+            dialogue: "Amazing! You saved your Queen and won Black's Queen.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.celebration,
+          dialogue: "Zwischenzug complete. The intermediate checks saved our Queen and won Black's Queen.",
+          mentorMood: MentorMood.celebration,
+        ),
+      ],
+    ),
+
+    // Chapter 51: The Windmill Combination
+    TutorialLesson(
+      chapterId: 51,
+      title: 'The Windmill',
+      setupFen: '6k1/pp4bp/2pr4/4p3/8/1P1P4/P1P1q1RP/2B3RK w - - 0 1',
+      steps: [
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "The Windmill is a sequence of discovered checks and captures where a Rook and a Bishop operate in perfect harmony.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Initiate the windmill! Capture the Bishop on g7 with check.",
+          highlightSquares: ['g2', 'g7'],
+          expectedMove: 'g2g7',
+          reactionCorrect: MentorReaction(
+            dialogue: "Excellent. The King must run to h8.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King escapes to h8.",
+          scriptedMove: 'g8h8',
+          animatePathSquares: ['g8', 'h8'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Deliver checkmate! Move the Rook to g8.",
+          highlightSquares: ['g7', 'g8'],
+          expectedMove: 'g7g8',
+          reactionCorrect: MentorReaction(
+            dialogue: "Checkmate! The windmill engine successfully delivers mate.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.celebration,
+          dialogue: "Windmill combination complete. You swept the defense and delivered checkmate.",
+          mentorMood: MentorMood.celebration,
+        ),
+      ],
+    ),
+
+    // Chapter 52: Lasker's Double Bishop Sacrifice
+    TutorialLesson(
+      chapterId: 52,
+      title: "Lasker's Double Sacrifice",
+      setupFen: 'r4rk1/1b2bpp1/ppq1p3/2ppB2n/5P2/1P1BP3/P1PPQ1PP/R4RK1 w - - 0 15',
+      steps: [
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "Lasker's Double Bishop Sacrifice is a classic attack. We sacrifice both Bishops on h7 and g7 to strip the enemy King's pawn shield.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Sacrifice the first Bishop! Capture on h7 with check.",
+          highlightSquares: ['d3', 'h7'],
+          expectedMove: 'd3h7',
+          reactionCorrect: MentorReaction(
+            dialogue: "Correct. The King captures the Bishop.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King captures the Bishop.",
+          scriptedMove: 'g8h7',
+          animatePathSquares: ['g8', 'h7'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Bring in the Queen! Capture the Knight on h5 with check.",
+          highlightSquares: ['e2', 'h5'],
+          expectedMove: 'e2h5',
+          reactionCorrect: MentorReaction(
+            dialogue: "Perfect check. The King must run back to g8.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King retreats to g8.",
+          scriptedMove: 'h7g8',
+          animatePathSquares: ['h7', 'g8'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Sacrifice the second Bishop! Capture the pawn on g7.",
+          highlightSquares: ['e5', 'g7'],
+          expectedMove: 'e5g7',
+          reactionCorrect: MentorReaction(
+            dialogue: "Beautiful! The King is lured out to g7.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King captures the second Bishop.",
+          scriptedMove: 'g8g7',
+          animatePathSquares: ['g8', 'g7'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Check again! Move Queen to g4 check.",
+          highlightSquares: ['h5', 'g4'],
+          expectedMove: 'h5g4',
+          reactionCorrect: MentorReaction(
+            dialogue: "Great check. Black's King must seek refuge on h7.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King escapes to h7.",
+          scriptedMove: 'g7h7',
+          animatePathSquares: ['g7', 'h7'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Complete the attack! Lift the Rook to f3, preparing Rh3+ and mate.",
+          highlightSquares: ['f1', 'f3'],
+          expectedMove: 'f1f3',
+          reactionCorrect: MentorReaction(
+            dialogue: "Flawless. Black has no defense against Rook to h3.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.celebration,
+          dialogue: "Lasker's Sacrifice complete. The double bishop sacrifice destroyed Black's castle.",
+          mentorMood: MentorMood.celebration,
+        ),
+      ],
+    ),
+
+    // Chapter 53: Alekhine's Gun
+    TutorialLesson(
+      chapterId: 53,
+      title: "Alekhine's Gun",
+      setupFen: '2r2rk1/1q2bppp/p2p1n2/3P4/1p1BP3/1P1R4/P1R1Q1PP/5B1K w - - 0 1',
+      steps: [
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "Alekhine's Gun is a heavy-piece battery where two Rooks are doubled on a file with the Queen backing them up.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Prepare to double your Rooks! Move Rook to d2.",
+          highlightSquares: ['d3', 'd2'],
+          expectedMove: 'd3d2',
+          reactionCorrect: MentorReaction(
+            dialogue: "Superb. Rooks will now double and dominate the c-file.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.celebration,
+          dialogue: "Alekhine's Gun lesson complete. Aligning Rooks and Queen on an open file yields absolute control.",
+          mentorMood: MentorMood.celebration,
+        ),
+      ],
+    ),
+
+    // Chapter 54: Steinitz's Queenside Majority
+    TutorialLesson(
+      chapterId: 54,
+      title: "Steinitz's Majority",
+      setupFen: '8/8/6k1/p1pp4/P1P5/1P6/5K2/8 w - - 0 1',
+      steps: [
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "Steinitz's Queenside Pawn Majority. Having more pawns on one side allows you to create a passed pawn to win endgames.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Initiate the pawn breakthrough! Capture the d5 pawn.",
+          highlightSquares: ['c4', 'd5'],
+          expectedMove: 'c4d5',
+          reactionCorrect: MentorReaction(
+            dialogue: "Perfect. Capturing creates a distant passed pawn.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.celebration,
+          dialogue: "Steinitz's Majority complete. A passed pawn is a powerful weapon in endgames.",
+          mentorMood: MentorMood.celebration,
+        ),
+      ],
+    ),
   ];
 
   static TutorialLesson getLesson(int chapterId) {

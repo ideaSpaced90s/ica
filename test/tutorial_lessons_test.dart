@@ -56,18 +56,18 @@ void main() {
     }
   });
 
-  test('guided tutorial paths start at the selected level and end at chapter 44', () {
+  test('guided tutorial paths start at the selected level and end at chapter 54', () {
     expect(GuidedTutorialFlow.pathFor(GuidedTutorialLevel.basic).first, 1);
     expect(GuidedTutorialFlow.pathFor(GuidedTutorialLevel.basic).last, kTutorialChapterCount);
-    expect(GuidedTutorialFlow.pathFor(GuidedTutorialLevel.basic).length, 44);
+    expect(GuidedTutorialFlow.pathFor(GuidedTutorialLevel.basic).length, 54);
 
     expect(GuidedTutorialFlow.pathFor(GuidedTutorialLevel.intermediate).first, 10);
     expect(GuidedTutorialFlow.pathFor(GuidedTutorialLevel.intermediate).last, kTutorialChapterCount);
-    expect(GuidedTutorialFlow.pathFor(GuidedTutorialLevel.intermediate).length, 35);
+    expect(GuidedTutorialFlow.pathFor(GuidedTutorialLevel.intermediate).length, 45);
 
     expect(GuidedTutorialFlow.pathFor(GuidedTutorialLevel.advanced).first, 24);
     expect(GuidedTutorialFlow.pathFor(GuidedTutorialLevel.advanced).last, kTutorialChapterCount);
-    expect(GuidedTutorialFlow.pathFor(GuidedTutorialLevel.advanced).length, 21);
+    expect(GuidedTutorialFlow.pathFor(GuidedTutorialLevel.advanced).length, 31);
   });
 
   test('guided tutorial advances sequentially through all remaining chapters', () {

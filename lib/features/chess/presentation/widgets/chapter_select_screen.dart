@@ -79,6 +79,14 @@ class ChapterSelectScreen extends ConsumerWidget {
       icon: Icons.track_changes_rounded,
       color: Color(0xFF0F766E),
     ),
+    _ChapterGroup(
+      title: 'Grandmaster Legacy',
+      subtitle: 'Advanced tactics, combinations, and legendary endgames',
+      start: 45,
+      end: 54,
+      icon: Icons.emoji_events_rounded,
+      color: Color(0xFF6B21A8),
+    ),
   ];
 
   Widget _buildHeader({
@@ -650,6 +658,26 @@ class _ChapterCard extends StatelessWidget {
         return Icons.layers_rounded;
       case 44:
         return Icons.view_week_rounded;
+      case 45:
+        return Icons.heart_broken_rounded;
+      case 46:
+        return Icons.scale_rounded;
+      case 47:
+        return Icons.radar_rounded;
+      case 48:
+        return Icons.cleaning_services_rounded;
+      case 49:
+        return Icons.block_rounded;
+      case 50:
+        return Icons.pending_actions_rounded;
+      case 51:
+        return Icons.cyclone_rounded;
+      case 52:
+        return Icons.filter_2_rounded;
+      case 53:
+        return Icons.align_horizontal_left_rounded;
+      case 54:
+        return Icons.groups_rounded;
       default:
         return Icons.help_outline_rounded;
     }
