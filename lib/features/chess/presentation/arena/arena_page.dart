@@ -912,6 +912,16 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
       if (confirm != true) return;
     }
     ref.read(arenaProvider.notifier).reset();
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('New Match Started'),
+          duration: Duration(milliseconds: 1500),
+          backgroundColor: ScholarlyTheme.accentBlue,
+        ),
+      );
+    }
   }
 
   Future<void> _handleSaveGame(BuildContext context, WidgetRef ref) async {

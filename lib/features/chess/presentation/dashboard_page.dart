@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../application/chess_provider.dart';
 import '../application/battleground_provider.dart';
+import '../application/arena_provider.dart';
 import 'mobile_navigation_shell.dart';
 import 'scholarly_theme.dart';
 import 'widgets/progression_charts.dart';
@@ -503,10 +504,25 @@ void exitToDashboardWithSidebar(BuildContext context, WidgetRef ref) {
   WidgetsBinding.instance.addPostFrameCallback((_) {
     if (!context.mounted) return;
     try {
-      ProviderScope.containerOf(context).read(mobileNavIndexProvider.notifier).state = 0;
+      final container = ProviderScope.containerOf(context);
+      final currentIndex = container.read(mobileNavIndexProvider);
+      if (currentIndex == 1) {
+        final arenaState = container.read(arenaProvider);
+        if (arenaState.recentMoves.isNotEmpty && !arenaState.game.gameOver && !arenaState.isPaused) {
+          container.read(arenaProvider.notifier).togglePause();
+        }
+      }
+      container.read(mobileNavIndexProvider.notifier).state = 0;
     } catch (_) {
       // Fallback check if the container couldn't be obtained or widget was disposed
       if (ref.context.mounted) {
+        final currentIndex = ref.read(mobileNavIndexProvider);
+        if (currentIndex == 1) {
+          final arenaState = ref.read(arenaProvider);
+          if (arenaState.recentMoves.isNotEmpty && !arenaState.game.gameOver && !arenaState.isPaused) {
+            ref.read(arenaProvider.notifier).togglePause();
+          }
+        }
         ref.read(mobileNavIndexProvider.notifier).state = 0;
       }
     }

@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:chess/chess.dart' as chess_lib;
 import 'package:kingslayer_chess/src/rust/api/context.dart';
 import 'package:kingslayer_chess/src/rust/api/humanizer.dart';
 import 'package:kingslayer_chess/src/rust/api/threats.dart';
@@ -7,6 +8,41 @@ import '../domain/models/position_context.dart';
 import '../domain/models/candidate_move.dart';
 
 class PositionContextBuilder {
+  static List<String> _humanizeUciSequence(String startFen, List<String> uciMoves) {
+    if (uciMoves.isEmpty) return [];
+    final List<String> humanized = [];
+    try {
+      final board = chess_lib.Chess.fromFEN(startFen);
+      for (final uci in uciMoves) {
+        if (uci.length < 4) break;
+        final from = uci.substring(0, 2);
+        final to = uci.substring(2, 4);
+        final promo = uci.length > 4 ? uci.substring(4) : '';
+        
+        final fenBefore = board.fen;
+        String label = uci;
+        try {
+          label = humanizeMoveRust(fenBefore: fenBefore, moveUci: uci);
+        } catch (e) {
+          debugPrint('ContextBuilder: Error humanizing move $uci in sequence: $e');
+        }
+        humanized.add(label);
+
+        final moved = board.move({
+          'from': from,
+          'to': to,
+          if (promo.isNotEmpty) 'promotion': promo,
+        });
+        if (!moved) {
+          break;
+        }
+      }
+    } catch (e) {
+      debugPrint('ContextBuilder: Error simulating sequence: $e');
+    }
+    return humanized.isEmpty ? uciMoves : humanized;
+  }
+
   static PositionContext build({
     required String move,
     required double currentEval,
@@ -51,20 +87,53 @@ class PositionContextBuilder {
     final threatLevel = _calculateThreatLevel(evalDiff, pvLine);
     final positionStyle = _determinePositionStyle(move, tacticalThreats, evalDiff);
 
+    // Humanize recommended bestMove at current board FEN
+    String? humanBestMove;
+    if (bestMove != null) {
+      try {
+        humanBestMove = humanizeMoveRust(fenBefore: game.fen, moveUci: bestMove);
+      } catch (e) {
+        humanBestMove = bestMove;
+      }
+    }
+
+    // Humanize pvLine at current board FEN
+    final humanizedPvLine = _humanizeUciSequence(game.fen, pvLine);
+
+    // Humanize candidates list
+    final List<CandidateMove> humanizedCandidates = [];
+    for (final c in candidates) {
+      String humanMove = c.uciMove;
+      try {
+        humanMove = humanizeMoveRust(fenBefore: game.fen, moveUci: c.uciMove);
+      } catch (e) {
+        // fallback
+      }
+      
+      final humanPv = _humanizeUciSequence(game.fen, c.fullPv);
+      
+      humanizedCandidates.add(CandidateMove(
+        multipvIndex: c.multipvIndex,
+        uciMove: humanMove,
+        evaluation: c.evaluation,
+        fullPv: humanPv,
+      ));
+    }
+
     return PositionContext(
       move: move,
       moveDescription: moveDescription,
       evaluation: currentEval,
       evalDiff: evalDiff,
       quality: quality,
-      bestMove: bestMove,
+      bestMove: humanBestMove,
       isBestMove: isBestMove,
       gamePhase: gamePhase,
       tacticalThreats: tacticalThreats,
       threatLevel: threatLevel,
       positionStyle: positionStyle,
-      pvLine: pvLine,
-      candidates: candidates,
+      pvLine: humanizedPvLine,
+      candidates: humanizedCandidates,
     );
   }
 

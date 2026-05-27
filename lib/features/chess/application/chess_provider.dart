@@ -13,7 +13,6 @@ import '../data/saved_game_repository.dart';
 import '../data/performance_ledger_repository.dart';
 import '../data/stockfish_service.dart';
 import '../data/chess_engine_service.dart';
-import '../data/crafty_service.dart';
 import '../data/uci_parser.dart';
 import '../domain/chess_game.dart';
 import '../domain/chess_960_generator.dart';
@@ -540,7 +539,6 @@ class ChessNotifier extends StateNotifier<ChessState> {
   ChessNotifier(
     this.ref,
     this._stockfishEngine,
-    this._craftyEngine,
     this._commentaryEngine,
     this._savedGameRepository,
     this._performanceLedgerRepository,
@@ -996,32 +994,8 @@ class ChessNotifier extends StateNotifier<ChessState> {
   }
 
   final ChessEngineService _stockfishEngine;
-  final ChessEngineService _craftyEngine;
-
-  String get _activeAvatarId {
-    if (state.isAcademyActive) {
-      return 'academy';
-    }
-    bool isBottomTurn = false;
-    final fenParts = state.game.fen.split(' ');
-    if (fenParts.length > 1) {
-      final turnWhite = fenParts[1] == 'w';
-      isBottomTurn = (state.isPlayerWhite == turnWhite);
-    }
-    return (state.isEngineVsEngine && isBottomTurn)
-        ? state.bottomAvatarId
-        : state.engineLevel;
-  }
 
   ChessEngineService get _engine {
-    final avatarId = _activeAvatarId;
-    if (avatarId == 'academy') {
-      return _craftyEngine.isError ? _stockfishEngine : _craftyEngine;
-    }
-    final craftyIds = {'avatar_0', 'avatar_1', 'avatar_4', 'avatar_7', 'avatar_9'};
-    if (craftyIds.contains(avatarId)) {
-      return _craftyEngine.isError ? _stockfishEngine : _craftyEngine;
-    }
     return _stockfishEngine;
   }
 
@@ -1039,13 +1013,10 @@ class ChessNotifier extends StateNotifier<ChessState> {
   Timer? _maxThinkingTimer;
   DateTime? _engineStartTime;
   StreamSubscription<String>? _stockfishSubscription;
-  StreamSubscription<String>? _craftySubscription;
 
   Future<void> _cancelEngineSubscriptions() async {
     await _stockfishSubscription?.cancel();
     _stockfishSubscription = null;
-    await _craftySubscription?.cancel();
-    _craftySubscription = null;
   }
   final List<_BoardSnapshot> _undoStack = [];
   final List<_BoardSnapshot> _redoStack = [];
@@ -1098,25 +1069,16 @@ class ChessNotifier extends StateNotifier<ChessState> {
     required bool analyzeCurrentPosition,
   }) async {
     try {
-      // Start listening to BOTH engines BEFORE init so we don't miss uciok/readyok
       _stockfishSubscription ??= _stockfishEngine.outputStream.listen(
-        _handleEngineOutput,
-      );
-      _craftySubscription ??= _craftyEngine.outputStream.listen(
         _handleEngineOutput,
       );
 
       await _stockfishEngine.init();
-      await _craftyEngine.init();
 
       final avatar = AiAvatar.getAvatar(state.engineLevel);
       final multiPV = state.isAcademyActive ? 3 : (avatar.name == 'Kingslayer' ? 1 : 4);
       
       await _stockfishEngine.setSkillLevel(
-        avatar.skillLevel,
-        multiPV: multiPV,
-      );
-      await _craftyEngine.setSkillLevel(
         avatar.skillLevel,
         multiPV: multiPV,
       );
@@ -1280,123 +1242,17 @@ class ChessNotifier extends StateNotifier<ChessState> {
   ) {
     if (candidates.isEmpty) return engineBestMove;
 
-    bool isOpenFile(String fileChar) {
-      for (int r = 1; r <= 8; r++) {
-        final p = game.getPiece('$fileChar$r');
-        if (p != null && p.type == chess_lib.PieceType.PAWN) {
-          return false;
-        }
-      }
-      return true;
-    }
-
     String bestCandidateMove = candidates.first.uciMove;
     double highestAdjustedScore = -999.0;
 
-    final turnColor = game.turn;
-    final opponentColor = turnColor == chess_lib.Color.WHITE
-        ? chess_lib.Color.BLACK
-        : chess_lib.Color.WHITE;
-
-    debugPrint('--- Persona Candidate Interception (${avatar.name}) ---');
+    debugPrint('--- Academy Mode Candidate Interception ---');
 
     for (final candidate in candidates) {
       if (candidate.uciMove.length < 4) continue;
       final fromSq = candidate.uciMove.substring(0, 2);
       final toSq = candidate.uciMove.substring(2, 4);
 
-      final piece = game.getPiece(fromSq);
-      final targetPiece = game.getPiece(toSq);
-
       double adjustedScore = candidate.evaluation;
-
-      // Trait scoring adjustments
-      if (avatar.name == 'Sparky') {
-        final randomVal = (math.Random().nextDouble() * 3.0) - 1.5; // -1.5 to +1.5
-        adjustedScore += randomVal;
-      } else if (avatar.name == 'Pawnzy') {
-        if (piece?.type == chess_lib.PieceType.PAWN) {
-          adjustedScore += 1.5;
-        }
-      } else if (avatar.name == 'Rook-ie') {
-        if (targetPiece != null) {
-          // If target piece is undefended by the opponent
-          if (!game.isAttacked(toSq, opponentColor)) {
-            adjustedScore += 2.0;
-          } else {
-            adjustedScore += 0.5; // Loves capturing generally
-          }
-        }
-      } else if (avatar.name == 'Stonewall') {
-        if (piece?.type == chess_lib.PieceType.PAWN) {
-          final fromRank = int.tryParse(fromSq[1]) ?? 0;
-          final toRank = int.tryParse(toSq[1]) ?? 0;
-          if ((toRank - fromRank).abs() <= 1) {
-            adjustedScore += 0.6; // Closed short steps
-          }
-        } else if (targetPiece != null) {
-          adjustedScore -= 0.5; // Penalize early unforced trades
-        }
-      } else if (avatar.name == 'Blitzer') {
-        if (piece?.type == chess_lib.PieceType.KNIGHT ||
-            piece?.type == chess_lib.PieceType.BISHOP) {
-          adjustedScore += 0.8;
-        }
-        // Find opponent king's coordinate
-        String? opponentKingSq;
-        for (final sq in chess_lib.Chess.SQUARES.keys) {
-          final p = game.getPiece(sq);
-          if (p != null && p.type == chess_lib.PieceType.KING && p.color == opponentColor) {
-            opponentKingSq = sq;
-            break;
-          }
-        }
-        if (opponentKingSq != null) {
-          final fromFileIdx = toSq.codeUnitAt(0) - 97; // 'a'.codeUnitAt(0)
-          final fromRankIdx = int.tryParse(toSq[1]) ?? 1;
-          final kingFileIdx = opponentKingSq.codeUnitAt(0) - 97;
-          final kingRankIdx = int.tryParse(opponentKingSq[1]) ?? 1;
-          final distance = math.sqrt(math.pow(fromFileIdx - kingFileIdx, 2) + math.pow(fromRankIdx - kingRankIdx, 2));
-          adjustedScore += math.max(0.0, (10.0 - distance) * 0.15); // Reward moving closer to opponent king
-        }
-      } else if (avatar.name == 'Gambit') {
-        // Enjoys material chaos or sacrifices to open active vectors
-        if (candidate.evaluation < -0.5 && (targetPiece != null || piece?.type == chess_lib.PieceType.PAWN)) {
-          adjustedScore += 1.2;
-        }
-      } else if (avatar.name == 'Vanguard') {
-        if (targetPiece != null && !game.isAttacked(toSq, opponentColor)) {
-          adjustedScore += 1.5; // Highly prioritize capturing hanging pieces
-        }
-      } else if (avatar.name == 'Sentinel') {
-        final file = toSq[0];
-        final rank = toSq[1];
-        final isCenterFile = file == 'c' || file == 'd' || file == 'e' || file == 'f';
-        final isCenterRank = rank == '4' || rank == '5';
-        if (isCenterFile && isCenterRank) {
-          adjustedScore += 0.8; // Prioritize central outposts
-        }
-        if (piece?.type == chess_lib.PieceType.KING) {
-          adjustedScore += 0.4; // Prophylactic king safety moves
-        }
-      } else if (avatar.name == 'Morphy') {
-        final file = toSq[0];
-        if ((piece?.type == chess_lib.PieceType.ROOK || piece?.type == chess_lib.PieceType.QUEEN) && isOpenFile(file)) {
-          adjustedScore += 1.0; // Reward rooks and queens on open files
-        }
-        final moveCount = game.history.length;
-        if (moveCount < 24 && (piece?.type == chess_lib.PieceType.KNIGHT || piece?.type == chess_lib.PieceType.BISHOP)) {
-          adjustedScore += 0.6; // Rapid minor piece development in early game
-        }
-      } else if (avatar.name == 'Titan') {
-        final file = toSq[0];
-        final rank = toSq[1];
-        final isCenterFile = file == 'd' || file == 'e';
-        final isCenterRank = rank == '4' || rank == '5';
-        if (isCenterFile && isCenterRank) {
-          adjustedScore += 0.3; // Subtle center control positional pressure
-        }
-      }
 
       // Academy Variation Heuristics (Move 1-10)
       if (state.isAcademyActive) {
@@ -1431,7 +1287,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
       }
     }
 
-    debugPrint('  Selected Persona Move: $bestCandidateMove');
+    debugPrint('  Selected Academy Move: $bestCandidateMove');
     return bestCandidateMove;
   }
 
@@ -3100,7 +2956,6 @@ class ChessNotifier extends StateNotifier<ChessState> {
     _cancelCommentaryReveal();
     await _cancelEngineSubscriptions();
     _stockfishEngine.dispose();
-    _craftyEngine.dispose();
     await _commentaryEngine.dispose();
   }
 
@@ -3113,10 +2968,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
     _cancelCommentaryReveal();
     _stockfishSubscription?.cancel();
     _stockfishSubscription = null;
-    _craftySubscription?.cancel();
-    _craftySubscription = null;
     _stockfishEngine.dispose();
-    _craftyEngine.dispose();
     unawaited(_commentaryEngine.dispose());
     super.dispose();
   }
@@ -3194,7 +3046,6 @@ final settingsRepositoryProvider = Provider((ref) => SettingsRepository());
 
 final chessProvider = StateNotifierProvider<ChessNotifier, ChessState>((ref) {
   final stockfishEngine = ref.watch(stockfishServiceProvider);
-  final craftyEngine = ref.watch(craftyServiceProvider);
   final commentaryEngine = ref.watch(commentaryEngineProvider);
   final savedGameRepository = ref.watch(savedGameRepositoryProvider);
   final performanceLedgerRepository = ref.watch(performanceLedgerRepositoryProvider);
@@ -3205,7 +3056,6 @@ final chessProvider = StateNotifierProvider<ChessNotifier, ChessState>((ref) {
   return ChessNotifier(
     ref,
     stockfishEngine,
-    craftyEngine,
     commentaryEngine,
     savedGameRepository,
     performanceLedgerRepository,

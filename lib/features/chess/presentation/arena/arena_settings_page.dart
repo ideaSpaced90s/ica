@@ -89,7 +89,7 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
                             : const SizedBox(),
                       ),
                       _SettingsTile(
-                        label: 'Chess 960 (Fischer Random)',
+                        label: 'Chess 960',
                         description: 'Randomized back-rank setup for dynamic play',
                         icon: Icons.shuffle_rounded,
                         onTap: () => notifier.setGameMode('chess960'),
@@ -119,7 +119,7 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
                           ),
                         ),
                         _SettingsTile(
-                          label: 'Animation Engine',
+                          label: 'Animation States',
                           description: 'Fine-tune movement and effects',
                           icon: Icons.movie_filter_rounded,
                           onTap: () => _showAnimationSettingsOverlay(context, ref),
@@ -188,7 +188,7 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
                           builder: (context) {
                             final currentAvatar = AiAvatar.getAvatar(state.engineLevel);
                             return _SettingsTile(
-                              label: 'Upper Side Persona (Engine)',
+                              label: 'Up Engine',
                               description: '${currentAvatar.name} • ${currentAvatar.title}',
                               icon: currentAvatar.icon,
                               imagePath: currentAvatar.imagePath,
@@ -219,7 +219,7 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
                           builder: (context) {
                             final currentAvatar = AiAvatar.getAvatar(state.bottomAvatarId);
                             return _SettingsTile(
-                              label: 'Bottom Side Persona (Robot Mode)',
+                              label: 'Down Engine',
                               description: '${currentAvatar.name} • ${currentAvatar.title}',
                               icon: currentAvatar.icon,
                               imagePath: currentAvatar.imagePath,
@@ -590,7 +590,7 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text(
-                                      'Animation Engine',
+                                      'Animation States',
                                       style: GoogleFonts.inter(
                                         color: ScholarlyTheme.textPrimary,
                                         fontSize: 18,

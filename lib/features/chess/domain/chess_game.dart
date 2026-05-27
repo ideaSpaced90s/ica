@@ -80,174 +80,183 @@ class ChessGame {
   String get turnColor => _chess.turn == chess_lib.Color.WHITE ? 'w' : 'b';
 
   bool makeMove(dynamic move) {
-    String? fromStr;
-    String? toStr;
-    String promoStr = '';
+    try {
+      String? fromStr;
+      String? toStr;
+      String promoStr = '';
 
-    if (move is Map) {
-      fromStr = move['from'] as String?;
-      toStr = move['to'] as String?;
-      promoStr = move['promotion']?.toString() ?? '';
-    } else if (move is String && move.length >= 4) {
-      fromStr = move.substring(0, 2);
-      toStr = move.substring(2, 4);
-      if (move.length > 4) {
-        promoStr = move.substring(4);
-      }
-    }
-
-    if (kDebugMode && fromStr != null && toStr != null) {
-      try {
-        final stopwatchRust = Stopwatch()..start();
-        final resultingFenRust = validateAndApplyMove(
-          currentFen: fen,
-          fromStr: fromStr,
-          toStr: toStr,
-          promotionStr: promoStr,
-          isChess960: isChess960,
-        );
-        stopwatchRust.stop();
-
-        if (resultingFenRust != null) {
-          debugPrint(
-            'State Validation Engine Benchmark:\n'
-            '  Rust evaluation: ${stopwatchRust.elapsedMicroseconds} μs\n'
-            '  Post-Move Parity FEN: $resultingFenRust',
-          );
+      if (move is Map) {
+        fromStr = move['from'] as String?;
+        toStr = move['to'] as String?;
+        promoStr = move['promotion']?.toString() ?? '';
+      } else if (move is String && move.length >= 4) {
+        fromStr = move.substring(0, 2);
+        toStr = move.substring(2, 4);
+        if (move.length > 4) {
+          promoStr = move.substring(4);
         }
-      } catch (e) {
-        debugPrint('Rust State Engine Error: $e');
       }
-    }
 
-    if (isChess960 && move is Map) {
-      final from = move['from'] as String?;
-      final to = move['to'] as String?;
-      if (from != null && to != null) {
-        final p = getPiece(from);
-        if (p != null && p.type == chess_lib.PieceType.KING) {
-          final isWhite = p.color == chess_lib.Color.WHITE;
-          final myRank = isWhite ? '1' : '8';
+      if (fromStr != null && !chess_lib.Chess.SQUARES.containsKey(fromStr)) return false;
+      if (toStr != null && !chess_lib.Chess.SQUARES.containsKey(toStr)) return false;
 
-          final targetPiece = getPiece(to);
-          final isTargetFriendlyRook =
-              targetPiece != null &&
-              targetPiece.type == chess_lib.PieceType.ROOK &&
-              targetPiece.color == p.color;
+      if (kDebugMode && fromStr != null && toStr != null) {
+        try {
+          final stopwatchRust = Stopwatch()..start();
+          final resultingFenRust = validateAndApplyMove(
+            currentFen: fen,
+            fromStr: fromStr,
+            toStr: toStr,
+            promotionStr: promoStr,
+            isChess960: isChess960,
+          );
+          stopwatchRust.stop();
 
-          final fromFileIdx = files.indexOf(from[0]);
-          final toFileIdx = files.indexOf(to[0]);
-          final isStandardCastleDest =
-              (to == 'g$myRank' || to == 'c$myRank') && from != to;
+          if (resultingFenRust != null) {
+            debugPrint(
+              'State Validation Engine Benchmark:\n'
+              '  Rust evaluation: ${stopwatchRust.elapsedMicroseconds} μs\n'
+              '  Post-Move Parity FEN: $resultingFenRust',
+            );
+          }
+        } catch (e) {
+          debugPrint('Rust State Engine Error: $e');
+        }
+      }
 
-          if (isTargetFriendlyRook || isStandardCastleDest) {
-            int rookFileIdx = -1;
-            if (isTargetFriendlyRook) {
-              rookFileIdx = toFileIdx;
-            } else {
-              if (to[0] == 'g' || toFileIdx > fromFileIdx) {
-                for (int f = fromFileIdx + 1; f < 8; f++) {
-                  final rp = getPiece('${files[f]}$myRank');
-                  if (rp != null &&
-                      rp.type == chess_lib.PieceType.ROOK &&
-                      rp.color == p.color) {
-                    rookFileIdx = f;
-                    break;
-                  }
-                }
+      if (isChess960 && move is Map) {
+        final from = move['from'] as String?;
+        final to = move['to'] as String?;
+        if (from != null && to != null) {
+          final p = getPiece(from);
+          if (p != null && p.type == chess_lib.PieceType.KING) {
+            final isWhite = p.color == chess_lib.Color.WHITE;
+            final myRank = isWhite ? '1' : '8';
+
+            final targetPiece = getPiece(to);
+            final isTargetFriendlyRook =
+                targetPiece != null &&
+                targetPiece.type == chess_lib.PieceType.ROOK &&
+                targetPiece.color == p.color;
+
+            final fromFileIdx = files.indexOf(from[0]);
+            final toFileIdx = files.indexOf(to[0]);
+            final isStandardCastleDest =
+                (to == 'g$myRank' || to == 'c$myRank') && from != to;
+
+            if (isTargetFriendlyRook || isStandardCastleDest) {
+              int rookFileIdx = -1;
+              if (isTargetFriendlyRook) {
+                rookFileIdx = toFileIdx;
               } else {
-                for (int f = 0; f < fromFileIdx; f++) {
-                  final rp = getPiece('${files[f]}$myRank');
-                  if (rp != null &&
-                      rp.type == chess_lib.PieceType.ROOK &&
-                      rp.color == p.color) {
-                    rookFileIdx = f;
-                    break;
+                if (to[0] == 'g' || toFileIdx > fromFileIdx) {
+                  for (int f = fromFileIdx + 1; f < 8; f++) {
+                    final rp = getPiece('${files[f]}$myRank');
+                    if (rp != null &&
+                        rp.type == chess_lib.PieceType.ROOK &&
+                        rp.color == p.color) {
+                      rookFileIdx = f;
+                      break;
+                    }
+                  }
+                } else {
+                  for (int f = 0; f < fromFileIdx; f++) {
+                    final rp = getPiece('${files[f]}$myRank');
+                    if (rp != null &&
+                        rp.type == chess_lib.PieceType.ROOK &&
+                        rp.color == p.color) {
+                      rookFileIdx = f;
+                      break;
+                    }
                   }
                 }
               }
-            }
 
-            if (rookFileIdx != -1) {
-              final isKingside = rookFileIdx > fromFileIdx;
-              final kingFinalFile = isKingside ? 'g' : 'c';
-              final rookFinalFile = isKingside ? 'f' : 'd';
+              if (rookFileIdx != -1) {
+                final isKingside = rookFileIdx > fromFileIdx;
+                final kingFinalFile = isKingside ? 'g' : 'c';
+                final rookFinalFile = isKingside ? 'f' : 'd';
 
-              final fenParts = fen.split(' ');
-              final ranksStr = fenParts[0].split('/');
-              final rankIdx = isWhite ? 7 : 0;
+                final fenParts = fen.split(' ');
+                final ranksStr = fenParts[0].split('/');
+                final rankIdx = isWhite ? 7 : 0;
 
-              // Expand rank to 8 individual character slots
-              final rankChars = List<String>.filled(8, '.');
-              int fileCursor = 0;
-              for (final char in ranksStr[rankIdx].split('')) {
-                final code = char.codeUnitAt(0);
-                if (code >= '1'.codeUnitAt(0) && code <= '8'.codeUnitAt(0)) {
-                  fileCursor += int.parse(char);
-                } else {
-                  rankChars[fileCursor] = char;
-                  fileCursor++;
-                }
-              }
-
-              final kingChar = rankChars[fromFileIdx];
-              final rookChar = rankChars[rookFileIdx];
-
-              // Clear original locations
-              rankChars[fromFileIdx] = '.';
-              rankChars[rookFileIdx] = '.';
-
-              // Place at target castling locations
-              final kFinalIdx = files.indexOf(kingFinalFile);
-              final rFinalIdx = files.indexOf(rookFinalFile);
-              rankChars[kFinalIdx] = kingChar;
-              rankChars[rFinalIdx] = rookChar;
-
-              // Re-compact rank layout
-              final buffer = StringBuffer();
-              int emptyCount = 0;
-              for (final c in rankChars) {
-                if (c == '.') {
-                  emptyCount++;
-                } else {
-                  if (emptyCount > 0) {
-                    buffer.write(emptyCount);
-                    emptyCount = 0;
+                // Expand rank to 8 individual character slots
+                final rankChars = List<String>.filled(8, '.');
+                int fileCursor = 0;
+                for (final char in ranksStr[rankIdx].split('')) {
+                  final code = char.codeUnitAt(0);
+                  if (code >= '1'.codeUnitAt(0) && code <= '8'.codeUnitAt(0)) {
+                    fileCursor += int.parse(char);
+                  } else {
+                    rankChars[fileCursor] = char;
+                    fileCursor++;
                   }
-                  buffer.write(c);
                 }
+
+                final kingChar = rankChars[fromFileIdx];
+                final rookChar = rankChars[rookFileIdx];
+
+                // Clear original locations
+                rankChars[fromFileIdx] = '.';
+                rankChars[rookFileIdx] = '.';
+
+                // Place at target castling locations
+                final kFinalIdx = files.indexOf(kingFinalFile);
+                final rFinalIdx = files.indexOf(rookFinalFile);
+                rankChars[kFinalIdx] = kingChar;
+                rankChars[rFinalIdx] = rookChar;
+
+                // Re-compact rank layout
+                final buffer = StringBuffer();
+                int emptyCount = 0;
+                for (final c in rankChars) {
+                  if (c == '.') {
+                    emptyCount++;
+                  } else {
+                    if (emptyCount > 0) {
+                      buffer.write(emptyCount);
+                      emptyCount = 0;
+                    }
+                    buffer.write(c);
+                  }
+                }
+                if (emptyCount > 0) {
+                  buffer.write(emptyCount);
+                }
+                ranksStr[rankIdx] = buffer.toString();
+
+                final newPlacement = ranksStr.join('/');
+                final newTurn = isWhite ? 'b' : 'w';
+
+                String newRights = fenParts[2];
+                if (isWhite) {
+                  newRights = newRights.replaceAll(RegExp(r'[KQ]'), '');
+                } else {
+                  newRights = newRights.replaceAll(RegExp(r'[kq]'), '');
+                }
+                if (newRights.isEmpty) newRights = '-';
+
+                final newEnPassant = '-';
+                final halfmove = 0;
+                final fullmove = int.parse(fenParts[5]) + (isWhite ? 0 : 1);
+
+                final resultingFen =
+                    '$newPlacement $newTurn $newRights $newEnPassant $halfmove $fullmove';
+                _chess.load(resultingFen);
+                return true;
               }
-              if (emptyCount > 0) {
-                buffer.write(emptyCount);
-              }
-              ranksStr[rankIdx] = buffer.toString();
-
-              final newPlacement = ranksStr.join('/');
-              final newTurn = isWhite ? 'b' : 'w';
-
-              String newRights = fenParts[2];
-              if (isWhite) {
-                newRights = newRights.replaceAll(RegExp(r'[KQ]'), '');
-              } else {
-                newRights = newRights.replaceAll(RegExp(r'[kq]'), '');
-              }
-              if (newRights.isEmpty) newRights = '-';
-
-              final newEnPassant = '-';
-              final halfmove = 0;
-              final fullmove = int.parse(fenParts[5]) + (isWhite ? 0 : 1);
-
-              final resultingFen =
-                  '$newPlacement $newTurn $newRights $newEnPassant $halfmove $fullmove';
-              _chess.load(resultingFen);
-              return true;
             }
           }
         }
       }
+      return _chess.move(move);
+    } catch (e) {
+      debugPrint('chess_game: makeMove failed: $e');
+      return false;
     }
-    return _chess.move(move);
   }
+
 
   chess_lib.Move? findMoveBySan(String san) {
     // Remove common punctuation Chanakya might add
@@ -456,6 +465,7 @@ class ChessGame {
   }
 
   chess_lib.Piece? getPiece(String square) {
+    if (!chess_lib.Chess.SQUARES.containsKey(square)) return null;
     return _chess.get(square);
   }
 

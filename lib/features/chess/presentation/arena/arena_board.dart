@@ -48,6 +48,7 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
     with TickerProviderStateMixin {
   String? _selectedSquare;
   List<String> _legalTargets = const [];
+  int _lastMovesCount = 0;
   final List<Offset> _leafScatters = [];
   final List<Offset> _toyConfetti = [];
   final List<Map<String, dynamic>> _metalShatters = [];
@@ -117,6 +118,14 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
     final arenaState = ref.watch(arenaProvider);
     final themeId = ThemeRegistry.resolveThemeId(chessState);
     final chessTheme = ThemeRegistry.getTheme(themeId);
+
+    // If the game has been reset (no moves made), clear any lingering selection highlights/legal dots
+    final recentMovesLength = arenaState.recentMoves.length;
+    if (recentMovesLength == 0 && _lastMovesCount > 0) {
+      _selectedSquare = null;
+      _legalTargets = const [];
+    }
+    _lastMovesCount = recentMovesLength;
 
     // Use currentBoardFen for display during analysis/history viewing
     final displayGame = ChessGame(fen: arenaState.currentBoardFen);
@@ -294,7 +303,14 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
                                                 size: Size.infinite,
                                               ),
                                             // 4. Selection Effects
-                                            if (isSelected)
+                                            if (isSelected &&
+                                                ref
+                                                    .read(
+                                                      chessProvider.notifier,
+                                                    )
+                                                    .isAnimationTypeEnabled(
+                                                      'indicators',
+                                                    ))
                                               chessTheme
                                                           .buildSelectionEffect(
                                                             context,
@@ -343,6 +359,7 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
                                               const OrbitingStarAnimation(
                                                 color: Colors.redAccent,
                                                 isActive: true,
+                                                isCircle: true,
                                               ),
                                             // 6. Last Move Highlight (Premium Trajectory Path)
                                             if (isLastMoveStartOrEnd ||
@@ -414,7 +431,14 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
                                               ),
                                             if (arenaState.isHintBlinking &&
                                                 (isSuggestedFrom ||
-                                                    isSuggestedTo))
+                                                    isSuggestedTo) &&
+                                                ref
+                                                    .read(
+                                                      chessProvider.notifier,
+                                                    )
+                                                    .isAnimationTypeEnabled(
+                                                      'indicators',
+                                                    ))
                                               const OrbitingStarAnimation(
                                                 color:
                                                     ScholarlyTheme.accentYellow,

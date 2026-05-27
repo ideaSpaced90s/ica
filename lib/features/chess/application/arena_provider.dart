@@ -11,7 +11,6 @@ import '../domain/models/candidate_move.dart';
 import '../services/chess_sound_service.dart';
 import '../services/chess_haptics_service.dart';
 import '../data/stockfish_service.dart';
-import '../data/crafty_service.dart';
 import '../data/chess_engine_service.dart';
 import '../data/uci_parser.dart';
 import '../data/saved_game.dart';
@@ -249,7 +248,6 @@ class ArenaState {
 class ArenaNotifier extends StateNotifier<ArenaState> {
   final Ref ref;
   final StockfishService _stockfishEngine;
-  final CraftyService _craftyEngine;
   final ChessSoundService _soundService;
   final ChessHapticsService _hapticsService;
 
@@ -259,19 +257,18 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
   Timer? _clockTimer;
   Timer? _engineMoveTimer;
   StreamSubscription<String>? _stockfishSubscription;
-  StreamSubscription<String>? _craftySubscription;
 
   Future<void>? _startupFuture;
   bool _isDisposed = false;
   DateTime _lastInfoUpdateTime = DateTime.fromMillisecondsSinceEpoch(0);
   String? _pendingHintFen;
   String? _searchFen;
+  bool _waitingForReady = false;
   final List<CandidateMove> _currentCandidates = [];
 
   ArenaNotifier(
     this.ref,
     this._stockfishEngine,
-    this._craftyEngine,
     this._soundService,
     this._hapticsService,
   ) : super(ArenaState(game: ChessGame())) {
@@ -280,7 +277,18 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
 
   void _loadInitialState() {
     final settings = ref.read(chessProvider);
+    final is960 = settings.gameMode == 'chess960';
+    final initialGame = is960
+        ? ChessGame(
+            fen: Chess960Generator.generateRandomPosition().fen,
+            isChess960: true,
+          )
+        : ChessGame(isChess960: false);
+
     state = state.copyWith(
+      game: initialGame,
+      lastMove: null,
+      recentMoves: const [],
       isBoardFlipped: settings.isBoardFlipped,
       isPlayerWhite: settings.isPlayerWhite,
       engineLevel: settings.engineLevel,
@@ -290,15 +298,18 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
       baseTimeDuration: settings.baseTimeDuration,
       incrementDuration: settings.incrementDuration,
       gameMode: settings.gameMode,
+      clockStarted: true,
+      activeClockSide: _clockWhite,
+      isPaused: false,
     );
+
+    _startClockTicker();
+    if (_isAiTurn()) {
+      unawaited(ensureGameServicesStarted(analyzeCurrentPosition: true));
+    }
   }
 
   ChessEngineService get _engine {
-    final avatarId = _activeAvatarId;
-    final craftyIds = {'avatar_0', 'avatar_1', 'avatar_4', 'avatar_7', 'avatar_9'};
-    if (craftyIds.contains(avatarId)) {
-      return _craftyEngine.isError ? _stockfishEngine : _craftyEngine;
-    }
     return _stockfishEngine;
   }
 
@@ -353,14 +364,11 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
   }) async {
     try {
       _stockfishSubscription ??= _stockfishEngine.outputStream.listen(_handleEngineOutput);
-      _craftySubscription ??= _craftyEngine.outputStream.listen(_handleEngineOutput);
 
       await _stockfishEngine.init();
-      await _craftyEngine.init();
 
       final avatar = AiAvatar.getAvatar(state.engineLevel);
       await _stockfishEngine.setSkillLevel(avatar.skillLevel, multiPV: avatar.name == 'Kingslayer' ? 1 : 4);
-      await _craftyEngine.setSkillLevel(avatar.skillLevel, multiPV: avatar.name == 'Kingslayer' ? 1 : 4);
 
       state = state.copyWith(
         servicesStarted: true,
@@ -383,6 +391,12 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
     }
   }
 
+  void _stopAnalysisAndReset() {
+    _waitingForReady = true;
+    _engine.sendCommand('stop');
+    _engine.sendCommand('isready');
+  }
+
   void _startAnalysis({int? depth}) async {
     if (!state.servicesStarted || !state.engineReady || state.game.gameOver || state.isPaused) return;
 
@@ -400,6 +414,17 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
 
   void _handleEngineOutput(String line) {
     if (_isDisposed) return;
+
+    final trimmed = line.trim();
+    if (trimmed == 'readyok') {
+      _waitingForReady = false;
+      state = state.copyWith(engineReady: true);
+      return;
+    }
+
+    if (_waitingForReady) {
+      return;
+    }
 
     // Check if output is relevant to the search FEN of the current game
     if (_searchFen != state.game.fen) return;
@@ -565,38 +590,133 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
     String engineBestMove,
   ) {
     if (candidates.isEmpty) return engineBestMove;
+
+    bool isOpenFile(String fileChar) {
+      for (int r = 1; r <= 8; r++) {
+        final p = game.getPiece('$fileChar$r');
+        if (p != null && p.type == chess_lib.PieceType.PAWN) {
+          return false;
+        }
+      }
+      return true;
+    }
+
     String bestCandidateMove = candidates.first.uciMove;
     double highestAdjustedScore = -999.0;
+
+    final turnColor = game.turn;
+    final opponentColor = turnColor == chess_lib.Color.WHITE
+        ? chess_lib.Color.BLACK
+        : chess_lib.Color.WHITE;
+
+    debugPrint('--- Arena Persona Candidate Interception (${avatar.name}) ---');
 
     for (final candidate in candidates) {
       if (candidate.uciMove.length < 4) continue;
       final fromSq = candidate.uciMove.substring(0, 2);
+      final toSq = candidate.uciMove.substring(2, 4);
 
       final piece = game.getPiece(fromSq);
+      final targetPiece = game.getPiece(toSq);
+
       double adjustedScore = candidate.evaluation;
 
+      // Trait scoring adjustments
       if (avatar.name == 'Sparky') {
-        final randomVal = (math.Random().nextDouble() * 3.0) - 1.5;
+        final randomVal = (math.Random().nextDouble() * 3.0) - 1.5; // -1.5 to +1.5
         adjustedScore += randomVal;
       } else if (avatar.name == 'Pawnzy') {
         if (piece?.type == chess_lib.PieceType.PAWN) {
           adjustedScore += 1.5;
         }
       } else if (avatar.name == 'Rook-ie') {
-        if (piece?.type == chess_lib.PieceType.ROOK) {
+        if (targetPiece != null) {
+          if (!game.isAttacked(toSq, opponentColor)) {
+            adjustedScore += 2.0;
+          } else {
+            adjustedScore += 0.5;
+          }
+        }
+      } else if (avatar.name == 'Stonewall') {
+        if (piece?.type == chess_lib.PieceType.PAWN) {
+          final fromRank = int.tryParse(fromSq[1]) ?? 0;
+          final toRank = int.tryParse(toSq[1]) ?? 0;
+          if ((toRank - fromRank).abs() <= 1) {
+            adjustedScore += 0.6;
+          }
+        } else if (targetPiece != null) {
+          adjustedScore -= 0.5;
+        }
+      } else if (avatar.name == 'Blitzer') {
+        if (piece?.type == chess_lib.PieceType.KNIGHT ||
+            piece?.type == chess_lib.PieceType.BISHOP) {
+          adjustedScore += 0.8;
+        }
+        String? opponentKingSq;
+        for (final sq in chess_lib.Chess.SQUARES.keys) {
+          final p = game.getPiece(sq);
+          if (p != null && p.type == chess_lib.PieceType.KING && p.color == opponentColor) {
+            opponentKingSq = sq;
+            break;
+          }
+        }
+        if (opponentKingSq != null) {
+          final fromFileIdx = toSq.codeUnitAt(0) - 97;
+          final fromRankIdx = int.tryParse(toSq[1]) ?? 1;
+          final kingFileIdx = opponentKingSq.codeUnitAt(0) - 97;
+          final kingRankIdx = int.tryParse(opponentKingSq[1]) ?? 1;
+          final distance = math.sqrt(math.pow(fromFileIdx - kingFileIdx, 2) + math.pow(fromRankIdx - kingRankIdx, 2));
+          adjustedScore += math.max(0.0, (10.0 - distance) * 0.15);
+        }
+      } else if (avatar.name == 'Gambit') {
+        if (candidate.evaluation < -0.5 && (targetPiece != null || piece?.type == chess_lib.PieceType.PAWN)) {
+          adjustedScore += 1.2;
+        }
+      } else if (avatar.name == 'Vanguard') {
+        if (targetPiece != null && !game.isAttacked(toSq, opponentColor)) {
           adjustedScore += 1.5;
         }
-      } else if (avatar.name == 'Bishop-hop') {
-        if (piece?.type == chess_lib.PieceType.BISHOP) {
-          adjustedScore += 1.5;
+      } else if (avatar.name == 'Sentinel') {
+        final file = toSq[0];
+        final rank = toSq[1];
+        final isCenterFile = file == 'c' || file == 'd' || file == 'e' || file == 'f';
+        final isCenterRank = rank == '4' || rank == '5';
+        if (isCenterFile && isCenterRank) {
+          adjustedScore += 0.8;
+        }
+        if (piece?.type == chess_lib.PieceType.KING) {
+          adjustedScore += 0.4;
+        }
+      } else if (avatar.name == 'Morphy') {
+        final file = toSq[0];
+        if ((piece?.type == chess_lib.PieceType.ROOK || piece?.type == chess_lib.PieceType.QUEEN) && isOpenFile(file)) {
+          adjustedScore += 1.0;
+        }
+        final moveCount = game.history.length;
+        if (moveCount < 24 && (piece?.type == chess_lib.PieceType.KNIGHT || piece?.type == chess_lib.PieceType.BISHOP)) {
+          adjustedScore += 0.6;
+        }
+      } else if (avatar.name == 'Titan') {
+        final file = toSq[0];
+        final rank = toSq[1];
+        final isCenterFile = file == 'd' || file == 'e';
+        final isCenterRank = rank == '4' || rank == '5';
+        if (isCenterFile && isCenterRank) {
+          adjustedScore += 0.3;
         }
       }
+
+      debugPrint(
+        '  Candidate ${candidate.multipvIndex}: ${candidate.uciMove} | Base Eval: ${candidate.evaluation.toStringAsFixed(2)} | Adjusted: ${adjustedScore.toStringAsFixed(2)}',
+      );
 
       if (adjustedScore > highestAdjustedScore) {
         highestAdjustedScore = adjustedScore;
         bestCandidateMove = candidate.uciMove;
       }
     }
+
+    debugPrint('  Selected Arena Move: $bestCandidateMove');
     return bestCandidateMove;
   }
 
@@ -686,6 +806,10 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
 
   Future<void> makeMove(String from, String to) async {
     if (state.game.gameOver) return;
+
+    _stopAnalysisAndReset();
+    _engineMoveTimer?.cancel();
+    _engineMoveTimer = null;
 
     if (state.viewingMoveIndex != null) {
       _truncateToViewingIndex();
@@ -916,6 +1040,9 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
 
   void undo() {
     if (_undoStack.isEmpty) return;
+    _engineMoveTimer?.cancel();
+    _engineMoveTimer = null;
+    _stopAnalysisAndReset();
     _redoStack.add(_captureCurrentSnapshot());
     final snapshot = _undoStack.removeLast();
     _restoreSnapshot(snapshot);
@@ -925,6 +1052,9 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
 
   void redo() {
     if (_redoStack.isEmpty) return;
+    _engineMoveTimer?.cancel();
+    _engineMoveTimer = null;
+    _stopAnalysisAndReset();
     _undoStack.add(_captureCurrentSnapshot());
     final snapshot = _redoStack.removeLast();
     _restoreSnapshot(snapshot);
@@ -940,7 +1070,7 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
       _stopClockTimer();
       _engineMoveTimer?.cancel();
       _engineMoveTimer = null;
-      _engine.sendCommand('stop');
+      _stopAnalysisAndReset();
       state = state.copyWith(isEngineThinking: false);
     } else {
       if (state.clockStarted) {
@@ -1018,6 +1148,7 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
   void reset({bool forcedPlayerWhite = true}) {
     _clockTimer?.cancel();
     _engineMoveTimer?.cancel();
+    _stopAnalysisAndReset();
     _undoStack.clear();
     _redoStack.clear();
 
@@ -1040,8 +1171,8 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
       canRedo: false,
       whiteTimeLeft: state.baseTimeDuration,
       blackTimeLeft: state.baseTimeDuration,
-      clockStarted: false,
-      activeClockSide: null,
+      clockStarted: true,
+      activeClockSide: _clockWhite,
       threatenedSquares: const [],
       moveAnimation: null,
       isPaused: false,
@@ -1052,6 +1183,11 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
       promotionDestination: null,
       isTimeOut: false,
     );
+
+    _startClockTicker();
+    if (_isAiTurn()) {
+      unawaited(ensureGameServicesStarted(analyzeCurrentPosition: true));
+    }
 
     _soundService.playSfx(SoundEffect.uiClick);
   }
@@ -1211,6 +1347,8 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
 
   Future<void> loadSavedGame(SavedGameEntry entry) async {
     _engineMoveTimer?.cancel();
+    _engineMoveTimer = null;
+    _stopAnalysisAndReset();
     _undoStack.clear();
     _redoStack.clear();
     _stopClockTimer();
@@ -1239,20 +1377,17 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
     _clockTimer?.cancel();
     _engineMoveTimer?.cancel();
     _stockfishSubscription?.cancel();
-    _craftySubscription?.cancel();
     super.dispose();
   }
 }
 
 final arenaProvider = StateNotifierProvider<ArenaNotifier, ArenaState>((ref) {
   final stockfishEngine = ref.watch(stockfishServiceProvider);
-  final craftyEngine = ref.watch(craftyServiceProvider);
   final soundService = ref.watch(chessSoundServiceProvider);
   final hapticsService = ref.watch(chessHapticsServiceProvider);
   return ArenaNotifier(
     ref,
     stockfishEngine,
-    craftyEngine,
     soundService,
     hapticsService,
   );

@@ -180,7 +180,14 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
                                               size: Size.infinite,
                                             ),
                                           // 4. Selection Effects
-                                          if (isSelected)
+                                          if (isSelected &&
+                                              ref
+                                                  .read(
+                                                    chessProvider.notifier,
+                                                  )
+                                                  .isAnimationTypeEnabled(
+                                                    'indicators',
+                                                  ))
                                             const OrbitingStarAnimation(
                                               color: ScholarlyTheme
                                                   .accentBlueSoft,
@@ -203,6 +210,7 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
                                             const OrbitingStarAnimation(
                                               color: Colors.redAccent,
                                               isActive: true,
+                                              isCircle: true,
                                             ),
                                           // 6. Last Move Highlight (Classic uses opacity)
                                           if (isLastMoveStartOrEnd || isLastMoveInBetween)

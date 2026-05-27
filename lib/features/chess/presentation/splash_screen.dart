@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:video_player/video_player.dart';
 import '../application/chess_provider.dart';
 import '../application/tutorial_provider.dart';
 import 'mobile_navigation_shell.dart';
@@ -23,6 +24,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   late AnimationController _shimmerController;
   late AnimationController _pulseController;
   double _loadingValue = 0;
+
+  VideoPlayerController? _videoController;
+  bool _isVideoInitialized = false;
+  bool _isVideoFinished = false;
+  late Future<void> _servicesInitFuture;
 
   @override
   void initState() {
@@ -61,35 +67,86 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       duration: const Duration(milliseconds: 2500),
     )..repeat(reverse: true);
 
-    _initFlow();
+    // 1. Start services initialization in parallel during video playback
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        final notifier = ref.read(chessProvider.notifier);
+        _servicesInitFuture = _initServices(notifier);
+      }
+    });
+
+    // 2. Initialize and play splash video
+    _initVideo();
   }
 
-  Future<void> _initFlow() async {
-    await Future.delayed(Duration.zero);
+  void _initVideo() {
+    _videoController = VideoPlayerController.asset(
+      'assets/splash/ideaspace_chess_splash_screen.mp4',
+    );
+
+    _videoController!.initialize().then((_) {
+      if (mounted) {
+        setState(() {
+          _isVideoInitialized = true;
+        });
+        _videoController!.play();
+      }
+    }).catchError((error) {
+      debugPrint('Splash video initialization error: $error');
+      _startLoadingFlow();
+    });
+
+    _videoController!.addListener(_videoListener);
+
+    // Safety fallback: transition to loading screen if video player hangs (8s timeout)
+    Future.delayed(const Duration(seconds: 8), () {
+      if (mounted && !_isVideoFinished) {
+        debugPrint('Splash video fallback triggered due to timeout.');
+        _startLoadingFlow();
+      }
+    });
+  }
+
+  void _videoListener() {
+    if (_videoController == null) return;
+    final value = _videoController!.value;
+    if (value.isInitialized &&
+        value.position >= value.duration &&
+        !_isVideoFinished) {
+      _startLoadingFlow();
+    }
+  }
+
+  void _startLoadingFlow() {
+    if (_isVideoFinished) return;
+    setState(() {
+      _isVideoFinished = true;
+    });
+    _videoController?.removeListener(_videoListener);
+    _runLoadingScreenFlow();
+  }
+
+  Future<void> _runLoadingScreenFlow() async {
     final startTime = DateTime.now();
-    // debugPrint('SplashScreen: Starting _initFlow...');
-    final notifier = ref.read(chessProvider.notifier);
 
-    // 1. Start services initialization in parallel
-    // debugPrint('SplashScreen: Triggering background service init...');
-    final initFuture = _initServices(notifier);
-
-    // 2. Start a smooth progress animation
+    // Start progress animation
     _progressController.forward();
 
-    // 3. Wait for actual services to load
-    // debugPrint('SplashScreen: Waiting for background services...');
-    await initFuture;
-    // debugPrint('SplashScreen: Background services completed.');
+    // Wait for the background services initialization to finish
+    try {
+      await _servicesInitFuture;
+    } catch (e) {
+      debugPrint('Service Init error in loading flow: $e');
+    }
 
-    // 4. Enforce a small minimum time (e.g. 1.2s) for branding
+    // Enforce a small minimum time (e.g. 1.2s) for branding
     final elapsed = DateTime.now().difference(startTime);
     const minTime = Duration(milliseconds: 1200);
     if (elapsed < minTime) {
       await Future.delayed(minTime - elapsed);
     }
 
-    // 5. Complete the progress bar quickly if not already done
+    // Complete the progress bar quickly if not already done
     if (_progressController.value < 1.0) {
       await _progressController.animateTo(
         1.0,
@@ -127,15 +184,14 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   }
 
   Future<void> _initServices(ChessNotifier notifier) async {
-    try {
-      await notifier.ensureGameServicesStarted();
-    } catch (e) {
-      debugPrint('Service Init error: $e');
-    }
+    // Defer chess engine startup to when the user actually enters arena/battleground/analysis
+    await Future.delayed(Duration.zero);
   }
 
   @override
   void dispose() {
+    _videoController?.removeListener(_videoListener);
+    _videoController?.dispose();
     _progressController.dispose();
     _shimmerController.dispose();
     _pulseController.dispose();
@@ -146,8 +202,44 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F7EF), // Cream off-white to match the app icon
-      body: _buildStaticPhase(),
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 800),
+        child: _buildCurrentPhase(),
+      ),
     );
+  }
+
+  Widget _buildCurrentPhase() {
+    if (!_isVideoFinished) {
+      if (_isVideoInitialized && _videoController != null) {
+        return Container(
+          key: const ValueKey('video_phase'),
+          color: const Color(0xFFF7F7EF), // Cream off-white background matching the video/app theme
+          child: Center(
+            child: AspectRatio(
+              aspectRatio: _videoController!.value.aspectRatio,
+              child: VideoPlayer(_videoController!),
+            ),
+          ),
+        );
+      } else {
+        return Container(
+          key: const ValueKey('video_init_phase'),
+          color: const Color(0xFFF7F7EF), // Cream off-white background during initialization
+          child: const Center(
+            child: CircularProgressIndicator(
+              color: Color(0xFF0D6EFD), // Contrasting theme blue indicator
+            ),
+          ),
+        );
+      }
+    } else {
+      return Container(
+        key: const ValueKey('static_phase'),
+        color: const Color(0xFFF7F7EF),
+        child: _buildStaticPhase(),
+      );
+    }
   }
 
   Widget _buildStaticPhase() {

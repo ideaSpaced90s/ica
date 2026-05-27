@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../application/chess_provider.dart';
 import '../application/battleground_provider.dart';
+import '../application/arena_provider.dart';
 import '../services/chess_sound_service.dart';
 import 'scholarly_theme.dart';
 
@@ -98,6 +99,14 @@ class MobileNavigationShell extends ConsumerWidget {
               icon: const Icon(Icons.menu_rounded, color: ScholarlyTheme.textPrimary),
               onPressed: () async {
                 ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
+                
+                if (currentIndex == 1) {
+                  final arenaState = ref.read(arenaProvider);
+                  if (arenaState.recentMoves.isNotEmpty && !arenaState.game.gameOver && !arenaState.isPaused) {
+                    ref.read(arenaProvider.notifier).togglePause();
+                  }
+                }
+
                 final isBattleground = currentIndex == 2;
                 final bgState = ref.read(battlegroundProvider);
                 final isMatchActive = isBattleground && bgState.recentMoves.isNotEmpty && !bgState.game.gameOver;
@@ -133,9 +142,12 @@ class MobileNavigationShell extends ConsumerWidget {
       body: IndexedStack(
         index: currentIndex,
         children: List.generate(pages.length, (index) {
-          return TickerMode(
-            enabled: currentIndex == index,
-            child: pages[index],
+          return LazyIndexedStackChild(
+            isActive: currentIndex == index,
+            child: TickerMode(
+              enabled: currentIndex == index,
+              child: pages[index],
+            ),
           );
         }),
       ),
@@ -390,6 +402,13 @@ class _MobileSidebarDrawer extends ConsumerWidget {
 
   void _navigate(WidgetRef ref, BuildContext context, int index) {
     ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
+    final currentIndex = ref.read(mobileNavIndexProvider);
+    if (currentIndex == 1 && index != 1) {
+      final arenaState = ref.read(arenaProvider);
+      if (arenaState.recentMoves.isNotEmpty && !arenaState.game.gameOver && !arenaState.isPaused) {
+        ref.read(arenaProvider.notifier).togglePause();
+      }
+    }
     ref.read(mobileNavIndexProvider.notifier).state = index;
     Navigator.of(context).pop(); // Close drawer
   }
@@ -435,5 +454,42 @@ class _DrawerTile extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class LazyIndexedStackChild extends StatefulWidget {
+  const LazyIndexedStackChild({
+    super.key,
+    required this.isActive,
+    required this.child,
+  });
+
+  final bool isActive;
+  final Widget child;
+
+  @override
+  State<LazyIndexedStackChild> createState() => _LazyIndexedStackChildState();
+}
+
+class _LazyIndexedStackChildState extends State<LazyIndexedStackChild> {
+  bool _initialized = false;
+
+  @override
+  void didUpdateWidget(covariant LazyIndexedStackChild oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isActive && !_initialized) {
+      setState(() {
+        _initialized = true;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_initialized || widget.isActive) {
+      _initialized = true;
+      return widget.child;
+    }
+    return const SizedBox.shrink();
   }
 }

@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 class OrbitingStarAnimation extends StatefulWidget {
   final Color color;
   final bool isActive;
+  final bool isCircle;
 
   const OrbitingStarAnimation({
     super.key,
     required this.color,
     required this.isActive,
+    this.isCircle = false,
   });
 
   @override
@@ -58,6 +60,7 @@ class _OrbitingStarAnimationState extends State<OrbitingStarAnimation>
           painter: _OrbitingStarPainter(
             progress: _controller.value,
             color: widget.color,
+            isCircle: widget.isCircle,
           ),
           size: Size.infinite,
         );
@@ -69,8 +72,13 @@ class _OrbitingStarAnimationState extends State<OrbitingStarAnimation>
 class _OrbitingStarPainter extends CustomPainter {
   final double progress;
   final Color color;
+  final bool isCircle;
 
-  _OrbitingStarPainter({required this.progress, required this.color});
+  _OrbitingStarPainter({
+    required this.progress,
+    required this.color,
+    required this.isCircle,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -78,31 +86,45 @@ class _OrbitingStarPainter extends CustomPainter {
     // Slightly inset the path to stay within square bounds
     final pathRect = rect.deflate(2.0);
 
-    // Calculate position along the square perimeter
-    // Perimeter length is 4 * side
-    final totalLength = pathRect.width * 4;
+    // Calculate position along the path (circumference if circle, perimeter if square)
+    final totalLength = isCircle
+        ? (2 * math.pi * (pathRect.width / 2))
+        : (pathRect.width * 4);
     final currentPos = progress * totalLength;
 
     Offset getPos(double distance) {
-      // Normalize distance to [0, totalLength)
-      double d = distance % totalLength;
-      if (d < 0) d += totalLength;
-
-      final w = pathRect.width;
-      final h = pathRect.height;
-
-      if (d < w) {
-        // Top edge (left to right)
-        return Offset(pathRect.left + d, pathRect.top);
-      } else if (d < w + h) {
-        // Right edge (top to bottom)
-        return Offset(pathRect.right, pathRect.top + (d - w));
-      } else if (d < 2 * w + h) {
-        // Bottom edge (right to left)
-        return Offset(pathRect.right - (d - (w + h)), pathRect.bottom);
+      if (isCircle) {
+        final center = pathRect.center;
+        final radius = pathRect.width / 2;
+        // Map the distance along the circumference to an angle.
+        // Start from top (12 o'clock, which is -pi/2) and rotate clockwise (adding angle).
+        final p = distance / totalLength;
+        final angle = -math.pi / 2 + p * 2 * math.pi;
+        return Offset(
+          center.dx + radius * math.cos(angle),
+          center.dy + radius * math.sin(angle),
+        );
       } else {
-        // Left edge (bottom to top)
-        return Offset(pathRect.left, pathRect.bottom - (d - (2 * w + h)));
+        // Normalize distance to [0, totalLength)
+        double d = distance % totalLength;
+        if (d < 0) d += totalLength;
+
+        final w = pathRect.width;
+        final h = pathRect.height;
+
+        if (d < w) {
+          // Top edge (left to right)
+          return Offset(pathRect.left + d, pathRect.top);
+        } else if (d < w + h) {
+          // Right edge (top to bottom)
+          return Offset(pathRect.right, pathRect.top + (d - w));
+        } else if (d < 2 * w + h) {
+          // Bottom edge (right to left)
+          return Offset(pathRect.right - (d - (w + h)), pathRect.bottom);
+        } else {
+          // Left edge (bottom to top)
+          return Offset(pathRect.left, pathRect.bottom - (d - (2 * w + h)));
+        }
       }
     }
 

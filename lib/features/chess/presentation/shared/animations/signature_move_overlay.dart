@@ -145,7 +145,17 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
         .read(chessProvider.notifier)
         .isAnimationTypeEnabled('pieceMotion');
     if (!pieceMotionEnabled) {
-      _controller.value = 1.0;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          widget.onLand?.call(
+            widget.data.from,
+            widget.data.to,
+            widget.data.pieceCode,
+            _profile,
+          );
+          widget.onComplete();
+        }
+      });
     } else {
       _controller.forward();
     }

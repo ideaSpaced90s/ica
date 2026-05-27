@@ -9,6 +9,7 @@ import '../scholarly_theme.dart';
 import 'puzzles_board.dart';
 import '../widgets/ambient_scaffold.dart';
 import '../dashboard_page.dart';
+import '../mobile_navigation_shell.dart';
 import 'dart:ui';
 
 class PuzzlesPage extends ConsumerStatefulWidget {
@@ -25,7 +26,10 @@ class _PuzzlesPageState extends ConsumerState<PuzzlesPage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await ref.read(puzzlesProvider.notifier).startPuzzleMode(silent: true);
+      final currentIndex = ref.read(mobileNavIndexProvider);
+      if (currentIndex == 4 && !ref.read(puzzlesProvider).isPuzzleMode) {
+        await ref.read(puzzlesProvider.notifier).startPuzzleMode(silent: true);
+      }
     });
   }
 
@@ -396,6 +400,12 @@ class _PuzzlesPageState extends ConsumerState<PuzzlesPage> {
     final state = ref.watch(puzzlesProvider);
     final notifier = ref.read(puzzlesProvider.notifier);
     final isLandscape = MediaQuery.of(context).size.width > MediaQuery.of(context).size.height;
+
+    ref.listen<int>(mobileNavIndexProvider, (previous, current) {
+      if (current == 4 && !ref.read(puzzlesProvider).isPuzzleMode) {
+        ref.read(puzzlesProvider.notifier).startPuzzleMode(silent: true);
+      }
+    });
 
     return PopScope(
       canPop: false,

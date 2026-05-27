@@ -22,6 +22,7 @@ class InkTheme extends ChessTheme {
 
   @override
   Widget buildBackground(BuildContext context, bool animationsEnabled) {
+    if (!animationsEnabled) return const SizedBox.shrink();
     return const Stack(children: [Positioned.fill(child: InkCheckSlash())]);
   }
 

@@ -93,8 +93,8 @@ class BoardTheme {
     BoardTheme(
       id: 'scholar',
       name: 'Scholar',
-      lightSquare: Color(0xFFF0F2F5), // Soft White
-      darkSquare: Color(0xFF1E3A8A), // Navy Blue
+      lightSquare: Color(0xFFFDF6E2), // Cream
+      darkSquare: Color(0xFF7BCBFC), // Sky Blue
       frameColor: Color(0xFF0F172A), // Darker Slate/Navy Frame
       pieceSetAsset: 'assets/board/sample2.png',
     ),

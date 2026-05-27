@@ -5,16 +5,16 @@ class ScholarTheme extends ChessTheme {
   const ScholarTheme() : super(id: 'scholar', name: 'Scholar');
 
   @override
-  Color get lightSquare => const Color(0xFFF0F2F5); // Soft White
+  Color get lightSquare => const Color(0xFFFDF6E2); // Cream
 
   @override
-  Color get darkSquare => const Color(0xFF1E3A8A); // Navy Blue
+  Color get darkSquare => const Color(0xFF7BCBFC); // Sky Blue
 
   @override
   Color get lightCoordinateColor => Colors.black87.withValues(alpha: 0.7);
 
   @override
-  Color get darkCoordinateColor => Colors.white70;
+  Color get darkCoordinateColor => const Color(0xFF0F172A).withValues(alpha: 0.8);
 
   @override
   Color get frameColor => const Color(0xFF0F172A); // Darker Slate/Navy Frame

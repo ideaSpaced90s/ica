@@ -189,7 +189,14 @@ class _AcademyBoardState extends ConsumerState<AcademyBoard>
                                               size: Size.infinite,
                                             ),
                                           // 4. Selection Effects
-                                          if (isSelected)
+                                          if (isSelected &&
+                                              ref
+                                                  .read(
+                                                    chessProvider.notifier,
+                                                  )
+                                                  .isAnimationTypeEnabled(
+                                                    'indicators',
+                                                  ))
                                             const OrbitingStarAnimation(
                                               color: ScholarlyTheme
                                                   .accentBlueSoft,
@@ -227,6 +234,7 @@ class _AcademyBoardState extends ConsumerState<AcademyBoard>
                                             const OrbitingStarAnimation(
                                               color: Colors.redAccent,
                                               isActive: true,
+                                              isCircle: true,
                                             ),
                                           if (isGlow)
                                             const AcademySquareGlow(
@@ -292,7 +300,14 @@ class _AcademyBoardState extends ConsumerState<AcademyBoard>
                                             ),
                                           if (chessState.isHintBlinking &&
                                               (isSuggestedFrom ||
-                                                  isSuggestedTo))
+                                                  isSuggestedTo) &&
+                                              ref
+                                                  .read(
+                                                    chessProvider.notifier,
+                                                  )
+                                                  .isAnimationTypeEnabled(
+                                                    'indicators',
+                                                  ))
                                             const OrbitingStarAnimation(
                                               color:
                                                   ScholarlyTheme.accentYellow,
