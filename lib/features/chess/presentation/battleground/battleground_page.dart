@@ -170,15 +170,19 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.start,
                   children: [
-                    ActiveAvatarWrapper(
-                      isActive: !isTurn,
-                      child: OpponentAvatarIndicator(
-                        avatar: opponentAvatar,
-                        onTap: null, // Read-only from rated arena
+                    Flexible(
+                      flex: 3,
+                      child: ActiveAvatarWrapper(
+                        isActive: !isTurn,
+                        child: OpponentAvatarIndicator(
+                          avatar: opponentAvatar,
+                          onTap: null, // Read-only from rated arena
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Flexible(
+                      flex: 2,
                       child: CapturedPiecesInline(
                         pieces: topPieces,
                         opponentPieces: bottomPieces,
@@ -202,15 +206,19 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     Flexible(
+                      flex: 2,
                       child: CapturedPiecesInline(
                         pieces: bottomPieces,
                         opponentPieces: topPieces,
                       ),
                     ),
                     const SizedBox(width: 12),
-                    ActiveAvatarWrapper(
-                      isActive: isTurn,
-                      child: const UserAvatarIndicator(isRated: true),
+                    Flexible(
+                      flex: 3,
+                      child: ActiveAvatarWrapper(
+                        isActive: isTurn,
+                        child: const UserAvatarIndicator(isRated: true),
+                      ),
                     ),
                   ],
                 ),
@@ -374,15 +382,19 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
           child: Row(
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
-              ActiveAvatarWrapper(
-                isActive: !isTurn,
-                child: OpponentAvatarIndicator(
-                  avatar: opponentAvatar,
-                  onTap: null, // Read-only from rated arena
+              Flexible(
+                flex: 3,
+                child: ActiveAvatarWrapper(
+                  isActive: !isTurn,
+                  child: OpponentAvatarIndicator(
+                    avatar: opponentAvatar,
+                    onTap: null, // Read-only from rated arena
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
               Flexible(
+                flex: 2,
                 child: CapturedPiecesInline(
                   pieces: topPieces,
                   opponentPieces: bottomPieces,
@@ -406,15 +418,19 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               Flexible(
+                flex: 2,
                 child: CapturedPiecesInline(
                   pieces: bottomPieces,
                   opponentPieces: topPieces,
                 ),
               ),
               const SizedBox(width: 12),
-              ActiveAvatarWrapper(
-                isActive: isTurn,
-                child: const UserAvatarIndicator(isRated: true),
+              Flexible(
+                flex: 3,
+                child: ActiveAvatarWrapper(
+                  isActive: isTurn,
+                  child: const UserAvatarIndicator(isRated: true),
+                ),
               ),
             ],
           ),

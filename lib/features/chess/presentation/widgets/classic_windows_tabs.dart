@@ -210,7 +210,6 @@ class _ClassicWindowsTabsState extends ConsumerState<ClassicWindowsTabs> {
           color: const Color(0xFFF1F5F9),
           child: Row(
             children: [
-              Spacer(flex: 0),
               SizedBox(
                 width: 45,
                 child: Text(

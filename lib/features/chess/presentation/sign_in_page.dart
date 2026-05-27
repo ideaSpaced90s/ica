@@ -23,7 +23,7 @@ class _SignInPageState extends ConsumerState<SignInPage>
   late AnimationController _fadeInController;
   late AnimationController _glowController;
   bool _isLoading = false;
-  String _loadingMessage = '';
+  int _selectedTab = 0;
 
   @override
   void initState() {
@@ -50,17 +50,9 @@ class _SignInPageState extends ConsumerState<SignInPage>
     ref.read(chessSoundServiceProvider).playSfx(SoundEffect.click);
     setState(() {
       _isLoading = true;
-      _loadingMessage = 'Connecting to Google Secure Gate...';
     });
 
-    await Future.delayed(const Duration(milliseconds: 1200));
-    if (!mounted) return;
-    
-    setState(() {
-      _loadingMessage = 'Enrolling Strategist into the Academy...';
-    });
-    
-    await Future.delayed(const Duration(milliseconds: 800));
+    await Future.delayed(const Duration(milliseconds: 2000));
     if (!mounted) return;
 
     final repo = ref.read(tutorialProgressRepositoryProvider);
@@ -73,7 +65,6 @@ class _SignInPageState extends ConsumerState<SignInPage>
     ref.read(chessSoundServiceProvider).playSfx(SoundEffect.click);
     setState(() {
       _isLoading = true;
-      _loadingMessage = 'Initializing Temporary Guest Session...';
     });
 
     await Future.delayed(const Duration(milliseconds: 1000));
@@ -130,10 +121,7 @@ class _SignInPageState extends ConsumerState<SignInPage>
                       const SizedBox(height: 36),
 
                       // Sign In Card
-                      if (_isLoading)
-                        _buildLoadingCard()
-                      else
-                        _buildOptionsCard(),
+                      _buildOptionsCard(),
                     ],
                   ),
                 ),
@@ -175,18 +163,22 @@ class _SignInPageState extends ConsumerState<SignInPage>
           ),
         ),
         const SizedBox(height: 24),
-        Text(
-          'THE ACADEMY',
-          style: GoogleFonts.outfit(
-            fontSize: 28,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 3.0,
-            color: ScholarlyTheme.textPrimary,
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            'IDEASPACE CHESS ACADEMY',
+            maxLines: 1,
+            style: GoogleFonts.outfit(
+              fontSize: 22,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.5,
+              color: ScholarlyTheme.textPrimary,
+            ),
           ),
         ),
         const SizedBox(height: 8),
         Text(
-          'Reclaim human strategic mastery over the machines.',
+          'Learn chess intently',
           textAlign: TextAlign.center,
           style: GoogleFonts.inter(
             fontSize: 13,
@@ -207,127 +199,166 @@ class _SignInPageState extends ConsumerState<SignInPage>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            'ENROLLMENT PORTAL',
-            textAlign: TextAlign.center,
-            style: GoogleFonts.inter(
-              color: ScholarlyTheme.accentBlue,
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 1.5,
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // Google Sign In Button
-          ElevatedButton(
-            onPressed: _handleGoogleSignIn,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white,
-              foregroundColor: ScholarlyTheme.textPrimary,
-              elevation: 2,
-              shadowColor: Colors.black12,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-                side: BorderSide(
-                  color: Colors.black.withValues(alpha: 0.08),
-                  width: 1,
-                ),
-              ),
+          // Segmented Tab Bar for Sign In Mode Selection
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(16),
             ),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Image.network(
-                  'https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg',
-                  height: 20,
-                  errorBuilder: (context, error, stackTrace) =>
-                      const Icon(Icons.g_mobiledata_rounded, color: Colors.blue, size: 24),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: _isLoading ? null : () => setState(() => _selectedTab = 0),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        color: _selectedTab == 0 ? Colors.white : Colors.transparent,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: _selectedTab == 0
+                            ? [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.05),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                )
+                              ]
+                            : [],
+                      ),
+                      child: Text(
+                        'Google Sign-in',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: _selectedTab == 0 ? FontWeight.bold : FontWeight.w600,
+                          color: _selectedTab == 0 ? ScholarlyTheme.textPrimary : ScholarlyTheme.textMuted,
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
-                const SizedBox(width: 12),
-                Text(
-                  'Sign In with Google',
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: ScholarlyTheme.textPrimary,
+                Expanded(
+                  child: GestureDetector(
+                    onTap: _isLoading ? null : () => setState(() => _selectedTab = 1),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        color: _selectedTab == 1 ? Colors.white : Colors.transparent,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: _selectedTab == 1
+                            ? [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.05),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                )
+                              ]
+                            : [],
+                      ),
+                      child: Text(
+                        'Play as Guest',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: _selectedTab == 1 ? FontWeight.bold : FontWeight.w600,
+                          color: _selectedTab == 1 ? ScholarlyTheme.textPrimary : ScholarlyTheme.textMuted,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 16),
-
-          // Guest Sign In Button
-          OutlinedButton(
-            onPressed: _handleGuestSignIn,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: ScholarlyTheme.accentBlue,
-              side: BorderSide(
-                color: ScholarlyTheme.accentBlue.withValues(alpha: 0.4),
-                width: 1.5,
-              ),
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-            ),
-            child: Text(
-              'Play as Guest',
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            '* Guest mode will reset and replay the Induction Guide on every startup.',
-            textAlign: TextAlign.center,
-            style: GoogleFonts.inter(
-              color: ScholarlyTheme.textSubtle,
-              fontSize: 10,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLoadingCard() {
-    return JuicyGlassCard(
-      borderRadius: 24,
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
-      child: Column(
-        children: [
-          const SizedBox(
-            width: 48,
-            height: 48,
-            child: CircularProgressIndicator(
-              strokeWidth: 4.5,
-              valueColor: AlwaysStoppedAnimation<Color>(ScholarlyTheme.accentBlue),
-            ),
-          ),
           const SizedBox(height: 28),
-          Text(
-            _loadingMessage,
-            textAlign: TextAlign.center,
-            style: GoogleFonts.inter(
-              color: ScholarlyTheme.textPrimary,
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
+
+          // Google Button
+          if (_selectedTab == 0)
+            ElevatedButton(
+              key: const ValueKey('google_btn'),
+              onPressed: _isLoading ? null : _handleGoogleSignIn,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: ScholarlyTheme.textPrimary,
+                elevation: 2,
+                shadowColor: Colors.black12,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    width: 1,
+                  ),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Image.network(
+                    'https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg',
+                    height: 20,
+                    errorBuilder: (context, error, stackTrace) =>
+                        const Icon(Icons.g_mobiledata_rounded, color: Colors.blue, size: 24),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Sign In with Google',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: ScholarlyTheme.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            OutlinedButton(
+              key: const ValueKey('guest_btn'),
+              onPressed: _isLoading ? null : _handleGuestSignIn,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: ScholarlyTheme.accentBlue,
+                side: BorderSide(
+                  color: ScholarlyTheme.accentBlue.withValues(alpha: 0.4),
+                  width: 1.5,
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.person_outline_rounded, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Continue as Guest',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Securing strategic parameters...',
-            style: GoogleFonts.inter(
-              color: ScholarlyTheme.textMuted,
-              fontSize: 12,
+          
+          if (_isLoading) ...[
+            const SizedBox(height: 24),
+            const Center(
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  strokeWidth: 3.0,
+                  valueColor: AlwaysStoppedAnimation<Color>(ScholarlyTheme.accentBlue),
+                ),
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );

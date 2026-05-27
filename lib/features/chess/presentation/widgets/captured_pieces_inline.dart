@@ -53,56 +53,51 @@ class CapturedPiecesInline extends ConsumerWidget {
           width: 1,
         ),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.center,
+      child: Wrap(
+        spacing: -6, // Stack overlap feel
+        runSpacing: 4,
+        crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          Flexible(
-            child: Wrap(
-              spacing: -6, // Stack overlap feel
-              runSpacing: 4,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: sortedPieces.map((piece) {
-                final type = piece.type.toString().toUpperCase();
-                final isWhite = piece.color == chess_lib.Color.WHITE;
+          ...sortedPieces.map((piece) {
+            final type = piece.type.toString().toUpperCase();
+            final isWhite = piece.color == chess_lib.Color.WHITE;
 
-                return SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: theme.buildPiece(context, type, isWhite, false, 0.0),
-                );
-              }).toList(),
-            ),
-          ),
-          if (scoreDiff > 0) ...[
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: ScholarlyTheme.realGold.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: ScholarlyTheme.realGold.withValues(alpha: 0.4),
-                  width: 1,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: ScholarlyTheme.realGold.withValues(alpha: 0.1),
-                    blurRadius: 6,
-                    spreadRadius: 1,
+            return SizedBox(
+              width: 24,
+              height: 24,
+              child: theme.buildPiece(context, type, isWhite, false, 0.0),
+            );
+          }),
+          if (scoreDiff > 0)
+            Padding(
+              padding: const EdgeInsets.only(left: 14), // offset the negative spacing of -6 and leave a nice gap
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: ScholarlyTheme.realGold.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: ScholarlyTheme.realGold.withValues(alpha: 0.4),
+                    width: 1,
                   ),
-                ],
-              ),
-              child: Text(
-                '+$scoreDiff',
-                style: GoogleFonts.inter(
-                  color: ScholarlyTheme.realGold,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 11,
+                  boxShadow: [
+                    BoxShadow(
+                      color: ScholarlyTheme.realGold.withValues(alpha: 0.1),
+                      blurRadius: 6,
+                      spreadRadius: 1,
+                    ),
+                  ],
+                ),
+                child: Text(
+                  '+$scoreDiff',
+                  style: GoogleFonts.inter(
+                    color: ScholarlyTheme.realGold,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 11,
+                  ),
                 ),
               ),
             ),
-          ],
         ],
       ),
     );

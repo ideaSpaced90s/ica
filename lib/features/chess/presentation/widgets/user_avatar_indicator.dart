@@ -1,8 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../scholarly_theme.dart';
 
+import '../../application/chess_provider.dart';
 import '../../application/battleground_provider.dart';
 
 class UserAvatarIndicator extends StatefulWidget {
@@ -20,8 +22,11 @@ class _UserAvatarIndicatorState extends State<UserAvatarIndicator> {
   Widget build(BuildContext context) {
     return Consumer(
       builder: (context, ref, child) {
+        final chessState = ref.watch(chessProvider);
+        final userName = chessState.userName;
+        final avatarPath = chessState.userAvatarPath;
+
         final primaryColor = ScholarlyTheme.accentBlue;
-        final bgColor = ScholarlyTheme.accentBlue.withValues(alpha: 0.1);
 
         int consolidatedRating = 1200;
         int totalWinningStreak = 0;
@@ -32,107 +37,124 @@ class _UserAvatarIndicatorState extends State<UserAvatarIndicator> {
         }
 
         return GestureDetector(
+          behavior: HitTestBehavior.opaque,
           onTap: () => setState(() => _isExpanded = !_isExpanded),
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 350),
-            curve: Curves.easeOutCubic,
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            decoration: BoxDecoration(
-              color: ScholarlyTheme.panelBase,
-              borderRadius: BorderRadius.circular(20),
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOutCubic,
+            padding: EdgeInsets.symmetric(
+              horizontal: _isExpanded ? 12 : 6,
+              vertical: _isExpanded ? 8 : 6,
+            ),
+            decoration: ScholarlyTheme.modernDecoration().copyWith(
+              borderRadius: BorderRadius.circular(24),
               border: Border.all(
-                color: primaryColor.withValues(alpha: 0.4),
-                width: 1,
+                color: primaryColor.withValues(alpha: _isExpanded ? 0.5 : 0.8),
+                width: 1.5,
               ),
               boxShadow: [
-                if (_isExpanded)
-                  BoxShadow(
-                    color: primaryColor.withValues(alpha: 0.2),
-                    blurRadius: 15,
-                    spreadRadius: 2,
-                  ),
+                BoxShadow(
+                  color: primaryColor.withValues(alpha: 0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
               ],
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Avatar Icon - Always Visible
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: bgColor,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: primaryColor,
-                      width: 1.5,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              physics: const NeverScrollableScrollPhysics(),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Profile Image Avatar
+                  Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: primaryColor.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: primaryColor,
+                        width: 1.5,
+                      ),
+                    ),
+                    child: ClipOval(
+                      child: avatarPath.startsWith('assets/')
+                          ? Image.asset(
+                              avatarPath,
+                              fit: BoxFit.cover,
+                            )
+                          : Image.file(
+                              File(avatarPath),
+                              fit: BoxFit.cover,
+                            ),
                     ),
                   ),
-                  child: Icon(
-                    widget.isRated ? Icons.emoji_events_rounded : Icons.person_outline_rounded,
-                    color: primaryColor,
-                    size: 16,
-                  ),
-                ),
-                // Horizontal Expansion Content
-                AnimatedSize(
-                  duration: const Duration(milliseconds: 400),
-                  curve: Curves.fastOutSlowIn,
-                  child: Container(
-                    constraints: _isExpanded ? const BoxConstraints(minWidth: 0) : const BoxConstraints(maxWidth: 0),
+                  // Expanding Contents
+                  AnimatedSize(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOutCubic,
                     child: _isExpanded
                         ? Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const SizedBox(width: 12),
-                              // Rating Pill
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: primaryColor.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(
-                                    color: primaryColor.withValues(alpha: 0.3),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      widget.isRated ? '$consolidatedRating MASTER' : 'UNRATED',
-                                      style: GoogleFonts.jetBrainsMono(
-                                        color: primaryColor,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w800,
-                                      ),
-                                    ),
-                                    if (totalWinningStreak > 0 && widget.isRated) ...[
-                                      const SizedBox(width: 6),
-                                      const Icon(
-                                        Icons.local_fire_department_rounded,
-                                        color: Colors.deepOrangeAccent,
-                                        size: 14,
-                                      ),
+                              const SizedBox(width: 10),
+                              // Name & Rating/Subtitle Column
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
                                       Text(
-                                        '$totalWinningStreak',
-                                        style: GoogleFonts.jetBrainsMono(
-                                          color: Colors.deepOrangeAccent,
-                                          fontSize: 11,
+                                        userName,
+                                        softWrap: false,
+                                        overflow: TextOverflow.visible,
+                                        style: GoogleFonts.inter(
+                                          color: ScholarlyTheme.textPrimary,
                                           fontWeight: FontWeight.bold,
+                                          fontSize: 13,
                                         ),
                                       ),
+                                      if (widget.isRated && totalWinningStreak > 0) ...[
+                                        const SizedBox(width: 4),
+                                        const Icon(
+                                          Icons.local_fire_department_rounded,
+                                          color: Colors.deepOrangeAccent,
+                                          size: 12,
+                                        ),
+                                        Text(
+                                          '$totalWinningStreak',
+                                          style: GoogleFonts.jetBrainsMono(
+                                            color: Colors.deepOrangeAccent,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
                                     ],
-                                  ],
-                                ),
+                                  ),
+                                  if (widget.isRated)
+                                    Text(
+                                      'ELO $consolidatedRating',
+                                      softWrap: false,
+                                      overflow: TextOverflow.visible,
+                                      style: GoogleFonts.jetBrainsMono(
+                                        color: ScholarlyTheme.accentBlue,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                ],
                               ),
                               const SizedBox(width: 4),
                             ],
                           )
                         : const SizedBox.shrink(),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         );

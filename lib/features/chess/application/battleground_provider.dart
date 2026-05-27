@@ -1002,8 +1002,8 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
       isBoardFlipped: !forcedPlayerWhite,
       whiteTimeLeft: state.baseTimeDuration,
       blackTimeLeft: state.baseTimeDuration,
-      clockStarted: false,
-      activeClockSide: null,
+      clockStarted: true,
+      activeClockSide: _clockWhite,
       threatenedSquares: const [],
       moveAnimation: null,
       isPaused: false,
@@ -1016,6 +1016,11 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
     );
 
     _autoSelectRatedOpponent();
+    _startClockTicker();
+    if (_isAiTurn()) {
+      unawaited(ensureGameServicesStarted(analyzeCurrentPosition: true));
+    }
+
     _soundService.playSfx(SoundEffect.uiClick);
   }
 
