@@ -168,6 +168,7 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
                 child: Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
                   children: [
                     ActiveAvatarWrapper(
                       isActive: !isTurn,
@@ -177,10 +178,10 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
                       ),
                     ),
                     const SizedBox(width: 12),
-                    Expanded(
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: CapturedPiecesInline(pieces: topPieces),
+                    Flexible(
+                      child: CapturedPiecesInline(
+                        pieces: topPieces,
+                        opponentPieces: bottomPieces,
                       ),
                     ),
                   ],
@@ -198,11 +199,12 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
                 child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    Expanded(
-                      child: Align(
-                        alignment: Alignment.centerRight,
-                        child: CapturedPiecesInline(pieces: bottomPieces),
+                    Flexible(
+                      child: CapturedPiecesInline(
+                        pieces: bottomPieces,
+                        opponentPieces: topPieces,
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -370,6 +372,7 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: Row(
+            mainAxisAlignment: MainAxisAlignment.start,
             children: [
               ActiveAvatarWrapper(
                 isActive: !isTurn,
@@ -379,10 +382,10 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
                 ),
               ),
               const SizedBox(width: 12),
-              Expanded(
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: CapturedPiecesInline(pieces: topPieces),
+              Flexible(
+                child: CapturedPiecesInline(
+                  pieces: topPieces,
+                  opponentPieces: bottomPieces,
                 ),
               ),
             ],
@@ -392,7 +395,7 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
         Expanded(
           child: Stack(
             children: [
-              const BattlegroundBoard(alignment: Alignment.topCenter),
+              const BattlegroundBoard(alignment: Alignment.center),
             ],
           ),
         ),
@@ -400,11 +403,12 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              Expanded(
-                child: Align(
-                  alignment: Alignment.centerRight,
-                  child: CapturedPiecesInline(pieces: bottomPieces),
+              Flexible(
+                child: CapturedPiecesInline(
+                  pieces: bottomPieces,
+                  opponentPieces: topPieces,
                 ),
               ),
               const SizedBox(width: 12),

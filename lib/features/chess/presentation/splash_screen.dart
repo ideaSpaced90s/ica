@@ -8,7 +8,6 @@ import '../application/tutorial_provider.dart';
 import 'mobile_navigation_shell.dart';
 import 'sign_in_page.dart';
 import 'scholarly_theme.dart';
-import 'widgets/ambient_flow_backdrop.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -22,12 +21,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   late AnimationController _progressController;
   late Animation<double> _progressAnimation;
   late AnimationController _shimmerController;
-  late AnimationController _pulseController;
   double _loadingValue = 0;
 
   VideoPlayerController? _videoController;
   bool _isVideoInitialized = false;
   bool _isVideoFinished = false;
+  bool _hasTransitioned = false;
   late Future<void> _servicesInitFuture;
 
   @override
@@ -42,30 +41,28 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
     _progressController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 3000), // Nominal duration
+      duration: const Duration(milliseconds: 3500), // Nominal duration
     );
 
-    _progressAnimation =
-        Tween<double>(begin: 0, end: 100).animate(
-          CurvedAnimation(
-            parent: _progressController,
-            curve: Curves.easeInOutCubic,
-          ),
-        )..addListener(() {
-          setState(() {
-            _loadingValue = _progressAnimation.value;
-          });
+    _progressAnimation = Tween<double>(begin: 0, end: 100).animate(
+      CurvedAnimation(
+        parent: _progressController,
+        curve: Curves.easeInOutCubic,
+      ),
+    )..addListener(() {
+        setState(() {
+          _loadingValue = _progressAnimation.value;
         });
+      })..addStatusListener((status) {
+        if (status == AnimationStatus.completed) {
+          _checkTransition();
+        }
+      });
 
     _shimmerController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1800),
     )..repeat();
-
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2500),
-    )..repeat(reverse: true);
 
     // 1. Start services initialization in parallel during video playback
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -81,7 +78,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
   void _initVideo() {
     _videoController = VideoPlayerController.asset(
-      'assets/splash/ideaspace_chess_splash_screen.mp4',
+      'assets/splash/splash_video.mp4',
     );
 
     _videoController!.initialize().then((_) {
@@ -89,20 +86,41 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
         setState(() {
           _isVideoInitialized = true;
         });
+        
+        // Calculate progress duration: video duration minus 500ms
+        final videoDuration = _videoController!.value.duration;
+        final targetDuration = videoDuration - const Duration(milliseconds: 500);
+        
+        // Ensure duration is positive and reasonable (fallback to 1s if video is extremely short)
+        _progressController.duration = targetDuration > const Duration(milliseconds: 500)
+            ? targetDuration
+            : const Duration(milliseconds: 1000);
+
         _videoController!.play();
+        _progressController.forward();
       }
     }).catchError((error) {
       debugPrint('Splash video initialization error: $error');
-      _startLoadingFlow();
+      if (mounted) {
+        setState(() {
+          _isVideoFinished = true;
+        });
+        _progressController.forward();
+        _checkTransition();
+      }
     });
 
     _videoController!.addListener(_videoListener);
 
-    // Safety fallback: transition to loading screen if video player hangs (8s timeout)
-    Future.delayed(const Duration(seconds: 8), () {
-      if (mounted && !_isVideoFinished) {
+    // Safety fallback: transition to loading screen if video player hangs (10s timeout)
+    Future.delayed(const Duration(seconds: 10), () {
+      if (mounted && !_hasTransitioned) {
         debugPrint('Splash video fallback triggered due to timeout.');
-        _startLoadingFlow();
+        setState(() {
+          _isVideoFinished = true;
+        });
+        _progressController.forward(); // Ensure progress completes
+        _checkTransition();
       }
     });
   }
@@ -113,46 +131,31 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     if (value.isInitialized &&
         value.position >= value.duration &&
         !_isVideoFinished) {
-      _startLoadingFlow();
+      setState(() {
+        _isVideoFinished = true;
+      });
+      _checkTransition();
     }
   }
 
-  void _startLoadingFlow() {
-    if (_isVideoFinished) return;
-    setState(() {
-      _isVideoFinished = true;
-    });
-    _videoController?.removeListener(_videoListener);
-    _runLoadingScreenFlow();
+  void _checkTransition() {
+    if (_hasTransitioned) return;
+
+    final isVideoDone = _isVideoFinished || (_videoController != null && _videoController!.value.hasError);
+    final isProgressDone = _progressController.isCompleted;
+
+    if (isVideoDone && isProgressDone) {
+      _hasTransitioned = true;
+      _navigateToNextScreen();
+    }
   }
 
-  Future<void> _runLoadingScreenFlow() async {
-    final startTime = DateTime.now();
-
-    // Start progress animation
-    _progressController.forward();
-
+  Future<void> _navigateToNextScreen() async {
     // Wait for the background services initialization to finish
     try {
       await _servicesInitFuture;
     } catch (e) {
       debugPrint('Service Init error in loading flow: $e');
-    }
-
-    // Enforce a small minimum time (e.g. 1.2s) for branding
-    final elapsed = DateTime.now().difference(startTime);
-    const minTime = Duration(milliseconds: 1200);
-    if (elapsed < minTime) {
-      await Future.delayed(minTime - elapsed);
-    }
-
-    // Complete the progress bar quickly if not already done
-    if (_progressController.value < 1.0) {
-      await _progressController.animateTo(
-        1.0,
-        duration: const Duration(milliseconds: 400),
-        curve: Curves.easeOutCubic,
-      );
     }
 
     if (mounted) {
@@ -194,7 +197,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     _videoController?.dispose();
     _progressController.dispose();
     _shimmerController.dispose();
-    _pulseController.dispose();
     super.dispose();
   }
 
@@ -202,126 +204,41 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F7EF), // Cream off-white to match the app icon
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 800),
-        child: _buildCurrentPhase(),
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // 1. Video Player Background (if initialized)
+          if (_isVideoInitialized && _videoController != null)
+            SizedBox.expand(
+              child: FittedBox(
+                fit: BoxFit.cover,
+                child: SizedBox(
+                  width: _videoController!.value.size.width,
+                  height: _videoController!.value.size.height,
+                  child: VideoPlayer(_videoController!),
+                ),
+              ),
+            )
+          else
+            // Fallback background during initialization
+            Container(color: const Color(0xFFF7F7EF)),
+
+          // 2. Overlays: Loading Bar & Footer
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 30),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  _buildLoadingIndicator(),
+                  const SizedBox(height: 24),
+                  _buildFooter(),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
-    );
-  }
-
-  Widget _buildCurrentPhase() {
-    if (!_isVideoFinished) {
-      if (_isVideoInitialized && _videoController != null) {
-        return Container(
-          key: const ValueKey('video_phase'),
-          color: const Color(0xFFF7F7EF), // Cream off-white background matching the video/app theme
-          child: Center(
-            child: AspectRatio(
-              aspectRatio: _videoController!.value.aspectRatio,
-              child: VideoPlayer(_videoController!),
-            ),
-          ),
-        );
-      } else {
-        return Container(
-          key: const ValueKey('video_init_phase'),
-          color: const Color(0xFFF7F7EF), // Cream off-white background during initialization
-          child: const Center(
-            child: CircularProgressIndicator(
-              color: Color(0xFF0D6EFD), // Contrasting theme blue indicator
-            ),
-          ),
-        );
-      }
-    } else {
-      return Container(
-        key: const ValueKey('static_phase'),
-        color: const Color(0xFFF7F7EF),
-        child: _buildStaticPhase(),
-      );
-    }
-  }
-
-  Widget _buildStaticPhase() {
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        // Ambient animated background glow
-        AmbientFlowBackdrop(
-          backgroundColor: const Color(0xFFF7F7EF),
-          blob1Color: const Color(0xFFDBEAFE).withValues(alpha: 0.5), // Soft pastel blue
-          blob2Color: const Color(0xFFFEE2E2).withValues(alpha: 0.4), // Soft pastel pink
-          blob3Color: const Color(0xFFF3E8FF).withValues(alpha: 0.45), // Soft pastel lavender
-          overlayColor: Colors.white.withValues(alpha: 0.35),
-        ),
-
-        // Background Logo (Centered and maximized) moved 20% up
-        Align(
-          alignment: const Alignment(0, -0.4),
-          child: TweenAnimationBuilder<double>(
-            tween: Tween<double>(begin: 0.0, end: 1.0),
-            duration: const Duration(milliseconds: 1500),
-            curve: Curves.easeOutCubic,
-            builder: (context, value, child) {
-              return Opacity(
-                opacity: value,
-                child: Transform.scale(
-                  scale: 0.9 + (0.1 * value),
-                  child: child,
-                ),
-              );
-            },
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                // Pulsing radial glow ring behind logo
-                AnimatedBuilder(
-                  animation: _pulseController,
-                  builder: (context, child) {
-                    return Container(
-                      width: MediaQuery.of(context).size.width * 0.60,
-                      height: MediaQuery.of(context).size.width * 0.60,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF0D6EFD).withValues(alpha: 0.05 + 0.05 * _pulseController.value),
-                            blurRadius: 45 + 15 * _pulseController.value,
-                            spreadRadius: 8 + 12 * _pulseController.value,
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-                Container(
-                  margin: const EdgeInsets.symmetric(vertical: 60),
-                  child: Image.asset(
-                    'assets/splash/appicon.png',
-                    height: MediaQuery.of(context).size.height * 0.416, // Reduced by 20% (0.52 * 0.8)
-                    fit: BoxFit.contain,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-
-        // Main Content
-        SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 30),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                _buildLoadingIndicator(),
-                const SizedBox(height: 24),
-                _buildFooter(),
-              ],
-            ),
-          ),
-        ),
-      ],
     );
   }
 
@@ -451,3 +368,4 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     );
   }
 }
+

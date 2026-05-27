@@ -178,21 +178,24 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
               // Opponent Avatar Indicator (Top Left) with Inline Captured Pieces
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Row(
-                    children: [
-                      ActiveAvatarWrapper(
-                        isActive: !isTurn,
-                        child: OpponentAvatarIndicator(
-                          avatar: AiAvatar.getAvatar(state.engineLevel),
-                          onTap: null, // Read-only from unrated arena
-                        ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    ActiveAvatarWrapper(
+                      isActive: !isTurn,
+                      child: OpponentAvatarIndicator(
+                        avatar: AiAvatar.getAvatar(state.engineLevel),
+                        onTap: null, // Read-only from unrated arena
                       ),
-                      const SizedBox(width: 12),
-                      Flexible(child: CapturedPiecesInline(pieces: topPieces)),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 12),
+                    Flexible(
+                      child: CapturedPiecesInline(
+                        pieces: topPieces,
+                        opponentPieces: bottomPieces,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               // BoardStage centered
@@ -207,23 +210,26 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
               // User Avatar Indicator (Bottom Right) with Inline Captured Pieces
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
-                child: Align(
-                  alignment: Alignment.centerRight,
-                  child: Row(
-                    children: [
-                      Flexible(child: CapturedPiecesInline(pieces: bottomPieces)),
-                      const SizedBox(width: 12),
-                      ActiveAvatarWrapper(
-                        isActive: isTurn,
-                        child: state.isEngineVsEngine
-                            ? OpponentAvatarIndicator(
-                                avatar: AiAvatar.getAvatar(state.bottomAvatarId),
-                                onTap: null, // Read-only from unrated arena
-                              )
-                            : const UserAvatarIndicator(),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Flexible(
+                      child: CapturedPiecesInline(
+                        pieces: bottomPieces,
+                        opponentPieces: topPieces,
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 12),
+                    ActiveAvatarWrapper(
+                      isActive: isTurn,
+                      child: state.isEngineVsEngine
+                          ? OpponentAvatarIndicator(
+                              avatar: AiAvatar.getAvatar(state.bottomAvatarId),
+                              onTap: null, // Read-only from unrated arena
+                            )
+                          : const UserAvatarIndicator(),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 12),
@@ -407,28 +413,31 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
         // Opponent with active wrapper
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Row(
-              children: [
-                ActiveAvatarWrapper(
-                  isActive: !isTurn,
-                  child: OpponentAvatarIndicator(
-                    avatar: AiAvatar.getAvatar(state.engineLevel),
-                    onTap: null, // Read-only from unrated arena
-                  ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              ActiveAvatarWrapper(
+                isActive: !isTurn,
+                child: OpponentAvatarIndicator(
+                  avatar: AiAvatar.getAvatar(state.engineLevel),
+                  onTap: null, // Read-only from unrated arena
                 ),
-                const SizedBox(width: 12),
-                Flexible(child: CapturedPiecesInline(pieces: topPieces)),
-              ],
-            ),
+              ),
+              const SizedBox(width: 12),
+              Flexible(
+                child: CapturedPiecesInline(
+                  pieces: topPieces,
+                  opponentPieces: bottomPieces,
+                ),
+              ),
+            ],
           ),
         ),
         // Board
         Expanded(
           child: Stack(
             children: [
-              const ArenaChessBoard(alignment: Alignment.topCenter),
+              const ArenaChessBoard(alignment: Alignment.center),
               if (state.isPaused) _buildPauseOverlay(context, ref),
             ],
           ),
@@ -436,23 +445,26 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
         // User with active wrapper
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-          child: Align(
-            alignment: Alignment.centerRight,
-            child: Row(
-              children: [
-                Flexible(child: CapturedPiecesInline(pieces: bottomPieces)),
-                const SizedBox(width: 12),
-                ActiveAvatarWrapper(
-                  isActive: isTurn,
-                  child: state.isEngineVsEngine
-                      ? OpponentAvatarIndicator(
-                          avatar: AiAvatar.getAvatar(state.bottomAvatarId),
-                          onTap: null, // Read-only from unrated arena
-                        )
-                      : const UserAvatarIndicator(),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Flexible(
+                child: CapturedPiecesInline(
+                  pieces: bottomPieces,
+                  opponentPieces: topPieces,
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 12),
+              ActiveAvatarWrapper(
+                isActive: isTurn,
+                child: state.isEngineVsEngine
+                    ? OpponentAvatarIndicator(
+                        avatar: AiAvatar.getAvatar(state.bottomAvatarId),
+                        onTap: null, // Read-only from unrated arena
+                      )
+                    : const UserAvatarIndicator(),
+              ),
+            ],
           ),
         ),
         // Actions wrapped in glass dock

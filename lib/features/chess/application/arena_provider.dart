@@ -578,6 +578,9 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
 
     if (moveMade) {
       _onMoveCompleted('$from$to$promotion');
+      if (_isAiTurn() && !state.game.gameOver && !state.isPaused) {
+        unawaited(ensureGameServicesStarted(analyzeCurrentPosition: true));
+      }
     } else {
       state = state.copyWith(moveAnimation: null);
     }
