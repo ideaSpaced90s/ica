@@ -1,28 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kingslayer_chess/features/chess/application/study_lab_provider.dart';
-import 'package:kingslayer_chess/features/chess/data/stockfish_service.dart';
 import 'package:chess/chess.dart' as chess_lib;
 
-class MockStockfishService extends StockfishService {
-  @override
-  Future<void> init() async {}
-  @override
-  Future<void> sendCommand(String command) async {}
-  @override
-  Future<void> analyzePosition(String fen, {int depth = 15}) async {}
-  @override
-  Future<void> stopAnalysis() async {}
-  @override
-  Stream<String> get outputStream => const Stream<String>.empty();
-}
-
 void main() {
-  late MockStockfishService mockEngine;
   late StudyLabNotifier notifier;
 
   setUp(() {
-    mockEngine = MockStockfishService();
-    notifier = StudyLabNotifier(mockEngine);
+    notifier = StudyLabNotifier();
   });
 
   test('Initial state is correct', () {

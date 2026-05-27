@@ -1,9 +1,6 @@
-import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:chess/chess.dart' as chess_lib;
 import 'package:intl/intl.dart';
-import '../data/stockfish_service.dart';
-import '../data/uci_parser.dart';
 import '../data/saved_game.dart';
 
 class StudyLabMoveNode {
@@ -122,65 +119,11 @@ class StudyLabState {
 }
 
 class StudyLabNotifier extends StateNotifier<StudyLabState> {
-  final StockfishService _engine;
-  StreamSubscription? _engineSubscription;
-
-  StudyLabNotifier(this._engine) : super(StudyLabState()) {
-    _initEngineListener();
-  }
-
-  void _initEngineListener() {
-    _engineSubscription = _engine.outputStream.listen((line) {
-      if (!state.isAnalysisActive) return;
-      final parsed = UCIParser.parseLine(line);
-      if (parsed['type'] == 'info' && parsed.containsKey('multipv')) {
-        final multiPV = parsed['multipv'] as int;
-        final currentLines = Map<int, Map<String, dynamic>>.from(state.engineLines);
-        currentLines[multiPV] = parsed;
-        state = state.copyWith(engineLines: currentLines);
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _engineSubscription?.cancel();
-    super.dispose();
-  }
-
-  Future<void> toggleAnalysis() async {
-    final active = !state.isAnalysisActive;
-    state = state.copyWith(
-      isAnalysisActive: active,
-      engineLines: {},
-    );
-
-    if (active) {
-      await _engine.init();
-      await _engine.sendCommand('setoption name MultiPV value 3');
-      _triggerAnalysis();
-    } else {
-      await _engine.stopAnalysis();
-    }
-  }
-
-  void updateEngineDepth(int depth) {
-    state = state.copyWith(engineDepth: depth);
-    if (state.isAnalysisActive) {
-      _triggerAnalysis();
-    }
-  }
-
-  void _triggerAnalysis() {
-    if (!state.isAnalysisActive) return;
-    state = state.copyWith(engineLines: {});
-    _engine.analyzePosition(state.activeFen, depth: state.engineDepth);
-  }
+  StudyLabNotifier() : super(StudyLabState());
 
   void selectNode(int? index) {
     state = state.copyWith(currentNodeIndex: index);
     _updateOpeningRecognition();
-    _triggerAnalysis();
   }
 
   void makeMove(String from, String to, [String promotion = '']) {
@@ -256,7 +199,6 @@ class StudyLabNotifier extends StateNotifier<StudyLabState> {
     );
 
     _updateOpeningRecognition();
-    _triggerAnalysis();
   }
 
   void undo() {
@@ -331,7 +273,6 @@ class StudyLabNotifier extends StateNotifier<StudyLabState> {
     );
 
     _updateOpeningRecognition();
-    _triggerAnalysis();
   }
 
   Set<int> _getDescendants(int index) {
@@ -355,7 +296,6 @@ class StudyLabNotifier extends StateNotifier<StudyLabState> {
       engineDepth: state.engineDepth,
       isBoardFlipped: state.isBoardFlipped,
     );
-    _triggerAnalysis();
   }
 
   List<PgnToken> tokenizePgn(String pgn) {
@@ -485,7 +425,6 @@ class StudyLabNotifier extends StateNotifier<StudyLabState> {
     );
 
     _updateOpeningRecognition();
-    _triggerAnalysis();
   }
 
   void importPgn(String pgn) {
@@ -593,7 +532,6 @@ class StudyLabNotifier extends StateNotifier<StudyLabState> {
     );
 
     _updateOpeningRecognition();
-    _triggerAnalysis();
   }
 
   String exportToPgn() {
@@ -698,6 +636,5 @@ class StudyLabNotifier extends StateNotifier<StudyLabState> {
 }
 
 final studyLabProvider = StateNotifierProvider<StudyLabNotifier, StudyLabState>((ref) {
-  final engine = ref.watch(stockfishServiceProvider);
-  return StudyLabNotifier(engine);
+  return StudyLabNotifier();
 });

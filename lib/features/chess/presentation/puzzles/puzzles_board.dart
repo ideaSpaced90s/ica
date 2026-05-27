@@ -313,6 +313,7 @@ class _PuzzlesBoardState extends ConsumerState<PuzzlesBoard>
                                             child: Center(
                                               child: ChessPieceWidget(
                                                 squareName: squareName,
+                                                game: displayGame,
                                                 highlighted: isSelected,
                                                 rotation: 0.0,
                                                 theme: chessTheme,

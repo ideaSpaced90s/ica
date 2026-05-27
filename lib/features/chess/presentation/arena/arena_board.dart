@@ -491,6 +491,7 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
                                                     builder: (context, child) {
                                                       return ChessPieceWidget(
                                                         squareName: squareName,
+                                                        game: displayGame,
                                                         highlighted: isSelected,
                                                         rotation:
                                                             _gearController

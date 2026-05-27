@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../application/chess_provider.dart';
+import '../../../domain/chess_game.dart';
 import '../../scholarly_theme.dart';
 import '../animations/piece_motion_profile.dart';
 
@@ -21,6 +22,7 @@ class ChessPieceWidget extends ConsumerStatefulWidget {
   final VoidCallback? onDragStarted;
   final VoidCallback? onDragEnd;
   final ChessTheme? theme;
+  final ChessGame? game;
 
   const ChessPieceWidget({
     super.key,
@@ -34,6 +36,7 @@ class ChessPieceWidget extends ConsumerStatefulWidget {
     this.onDragStarted,
     this.onDragEnd,
     this.theme,
+    this.game,
   });
 
   @override
@@ -91,7 +94,8 @@ class _ChessPieceWidgetState extends ConsumerState<ChessPieceWidget>
     var code = widget.pieceCode;
 
     if (code == null) {
-      final piece = chessState.game.getPiece(widget.squareName);
+      final activeGame = widget.game ?? chessState.game;
+      final piece = activeGame.getPiece(widget.squareName);
       if (piece == null) return const SizedBox.shrink();
 
       final colorStr = piece.color.toString().toLowerCase();
@@ -177,11 +181,11 @@ class _ChessPieceWidgetState extends ConsumerState<ChessPieceWidget>
         widget.squareName != 'none' &&
         ref.read(chessProvider.notifier).isAnimationTypeEnabled('feedback') &&
         !widget.highlighted) {
-      final chessStateForCheck = ref.read(chessProvider);
-      final pieceOnSquare = chessStateForCheck.game.getPiece(widget.squareName);
+      final activeGame = widget.game ?? chessState.game;
+      final pieceOnSquare = activeGame.getPiece(widget.squareName);
       final isKingPiece = pieceOnSquare?.type == chess_lib.PieceType.KING;
-      final isKingTurn = pieceOnSquare?.color == chessStateForCheck.game.turn;
-      if (isKingPiece && isKingTurn && chessStateForCheck.game.inCheck) {
+      final isKingTurn = pieceOnSquare?.color == activeGame.turn;
+      if (isKingPiece && isKingTurn && activeGame.inCheck) {
         pieceWidget = AnimatedBuilder(
           animation: _checkPulseController,
           builder: (context, child) {
