@@ -143,11 +143,23 @@ class ArenaState {
 
   bool get isChess960 => gameMode == 'chess960';
 
+  bool get isInReviewMode => (game.gameOver || isTimeOut) && isGameOverDismissed;
+
+  bool get canNavigateBack =>
+      recentMoves.isNotEmpty &&
+      (viewingMoveIndex == null ? recentMoves.isNotEmpty : viewingMoveIndex! > -1);
+
+  bool get canNavigateForward => viewingMoveIndex != null;
+
+
   String get currentBoardFen {
     if (viewingMoveIndex == null || viewingMoveIndex! >= recentMoves.length) {
       return game.fen;
     }
-    final tempGame = chess_lib.Chess();
+    if (viewingMoveIndex! < 0) {
+      return game.initialFen;
+    }
+    final tempGame = chess_lib.Chess.fromFEN(game.initialFen);
     for (int i = 0; i <= viewingMoveIndex!; i++) {
       tempGame.move(recentMoves[i]);
     }
@@ -808,7 +820,8 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
   }
 
   Future<void> makeMove(String from, String to) async {
-    if (state.game.gameOver) return;
+    if (state.game.gameOver && state.viewingMoveIndex == null) return;
+    if (state.isTimeOut && state.viewingMoveIndex == null) return;
 
     _stopAnalysisAndReset();
     _engineMoveTimer?.cancel();
@@ -816,6 +829,10 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
 
     if (state.viewingMoveIndex != null) {
       _truncateToViewingIndex();
+      state = state.copyWith(
+        isGameOverDismissed: false,
+        isTimeOut: false,
+      );
     }
 
     if (_redoStack.isNotEmpty) {
@@ -916,9 +933,7 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
     final movesToKeep = state.recentMoves.sublist(0, index + 1);
 
     final is960 = state.gameMode == 'chess960';
-    final tempGame = is960
-        ? ChessGame(fen: Chess960Generator.generateRandomPosition().fen, isChess960: true)
-        : ChessGame();
+    final tempGame = ChessGame(fen: state.game.initialFen, isChess960: is960);
 
     for (final m in movesToKeep) {
       tempGame.makeMove({'from': m.substring(0, 2), 'to': m.substring(2, 4), 'promotion': m.length > 4 ? m[4] : 'q'});
@@ -1316,6 +1331,46 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
 
   void setViewingMoveIndex(int? index) {
     state = state.copyWith(viewingMoveIndex: index);
+  }
+
+  void navigateBack() {
+    if (state.recentMoves.isEmpty) return;
+    final current = state.viewingMoveIndex;
+    if (current == null) {
+      if (state.recentMoves.length > 1) {
+        state = state.copyWith(viewingMoveIndex: state.recentMoves.length - 2);
+      } else {
+        state = state.copyWith(viewingMoveIndex: -1);
+      }
+    } else if (current > -1) {
+      state = state.copyWith(viewingMoveIndex: current - 1);
+    }
+    _soundService.playSfx(SoundEffect.uiClick);
+  }
+
+  void navigateForward() {
+    final current = state.viewingMoveIndex;
+    if (current == null) return;
+    final next = current + 1;
+    if (next >= state.recentMoves.length) {
+      state = state.copyWith(viewingMoveIndex: null);
+    } else {
+      state = state.copyWith(viewingMoveIndex: next);
+    }
+    _soundService.playSfx(SoundEffect.uiClick);
+  }
+
+  void continueAfterTimeout() {
+    state = state.copyWith(
+      isTimeOut: false,
+      isGameOverDismissed: false,
+      clockStarted: false,
+      activeClockSide: null,
+    );
+    if (_isAiTurn()) {
+      unawaited(ensureGameServicesStarted(analyzeCurrentPosition: true));
+    }
+    _soundService.playSfx(SoundEffect.uiClick);
   }
 
   Future<SavedGameEntry> saveCurrentGame({String? resultOverride}) async {

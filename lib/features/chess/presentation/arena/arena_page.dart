@@ -93,7 +93,9 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                   : _buildPortraitLayout(context, ref, state),
             ),
             if ((state.game.gameOver || state.isTimeOut) && !state.isGameOverDismissed)
-              _buildGameOverOverlay(context, ref, state),
+              state.isTimeOut && !state.game.gameOver
+                  ? _buildTimeOutOverlay(context, ref, state)
+                  : _buildGameOverOverlay(context, ref, state),
             
             // Confetti Layer
             Align(
@@ -527,17 +529,35 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                   onTap: () => _handleNewGame(context, ref),
                 ),
                 const SizedBox(width: 8),
-                ActionIconButton(
-                  icon: Icons.undo_rounded,
-                  isEnabled: state.canUndo,
-                  onTap: state.canUndo ? () => ref.read(arenaProvider.notifier).undo() : null,
-                ),
-                const SizedBox(width: 8),
-                ActionIconButton(
-                  icon: Icons.redo_rounded,
-                  isEnabled: state.canRedo,
-                  onTap: state.canRedo ? () => ref.read(arenaProvider.notifier).redo() : null,
-                ),
+                if (state.isInReviewMode) ...[
+                  ActionIconButton(
+                    icon: Icons.skip_previous_rounded,
+                    isEnabled: state.canNavigateBack,
+                    onTap: state.canNavigateBack
+                        ? () => ref.read(arenaProvider.notifier).navigateBack()
+                        : null,
+                  ),
+                  const SizedBox(width: 8),
+                  ActionIconButton(
+                    icon: Icons.skip_next_rounded,
+                    isEnabled: state.canNavigateForward,
+                    onTap: state.canNavigateForward
+                        ? () => ref.read(arenaProvider.notifier).navigateForward()
+                        : null,
+                  ),
+                ] else ...[
+                  ActionIconButton(
+                    icon: Icons.undo_rounded,
+                    isEnabled: state.canUndo,
+                    onTap: state.canUndo ? () => ref.read(arenaProvider.notifier).undo() : null,
+                  ),
+                  const SizedBox(width: 8),
+                  ActionIconButton(
+                    icon: Icons.redo_rounded,
+                    isEnabled: state.canRedo,
+                    onTap: state.canRedo ? () => ref.read(arenaProvider.notifier).redo() : null,
+                  ),
+                ],
                 const SizedBox(width: 8),
                 ActionIconButton(
                   icon: Icons.flip_camera_android_outlined,
@@ -879,6 +899,209 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                           ),
                           child: Text(
                             'REVIEW BOARD',
+                            style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTimeOutOverlay(BuildContext context, WidgetRef ref, ArenaState state) {
+    final playerTimedOut = state.isPlayerWhite
+        ? state.whiteTimeLeft <= Duration.zero
+        : state.blackTimeLeft <= Duration.zero;
+
+    final title = '⏱️ TIME\'S UP!';
+    final msg = playerTimedOut
+        ? 'Your clock has run out! Would you like to continue playing with the clock disabled, or review your moves?'
+        : 'Your opponent ran out of time! Would you like to continue playing with the clock disabled, or review your moves?';
+
+    final accentColor = ScholarlyTheme.accentBlue;
+
+    return Positioned.fill(
+      child: ClipRRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+          child: Container(
+            color: Colors.black.withValues(alpha: 0.55),
+            child: Center(
+              child: _SpringEntrance(
+                child: Container(
+                  width: MediaQuery.of(context).size.width * 0.85,
+                  padding: const EdgeInsets.all(28),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Colors.white.withValues(alpha: 0.92),
+                        Colors.white.withValues(alpha: 0.80),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: accentColor.withValues(alpha: 0.6),
+                      width: 2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: accentColor.withValues(alpha: 0.25),
+                        blurRadius: 30,
+                        spreadRadius: 4,
+                        offset: const Offset(0, 8),
+                      ),
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.1),
+                        blurRadius: 20,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Icon with glow
+                      Container(
+                        width: 72,
+                        height: 72,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: accentColor.withValues(alpha: 0.12),
+                          border: Border.all(color: accentColor.withValues(alpha: 0.4), width: 2),
+                          boxShadow: [
+                            BoxShadow(
+                              color: accentColor.withValues(alpha: 0.3),
+                              blurRadius: 16,
+                              spreadRadius: 2,
+                            ),
+                          ],
+                        ),
+                        child: Icon(
+                          Icons.timer_off_rounded,
+                          size: 36,
+                          color: accentColor,
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      // Title
+                      Text(
+                        title,
+                        style: GoogleFonts.inter(
+                          color: accentColor,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 22,
+                          letterSpacing: 2.0,
+                          shadows: [
+                            Shadow(
+                              color: accentColor.withValues(alpha: 0.3),
+                              blurRadius: 8,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        msg,
+                        style: GoogleFonts.inter(
+                          color: ScholarlyTheme.textMuted,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          height: 1.5,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 28),
+                      // Buttons
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                accentColor,
+                                accentColor.withValues(alpha: 0.8),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(14),
+                            boxShadow: [
+                              BoxShadow(
+                                color: accentColor.withValues(alpha: 0.4),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: FilledButton(
+                            onPressed: () {
+                              ref.read(arenaProvider.notifier).continueAfterTimeout();
+                            },
+                            style: FilledButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              foregroundColor: Colors.white,
+                              shadowColor: Colors.transparent,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            ),
+                            child: Text(
+                              'CONTINUE PLAYING',
+                              style: GoogleFonts.inter(
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 1.2,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 46,
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            ref.read(arenaProvider.notifier).dismissGameOver();
+                          },
+                          icon: const Icon(Icons.palette_rounded),
+                          label: Text(
+                            'REVIEW BOARD',
+                            style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: ScholarlyTheme.accentGold,
+                            side: BorderSide(
+                              color: ScholarlyTheme.accentGold.withValues(alpha: 0.6),
+                              width: 1.5,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 46,
+                        child: OutlinedButton(
+                          onPressed: () {
+                            ref.read(arenaProvider.notifier).reset();
+                          },
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: ScholarlyTheme.textMuted,
+                            side: BorderSide(
+                              color: ScholarlyTheme.panelStroke.withValues(alpha: 0.6),
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14)),
+                          ),
+                          child: Text(
+                            'PLAY NEW MATCH',
                             style: GoogleFonts.inter(fontWeight: FontWeight.bold),
                           ),
                         ),
