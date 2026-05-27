@@ -99,6 +99,7 @@ class ChessSoundService {
   };
   bool isBgmEnabled = false;
   bool _isInitialized = false;
+  final Completer<void> _initCompleter = Completer<void>();
 
   final double _bgmVolumeScale = 0.5;
   final double _sfxVolumeScale = 0.7;
@@ -107,45 +108,56 @@ class ChessSoundService {
     _initAudio();
   }
 
+  /// Returns a future that completes when the audio engine is ready.
+  Future<void> get initialized => _initCompleter.future;
+
   Future<void> _initAudio() async {
     if (_isInitialized) return;
 
-    unawaited(() async {
-      try {
-        if (!SoLoud.instance.isInitialized) {
-          await SoLoud.instance.init();
-        }
-
-        // Load BGM tracks into memory buffers
-        for (final track in _bgmTracks) {
-          try {
-            final source = await SoLoud.instance.loadAsset(track);
-            _bgmSources.add(source);
-          } catch (e) {
-            debugPrint('Error loading BGM $track: $e');
-          }
-        }
-
-        // Load SFX tracks into memory buffers
-        for (final entry in _sfxTracks.entries) {
-          try {
-            final source = await SoLoud.instance.loadAsset(entry.value);
-            _sfxSources[entry.key] = source;
-          } catch (e) {
-            debugPrint('Error loading SFX ${entry.key}: $e');
-          }
-        }
-
-        _isInitialized = true;
-
-        // Start BGM if enabled during initialization
-        if (isBgmEnabled) {
-          _playRandomBgm();
-        }
-      } catch (e) {
-        debugPrint('ChessSoundService Init Error: $e');
+    try {
+      debugPrint('ChessSoundService: Starting SoLoud init...');
+      if (!SoLoud.instance.isInitialized) {
+        await SoLoud.instance.init();
       }
-    }());
+      debugPrint('ChessSoundService: SoLoud engine initialized.');
+
+      // Load BGM tracks into memory buffers
+      for (final track in _bgmTracks) {
+        try {
+          final source = await SoLoud.instance.loadAsset(track);
+          _bgmSources.add(source);
+        } catch (e) {
+          debugPrint('ChessSoundService: Error loading BGM $track: $e');
+        }
+      }
+      debugPrint('ChessSoundService: Loaded ${_bgmSources.length}/${_bgmTracks.length} BGM tracks.');
+
+      // Load SFX tracks into memory buffers
+      int sfxLoaded = 0;
+      for (final entry in _sfxTracks.entries) {
+        try {
+          final source = await SoLoud.instance.loadAsset(entry.value);
+          _sfxSources[entry.key] = source;
+          sfxLoaded++;
+        } catch (e) {
+          debugPrint('ChessSoundService: Error loading SFX ${entry.key}: $e');
+        }
+      }
+      debugPrint('ChessSoundService: Loaded $sfxLoaded/${_sfxTracks.length} SFX tracks.');
+
+      _isInitialized = true;
+      if (!_initCompleter.isCompleted) _initCompleter.complete();
+
+      // Start BGM if it was enabled while we were loading
+      if (isBgmEnabled && _bgmSources.isNotEmpty) {
+        debugPrint('ChessSoundService: BGM was requested during init, starting playback now.');
+        _playRandomBgm();
+      }
+    } catch (e) {
+      debugPrint('ChessSoundService: FATAL Init Error: $e');
+      _isInitialized = false;
+      if (!_initCompleter.isCompleted) _initCompleter.complete();
+    }
   }
 
   void updateSettings({
@@ -170,10 +182,17 @@ class ChessSoundService {
       this.academySoundSettings = academySoundSettings;
     }
 
-    if (isBgmEnabled != bgmEnabled) {
-      isBgmEnabled = bgmEnabled;
+    final bgmChanged = isBgmEnabled != bgmEnabled;
+    isBgmEnabled = bgmEnabled;
+
+    if (bgmChanged) {
       if (isBgmEnabled) {
-        _playRandomBgm();
+        // If not yet initialized, _initAudio will start BGM when ready
+        if (_isInitialized) {
+          _playRandomBgm();
+        } else {
+          debugPrint('ChessSoundService: BGM enabled but init pending — will start after init.');
+        }
       } else {
         _stopBgm();
       }
@@ -248,6 +267,7 @@ class ChessSoundService {
   }
 
   Future<void> _playSound(String key) async {
+    await initialized;
     if (!isSfxEnabled || !_isInitialized || !SoLoud.instance.isInitialized) return;
 
     final source = _sfxSources[key];
@@ -255,7 +275,7 @@ class ChessSoundService {
       try {
         await SoLoud.instance.play(source, volume: _sfxVolumeScale);
       } catch (e) {
-        debugPrint('Error playing sound $key: $e');
+        debugPrint('ChessSoundService: Error playing sound $key: $e');
       }
     }
   }
@@ -314,6 +334,7 @@ class ChessSoundService {
 
   Future<void> playWriting() async {
     if (isRatedMode) return;
+    await initialized;
     if (!isSfxEnabled || !_isCategoryEnabled('ambientClicks') || !_isInitialized || !SoLoud.instance.isInitialized) return;
     
     // Cycle through 5 clicks to sound like real typing
@@ -324,7 +345,7 @@ class ChessSoundService {
         // Play at lower volume so it remains a subtle background texture
         await SoLoud.instance.play(source, volume: _sfxVolumeScale * 0.45);
       } catch (e) {
-        debugPrint('Error playing writing click: $e');
+        debugPrint('ChessSoundService: Error playing writing click: $e');
       }
     }
   }
