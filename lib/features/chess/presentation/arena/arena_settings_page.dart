@@ -175,8 +175,14 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
                       title: 'GAMEPLAY',
                       children: [
                         _SettingsTile(
-                          label: 'Time Control',
-                          description: '${state.whiteTimeLeft.inMinutes}+${state.incrementDuration.inSeconds} • Tap to change',
+                          label: 'Time',
+                          description: (() {
+                            final baseSecs = state.baseTimeDuration.inSeconds;
+                            final mins = baseSecs ~/ 60;
+                            final secs = baseSecs % 60;
+                            final timeStr = secs == 0 ? '$mins' : '$mins:${secs.toString().padLeft(2, '0')}';
+                            return '$timeStr+${state.incrementDuration.inSeconds} • Tap to change';
+                          })(),
                           icon: Icons.timer_rounded,
                           onTap: () => _showTimeControlSelector(context, ref),
                           trailing: const Icon(
@@ -216,7 +222,16 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
                             ),
                           ),
                         ),
-
+                        _SettingsSwitchTile(
+                          label: 'Quick play',
+                          description: state.quickPlay
+                              ? 'Force to play immediately'
+                              : 'Tap and hold the flash icon to force play immediately',
+                          icon: Icons.flash_on_rounded,
+                          value: state.quickPlay,
+                          onChanged: (v) => notifier.toggleQuickPlay(v),
+                          enabled: true,
+                        ),
                       ],
                     ),
 
@@ -374,14 +389,74 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
             final state = ref.watch(chessProvider);
             final notifier = ref.read(chessProvider.notifier);
 
-            final presets = [
-              {'label': '1+0', 'min': 1, 'inc': 0},
-              {'label': '3+0', 'min': 3, 'inc': 0},
-              {'label': '3+2', 'min': 3, 'inc': 2},
-              {'label': '10+0', 'min': 10, 'inc': 0},
-              {'label': '10+5', 'min': 10, 'inc': 5},
-              {'label': '5+25', 'min': 5, 'inc': 25},
+            final bulletPresets = [
+              {'label': '0.5+0', 'min': 0, 'sec': 30, 'inc': 0},
+              {'label': '1+0', 'min': 1, 'sec': 0, 'inc': 0},
+              {'label': '2+1', 'min': 2, 'sec': 0, 'inc': 1},
             ];
+            final blitzPresets = [
+              {'label': '3+0', 'min': 3, 'sec': 0, 'inc': 0},
+              {'label': '3+2', 'min': 3, 'sec': 0, 'inc': 2},
+              {'label': '5+0', 'min': 5, 'sec': 0, 'inc': 0},
+            ];
+            final rapidPresets = [
+              {'label': '10+0', 'min': 10, 'sec': 0, 'inc': 0},
+              {'label': '15+10', 'min': 15, 'sec': 0, 'inc': 10},
+              {'label': '30+0', 'min': 30, 'sec': 0, 'inc': 0},
+            ];
+
+            Widget buildGroup(String title, IconData icon, List<Map<String, dynamic>> group) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(icon, color: ScholarlyTheme.accentBlue, size: 16),
+                      const SizedBox(width: 8),
+                      Text(
+                        title.toUpperCase(),
+                        style: GoogleFonts.inter(
+                          color: ScholarlyTheme.textMuted,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: group.map((p) {
+                      final isSelected = state.baseTimeDuration.inMinutes == p['min'] &&
+                          state.baseTimeDuration.inSeconds % 60 == p['sec'] &&
+                          state.incrementDuration.inSeconds == p['inc'];
+                      return ChoiceChip(
+                        label: Text(p['label'] as String),
+                        selected: isSelected,
+                        onSelected: (selected) {
+                          if (selected) {
+                            notifier.setTimeControl(
+                              Duration(minutes: p['min'] as int, seconds: p['sec'] as int),
+                              Duration(seconds: p['inc'] as int),
+                            );
+                            Navigator.pop(context);
+                          }
+                        },
+                        selectedColor: ScholarlyTheme.accentBlueSoft,
+                        labelStyle: GoogleFonts.inter(
+                          color: isSelected ? ScholarlyTheme.accentBlue : ScholarlyTheme.textPrimary,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          fontSize: 13,
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+              );
+            }
 
             return ClipRRect(
               borderRadius: const BorderRadius.vertical(
@@ -401,57 +476,48 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
                       width: 1.5,
                     ),
                   ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Time Control',
-                        style: GoogleFonts.inter(
-                          color: ScholarlyTheme.textPrimary,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: presets.map((p) {
-                          final isSelected = state.whiteTimeLeft.inMinutes == p['min'] &&
-                              state.incrementDuration.inSeconds == p['inc'];
-                          return ChoiceChip(
-                            label: Text(p['label'] as String),
-                            selected: isSelected,
-                            onSelected: (selected) {
-                              if (selected) {
-                                notifier.setTimeControl(
-                                  Duration(minutes: p['min'] as int),
-                                  Duration(seconds: p['inc'] as int),
-                                );
-                              }
-                            },
-                            selectedColor: ScholarlyTheme.accentBlueSoft,
-                            labelStyle: GoogleFonts.inter(
-                              color: isSelected ? ScholarlyTheme.accentBlue : ScholarlyTheme.textPrimary,
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Center(
+                          child: Container(
+                            width: 40,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: ScholarlyTheme.panelStroke,
+                              borderRadius: BorderRadius.circular(2),
                             ),
-                          );
-                        }).toList(),
-                      ),
-                      const SizedBox(height: 24),
-                      Text(
-                        'Custom',
-                        style: GoogleFonts.inter(
-                          color: ScholarlyTheme.textMuted,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      _showCustomTimeControls(context, ref),
-                      const SizedBox(height: 32),
-                    ],
+                        const SizedBox(height: 20),
+                        Text(
+                          'Time',
+                          style: GoogleFonts.inter(
+                            color: ScholarlyTheme.textPrimary,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        buildGroup('Bullet Arena', Icons.bolt_rounded, bulletPresets),
+                        buildGroup('Blitz Arena', Icons.local_fire_department_rounded, blitzPresets),
+                        buildGroup('Rapid Arena', Icons.timer_rounded, rapidPresets),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Custom',
+                          style: GoogleFonts.inter(
+                            color: ScholarlyTheme.textMuted,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        _showCustomTimeControls(context, ref),
+                        const SizedBox(height: 32),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -463,7 +529,9 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
   }
 
   Widget _showCustomTimeControls(BuildContext context, WidgetRef ref) {
-    int totalMinutes = ref.read(chessProvider).whiteTimeLeft.inMinutes;
+    final baseTime = ref.read(chessProvider).baseTimeDuration;
+    int totalMinutes = baseTime.inMinutes;
+    if (totalMinutes < 1) totalMinutes = 1;
     int incrementSeconds = ref.read(chessProvider).incrementDuration.inSeconds;
 
     return StatefulBuilder(

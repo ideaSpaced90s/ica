@@ -13,10 +13,6 @@ import '../shared/themes/chess_theme.dart';
 import '../shared/widgets/chess_piece_widget.dart';
 import '../shared/widgets/orbiting_star_animation.dart';
 import '../shared/widgets/promotion_overlay.dart';
-import '../shared/animations/signature_move_overlay.dart';
-import '../shared/animations/landing_feedback.dart';
-import '../shared/animations/tap_ripple.dart';
-import '../shared/animations/piece_motion_profile.dart';
 import '../shared/animations/shake_animation.dart';
 
 import 'themes/rated_classic_theme.dart';
@@ -35,11 +31,7 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
   String? _selectedSquare;
   List<String> _legalTargets = const [];
 
-  // Tap ripple entries: board-local top-left Offset of the tapped square
-  final List<Offset> _tapRipples = [];
 
-  // Landing micro-settle entries: {square, profile, row, col}
-  final List<Map<String, dynamic>> _landingFeedbacks = [];
 
   @override
   Widget build(BuildContext context) {
@@ -106,6 +98,9 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
                             _isInBetweenSquare(squareName, bgState.lastMove);
                         final isThreatened = bgState.threatenedSquares
                             .contains(squareName);
+                        final isPremoveStartOrEnd =
+                            bgState.premoveFrom == squareName ||
+                            bgState.premoveTo == squareName;
 
                         final piece = displayGame.getPiece(squareName);
 
@@ -222,18 +217,7 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
                                                 begin: isLastMoveStartOrEnd ? 0.35 : 0.15,
                                                 end: isLastMoveStartOrEnd ? 0.24 : 0.09,
                                               ),
-                                              duration: ref
-                                                      .read(
-                                                        chessProvider
-                                                            .notifier,
-                                                      )
-                                                      .isAnimationTypeEnabled(
-                                                        'indicators',
-                                                      )
-                                                  ? const Duration(
-                                                      milliseconds: 400,
-                                                    )
-                                                  : Duration.zero,
+                                              duration: Duration.zero,
                                               curve: Curves.easeOutCubic,
                                               builder: (context, opacity, _) {
                                                 return chessTheme
@@ -243,27 +227,18 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
                                                     );
                                               },
                                             ),
+                                          if (isPremoveStartOrEnd)
+                                            Container(
+                                              decoration: BoxDecoration(
+                                                color: Colors.redAccent.withValues(alpha: 0.25),
+                                                border: Border.all(
+                                                  color: Colors.redAccent,
+                                                  width: 2.0,
+                                                ),
+                                              ),
+                                            ),
                                           ShakeAnimation(
-                                            isActive:
-                                                ref
-                                                    .read(
-                                                      chessProvider
-                                                          .notifier,
-                                                    )
-                                                    .isAnimationTypeEnabled(
-                                                      'feedback',
-                                                      isRated: true,
-                                                    ) &&
-                                                piece?.type ==
-                                                    chess_lib
-                                                        .PieceType
-                                                        .KING &&
-                                                ((bgState.game.inCheck &&
-                                                        piece?.color ==
-                                                            bgState
-                                                                .game
-                                                                .turn) ||
-                                                    isThreatened),
+                                            isActive: false, // Disabled in Battleground for snappiness
                                             child: Center(
                                               child: ChessPieceWidget(
                                                 squareName: squareName,
@@ -271,15 +246,7 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
                                                 highlighted: isSelected,
                                                 rotation: 0.0,
                                                 theme: chessTheme,
-                                                isMoving:
-                                                    bgState
-                                                            .moveAnimation
-                                                            ?.from ==
-                                                        squareName ||
-                                                    bgState
-                                                            .moveAnimation
-                                                            ?.to ==
-                                                        squareName,
+                                                isMoving: false, // Disabled in Battleground for snappiness
                                                 onTap: () =>
                                                     _handleSquareTap(
                                                       squareName:
@@ -318,53 +285,15 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
                     ),
                   ),
                   if (bgState.moveAnimation != null)
-                    SignatureMoveOverlay(
-                      data: bgState.moveAnimation!,
-                      boardSize: boardSize,
-                      isFlipped: bgState.isBoardFlipped,
-                      isCheckmate: bgState.game.inCheckmate,
-                      theme: chessTheme,
-                      onComplete: () {
-                        ref
-                            .read(battlegroundProvider.notifier)
-                            .clearMoveAnimation();
+                    Builder(
+                      builder: (context) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          ref
+                              .read(battlegroundProvider.notifier)
+                              .clearMoveAnimation();
+                        });
+                        return const SizedBox.shrink();
                       },
-                      onLand: (from, to, pieceCode, profile) =>
-                          _handleMoveLanding(
-                            from,
-                            to,
-                            pieceCode,
-                            profile,
-                            boardSize,
-                            isCritical: bgState.game.inCheckmate,
-                          ),
-                      onActionTrigger: (action, position) {},
-                    ),
-
-                  // Landing micro-settle effects
-                  for (final fb in _landingFeedbacks)
-                    LandingFeedback(
-                      squareName: fb['square'] as String,
-                      profile: fb['profile'] as PieceMotionProfile,
-                      squareSize: boardSize / 8,
-                      squareRow: fb['row'] as int,
-                      squareCol: fb['col'] as int,
-                      isFlipped: bgState.isBoardFlipped,
-                      isCritical: fb['critical'] as bool? ?? false,
-                      onComplete: () =>
-                          setState(() => _landingFeedbacks.remove(fb)),
-                    ),
-
-                  // Tap ripple effects
-                  for (final pos in _tapRipples)
-                    TapRipple(
-                      position: pos,
-                      squareSize: boardSize / 8,
-                      arcadeMode: ref
-                          .read(chessProvider.notifier)
-                          .isAnimationTypeEnabled('arcadeMode', isRated: true),
-                      onComplete: () =>
-                          setState(() => _tapRipples.remove(pos)),
                     ),
 
                   PromotionOverlay(theme: chessTheme),
@@ -377,19 +306,30 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
     );
   }
 
+  List<String> _getLegalTargetsForSquare(String squareName, ChessGame game, BattlegroundState bgState) {
+    final isWhiteTurn = game.turn == chess_lib.Color.WHITE;
+    final isPlayerTurn = bgState.isPlayerWhite == isWhiteTurn;
+    if (isPlayerTurn) {
+      return game.legalDestinations(squareName);
+    } else {
+      try {
+        final fenParts = game.fen.split(' ');
+        if (fenParts.length > 1) {
+          fenParts[1] = bgState.isPlayerWhite ? 'w' : 'b';
+          final tempGame = ChessGame(fen: fenParts.join(' '));
+          return tempGame.legalDestinations(squareName);
+        }
+      } catch (_) {}
+      return const [];
+    }
+  }
+
   void _handleSquareTap({
     required String squareName,
     required bool pieceExists,
   }) {
-    final haptics = ref.read(chessHapticsServiceProvider);
-    haptics.selection();
     final bgState = ref.read(battlegroundProvider);
     final displayGame = ChessGame(fen: bgState.currentBoardFen);
-
-    // Tap ripple on every tap (gated by animations setting)
-    if (ref.read(chessProvider.notifier).isAnimationTypeEnabled('feedback')) {
-      _triggerTapRipple(squareName);
-    }
 
     if (_selectedSquare != null && _legalTargets.contains(squareName)) {
       ref.read(battlegroundProvider.notifier).makeMove(_selectedSquare!, squareName);
@@ -401,6 +341,7 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
       _handlePieceSelection(squareName, displayGame);
     } else {
       _clearSelection();
+      ref.read(battlegroundProvider.notifier).clearPremove();
     }
   }
 
@@ -412,27 +353,36 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
       return;
     }
 
-    final isWhiteTurn = displayGame.turn == chess_lib.Color.WHITE;
-    if (piece.color == chess_lib.Color.WHITE && !isWhiteTurn) {
-      _clearSelection();
-      return;
-    }
-    if (piece.color == chess_lib.Color.BLACK && isWhiteTurn) {
+    final isGameOver = bgState.game.gameOver;
+    if (isGameOver) {
       _clearSelection();
       return;
     }
 
-    // Lock board controls if game is over or it's AI turn
-    final isGameOver = bgState.game.gameOver;
-    final isAiTurn = _isAiTurn(bgState);
-    if (isGameOver || isAiTurn) {
-      _clearSelection();
-      return;
+    final isWhiteTurn = displayGame.turn == chess_lib.Color.WHITE;
+    final isPlayerTurn = bgState.isPlayerWhite == isWhiteTurn;
+
+    if (isPlayerTurn) {
+      if (piece.color == chess_lib.Color.WHITE && !isWhiteTurn) {
+        _clearSelection();
+        return;
+      }
+      if (piece.color == chess_lib.Color.BLACK && isWhiteTurn) {
+        _clearSelection();
+        return;
+      }
+    } else {
+      final isPlayerPiece = (piece.color == chess_lib.Color.WHITE) == bgState.isPlayerWhite;
+      if (!isPlayerPiece) {
+        _clearSelection();
+        ref.read(battlegroundProvider.notifier).clearPremove();
+        return;
+      }
     }
 
     setState(() {
       _selectedSquare = squareName;
-      _legalTargets = displayGame.legalDestinations(squareName);
+      _legalTargets = _getLegalTargetsForSquare(squareName, displayGame, bgState);
     });
   }
 
@@ -443,68 +393,7 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
     });
   }
 
-  bool _isAiTurn(BattlegroundState state) {
-    final fenParts = state.game.fen.split(' ');
-    if (fenParts.length > 1) {
-      final turnWhite = fenParts[1] == 'w';
-      return state.isPlayerWhite != turnWhite;
-    }
-    return false;
-  }
 
-  void _triggerTapRipple(String squareName) {
-    final rowCol = _getSquareRowCol(squareName, ref.read(battlegroundProvider).isBoardFlipped);
-    if (rowCol != null) {
-      final size = context.size?.width ?? 0;
-      final squareSize = size / 8;
-      final offset = Offset(
-        rowCol.y * squareSize,
-        rowCol.x * squareSize,
-      );
-      setState(() {
-        _tapRipples.add(offset);
-      });
-    }
-  }
-
-  void _handleMoveLanding(
-    String from,
-    String to,
-    String pieceCode,
-    PieceMotionProfile profile,
-    double boardSize, {
-    bool isCritical = false,
-  }) {
-    final isFlipped = ref.read(battlegroundProvider).isBoardFlipped;
-    final toRowCol = _getSquareRowCol(to, isFlipped);
-    if (toRowCol != null) {
-      setState(() {
-        _landingFeedbacks.add({
-          'square': to,
-          'profile': profile,
-          'row': toRowCol.x,
-          'col': toRowCol.y,
-          'critical': isCritical,
-        });
-      });
-    }
-  }
-
-  Point<int>? _getSquareRowCol(String square, bool isFlipped) {
-    if (square.length != 2) return null;
-    final files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-    final ranks = ['8', '7', '6', '5', '4', '3', '2', '1'];
-
-    final fileIndex = files.indexOf(square[0]);
-    final rankIndex = ranks.indexOf(square[1]);
-
-    if (fileIndex == -1 || rankIndex == -1) return null;
-
-    if (isFlipped) {
-      return Point(7 - rankIndex, 7 - fileIndex);
-    }
-    return Point(rankIndex, fileIndex);
-  }
 
   String _getSquareName(int row, int col, bool isFlipped) {
     final files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];

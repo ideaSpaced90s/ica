@@ -7,7 +7,14 @@ abstract class ChessEngineService {
   bool get isError;
   Stream<String> get outputStream;
   Future<void> sendCommand(String command);
-  Future<void> analyzePosition(String fen, {int depth = 15});
+  Future<void> analyzePosition(
+    String fen, {
+    int depth = 15,
+    Duration? wTime,
+    Duration? bTime,
+    Duration? wInc,
+    Duration? bInc,
+  });
   Future<void> stopAnalysis();
   Future<void> setSkillLevel(int level, {int multiPV = 1});
   Future<void> setChess960Mode(bool isEnabled);

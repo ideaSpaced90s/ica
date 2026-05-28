@@ -16,6 +16,7 @@ class AppSettings {
   final String engineLevel;
   final String bottomAvatarId;
   final bool isAiOperational;
+  final bool quickPlay;
   final int totalTimeMinutes;
   final int incrementSeconds;
   final Map<String, bool> animationSettings;
@@ -67,6 +68,7 @@ class AppSettings {
     this.engineLevel = 'avatar_6',
     this.bottomAvatarId = 'avatar_6',
     this.isAiOperational = true,
+    this.quickPlay = false,
     this.totalTimeMinutes = 10,
     this.incrementSeconds = 0,
     this.gameMode = 'classic',
@@ -131,6 +133,7 @@ class AppSettings {
     String? engineLevel,
     String? bottomAvatarId,
     bool? isAiOperational,
+    bool? quickPlay,
     int? totalTimeMinutes,
     int? incrementSeconds,
     Map<String, bool>? animationSettings,
@@ -176,6 +179,7 @@ class AppSettings {
       engineLevel: engineLevel ?? this.engineLevel,
       bottomAvatarId: bottomAvatarId ?? this.bottomAvatarId,
       isAiOperational: isAiOperational ?? this.isAiOperational,
+      quickPlay: quickPlay ?? this.quickPlay,
       totalTimeMinutes: totalTimeMinutes ?? this.totalTimeMinutes,
       incrementSeconds: incrementSeconds ?? this.incrementSeconds,
       animationSettings: animationSettings ?? this.animationSettings,
@@ -223,6 +227,7 @@ class AppSettings {
     'engineLevel': engineLevel,
     'bottomAvatarId': bottomAvatarId,
     'isAiOperational': isAiOperational,
+    'quickPlay': quickPlay,
     'totalTimeMinutes': totalTimeMinutes,
     'incrementSeconds': incrementSeconds,
     'gameMode': gameMode,
@@ -300,6 +305,7 @@ class AppSettings {
       engineLevel: level,
       bottomAvatarId: bottomLevel,
       isAiOperational: json['isAiOperational'] ?? true,
+      quickPlay: json['quickPlay'] ?? false,
       totalTimeMinutes: json['totalTimeMinutes'] ?? 10,
       incrementSeconds: json['incrementSeconds'] ?? 0,
       gameMode: json['gameMode'] ?? 'classic',

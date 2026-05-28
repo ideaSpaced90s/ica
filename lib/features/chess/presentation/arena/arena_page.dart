@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../application/chess_provider.dart';
 import '../../application/arena_provider.dart';
 import '../../application/study_lab_provider.dart';
+import '../../services/chess_sound_service.dart';
 import '../mobile_navigation_shell.dart';
 import '../scholarly_theme.dart';
 import '../widgets/game_controls.dart';
@@ -181,26 +182,26 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Flexible(
-                      flex: 3,
-                      child: ActiveAvatarWrapper(
-                        isActive: !isTurn,
-                        child: OpponentAvatarIndicator(
-                          avatar: AiAvatar.getAvatar(state.engineLevel),
-                          onTap: null, // Read-only from unrated arena
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ActiveAvatarWrapper(
+                          isActive: !isTurn,
+                          child: OpponentAvatarIndicator(
+                            avatar: AiAvatar.getAvatar(state.engineLevel),
+                            onTap: null, // Read-only from unrated arena
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: 12),
+                        CapturedPiecesInline(
+                          pieces: topPieces,
+                          opponentPieces: bottomPieces,
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 12),
-                    Flexible(
-                      flex: 2,
-                      child: CapturedPiecesInline(
-                        pieces: topPieces,
-                        opponentPieces: bottomPieces,
-                      ),
-                    ),
+                    _buildThinkingFlashButton(context: context, ref: ref, state: state),
                   ],
                 ),
               ),
@@ -424,26 +425,26 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Flexible(
-                flex: 3,
-                child: ActiveAvatarWrapper(
-                  isActive: !isTurn,
-                  child: OpponentAvatarIndicator(
-                    avatar: AiAvatar.getAvatar(state.engineLevel),
-                    onTap: null, // Read-only from unrated arena
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ActiveAvatarWrapper(
+                    isActive: !isTurn,
+                    child: OpponentAvatarIndicator(
+                      avatar: AiAvatar.getAvatar(state.engineLevel),
+                      onTap: null, // Read-only from unrated arena
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 12),
+                  CapturedPiecesInline(
+                    pieces: topPieces,
+                    opponentPieces: bottomPieces,
+                  ),
+                ],
               ),
-              const SizedBox(width: 12),
-              Flexible(
-                flex: 2,
-                child: CapturedPiecesInline(
-                  pieces: topPieces,
-                  opponentPieces: bottomPieces,
-                ),
-              ),
+              _buildThinkingFlashButton(context: context, ref: ref, state: state),
             ],
           ),
         ),
@@ -1117,6 +1118,85 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
     );
   }
 
+
+  Widget _buildThinkingFlashButton({
+    required BuildContext context,
+    required WidgetRef ref,
+    required ArenaState state,
+  }) {
+    final isAiTurn = !_isPlayerTurn(state);
+    final isThinking = state.isEngineThinking && isAiTurn;
+    final quickPlay = ref.watch(chessProvider).quickPlay;
+
+    return Tooltip(
+      message: isThinking 
+          ? (quickPlay ? 'Quick play active (instantly play)' : 'Force AI to play immediately') 
+          : 'AI Thinking Indicator',
+      child: TweenAnimationBuilder<double>(
+        tween: Tween<double>(begin: 1.0, end: isThinking ? 1.25 : 1.0),
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOut,
+        builder: (context, scale, child) {
+          return Transform.scale(
+            scale: scale,
+            child: child,
+          );
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: quickPlay
+                ? (isThinking 
+                    ? Colors.amber.withValues(alpha: 0.25) 
+                    : Colors.white.withValues(alpha: 0.1))
+                : null,
+            border: quickPlay
+                ? Border.all(
+                    color: isThinking 
+                        ? Colors.amber.withValues(alpha: 0.8) 
+                        : Colors.white.withValues(alpha: 0.3),
+                    width: 2.0,
+                  )
+                : null,
+            boxShadow: isThinking
+                ? [
+                    BoxShadow(
+                      color: Colors.amber.withValues(alpha: 0.4),
+                      blurRadius: 10,
+                      spreadRadius: 1,
+                    ),
+                  ]
+                : null,
+          ),
+          child: GestureDetector(
+            onLongPress: () {
+              final currentQuickPlay = ref.read(chessProvider).quickPlay;
+              ref.read(chessSoundServiceProvider).playSfx(SoundEffect.switchToggle);
+              ref.read(chessProvider.notifier).toggleQuickPlay(!currentQuickPlay);
+              if (!currentQuickPlay) {
+                ref.read(arenaProvider.notifier).forcePlay();
+              } else {
+                ref.read(arenaProvider.notifier).restartNormalAnalysis();
+              }
+            },
+            onTap: isThinking
+                ? () => ref.read(arenaProvider.notifier).forcePlay()
+                : null,
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Icon(
+                Icons.flash_on_rounded,
+                color: isThinking 
+                    ? Colors.amber 
+                    : (quickPlay ? Colors.amber : Colors.white.withValues(alpha: 0.3)),
+                size: 24,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
   bool _didPlayerWin(ArenaState state) {
     if (state.game.inDraw) return false;

@@ -187,6 +187,7 @@ class ChessState {
     this.isPaused = false,
     this.viewingMoveIndex,
     this.isAiOperational = true,
+    this.quickPlay = false,
     this.isGameOverDismissed = false,
     this.isPromoting = false,
     this.promotionSource,
@@ -288,6 +289,7 @@ class ChessState {
   final bool isPaused;
   final int? viewingMoveIndex;
   final bool isAiOperational;
+  final bool quickPlay;
   final bool isGameOverDismissed;
   final bool isPromoting;
   final String? promotionSource;
@@ -383,6 +385,7 @@ class ChessState {
     bool? isPaused,
     Object? viewingMoveIndex = _sentinel,
     bool? isAiOperational,
+    bool? quickPlay,
     bool? isGameOverDismissed,
     bool? isPromoting,
     Object? promotionSource = _sentinel,
@@ -491,6 +494,7 @@ class ChessState {
           ? this.viewingMoveIndex
           : viewingMoveIndex as int?,
       isAiOperational: isAiOperational ?? this.isAiOperational,
+      quickPlay: quickPlay ?? this.quickPlay,
       isGameOverDismissed: isGameOverDismissed ?? this.isGameOverDismissed,
       isPromoting: isPromoting ?? this.isPromoting,
       promotionSource: identical(promotionSource, _sentinel)
@@ -784,6 +788,11 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
   void setBoardTheme(String themeId) {
     state = state.copyWith(boardThemeId: themeId);
+    _saveSettings();
+  }
+
+  void toggleQuickPlay(bool value) {
+    state = state.copyWith(quickPlay: value);
     _saveSettings();
   }
 

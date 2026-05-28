@@ -168,26 +168,26 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Flexible(
-                      flex: 3,
-                      child: ActiveAvatarWrapper(
-                        isActive: !isTurn,
-                        child: OpponentAvatarIndicator(
-                          avatar: opponentAvatar,
-                          onTap: null, // Read-only from rated arena
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ActiveAvatarWrapper(
+                          isActive: !isTurn,
+                          child: OpponentAvatarIndicator(
+                            avatar: opponentAvatar,
+                            onTap: null, // Read-only from rated arena
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: 12),
+                        CapturedPiecesInline(
+                          pieces: topPieces,
+                          opponentPieces: bottomPieces,
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 12),
-                    Flexible(
-                      flex: 2,
-                      child: CapturedPiecesInline(
-                        pieces: topPieces,
-                        opponentPieces: bottomPieces,
-                      ),
-                    ),
+                    _buildThinkingFlashButton(context: context, ref: ref, state: state),
                   ],
                 ),
               ),
@@ -380,26 +380,26 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Flexible(
-                flex: 3,
-                child: ActiveAvatarWrapper(
-                  isActive: !isTurn,
-                  child: OpponentAvatarIndicator(
-                    avatar: opponentAvatar,
-                    onTap: null, // Read-only from rated arena
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ActiveAvatarWrapper(
+                    isActive: !isTurn,
+                    child: OpponentAvatarIndicator(
+                      avatar: opponentAvatar,
+                      onTap: null, // Read-only from rated arena
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 12),
+                  CapturedPiecesInline(
+                    pieces: topPieces,
+                    opponentPieces: bottomPieces,
+                  ),
+                ],
               ),
-              const SizedBox(width: 12),
-              Flexible(
-                flex: 2,
-                child: CapturedPiecesInline(
-                  pieces: topPieces,
-                  opponentPieces: bottomPieces,
-                ),
-              ),
+              _buildThinkingFlashButton(context: context, ref: ref, state: state),
             ],
           ),
         ),
@@ -724,6 +724,27 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildThinkingFlashButton({
+    required BuildContext context,
+    required WidgetRef ref,
+    required BattlegroundState state,
+  }) {
+    final isAiTurn = !_isPlayerTurn(state);
+    final isThinking = state.isEngineThinking && isAiTurn;
+
+    if (!isThinking) {
+      return const SizedBox(width: 48, height: 48);
+    }
+
+    return const Padding(
+      padding: EdgeInsets.symmetric(horizontal: 14),
+      child: Tooltip(
+        message: 'Engine is thinking...',
+        child: ThinkingDotsAnimation(),
       ),
     );
   }
@@ -1342,4 +1363,67 @@ Future<bool?> showRatedExitDialog(BuildContext context) async {
       ],
     ),
   );
+}
+
+class ThinkingDotsAnimation extends StatefulWidget {
+  const ThinkingDotsAnimation({super.key});
+
+  @override
+  State<ThinkingDotsAnimation> createState() => _ThinkingDotsAnimationState();
+}
+
+class _ThinkingDotsAnimationState extends State<ThinkingDotsAnimation>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 20,
+      height: 20,
+      child: GridView.builder(
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3,
+          mainAxisSpacing: 3,
+          crossAxisSpacing: 3,
+        ),
+        itemCount: 9,
+        itemBuilder: (context, index) {
+          final row = index ~/ 3;
+          final col = index % 3;
+          final delay = (row + col) * 0.15;
+
+          return AnimatedBuilder(
+            animation: _controller,
+            builder: (context, child) {
+              final progress = (_controller.value - delay) % 1.0;
+              final double opacity = (math.sin(progress * 2 * math.pi) + 1.0) / 2.0;
+              return Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: ScholarlyTheme.textPrimary.withValues(alpha: 0.15 + 0.85 * opacity),
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
 }

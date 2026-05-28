@@ -405,6 +405,7 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
   }
 
   void _stopAnalysisAndReset() {
+    if (!state.servicesStarted || !state.engineReady) return;
     _waitingForReady = true;
     _engine.sendCommand('stop');
     _engine.sendCommand('isready');
@@ -423,7 +424,22 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
 
     _searchFen = state.game.fen;
     final targetDepth = depth ?? avatar.depth;
-    _engine.analyzePosition(state.game.fen, depth: targetDepth);
+    final quickPlayEnabled = ref.read(chessProvider).quickPlay;
+
+    if (quickPlayEnabled && _isAiTurn()) {
+      _engine.analyzePosition(state.game.fen, depth: 1);
+    } else if (state.clockStarted && !state.game.gameOver) {
+      _engine.analyzePosition(
+        state.game.fen,
+        depth: targetDepth,
+        wTime: state.whiteTimeLeft,
+        bTime: state.blackTimeLeft,
+        wInc: state.incrementDuration,
+        bInc: state.incrementDuration,
+      );
+    } else {
+      _engine.analyzePosition(state.game.fen, depth: targetDepth);
+    }
   }
 
   void _handleEngineOutput(String line) {
@@ -530,8 +546,8 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
           !state.isPaused) {
         _engineMoveTimer?.cancel();
         final finalMove = bestMoveToPlay;
-        
-        if (ref.read(chessProvider).isAnimationsEnabled) {
+        final quickPlayEnabled = ref.read(chessProvider).quickPlay;
+        if (ref.read(chessProvider).isAnimationsEnabled && !quickPlayEnabled) {
           _engineMoveTimer = Timer(const Duration(milliseconds: 1500), () {
             if (!_isDisposed && !state.isPaused && _searchFen == state.game.fen) {
               _makeEngineMove(finalMove);
@@ -966,6 +982,23 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
       }
     }
     _soundService.playSfx(SoundEffect.uiClick);
+  }
+
+  void forcePlay() {
+    if (!_isAiTurn() || state.game.gameOver || state.isPaused) return;
+    _engineMoveTimer?.cancel();
+    _engineMoveTimer = null;
+    _engine.sendCommand('stop');
+    _soundService.playSfx(SoundEffect.uiClick);
+  }
+
+  void restartNormalAnalysis() {
+    if (!_isAiTurn() || state.game.gameOver || state.isPaused) return;
+    _engineMoveTimer?.cancel();
+    _engineMoveTimer = null;
+    _stopAnalysisAndReset();
+    _startAnalysis();
+    state = state.copyWith(isEngineThinking: true);
   }
 
   void toggleEngineVsEngine() {

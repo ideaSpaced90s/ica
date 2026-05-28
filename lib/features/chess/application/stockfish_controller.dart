@@ -130,9 +130,23 @@ class StockfishController extends StateNotifier<StockfishState> {
   }
 
   /// Sets the position and starts analysis.
-  Future<void> analyzePosition(String fen, {int depth = 15}) async {
+  Future<void> analyzePosition(
+    String fen, {
+    int depth = 15,
+    Duration? wTime,
+    Duration? bTime,
+    Duration? wInc,
+    Duration? bInc,
+  }) async {
     state = state.copyWith(candidates: const []);
-    await _service.analyzePosition(fen, depth: depth);
+    await _service.analyzePosition(
+      fen,
+      depth: depth,
+      wTime: wTime,
+      bTime: bTime,
+      wInc: wInc,
+      bInc: bInc,
+    );
   }
 
   /// Enables or disables Chess 960 rules inside Stockfish.

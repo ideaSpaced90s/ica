@@ -61,6 +61,8 @@ class BattlegroundState {
   final bool servicesStarting;
   final bool engineReady;
   final String? startupError;
+  final String? premoveFrom;
+  final String? premoveTo;
 
   // Rated ELO fields
   final int consolidatedRating;
@@ -122,6 +124,8 @@ class BattlegroundState {
     this.servicesStarting = false,
     this.engineReady = false,
     this.startupError,
+    this.premoveFrom,
+    this.premoveTo,
 
     // Rated
     this.consolidatedRating = 1200,
@@ -197,6 +201,8 @@ class BattlegroundState {
     bool? servicesStarting,
     bool? engineReady,
     Object? startupError = const Object(),
+    Object? premoveFrom = const Object(),
+    Object? premoveTo = const Object(),
 
     // Rated
     int? consolidatedRating,
@@ -258,6 +264,8 @@ class BattlegroundState {
       servicesStarting: servicesStarting ?? this.servicesStarting,
       engineReady: engineReady ?? this.engineReady,
       startupError: startupError == const Object() ? this.startupError : startupError as String?,
+      premoveFrom: premoveFrom == const Object() ? this.premoveFrom : premoveFrom as String?,
+      premoveTo: premoveTo == const Object() ? this.premoveTo : premoveTo as String?,
 
       // Rated
       consolidatedRating: consolidatedRating ?? this.consolidatedRating,
@@ -297,6 +305,7 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
   final SavedGameRepository _savedGameRepository;
   final PerformanceLedgerRepository _performanceLedgerRepository;
   final ChessSoundService _soundService;
+  // ignore: unused_field
   final ChessHapticsService _hapticsService;
   final SettingsRepository _settingsRepository;
 
@@ -479,7 +488,18 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
 
     _searchFen = state.game.fen;
     final targetDepth = depth ?? opponent.depth;
-    _stockfishEngine.analyzePosition(state.game.fen, depth: targetDepth);
+    if (state.clockStarted && !state.game.gameOver) {
+      _stockfishEngine.analyzePosition(
+        state.game.fen,
+        depth: targetDepth,
+        wTime: state.whiteTimeLeft,
+        bTime: state.blackTimeLeft,
+        wInc: state.incrementDuration,
+        bInc: state.incrementDuration,
+      );
+    } else {
+      _stockfishEngine.analyzePosition(state.game.fen, depth: targetDepth);
+    }
   }
 
   void _handleEngineOutput(String line) {
@@ -652,7 +672,13 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
       }
     }
 
-    if (!_isPlayerTurn()) return;
+    if (!_isPlayerTurn()) {
+      state = state.copyWith(
+        premoveFrom: from,
+        premoveTo: to,
+      );
+      return;
+    }
 
     final piece = state.game.getPiece(from);
     final colorPrefix = piece?.color == chess_lib.Color.WHITE ? 'w' : 'b';
@@ -709,9 +735,6 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
 
     if (!moveMade) {
       state = state.copyWith(moveAnimation: null);
-      if (ref.read(chessProvider).isHapticsEnabled) {
-        _hapticsService.errorFeedback();
-      }
       return;
     }
 
@@ -727,6 +750,13 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
 
     await ensureGameServicesStarted(analyzeCurrentPosition: true);
     state = state.copyWith(isEngineThinking: state.engineReady);
+  }
+
+  void clearPremove() {
+    state = state.copyWith(
+      premoveFrom: null,
+      premoveTo: null,
+    );
   }
 
   void _truncateToViewingIndex() {
@@ -753,7 +783,6 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
 
   void _onMoveCompleted(String moveLabel) {
     final updatedMoves = state.game.moveHistoryLabels();
-    final move = state.game.history.isEmpty ? null : state.game.history.last;
     final isWhiteTurn = state.game.turn == chess_lib.Color.WHITE;
     final playerJustMoved = isWhiteTurn ? 'Black' : 'White';
 
@@ -764,17 +793,7 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
       );
     }
 
-    if (ref.read(chessProvider).isHapticsEnabled) {
-      if (state.game.inCheckmate) {
-        _hapticsService.mateBurst();
-      } else if (state.game.inCheck) {
-        _hapticsService.checkPulse();
-      } else if (move?.move.captured != null) {
-        _hapticsService.heavyRook();
-      } else {
-        _hapticsService.softTap();
-      }
-    }
+    // Haptics and SFX are disabled in Battleground for snappiness
 
     final threatened = <String>[];
     final opponentColor = state.game.turn;
@@ -803,17 +822,6 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
 
     if (state.game.gameOver) {
       _stopClockTimer();
-      final isDraw = state.game.inDraw || state.game.inStalemate;
-      if (isDraw) {
-        _soundService.playSfx(SoundEffect.draw);
-      } else {
-        final humanWon = (playerJustMoved == 'White') == state.isPlayerWhite;
-        _soundService.playSfx(humanWon ? SoundEffect.victory : SoundEffect.defeat);
-      }
-    } else if (state.game.inCheck) {
-      _soundService.playSfx(SoundEffect.check);
-    } else {
-      _soundService.playSfx(move?.move.captured != null ? SoundEffect.capture : SoundEffect.move);
     }
 
     // Apply ELO / Save Rated match outcome
@@ -836,6 +844,28 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
       if (state.activeRatedMatchId == null) {
         state = state.copyWith(activeRatedMatchId: DateTime.now().millisecondsSinceEpoch.toString());
         _saveSettings();
+      }
+    }
+
+    // Snappy Premove auto-execution
+    if (_isPlayerTurn() && state.premoveFrom != null && state.premoveTo != null) {
+      final pFrom = state.premoveFrom!;
+      final pTo = state.premoveTo!;
+      state = state.copyWith(premoveFrom: null, premoveTo: null);
+
+      final legalMoves = state.game.generateMoves();
+      bool isLegal = false;
+      for (final m in legalMoves) {
+        final fromAlg = chess_lib.Chess.algebraic(m.from);
+        final toAlg = chess_lib.Chess.algebraic(m.to);
+        if (fromAlg == pFrom && toAlg == pTo) {
+          isLegal = true;
+          break;
+        }
+      }
+
+      if (isLegal) {
+        unawaited(makeMove(pFrom, pTo));
       }
     }
   }
@@ -1118,9 +1148,7 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
   }
 
   void _triggerHeartbeatIfRequired(Duration time) {
-    if (ref.read(chessProvider).isHapticsEnabled && time <= const Duration(seconds: 10) && time.inMilliseconds % 1000 == 0) {
-      _hapticsService.heartbeat();
-    }
+    // Heartbeat haptics disabled in Battleground for snappiness
   }
 
   void _handleClockTimeout(String side) {
@@ -1144,7 +1172,7 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
     final result = humanWon ? 'W' : 'L';
     saveCurrentGame(resultOverride: result);
 
-    _soundService.playSfx(humanWon ? SoundEffect.victory : SoundEffect.defeat);
+    // Timeout sound disabled in Battleground
   }
 
   String _clockSideForTurn() {

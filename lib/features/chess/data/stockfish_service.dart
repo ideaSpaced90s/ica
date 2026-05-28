@@ -258,11 +258,26 @@ class StockfishService implements ChessEngineService {
   }
 
   @override
-  Future<void> analyzePosition(String fen, {int depth = 15}) async {
+  Future<void> analyzePosition(
+    String fen, {
+    int depth = 15,
+    Duration? wTime,
+    Duration? bTime,
+    Duration? wInc,
+    Duration? bInc,
+  }) async {
     if (!_isReady) await _readyCompleter?.future;
     await sendCommand('stop');
     await sendCommand('position fen $fen');
-    await sendCommand('go depth $depth');
+    if (wTime != null || bTime != null) {
+      final wt = wTime?.inMilliseconds ?? 0;
+      final bt = bTime?.inMilliseconds ?? 0;
+      final wi = wInc?.inMilliseconds ?? 0;
+      final bi = bInc?.inMilliseconds ?? 0;
+      await sendCommand('go wtime $wt btime $bt winc $wi binc $bi');
+    } else {
+      await sendCommand('go depth $depth');
+    }
   }
 
   @override
