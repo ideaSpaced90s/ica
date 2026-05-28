@@ -7,9 +7,10 @@ import '../scholarly_theme.dart';
 import 'themes/theme_registry.dart';
 import '../shared/themes/chess_theme.dart';
 import '../../domain/models/ai_avatar.dart';
-import '../widgets/avatar_selection_sheet.dart';
 import '../widgets/ambient_scaffold.dart';
 import 'dart:ui';
+import 'arena_personas_selection_page.dart';
+
 
 class ArenaSettingsPage extends ConsumerStatefulWidget {
   const ArenaSettingsPage({super.key});
@@ -184,68 +185,38 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
                             color: ScholarlyTheme.accentBlue,
                           ),
                         ),
-                        Builder(
-                          builder: (context) {
-                            final currentAvatar = AiAvatar.getAvatar(state.engineLevel);
-                            return _SettingsTile(
-                              label: 'Up Engine',
-                              description: '${currentAvatar.name} • ${currentAvatar.title}',
-                              icon: currentAvatar.icon,
-                              imagePath: currentAvatar.imagePath,
-                              onTap: () => showAvatarSelectionSheet(context, ref, isBottomSlot: false),
-                              trailing: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: currentAvatar.color.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(color: currentAvatar.color),
-                                ),
-                                child: Text(
-                                  'FIDE ${currentAvatar.fideRatingRange}',
-                                  style: GoogleFonts.jetBrainsMono(
-                                    color: currentAvatar.color.computeLuminance() > 0.6 ? Colors.black87 : currentAvatar.color,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 11,
-                                  ),
-                                ),
+                        _SettingsTile(
+                          label: 'Personas',
+                          description: 'Swipe and select Up & Down engine profiles',
+                          icon: Icons.people_rounded,
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const ArenaPersonasSelectionPage(),
                               ),
                             );
                           },
-                        ),
-                        Builder(
-                          builder: (context) {
-                            final currentAvatar = AiAvatar.getAvatar(state.bottomAvatarId);
-                            return _SettingsTile(
-                              label: 'Down Engine',
-                              description: '${currentAvatar.name} • ${currentAvatar.title}',
-                              icon: currentAvatar.icon,
-                              imagePath: currentAvatar.imagePath,
-                              onTap: () => showAvatarSelectionSheet(context, ref, isBottomSlot: true),
-                              trailing: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: currentAvatar.color.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(color: currentAvatar.color),
-                                ),
-                                child: Text(
-                                  'FIDE ${currentAvatar.fideRatingRange}',
-                                  style: GoogleFonts.jetBrainsMono(
-                                    color: currentAvatar.color.computeLuminance() > 0.6 ? Colors.black87 : currentAvatar.color,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 11,
-                                  ),
-                                ),
+                          trailing: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: ScholarlyTheme.accentBlueSoft,
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: ScholarlyTheme.accentBlue),
+                            ),
+                            child: Text(
+                              '${AiAvatar.getAvatar(state.engineLevel).name} / ${AiAvatar.getAvatar(state.bottomAvatarId).name}',
+                              style: GoogleFonts.inter(
+                                color: ScholarlyTheme.accentBlue,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11,
                               ),
-                            );
-                          },
+                            ),
+                          ),
                         ),
+
                       ],
                     ),
 
@@ -921,7 +892,6 @@ class _SettingsTile extends ConsumerWidget {
   final IconData icon;
   final VoidCallback onTap;
   final Widget? trailing;
-  final String? imagePath;
   final bool enabled;
 
   const _SettingsTile({
@@ -930,7 +900,6 @@ class _SettingsTile extends ConsumerWidget {
     required this.icon,
     required this.onTap,
     this.trailing,
-    this.imagePath,
     this.enabled = true,
   });
 
@@ -960,21 +929,11 @@ class _SettingsTile extends ConsumerWidget {
               width: 1,
             ),
           ),
-          child: imagePath != null
-              ? ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: Image.asset(
-                    imagePath!,
-                    width: 20,
-                    height: 20,
-                    fit: BoxFit.cover,
-                  ),
-                )
-              : Icon(
-                  icon,
-                  color: effectiveAccent ?? ScholarlyTheme.textPrimary,
-                  size: 20,
-                ),
+          child: Icon(
+            icon,
+            color: effectiveAccent ?? ScholarlyTheme.textPrimary,
+            size: 20,
+          ),
         ),
         title: Text(
           label,

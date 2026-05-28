@@ -63,3 +63,7 @@ assets/engine/wincessengines/sunfish-master
 
 # Scratch files
 scratch/
+
+# Text log files
+*.txt
+

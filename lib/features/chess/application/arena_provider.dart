@@ -652,7 +652,7 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
             adjustedScore += 0.5;
           }
         }
-      } else if (avatar.name == 'Stonewall') {
+      } else if (avatar.name == 'Molly') {
         if (piece?.type == chess_lib.PieceType.PAWN) {
           final fromRank = int.tryParse(fromSq[1]) ?? 0;
           final toRank = int.tryParse(toSq[1]) ?? 0;
@@ -662,7 +662,7 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
         } else if (targetPiece != null) {
           adjustedScore -= 0.5;
         }
-      } else if (avatar.name == 'Blitzer') {
+      } else if (avatar.name == 'Blaire') {
         if (piece?.type == chess_lib.PieceType.KNIGHT ||
             piece?.type == chess_lib.PieceType.BISHOP) {
           adjustedScore += 0.8;
@@ -687,7 +687,7 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
         if (candidate.evaluation < -0.5 && (targetPiece != null || piece?.type == chess_lib.PieceType.PAWN)) {
           adjustedScore += 1.2;
         }
-      } else if (avatar.name == 'Vanguard') {
+      } else if (avatar.name == 'Vala') {
         if (targetPiece != null && !game.isAttacked(toSq, opponentColor)) {
           adjustedScore += 1.5;
         }
@@ -702,7 +702,7 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
         if (piece?.type == chess_lib.PieceType.KING) {
           adjustedScore += 0.4;
         }
-      } else if (avatar.name == 'Morphy') {
+      } else if (avatar.name == 'Murphy') {
         final file = toSq[0];
         if ((piece?.type == chess_lib.PieceType.ROOK || piece?.type == chess_lib.PieceType.QUEEN) && isOpenFile(file)) {
           adjustedScore += 1.0;

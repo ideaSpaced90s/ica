@@ -535,257 +535,193 @@ class _AboutUsPageState extends ConsumerState<AboutUsPage> {
     final items = const [
       _PersonaMatrixItem(
         name: 'GM Chanakya',
-        brand: 'Crafty',
-        depth: 'Full Power',
+        depth: '-',
         eloRange: 'Mentor',
-        style: 'Wisdom/mentor style, maximum precision, classic intuition.',
-        icon: Icons.school_rounded,
+        style: '100% human chess mentor. Believes humanity can beat chess machines. Plays with highest intellectual intuition as an ex-grandmaster.',
+        imagePath: 'assets/persona/gm_chanakya.png',
         color: ScholarlyTheme.accentBlue,
       ),
       _PersonaMatrixItem(
         name: 'Kingslayer',
-        brand: 'Stockfish',
         depth: 'Depth 22',
         eloRange: '2850 - 3200+',
-        style: 'Ultimate absolute computational perfection.',
-        icon: Icons.diamond_rounded,
+        style: 'A near-perfect computational killing machine. Banned from tournaments for not being organic. No story of defeat exists.',
+        imagePath: 'assets/persona/gm_kingslayer.png',
         color: Color(0xFFE0E0E0),
       ),
       _PersonaMatrixItem(
         name: 'Titan',
-        brand: 'Crafty',
         depth: 'Depth 18',
         eloRange: '2500 - 2700',
-        style: 'Grandmaster precision, relentless positional pressure.',
-        icon: Icons.psychology_rounded,
+        style: 'First bot to overthrow a human grandmaster. Grandmaster-level precision with constant tactical/positional pressure.',
+        imagePath: 'assets/persona/gm_titan.png',
         color: Color(0xFFFFD54F),
       ),
       _PersonaMatrixItem(
-        name: 'Morphy',
-        brand: 'Stockfish',
+        name: 'Murphy',
         depth: 'Depth 15',
         eloRange: '2200 - 2400',
-        style: 'Classical elegance, open lines, rapid piece coordination.',
-        icon: Icons.local_fire_department_rounded,
+        style: 'Sea-storm strategist. Opens lines early to welcome opponent pieces, then unleashes rapid coordinated sea-storm attacks.',
+        imagePath: 'assets/persona/im_murphy.png',
         color: Color(0xFFE57373),
       ),
       _PersonaMatrixItem(
         name: 'Sentinel',
-        brand: 'Crafty',
         depth: 'Depth 12',
         eloRange: '1900 - 2100',
-        style: 'Positional trap specialist, superb prophylaxis.',
-        icon: Icons.gpp_good_rounded,
+        style: 'Positional trap specialist. Plays human-like moves to lull opponents, then springs subtle positional traps.',
+        imagePath: 'assets/persona/sentinel.png',
         color: Color(0xFF7986CB),
       ),
       _PersonaMatrixItem(
-        name: 'Vanguard',
-        brand: 'Stockfish',
+        name: 'Vala',
         depth: 'Depth 10',
         eloRange: '1700 - 1850',
-        style: 'Sharp tactical vision, uncoordinated piece punisher.',
-        icon: Icons.track_changes_rounded,
+        style: 'Sharp tactical vision with forward-facing energy. Punishes uncoordinated opponent pieces immediately.',
+        imagePath: 'assets/persona/vala.png',
         color: Color(0xFF4DB6AC),
       ),
       _PersonaMatrixItem(
         name: 'Gambit',
-        brand: 'Stockfish',
         depth: 'Depth 7',
         eloRange: '1500 - 1650',
-        style: 'Chaos lover, tactical sacrifices, material imbalances.',
-        icon: Icons.auto_awesome_rounded,
+        style: 'Chaos lover known more for looks than chess. Makes wild material sacrifices to create unpredictable imbalances.',
+        imagePath: 'assets/persona/gambit.png',
         color: Color(0xFFBA68C8),
       ),
       _PersonaMatrixItem(
-        name: 'Blitzer',
-        brand: 'Crafty',
+        name: 'Blaire',
         depth: 'Depth 5',
         eloRange: '1300 - 1450',
-        style: 'Highly tactical, rapid attacker targeting the king.',
-        icon: Icons.bolt_rounded,
+        style: 'Highly tactical rapid attacker targeting the king, but leaves loose, exploitable positions.',
+        imagePath: 'assets/persona/blaire.png',
         color: Color(0xFFFFB74D),
       ),
       _PersonaMatrixItem(
-        name: 'Stonewall',
-        brand: 'Stockfish',
+        name: 'Molly',
         depth: 'Depth 4',
         eloRange: '1100 - 1250',
-        style: 'Locked pawn chains, ultra-conservative, closed files.',
-        icon: Icons.shield_rounded,
+        style: 'Ultra-conservative and introverted bot. Locks opponents behind iron pawn walls, plays closed files only, and rarely speaks.',
+        imagePath: 'assets/persona/molly.png',
         color: Color(0xFF90A4AE),
       ),
       _PersonaMatrixItem(
         name: 'Rook-ie',
-        brand: 'Stockfish',
         depth: 'Depth 3',
         eloRange: '950 - 1050',
-        style: 'Capturing undefended pieces immediately without recapture risk assessment.',
-        icon: Icons.castle_rounded,
+        style: 'High-school level bully who captures undefended pieces immediately with zero recapture risk assessment.',
+        imagePath: 'assets/persona/rook-ie.png',
         color: Color(0xFF64B5F6),
       ),
       _PersonaMatrixItem(
         name: 'Pawnzy',
-        brand: 'Crafty',
         depth: 'Depth 2',
         eloRange: '800 - 950',
-        style: 'Erratic novice, pawn-heavy movements.',
-        icon: Icons.cruelty_free_rounded,
+        style: 'Erratic novice obsessed with pawn promotions. Nerdy in all the wrong ways — plays only pawns hoping one will queen.',
+        imagePath: 'assets/persona/pawnzy.png',
         color: Color(0xFF81C784),
       ),
       _PersonaMatrixItem(
         name: 'Sparky',
-        brand: 'Crafty',
         depth: 'Depth 1',
         eloRange: '400 - 500',
-        style: 'Absolute beginner, frequent blunders, random pushes.',
-        icon: Icons.child_care_rounded,
+        style: 'Absolute beginner who randomly pushes pieces and blunders frequently — has no idea what\'s happening on the board.',
+        imagePath: 'assets/persona/sparky.png',
         color: Color(0xFFA1887F),
       ),
     ];
 
-    return JuicyGlassCard(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      borderRadius: 24,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        child: Container(
-          constraints: const BoxConstraints(minWidth: 800),
-          child: Table(
-            columnWidths: const {
-              0: FixedColumnWidth(160), // Name
-              1: FixedColumnWidth(130), // Engine Brand
-              2: FixedColumnWidth(120), // Engine Depth
-              3: FixedColumnWidth(120), // Elo Range
-              4: FixedColumnWidth(270), // Playing Style
-            },
-            defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-            children: [
-              TableRow(
-                decoration: const BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(color: Colors.white24, width: 1.5),
-                  ),
-                ),
-                children: [
-                  _buildHeaderCell('PERSONA'),
-                  _buildHeaderCell('ENGINE BRAND'),
-                  _buildHeaderCell('ENGINE DEPTH'),
-                  _buildHeaderCell('ELO RANGE'),
-                  _buildHeaderCell('TACTICAL PLAYSTYLE'),
-                ],
-              ),
-              ...items.map((item) {
-                return TableRow(
-                  decoration: const BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(color: Colors.white12, width: 1),
-                    ),
-                  ),
+    return Column(
+      children: items.map((item) {
+        return Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          child: JuicyGlassCard(
+            padding: const EdgeInsets.all(18),
+            borderRadius: 20,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                      child: Row(
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: item.color.withValues(alpha: 0.3),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: ClipOval(
+                        child: Image.asset(
+                          item.imagePath,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(item.icon, color: item.color, size: 20),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              item.name,
-                              style: GoogleFonts.outfit(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                                color: ScholarlyTheme.textPrimary,
-                              ),
+                          Text(
+                            item.name,
+                            style: GoogleFonts.outfit(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: ScholarlyTheme.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Engine Depth: ${item.depth}',
+                            style: GoogleFonts.jetBrainsMono(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: ScholarlyTheme.textSubtle,
                             ),
                           ),
                         ],
                       ),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                      child: _buildEngineChip(item.brand),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                      child: Text(
-                        item.depth,
-                        style: GoogleFonts.jetBrainsMono(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.bold,
-                          color: ScholarlyTheme.textPrimary,
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: ScholarlyTheme.accentGold.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: ScholarlyTheme.accentGold.withValues(alpha: 0.25),
+                          width: 1,
                         ),
                       ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       child: Text(
                         item.eloRange,
                         style: GoogleFonts.jetBrainsMono(
-                          fontSize: 12.5,
+                          fontSize: 11,
                           fontWeight: FontWeight.bold,
                           color: ScholarlyTheme.accentGold,
                         ),
                       ),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                      child: Text(
-                        item.style,
-                        style: GoogleFonts.inter(
-                          fontSize: 12.5,
-                          color: ScholarlyTheme.textMuted,
-                          height: 1.4,
-                        ),
-                      ),
-                    ),
                   ],
-                );
-              }),
-            ],
+                ),
+                const SizedBox(height: 12),
+                const Divider(height: 1, color: Colors.white10),
+                const SizedBox(height: 12),
+                Text(
+                  item.style,
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    color: ScholarlyTheme.textMuted,
+                    height: 1.45,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeaderCell(String text) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      child: Text(
-        text,
-        style: GoogleFonts.outfit(
-          fontSize: 11.5,
-          fontWeight: FontWeight.w900,
-          letterSpacing: 1.2,
-          color: ScholarlyTheme.textSubtle,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEngineChip(String brand) {
-    final isCrafty = brand == 'Crafty';
-    final color = isCrafty ? ScholarlyTheme.accentGold : ScholarlyTheme.accentBlue;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: color.withValues(alpha: 0.3),
-          width: 1,
-        ),
-      ),
-      child: Text(
-        brand,
-        style: GoogleFonts.jetBrainsMono(
-          color: color,
-          fontSize: 10.5,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 0.5,
-        ),
-      ),
+        );
+      }).toList(),
     );
   }
 }
@@ -878,20 +814,18 @@ class _CollapsibleSectionState extends State<CollapsibleSection> {
 
 class _PersonaMatrixItem {
   final String name;
-  final String brand;
   final String depth;
   final String eloRange;
   final String style;
-  final IconData icon;
+  final String imagePath;
   final Color color;
 
   const _PersonaMatrixItem({
     required this.name,
-    required this.brand,
     required this.depth,
     required this.eloRange,
     required this.style,
-    required this.icon,
+    required this.imagePath,
     required this.color,
   });
 }
