@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'dart:async';
 import 'package:chess/chess.dart' as chess_lib;
 import 'package:flutter/foundation.dart';
@@ -8,6 +7,7 @@ import '../domain/chess_game.dart';
 import '../domain/chess_960_generator.dart';
 import '../domain/models/ai_avatar.dart';
 import '../domain/models/candidate_move.dart';
+import '../domain/chess_persona_evaluator.dart';
 import '../services/chess_sound_service.dart';
 import '../services/chess_haptics_service.dart';
 import '../data/stockfish_service.dart';
@@ -381,6 +381,7 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
 
       final avatar = AiAvatar.getAvatar(state.engineLevel);
       await _stockfishEngine.setSkillLevel(avatar.skillLevel, multiPV: avatar.name == 'Kingslayer' ? 1 : 4);
+      _stockfishEngine.sendCommand('setoption name MultiPV value ${avatar.name == 'Kingslayer' ? 1 : 4}');
 
       state = state.copyWith(
         servicesStarted: true,
@@ -418,6 +419,7 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
 
     final avatar = AiAvatar.getAvatar(_activeAvatarId);
     await _engine.setSkillLevel(avatar.skillLevel, multiPV: avatar.name == 'Kingslayer' ? 1 : 4);
+    _engine.sendCommand('setoption name MultiPV value ${avatar.name == 'Kingslayer' ? 1 : 4}');
 
     _searchFen = state.game.fen;
     final targetDepth = depth ?? avatar.depth;
@@ -495,7 +497,7 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
       if (rawBestMove != null && _currentCandidates.isNotEmpty) {
         final currentAvatar = AiAvatar.getAvatar(_activeAvatarId);
         if (currentAvatar.name != 'Kingslayer') {
-          bestMoveToPlay = _applyPersonaHeuristics(
+          bestMoveToPlay = ChessPersonaEvaluator.selectBestMove(
             List.from(_currentCandidates),
             currentAvatar,
             state.game,
@@ -598,142 +600,7 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
     }
   }
 
-  String _applyPersonaHeuristics(
-    List<CandidateMove> candidates,
-    AiAvatar avatar,
-    ChessGame game,
-    String engineBestMove,
-  ) {
-    if (candidates.isEmpty) return engineBestMove;
 
-    bool isOpenFile(String fileChar) {
-      for (int r = 1; r <= 8; r++) {
-        final p = game.getPiece('$fileChar$r');
-        if (p != null && p.type == chess_lib.PieceType.PAWN) {
-          return false;
-        }
-      }
-      return true;
-    }
-
-    String bestCandidateMove = candidates.first.uciMove;
-    double highestAdjustedScore = -999.0;
-
-    final turnColor = game.turn;
-    final opponentColor = turnColor == chess_lib.Color.WHITE
-        ? chess_lib.Color.BLACK
-        : chess_lib.Color.WHITE;
-
-    debugPrint('--- Arena Persona Candidate Interception (${avatar.name}) ---');
-
-    for (final candidate in candidates) {
-      if (candidate.uciMove.length < 4) continue;
-      final fromSq = candidate.uciMove.substring(0, 2);
-      final toSq = candidate.uciMove.substring(2, 4);
-
-      final piece = game.getPiece(fromSq);
-      final targetPiece = game.getPiece(toSq);
-
-      double adjustedScore = candidate.evaluation;
-
-      // Trait scoring adjustments
-      if (avatar.name == 'Sparky') {
-        final randomVal = (math.Random().nextDouble() * 3.0) - 1.5; // -1.5 to +1.5
-        adjustedScore += randomVal;
-      } else if (avatar.name == 'Pawnzy') {
-        if (piece?.type == chess_lib.PieceType.PAWN) {
-          adjustedScore += 1.5;
-        }
-      } else if (avatar.name == 'Rook-ie') {
-        if (targetPiece != null) {
-          if (!game.isAttacked(toSq, opponentColor)) {
-            adjustedScore += 2.0;
-          } else {
-            adjustedScore += 0.5;
-          }
-        }
-      } else if (avatar.name == 'Molly') {
-        if (piece?.type == chess_lib.PieceType.PAWN) {
-          final fromRank = int.tryParse(fromSq[1]) ?? 0;
-          final toRank = int.tryParse(toSq[1]) ?? 0;
-          if ((toRank - fromRank).abs() <= 1) {
-            adjustedScore += 0.6;
-          }
-        } else if (targetPiece != null) {
-          adjustedScore -= 0.5;
-        }
-      } else if (avatar.name == 'Blaire') {
-        if (piece?.type == chess_lib.PieceType.KNIGHT ||
-            piece?.type == chess_lib.PieceType.BISHOP) {
-          adjustedScore += 0.8;
-        }
-        String? opponentKingSq;
-        for (final sq in chess_lib.Chess.SQUARES.keys) {
-          final p = game.getPiece(sq);
-          if (p != null && p.type == chess_lib.PieceType.KING && p.color == opponentColor) {
-            opponentKingSq = sq;
-            break;
-          }
-        }
-        if (opponentKingSq != null) {
-          final fromFileIdx = toSq.codeUnitAt(0) - 97;
-          final fromRankIdx = int.tryParse(toSq[1]) ?? 1;
-          final kingFileIdx = opponentKingSq.codeUnitAt(0) - 97;
-          final kingRankIdx = int.tryParse(opponentKingSq[1]) ?? 1;
-          final distance = math.sqrt(math.pow(fromFileIdx - kingFileIdx, 2) + math.pow(fromRankIdx - kingRankIdx, 2));
-          adjustedScore += math.max(0.0, (10.0 - distance) * 0.15);
-        }
-      } else if (avatar.name == 'Gambit') {
-        if (candidate.evaluation < -0.5 && (targetPiece != null || piece?.type == chess_lib.PieceType.PAWN)) {
-          adjustedScore += 1.2;
-        }
-      } else if (avatar.name == 'Vala') {
-        if (targetPiece != null && !game.isAttacked(toSq, opponentColor)) {
-          adjustedScore += 1.5;
-        }
-      } else if (avatar.name == 'Sentinel') {
-        final file = toSq[0];
-        final rank = toSq[1];
-        final isCenterFile = file == 'c' || file == 'd' || file == 'e' || file == 'f';
-        final isCenterRank = rank == '4' || rank == '5';
-        if (isCenterFile && isCenterRank) {
-          adjustedScore += 0.8;
-        }
-        if (piece?.type == chess_lib.PieceType.KING) {
-          adjustedScore += 0.4;
-        }
-      } else if (avatar.name == 'Murphy') {
-        final file = toSq[0];
-        if ((piece?.type == chess_lib.PieceType.ROOK || piece?.type == chess_lib.PieceType.QUEEN) && isOpenFile(file)) {
-          adjustedScore += 1.0;
-        }
-        final moveCount = game.history.length;
-        if (moveCount < 24 && (piece?.type == chess_lib.PieceType.KNIGHT || piece?.type == chess_lib.PieceType.BISHOP)) {
-          adjustedScore += 0.6;
-        }
-      } else if (avatar.name == 'Titan') {
-        final file = toSq[0];
-        final rank = toSq[1];
-        final isCenterFile = file == 'd' || file == 'e';
-        final isCenterRank = rank == '4' || rank == '5';
-        if (isCenterFile && isCenterRank) {
-          adjustedScore += 0.3;
-        }
-      }
-
-      debugPrint(
-        '  Candidate ${candidate.multipvIndex}: ${candidate.uciMove} | Base Eval: ${candidate.evaluation.toStringAsFixed(2)} | Adjusted: ${adjustedScore.toStringAsFixed(2)}',
-      );
-
-      if (adjustedScore > highestAdjustedScore) {
-        highestAdjustedScore = adjustedScore;
-        bestCandidateMove = candidate.uciMove;
-      }
-    }
-
-    debugPrint('  Selected Arena Move: $bestCandidateMove');
-    return bestCandidateMove;
-  }
 
   bool _isPlayerTurn() {
     if (state.game.gameOver || state.isPaused) return false;

@@ -8,6 +8,7 @@ import '../domain/chess_game.dart';
 import '../domain/chess_960_generator.dart';
 import '../domain/models/ai_avatar.dart';
 import '../domain/models/candidate_move.dart';
+import '../domain/chess_persona_evaluator.dart';
 import '../services/chess_sound_service.dart';
 import '../services/chess_haptics_service.dart';
 import '../data/stockfish_service.dart';
@@ -441,7 +442,8 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
       await _stockfishEngine.init();
 
       final opponent = state.activeOpponent ?? AiAvatar.getBestMatch(state.consolidatedRating);
-      await _stockfishEngine.setSkillLevel(opponent.skillLevel, multiPV: 1);
+      await _stockfishEngine.setSkillLevel(opponent.skillLevel, multiPV: opponent.name == 'Kingslayer' ? 1 : 4);
+      _stockfishEngine.sendCommand('setoption name MultiPV value ${opponent.name == 'Kingslayer' ? 1 : 4}');
 
       state = state.copyWith(
         servicesStarted: true,
@@ -472,7 +474,8 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
     await _stockfishEngine.setChess960Mode(is960);
 
     final opponent = state.activeOpponent ?? AiAvatar.getBestMatch(state.consolidatedRating);
-    await _stockfishEngine.setSkillLevel(opponent.skillLevel, multiPV: 1);
+    await _stockfishEngine.setSkillLevel(opponent.skillLevel, multiPV: opponent.name == 'Kingslayer' ? 1 : 4);
+    _stockfishEngine.sendCommand('setoption name MultiPV value ${opponent.name == 'Kingslayer' ? 1 : 4}');
 
     _searchFen = state.game.fen;
     final targetDepth = depth ?? opponent.depth;
@@ -542,6 +545,19 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
         if (piece != null && piece.color == state.game.turn) {
           isMoveValidForCurrentTurn = true;
         }
+      }
+
+      if (bestMoveToPlay != null && aiTurn && isMoveValidForCurrentTurn) {
+        final opponent = state.activeOpponent ?? AiAvatar.getBestMatch(state.consolidatedRating);
+        if (opponent.name != 'Kingslayer' && _currentCandidates.isNotEmpty) {
+          bestMoveToPlay = ChessPersonaEvaluator.selectBestMove(
+            List.from(_currentCandidates),
+            opponent,
+            state.game,
+            bestMoveToPlay,
+          );
+        }
+        _currentCandidates.clear();
       }
 
       if (bestMoveToPlay != null &&

@@ -8,6 +8,7 @@ import 'api/context.dart';
 import 'api/history.dart';
 import 'api/humanizer.dart';
 import 'api/moves.dart';
+import 'api/persona.dart';
 import 'api/puzzles.dart';
 import 'api/simple.dart';
 import 'api/state.dart';
@@ -52,6 +53,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<String> dco_decode_list_String(dynamic raw);
 
   @protected
+  List<PersonaCandidate> dco_decode_list_persona_candidate(dynamic raw);
+
+  @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
 
   @protected
@@ -68,6 +72,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   Puzzle? dco_decode_opt_box_autoadd_puzzle(dynamic raw);
+
+  @protected
+  PersonaCandidate dco_decode_persona_candidate(dynamic raw);
 
   @protected
   PositionMetrics dco_decode_position_metrics(dynamic raw);
@@ -117,6 +124,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<String> sse_decode_list_String(SseDeserializer deserializer);
 
   @protected
+  List<PersonaCandidate> sse_decode_list_persona_candidate(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
 
   @protected
@@ -135,6 +147,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   Puzzle? sse_decode_opt_box_autoadd_puzzle(SseDeserializer deserializer);
+
+  @protected
+  PersonaCandidate sse_decode_persona_candidate(SseDeserializer deserializer);
 
   @protected
   PositionMetrics sse_decode_position_metrics(SseDeserializer deserializer);
@@ -185,6 +200,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_list_String(List<String> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_persona_candidate(
+    List<PersonaCandidate> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_prim_u_8_strict(
     Uint8List self,
     SseSerializer serializer,
@@ -208,6 +229,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_puzzle(
     Puzzle? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_persona_candidate(
+    PersonaCandidate self,
     SseSerializer serializer,
   );
 

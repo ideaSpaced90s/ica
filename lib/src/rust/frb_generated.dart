@@ -8,6 +8,7 @@ import 'api/context.dart';
 import 'api/history.dart';
 import 'api/humanizer.dart';
 import 'api/moves.dart';
+import 'api/persona.dart';
 import 'api/puzzles.dart';
 import 'api/simple.dart';
 import 'api/state.dart';
@@ -75,7 +76,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.12.0';
 
   @override
-  int get rustContentHash => 144298715;
+  int get rustContentHash => -1430464884;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -138,6 +139,14 @@ abstract class RustLibApi extends BaseApi {
     int? minRating,
     int? maxRating,
     int? limit,
+  });
+
+  String crateApiPersonaSelectPersonaMoveRust({
+    required String fen,
+    required List<PersonaCandidate> candidates,
+    required String avatarName,
+    required bool isChess960,
+    required int moveCount,
   });
 
   String? crateApiStateValidateAndApplyMove({
@@ -517,6 +526,48 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  String crateApiPersonaSelectPersonaMoveRust({
+    required String fen,
+    required List<PersonaCandidate> candidates,
+    required String avatarName,
+    required bool isChess960,
+    required int moveCount,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(fen, serializer);
+          sse_encode_list_persona_candidate(candidates, serializer);
+          sse_encode_String(avatarName, serializer);
+          sse_encode_bool(isChess960, serializer);
+          sse_encode_i_32(moveCount, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 13)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiPersonaSelectPersonaMoveRustConstMeta,
+        argValues: [fen, candidates, avatarName, isChess960, moveCount],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiPersonaSelectPersonaMoveRustConstMeta =>
+      const TaskConstMeta(
+        debugName: "select_persona_move_rust",
+        argNames: [
+          "fen",
+          "candidates",
+          "avatarName",
+          "isChess960",
+          "moveCount",
+        ],
+      );
+
+  @override
   String? crateApiStateValidateAndApplyMove({
     required String currentFen,
     required String fromStr,
@@ -533,7 +584,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_String(toStr, serializer);
           sse_encode_String(promotionStr, serializer);
           sse_encode_bool(isChess960, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 13)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 14)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_opt_String,
@@ -616,6 +667,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<PersonaCandidate> dco_decode_list_persona_candidate(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_persona_candidate).toList();
+  }
+
+  @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as Uint8List;
@@ -649,6 +706,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Puzzle? dco_decode_opt_box_autoadd_puzzle(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_box_autoadd_puzzle(raw);
+  }
+
+  @protected
+  PersonaCandidate dco_decode_persona_candidate(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return PersonaCandidate(
+      uciMove: dco_decode_String(arr[0]),
+      evaluation: dco_decode_f_64(arr[1]),
+    );
   }
 
   @protected
@@ -799,6 +868,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<PersonaCandidate> sse_decode_list_persona_candidate(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <PersonaCandidate>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_persona_candidate(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var len_ = sse_decode_i_32(deserializer);
@@ -862,6 +945,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     } else {
       return null;
     }
+  }
+
+  @protected
+  PersonaCandidate sse_decode_persona_candidate(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_uciMove = sse_decode_String(deserializer);
+    var var_evaluation = sse_decode_f_64(deserializer);
+    return PersonaCandidate(uciMove: var_uciMove, evaluation: var_evaluation);
   }
 
   @protected
@@ -1010,6 +1101,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_list_persona_candidate(
+    List<PersonaCandidate> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_persona_candidate(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_prim_u_8_strict(
     Uint8List self,
     SseSerializer serializer,
@@ -1071,6 +1174,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     if (self != null) {
       sse_encode_box_autoadd_puzzle(self, serializer);
     }
+  }
+
+  @protected
+  void sse_encode_persona_candidate(
+    PersonaCandidate self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.uciMove, serializer);
+    sse_encode_f_64(self.evaluation, serializer);
   }
 
   @protected
