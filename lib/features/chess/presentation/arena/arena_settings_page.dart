@@ -256,16 +256,17 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
         return Consumer(
           builder: (context, ref, _) {
             final state = ref.watch(chessProvider);
-            final notifier = ref.read(chessProvider.notifier);
-
-            return ClipRRect(
+            final notifier = ref.read(chessProvider.notifier);            return ClipRRect(
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(32),
               ),
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
                 child: Container(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 10),
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.75,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.45),
                     borderRadius: const BorderRadius.vertical(
@@ -276,41 +277,56 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
                       width: 1.5,
                     ),
                   ),
-                  child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Choose Board Theme',
-                          style: GoogleFonts.inter(
-                            color: ScholarlyTheme.textPrimary,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          margin: const EdgeInsets.only(bottom: 16),
+                          decoration: BoxDecoration(
+                            color: ScholarlyTheme.panelStroke,
+                            borderRadius: BorderRadius.circular(2),
                           ),
                         ),
-                        const SizedBox(height: 20),
-                        SizedBox(
-                          height: 120,
-                          child: ListView.separated(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: ThemeRegistry.allThemes.length,
-                            separatorBuilder: (context, index) => const SizedBox(width: 16),
-                            itemBuilder: (context, index) {
-                              final theme = ThemeRegistry.allThemes[index];
-                              final isSelected = state.boardThemeId == theme.id;
+                      ),
+                      Text(
+                        'Choose Board Theme',
+                        style: GoogleFonts.inter(
+                          color: ScholarlyTheme.textPrimary,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Expanded(
+                        child: GridView.builder(
+                          physics: const BouncingScrollPhysics(),
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 3,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 16,
+                            childAspectRatio: 0.75,
+                          ),
+                          itemCount: ThemeRegistry.allThemes.length,
+                          itemBuilder: (context, index) {
+                            final theme = ThemeRegistry.allThemes[index];
+                            final isSelected = state.boardThemeId == theme.id;
 
-                              return GestureDetector(
-                                onTap: () {
-                                  notifier.setBoardTheme(theme.id);
-                                  Navigator.of(context).popUntil((route) => route.isFirst);
-                                },
-                                child: Column(
-                                  children: [
-                                    Container(
-                                      width: 70,
-                                      height: 70,
+                            return GestureDetector(
+                              onTap: () {
+                                ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                                notifier.setBoardTheme(theme.id);
+                                Navigator.of(context).popUntil((route) => route.isFirst);
+                              },
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  AspectRatio(
+                                    aspectRatio: 1.0,
+                                    child: Container(
                                       decoration: BoxDecoration(
                                         gradient: LinearGradient(
                                           colors: [
@@ -324,22 +340,29 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
                                         border: Border.all(
                                           color: isSelected
                                               ? ScholarlyTheme.accentBlue
-                                              : ScholarlyTheme.panelStroke,
-                                          width: isSelected ? 3 : 1,
+                                              : ScholarlyTheme.panelStroke.withValues(alpha: 0.5),
+                                          width: isSelected ? 3 : 1.5,
                                         ),
                                         boxShadow: isSelected
                                             ? [
                                                 BoxShadow(
                                                   color: ScholarlyTheme.accentBlue.withValues(alpha: 0.3),
                                                   blurRadius: 10,
+                                                  spreadRadius: 1,
                                                 ),
                                               ]
-                                            : [],
+                                            : [
+                                                BoxShadow(
+                                                  color: Colors.black.withValues(alpha: 0.05),
+                                                  blurRadius: 4,
+                                                  offset: const Offset(0, 2),
+                                                ),
+                                              ],
                                       ),
                                       child: Center(
-                                        child: SizedBox(
-                                          width: 44,
-                                          height: 44,
+                                        child: FractionallySizedBox(
+                                          widthFactor: 0.65,
+                                          heightFactor: 0.65,
                                           child: theme.buildPiece(
                                             context,
                                             'N',
@@ -350,24 +373,27 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
                                         ),
                                       ),
                                     ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      theme.name,
-                                      style: GoogleFonts.inter(
-                                        fontSize: 12,
-                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                        color: isSelected ? ScholarlyTheme.accentBlue : ScholarlyTheme.textPrimary,
-                                      ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    theme.name,
+                                    textAlign: TextAlign.center,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 11,
+                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                      color: isSelected ? ScholarlyTheme.accentBlue : ScholarlyTheme.textPrimary,
+                                      height: 1.2,
                                     ),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
                         ),
-                        const SizedBox(height: 20),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ),

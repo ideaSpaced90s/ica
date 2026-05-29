@@ -6,6 +6,8 @@ import 'package:kingslayer_chess/src/rust/api/puzzles.dart' as rust_puzzles;
 
 import '../domain/chess_game.dart';
 import '../data/puzzle_repository.dart';
+import '../data/prescription_puzzle_repository.dart';
+import 'battleground_provider.dart';
 import '../services/chess_haptics_service.dart';
 import '../data/saved_game.dart'; // For CommentaryEntry
 import 'chess_provider.dart' show MoveAnimationData, chessProvider, chessHapticsServiceProvider;
@@ -32,6 +34,8 @@ class PuzzlesState {
   final MoveAnimationData? moveAnimation;
   final List<String> threatenedSquares;
   final bool isPuzzleMode;
+  final ScotomaAxis? activeAxis;
+  final bool isPressureCookerActive;
 
   PuzzlesState({
     required this.game,
@@ -53,6 +57,8 @@ class PuzzlesState {
     this.moveAnimation,
     this.threatenedSquares = const [],
     this.isPuzzleMode = false,
+    this.activeAxis,
+    this.isPressureCookerActive = false,
   });
 
   PuzzlesState copyWith({
@@ -75,6 +81,8 @@ class PuzzlesState {
     Object? moveAnimation = _sentinel,
     List<String>? threatenedSquares,
     bool? isPuzzleMode,
+    Object? activeAxis = _sentinel,
+    bool? isPressureCookerActive,
   }) {
     return PuzzlesState(
       game: game ?? this.game,
@@ -104,6 +112,8 @@ class PuzzlesState {
           : moveAnimation as MoveAnimationData?,
       threatenedSquares: threatenedSquares ?? this.threatenedSquares,
       isPuzzleMode: isPuzzleMode ?? this.isPuzzleMode,
+      activeAxis: identical(activeAxis, _sentinel) ? this.activeAxis : activeAxis as ScotomaAxis?,
+      isPressureCookerActive: isPressureCookerActive ?? this.isPressureCookerActive,
     );
   }
 }
@@ -112,11 +122,13 @@ class PuzzlesNotifier extends StateNotifier<PuzzlesState> {
   PuzzlesNotifier(
     this.ref,
     this._puzzleRepository,
+    this._prescriptionRepository,
     this._hapticsService,
   ) : super(PuzzlesState(game: ChessGame(fen: '8/8/8/8/8/8/8/8 w - - 0 1')));
 
   final Ref ref;
   final PuzzleRepository _puzzleRepository;
+  final PrescriptionPuzzleRepository _prescriptionRepository;
   final ChessHapticsService _hapticsService;
   bool _isDisposed = false;
 
@@ -129,6 +141,11 @@ class PuzzlesNotifier extends StateNotifier<PuzzlesState> {
   Future<void> startPuzzleMode({bool silent = false}) async {
     state = state.copyWith(isPuzzleMode: true);
     await nextPuzzle(silent: silent);
+  }
+
+  Future<void> startPrescriptionMode({bool silent = false}) async {
+    state = state.copyWith(isPuzzleMode: true);
+    await nextPrescriptionPuzzle(silent: silent);
   }
 
   Future<void> exitPuzzleMode() async {
@@ -161,7 +178,65 @@ class PuzzlesNotifier extends StateNotifier<PuzzlesState> {
     }
   }
 
-  Future<void> loadPuzzle(rust_puzzles.Puzzle puzzle, {bool silent = false}) async {
+  Future<void> nextPrescriptionPuzzle({bool silent = false}) async {
+    if (!state.isPuzzleMode) return;
+
+    debugPrint('PuzzlesNotifier: Requesting next prescription puzzle...');
+    try {
+      // 1. Get scotoma from battleground provider
+      final bgState = ref.read(battlegroundProvider);
+      final scotoma = bgState.cachedScotoma;
+      
+      // 2. Select dominant axis
+      ScotomaAxis chosenAxis = ScotomaAxis.balanced;
+      if (scotoma != null) {
+        final Map<ScotomaAxis, double> axisValues = {
+          ScotomaAxis.dgb: scotoma.diagonalRetreats,
+          ScotomaAxis.hrz: scotoma.horizontalSwings,
+          ScotomaAxis.knf: scotoma.knightForks,
+          ScotomaAxis.tmp: scotoma.timePanic,
+          ScotomaAxis.grd: scotoma.materialGreed,
+          ScotomaAxis.tnl: scotoma.tunnelVision,
+          ScotomaAxis.pin: scotoma.pinnedPieces,
+          ScotomaAxis.ksb: scotoma.kingSafety,
+        };
+
+        var maxEntry = axisValues.entries.reduce((a, b) => a.value > b.value ? a : b);
+        if (maxEntry.value > 0.3) {
+          chosenAxis = maxEntry.key;
+        }
+      }
+
+      // 3. Get user Elo
+      final playerElo = bgState.consolidatedRating;
+      
+      debugPrint('PuzzlesNotifier: Dominant Axis determined as $chosenAxis for Elo $playerElo');
+
+      final puzzle = await _prescriptionRepository.getPrescriptionPuzzle(
+        axis: chosenAxis,
+        playerElo: playerElo,
+      );
+
+      if (puzzle != null) {
+        state = state.copyWith(
+          activeAxis: chosenAxis,
+          isPressureCookerActive: chosenAxis == ScotomaAxis.tmp,
+        );
+        await loadPuzzle(puzzle, silent: silent, customAxis: chosenAxis);
+      } else {
+        state = state.copyWith(
+          commentaryError: 'Could not fetch a prescription puzzle.',
+        );
+      }
+    } catch (e) {
+      debugPrint('PuzzlesNotifier: Failed to get next prescription puzzle: $e');
+      state = state.copyWith(
+        commentaryError: 'An error occurred while loading your prescription.',
+      );
+    }
+  }
+
+  Future<void> loadPuzzle(rust_puzzles.Puzzle puzzle, {bool silent = false, ScotomaAxis? customAxis}) async {
     _clearHint();
 
     final restoredGame = ChessGame(fen: puzzle.fen, isChess960: false);
@@ -183,10 +258,43 @@ class PuzzlesNotifier extends StateNotifier<PuzzlesState> {
       puzzleMovesRemaining: remainingMoves,
       recentMoves: const [],
       lastMove: null,
+      activeAxis: customAxis ?? state.activeAxis,
+      isPressureCookerActive: customAxis == ScotomaAxis.tmp || (customAxis == null && state.isPressureCookerActive),
     );
 
     if (!silent) {
-      final introText = "Apprentice, I have loaded puzzle #${puzzle.id}. Rating: ${puzzle.rating}. Find the best sequence for ${isPlayerWhite ? 'White' : 'Black'}.";
+      String introText = "Apprentice, I have loaded puzzle #${puzzle.id}. Rating: ${puzzle.rating}. Find the best sequence for ${isPlayerWhite ? 'White' : 'Black'}.";
+      if (customAxis != null) {
+        switch (customAxis) {
+          case ScotomaAxis.dgb:
+            introText = "Apprentice, I see your eyes miss the long diagonal. Study this position — the retreating bishop is the weapon your opponent wields against you.";
+            break;
+          case ScotomaAxis.hrz:
+            introText = "Your blindness lies in the lateral files. Train your eye to sweep horizontally. Find the rook's path.";
+            break;
+          case ScotomaAxis.knf:
+            introText = "The knight on the flank haunts your games. Learn to see the L-shaped threat from the edges before it forks your pieces.";
+            break;
+          case ScotomaAxis.tmp:
+            introText = "You crumble under time pressure. 15 seconds, Apprentice. Find the move. There is no time for fear — only sight.";
+            break;
+          case ScotomaAxis.grd:
+            introText = "Greed is your enemy. Before you capture, look at what the opponent prepares. This puzzle teaches discipline.";
+            break;
+          case ScotomaAxis.tnl:
+            introText = "You focus on one side, blind to the other. The decisive blow always comes from where you are not looking.";
+            break;
+          case ScotomaAxis.pin:
+            introText = "A pinned piece is a ghost defender. You have been fooled by them before. This puzzle cures the hallucination.";
+            break;
+          case ScotomaAxis.ksb:
+            introText = "Your king breathes easy while danger forms. I will show you mating nets until they become instinct.";
+            break;
+          case ScotomaAxis.balanced:
+            introText = "Your vision is balanced, Apprentice. Now we sharpen all edges. A well-rounded tactician fears nothing. Begin.";
+            break;
+        }
+      }
       state = state.copyWith(
         commentaryHistory: [
           CommentaryEntry(
@@ -426,6 +534,7 @@ class PuzzlesNotifier extends StateNotifier<PuzzlesState> {
 
 final puzzlesProvider = StateNotifierProvider<PuzzlesNotifier, PuzzlesState>((ref) {
   final puzzleRepository = ref.watch(puzzleRepositoryProvider);
+  final prescriptionRepository = ref.watch(prescriptionPuzzleRepositoryProvider);
   final hapticsService = ref.watch(chessHapticsServiceProvider);
-  return PuzzlesNotifier(ref, puzzleRepository, hapticsService);
+  return PuzzlesNotifier(ref, puzzleRepository, prescriptionRepository, hapticsService);
 });

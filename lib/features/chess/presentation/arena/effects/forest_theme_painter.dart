@@ -4,11 +4,15 @@ class WoodenPiecePainter extends CustomPainter {
   final String type; // K, Q, B, N, R, P
   final bool isWhite;
   final bool isHighlighted;
+  final List<Color>? customGradientColors;
+  final Color? customStrokeColor;
 
   WoodenPiecePainter({
     required this.type,
     required this.isWhite,
     this.isHighlighted = false,
+    this.customGradientColors,
+    this.customStrokeColor,
   });
 
   @override
@@ -16,10 +20,12 @@ class WoodenPiecePainter extends CustomPainter {
     final center = size.center(Offset.zero);
     final radius = size.width / 2;
 
+    final defaultColors = isWhite
+        ? const [Color(0xFFF5E6CC), Color(0xFFA67C52)] // Lightened
+        : const [Color(0xFF3E2723), Color(0xFF1A0F0E)]; // Darkened
+
     final woodGradient = LinearGradient(
-      colors: isWhite
-          ? [const Color(0xFFF5E6CC), const Color(0xFFA67C52)] // Lightened
-          : [const Color(0xFF3E2723), const Color(0xFF1A0F0E)], // Darkened
+      colors: customGradientColors ?? defaultColors,
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
@@ -29,7 +35,7 @@ class WoodenPiecePainter extends CustomPainter {
       ..style = PaintingStyle.fill;
 
     final strokePaint = Paint()
-      ..color = Colors.black.withValues(alpha: 0.3)
+      ..color = customStrokeColor ?? Colors.black.withValues(alpha: 0.3)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
 

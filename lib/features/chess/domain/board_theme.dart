@@ -76,7 +76,7 @@ class BoardTheme {
     ),
     BoardTheme(
       id: 'theme9',
-      name: 'Cartoon Toy',
+      name: 'Mummy',
       lightSquare: Color(0xFFFFF3E0),
       darkSquare: Color(0xFFFFB74D),
       frameColor: Color(0xFFE65100),

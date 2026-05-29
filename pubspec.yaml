@@ -53,6 +53,8 @@ dependencies:
   confetti: ^0.7.0
   image_picker: ^1.1.2
   video_player: ^2.11.1
+  chess_assets:
+    path: packages/chess_assets
 
 dev_dependencies:
   flutter_test:
@@ -84,6 +86,7 @@ flutter:
     # - assets/engine/wincessengines/stockfish-windows-x86-64/stockfish/
     # - assets/engine/wincessengines/crafty/
     - assets/data/
+    - assets/prescriptions/
     - assets/llm/
     - assets/llm/gemma/
 

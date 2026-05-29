@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-
-
+import 'package:confetti/confetti.dart';
 
 import '../../application/puzzles_provider.dart';
 import '../scholarly_theme.dart';
@@ -10,6 +9,8 @@ import 'puzzles_board.dart';
 import '../widgets/ambient_scaffold.dart';
 import '../dashboard_page.dart';
 import '../mobile_navigation_shell.dart';
+import 'widgets/prescription_banner.dart';
+import 'widgets/pressure_cooker_timer.dart';
 import 'dart:ui';
 
 class PuzzlesPage extends ConsumerStatefulWidget {
@@ -21,20 +22,24 @@ class PuzzlesPage extends ConsumerStatefulWidget {
 
 class _PuzzlesPageState extends ConsumerState<PuzzlesPage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  late ConfettiController _confettiController;
+  bool _hasTriggeredConfetti = false;
 
   @override
   void initState() {
     super.initState();
+    _confettiController = ConfettiController(duration: const Duration(seconds: 3));
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final currentIndex = ref.read(mobileNavIndexProvider);
       if (currentIndex == 4 && !ref.read(puzzlesProvider).isPuzzleMode) {
-        await ref.read(puzzlesProvider.notifier).startPuzzleMode(silent: true);
+        await ref.read(puzzlesProvider.notifier).startPrescriptionMode(silent: true);
       }
     });
   }
 
   @override
   void dispose() {
+    _confettiController.dispose();
     super.dispose();
   }
 
@@ -99,96 +104,13 @@ class _PuzzlesPageState extends ConsumerState<PuzzlesPage> {
     }
   }
 
-  Widget _buildMoveLog(BuildContext context, PuzzlesState state) {
-    final moves = state.recentMoves;
-    if (moves.isEmpty) {
-      return const Center(
-        child: Text(
-          'No moves yet.',
-          style: TextStyle(
-            color: ScholarlyTheme.textMuted,
-            fontSize: 13,
-            fontStyle: FontStyle.italic,
-          ),
-        ),
-      );
-    }
-
-    final List<List<String>> pairs = [];
-    for (int i = 0; i < moves.length; i += 2) {
-      pairs.add([moves[i], if (i + 1 < moves.length) moves[i + 1]]);
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      itemCount: pairs.length,
-      itemBuilder: (context, index) {
-        final pair = pairs[index];
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Row(
-            children: [
-              SizedBox(
-                width: 28,
-                child: Text(
-                  '${index + 1}.',
-                  style: GoogleFonts.jetBrainsMono(
-                    color: ScholarlyTheme.accentBlue.withValues(alpha: 0.6),
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: ScholarlyTheme.accentBlue.withValues(alpha: 0.05),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    pair[0],
-                    style: GoogleFonts.inter(
-                      color: ScholarlyTheme.textPrimary,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              if (pair.length > 1)
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.05),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      pair[1],
-                      style: GoogleFonts.inter(
-                        color: ScholarlyTheme.textPrimary,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                )
-              else
-                const Expanded(child: SizedBox()),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   Widget _buildPortraitLayout(
     BuildContext context,
     PuzzlesState state,
     PuzzlesNotifier notifier,
   ) {
+    final bool isSolved = state.puzzleMovesRemaining.isEmpty;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -197,88 +119,95 @@ class _PuzzlesPageState extends ConsumerState<PuzzlesPage> {
           aspectRatio: 1.0,
           child: PuzzlesBoard(alignment: Alignment.topCenter),
         ),
-        
-        // 2. Puzzle Info & Move Log
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _PuzzleStatusHeader(state: state),
-                const SizedBox(height: 12),
-                Expanded(
-                  child: JuicyGlassCard(
-                    borderRadius: 20,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(top: 12, bottom: 4),
-                          child: Text(
-                            'MOVE SEQUENCE',
-                            style: GoogleFonts.inter(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w900,
-                              color: ScholarlyTheme.textSubtle,
-                              letterSpacing: 1.0,
-                            ),
-                          ),
-                        ),
-                        const Divider(color: ScholarlyTheme.panelStroke),
-                        Expanded(
-                          child: _buildMoveLog(context, state),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
+
+        // Prescription Therapy Banner
+        if (state.activeAxis != null) ...[
+          PrescriptionBanner(axis: state.activeAxis!),
+        ],
+
+        // Pressure Cooker Countdown Timer
+        if (state.isPressureCookerActive && !isSolved) ...[
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+            child: PressureCookerTimer(),
           ),
+        ],
+        
+        // 2. Puzzle Info Header
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+          child: _PuzzleStatusHeader(state: state),
         ),
 
-        // 3. Actions
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-          child: JuicyGlassCard(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            borderRadius: 24,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _CompactActionIcon(
-                  icon: Icons.skip_next_rounded,
-                  tooltip: 'Next Puzzle',
-                  onTap: () => notifier.nextPuzzle(silent: true),
+        // Spacer to push actions to the bottom
+        const Spacer(),
+
+        // 3. Actions / Solved CTA Button
+        if (isSolved)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 4, 12, 16),
+            child: InkWell(
+              onTap: () => notifier.nextPrescriptionPuzzle(silent: true),
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF10B981), Color(0xFF059669)], // Emerald gradients
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
                 ),
-                _CompactActionIcon(
-                  icon: Icons.refresh_rounded,
-                  tooltip: 'Reset',
-                  onTap: () => notifier.resetPuzzleLine(),
+                child: Center(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Next Prescription',
+                        style: GoogleFonts.outfit(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Icon(
+                        Icons.arrow_forward_rounded,
+                        color: Colors.white,
+                        size: 16,
+                      ),
+                    ],
+                  ),
                 ),
-                _CompactActionIcon(
-                  icon: Icons.flip_camera_android_outlined,
-                  tooltip: 'Flip',
-                  isActive: state.isBoardFlipped,
-                  onTap: () => notifier.toggleBoardOrientation(),
-                ),
-                _CompactActionIcon(
-                  icon: state.isBulbGlowing
-                      ? Icons.lightbulb_rounded
-                      : Icons.lightbulb_outline_rounded,
-                  tooltip: 'Hint',
-                  isEnabled: !state.isHintLoading,
-                  isActive: state.isBulbGlowing,
-                  activeColor: ScholarlyTheme.accentYellowSoft,
-                  activeIconColor: ScholarlyTheme.accentYellow,
-                  onTap: () => notifier.requestHint(),
-                ),
-              ],
+              ),
+            ),
+          )
+        else
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 4, 12, 16),
+            child: Center(
+              child: _CompactActionIcon(
+                icon: state.isBulbGlowing
+                    ? Icons.lightbulb_rounded
+                    : Icons.lightbulb_outline_rounded,
+                tooltip: 'Hint',
+                isEnabled: !state.isHintLoading,
+                isActive: state.isBulbGlowing,
+                activeColor: ScholarlyTheme.accentYellowSoft,
+                activeIconColor: ScholarlyTheme.accentYellow,
+                onTap: () => notifier.requestHint(),
+              ),
             ),
           ),
-        ),
       ],
     );
   }
@@ -288,6 +217,8 @@ class _PuzzlesPageState extends ConsumerState<PuzzlesPage> {
     PuzzlesState state,
     PuzzlesNotifier notifier,
   ) {
+    final bool isSolved = state.puzzleMovesRemaining.isEmpty;
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -312,81 +243,87 @@ class _PuzzlesPageState extends ConsumerState<PuzzlesPage> {
         Expanded(
           flex: 9,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+            padding: const EdgeInsets.all(12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // Prescription Therapy Banner
+                if (state.activeAxis != null) ...[
+                  PrescriptionBanner(axis: state.activeAxis!),
+                  const SizedBox(height: 6),
+                ],
+
+                // Pressure Cooker Countdown Timer
+                if (state.isPressureCookerActive && !isSolved) ...[
+                  const PressureCookerTimer(),
+                  const SizedBox(height: 6),
+                ],
+
                 // 1. Puzzle Status Header
                 _PuzzleStatusHeader(state: state),
-                const SizedBox(height: 12),
+                
+                const Spacer(),
 
-                // 2. Move Log
-                Expanded(
-                  child: JuicyGlassCard(
-                    borderRadius: 20,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(top: 12, bottom: 4),
-                          child: Text(
-                            'MOVE SEQUENCE',
-                            style: GoogleFonts.inter(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w900,
-                              color: ScholarlyTheme.textSubtle,
-                              letterSpacing: 1.0,
-                            ),
+                // 3. Actions Row / Solved CTA Button
+                if (isSolved)
+                  InkWell(
+                    onTap: () => notifier.nextPrescriptionPuzzle(silent: true),
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF10B981), Color(0xFF059669)], // Emerald gradients
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
                           ),
+                        ],
+                      ),
+                      child: Center(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Next Prescription',
+                              style: GoogleFonts.outfit(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            const Icon(
+                              Icons.arrow_forward_rounded,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                          ],
                         ),
-                        const Divider(color: ScholarlyTheme.panelStroke),
-                        Expanded(
-                          child: _buildMoveLog(context, state),
-                        ),
-                      ],
+                      ),
+                    ),
+                  )
+                else
+                  Center(
+                    child: _CompactActionIcon(
+                      icon: state.isBulbGlowing
+                          ? Icons.lightbulb_rounded
+                          : Icons.lightbulb_outline_rounded,
+                      tooltip: 'Hint',
+                      isEnabled: !state.isHintLoading,
+                      isActive: state.isBulbGlowing,
+                      activeColor: ScholarlyTheme.accentYellowSoft,
+                      activeIconColor: ScholarlyTheme.accentYellow,
+                      onTap: () => notifier.requestHint(),
                     ),
                   ),
-                ),
-                const SizedBox(height: 12),
-
-                // 3. Actions Row
-                JuicyGlassCard(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  borderRadius: 24,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _CompactActionIcon(
-                        icon: Icons.skip_next_rounded,
-                        tooltip: 'Next Puzzle',
-                        onTap: () => notifier.nextPuzzle(silent: true),
-                      ),
-                      _CompactActionIcon(
-                        icon: Icons.refresh_rounded,
-                        tooltip: 'Reset',
-                        onTap: () => notifier.resetPuzzleLine(),
-                      ),
-                      _CompactActionIcon(
-                        icon: Icons.flip_camera_android_outlined,
-                        tooltip: 'Flip',
-                        isActive: state.isBoardFlipped,
-                        onTap: () => notifier.toggleBoardOrientation(),
-                      ),
-                      _CompactActionIcon(
-                        icon: state.isBulbGlowing
-                            ? Icons.lightbulb_rounded
-                            : Icons.lightbulb_outline_rounded,
-                        tooltip: 'Hint',
-                        isEnabled: !state.isHintLoading,
-                        isActive: state.isBulbGlowing,
-                        activeColor: ScholarlyTheme.accentYellowSoft,
-                        activeIconColor: ScholarlyTheme.accentYellow,
-                        onTap: () => notifier.requestHint(),
-                      ),
-                    ],
-                  ),
-                ),
               ],
             ),
           ),
@@ -403,7 +340,18 @@ class _PuzzlesPageState extends ConsumerState<PuzzlesPage> {
 
     ref.listen<int>(mobileNavIndexProvider, (previous, current) {
       if (current == 4 && !ref.read(puzzlesProvider).isPuzzleMode) {
-        ref.read(puzzlesProvider.notifier).startPuzzleMode(silent: true);
+        ref.read(puzzlesProvider.notifier).startPrescriptionMode(silent: true);
+      }
+    });
+
+    ref.listen<PuzzlesState>(puzzlesProvider, (previous, current) {
+      final wasSolved = previous?.puzzleMovesRemaining.isEmpty ?? false;
+      final isSolved = current.puzzleMovesRemaining.isEmpty;
+      if (isSolved && !wasSolved && current.currentPuzzle != null && !_hasTriggeredConfetti) {
+        _hasTriggeredConfetti = true;
+        _confettiController.play();
+      } else if (!isSolved) {
+        _hasTriggeredConfetti = false;
       }
     });
 
@@ -418,11 +366,33 @@ class _PuzzlesPageState extends ConsumerState<PuzzlesPage> {
         blob1Color: const Color(0xFFF0F9FF), // Very light blue
         blob2Color: const Color(0xFFFDF2F8), // Very light pink
         blob3Color: const Color(0xFFFFFBEB), // Very light amber
-        body: SafeArea(
-          top: false,
-          child: isLandscape
-              ? _buildLandscapeLayout(context, state, notifier)
-              : _buildPortraitLayout(context, state, notifier),
+        body: Stack(
+          children: [
+            SafeArea(
+              top: false,
+              child: isLandscape
+                  ? _buildLandscapeLayout(context, state, notifier)
+                  : _buildPortraitLayout(context, state, notifier),
+            ),
+            
+            // Confetti Cannon Overlay
+            Align(
+              alignment: Alignment.topCenter,
+              child: ConfettiWidget(
+                confettiController: _confettiController,
+                blastDirectionality: BlastDirectionality.explosive,
+                shouldLoop: false,
+                colors: const [
+                  Colors.green,
+                  Colors.blue,
+                  Colors.pink,
+                  Colors.orange,
+                  Colors.purple,
+                  Colors.yellow,
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -448,44 +418,44 @@ class _PuzzleStatusHeader extends ConsumerWidget {
     final bool isSolved = state.puzzleMovesRemaining.isEmpty;
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(12),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
             color: isSolved 
                 ? Colors.green.withValues(alpha: 0.1) 
                 : ScholarlyTheme.accentBlue.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: isSolved 
                   ? Colors.greenAccent.withValues(alpha: 0.3) 
                   : ScholarlyTheme.accentBlue.withValues(alpha: 0.2),
-              width: 1.5,
+              width: 1.2,
             ),
           ),
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(5),
                 decoration: BoxDecoration(
                   color: isSolved ? Colors.greenAccent : ScholarlyTheme.accentBlue,
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
                       color: (isSolved ? Colors.greenAccent : ScholarlyTheme.accentBlue).withValues(alpha: 0.3),
-                      blurRadius: 8,
+                      blurRadius: 6,
                     ),
                   ],
                 ),
                 child: Icon(
                   isSolved ? Icons.check_rounded : Icons.extension_rounded,
-                  size: 18,
+                  size: 14,
                   color: Colors.white,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -500,17 +470,17 @@ class _PuzzleStatusHeader extends ConsumerWidget {
                                   ? 'ERROR'
                                   : 'LOADING...')),
                       style: GoogleFonts.outfit(
-                        fontSize: 14,
+                        fontSize: 11,
                         fontWeight: FontWeight.bold,
                         color: isSolved
                             ? Colors.green.shade700
                             : (state.commentaryError != null
                                 ? Colors.redAccent
                                 : ScholarlyTheme.textPrimary),
-                        letterSpacing: 0.5,
+                        letterSpacing: 0.4,
                       ),
                     ),
-                    const SizedBox(height: 1),
+                    const SizedBox(height: 0.5),
                     if (state.commentaryError != null && p == null)
                       Row(
                         children: [
@@ -518,7 +488,7 @@ class _PuzzleStatusHeader extends ConsumerWidget {
                             child: Text(
                               state.commentaryError!,
                               style: GoogleFonts.inter(
-                                fontSize: 11,
+                                fontSize: 9.5,
                                 color: Colors.redAccent.withValues(alpha: 0.8),
                                 fontWeight: FontWeight.w500,
                               ),
@@ -526,15 +496,15 @@ class _PuzzleStatusHeader extends ConsumerWidget {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 6),
                           GestureDetector(
                             onTap: () => ref
                                 .read(puzzlesProvider.notifier)
-                                .nextPuzzle(silent: true),
+                                .nextPrescriptionPuzzle(silent: true),
                             child: Container(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
+                                horizontal: 6,
+                                vertical: 2,
                               ),
                               decoration: BoxDecoration(
                                 color: Colors.redAccent.withValues(alpha: 0.1),
@@ -546,7 +516,7 @@ class _PuzzleStatusHeader extends ConsumerWidget {
                               child: Text(
                                 'RETRY',
                                 style: GoogleFonts.inter(
-                                  fontSize: 10,
+                                  fontSize: 8.5,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.redAccent,
                                 ),
@@ -559,7 +529,7 @@ class _PuzzleStatusHeader extends ConsumerWidget {
                       Text(
                         '${state.isPlayerWhite ? "White" : "Black"} to move',
                         style: GoogleFonts.inter(
-                          fontSize: 11,
+                          fontSize: 9.5,
                           color: ScholarlyTheme.textSubtle,
                           fontWeight: FontWeight.w500,
                         ),
@@ -569,15 +539,15 @@ class _PuzzleStatusHeader extends ConsumerWidget {
               ),
               if (!isSolved && p != null)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.5),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
                     '${(state.puzzleMovesRemaining.length / 2).ceil()} LEFT',
                     style: GoogleFonts.jetBrainsMono(
-                      fontSize: 11,
+                      fontSize: 10,
                       fontWeight: FontWeight.bold,
                       color: ScholarlyTheme.accentBlue,
                     ),
