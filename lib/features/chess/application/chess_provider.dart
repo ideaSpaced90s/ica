@@ -837,7 +837,14 @@ class ChessNotifier extends StateNotifier<ChessState> {
     if (isRated || state.isAcademyActive) {
       return key == 'pieceMotion';
     }
-    return state.isAnimationsEnabled && (state.animationSettings[key] ?? true);
+    if (!state.isAnimationsEnabled) {
+      return false;
+    }
+    final themeId = state.boardThemeId;
+    if (themeId == 'classic' || themeId == 'scholar' || themeId == 'vector_glass') {
+      return false;
+    }
+    return true;
   }
 
   void toggleAcademyHouseAnimations() {

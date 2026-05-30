@@ -92,6 +92,7 @@ class ChessSoundService {
     'ambientClicks': true,
   };
   bool isBgmEnabled = false;
+  bool _isInMutedTab = false;
   bool _isInitialized = false;
   final Completer<void> _initCompleter = Completer<void>();
 
@@ -145,7 +146,7 @@ class ChessSoundService {
       // Start BGM if it was enabled while we were loading
       if (isBgmEnabled && _bgmSources.isNotEmpty) {
         debugPrint('ChessSoundService: BGM was requested during init, starting playback now.');
-        _playRandomBgm();
+        _updateBgmPlayback();
       }
     } catch (e) {
       debugPrint('ChessSoundService: FATAL Init Error: $e');
@@ -180,21 +181,30 @@ class ChessSoundService {
     isBgmEnabled = bgmEnabled;
 
     if (bgmChanged) {
-      if (isBgmEnabled) {
-        // If not yet initialized, _initAudio will start BGM when ready
-        if (_isInitialized) {
+      _updateBgmPlayback();
+    }
+  }
+
+  void setMutedTabState(bool isMuted) {
+    if (_isInMutedTab == isMuted) return;
+    _isInMutedTab = isMuted;
+    _updateBgmPlayback();
+  }
+
+  void _updateBgmPlayback() {
+    if (isBgmEnabled && !_isInMutedTab) {
+      if (_isInitialized) {
+        if (_bgmHandle == null) {
           _playRandomBgm();
-        } else {
-          debugPrint('ChessSoundService: BGM enabled but init pending — will start after init.');
         }
-      } else {
-        _stopBgm();
       }
+    } else {
+      _stopBgm();
     }
   }
 
   Future<void> _playRandomBgm() async {
-    if (!isBgmEnabled || _bgmSources.isEmpty || !SoLoud.instance.isInitialized) return;
+    if (!isBgmEnabled || _isInMutedTab || _bgmSources.isEmpty || !SoLoud.instance.isInitialized) return;
 
     try {
       final sources = List<AudioSource>.from(_bgmSources)..shuffle();
@@ -213,8 +223,8 @@ class ChessSoundService {
         volume: 0.0,
       );
 
-      if (!isBgmEnabled) {
-        // If BGM was disabled while we were awaiting, stop this handle immediately
+      if (!isBgmEnabled || _isInMutedTab) {
+        // If BGM was disabled or we entered a muted tab while we were awaiting, stop this handle immediately
         try {
           if (SoLoud.instance.isInitialized) {
             SoLoud.instance.stop(handle);
@@ -280,10 +290,10 @@ class ChessSoundService {
       return academySoundSettings[key] ?? true;
     } else {
       if (!isGameSoundEnabled) return false;
-      if (key == 'outcomeSounds' || key == 'coachSounds' || key == 'ambientClicks') {
+      if (key == 'coachSounds' || key == 'ambientClicks') {
         return false;
       }
-      return soundSettings[key] ?? true;
+      return true;
     }
   }
 

@@ -34,6 +34,12 @@ class MobileNavigationShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final currentIndex = ref.watch(mobileNavIndexProvider);
 
+    // Mute background music when in Arena (1), Battleground (2), Academy (3), or Puzzles (4)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final isMuted = currentIndex == 1 || currentIndex == 2 || currentIndex == 3 || currentIndex == 4;
+      ref.read(chessSoundServiceProvider).setMutedTabState(isMuted);
+    });
+
     // IndexedStack children
     final List<Widget> pages = [
       const DashboardPage(),
