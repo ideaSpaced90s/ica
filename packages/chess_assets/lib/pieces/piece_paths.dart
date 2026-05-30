@@ -76,8 +76,8 @@ class ChessPiecePaths {
         return '''
           <g>
             <path d="M22 9c-2.21 0-4 1.79-4 4 0 3.15 2.5 4.5 3 6.5-3.1 1.05-6 2.95-6 6 0 2 1.5 2.5 2.5 3 1 1 3 1 4.5 1.5 1.5.5 2.5 1.5 2.5 1.5s1-1 2.5-1.5c1.5-.5 3.5-.5 4.5-1.5 1-.5 2.5-1 2.5-3 0-3.05-2.9-4.95-6-6 .5-2 3-3.35 3-6.5 0-2.21-1.79-4-4-4z" fill="{primary}" stroke="{secondary}" stroke-linecap="butt" stroke-linejoin="miter" stroke-width="1.5" />
-            <path d="M11 38.5a35 35 0 0 0 23 0" fill="none" stroke="{secondary}" stroke-linecap="butt" stroke-linejoin="miter" stroke-width="1.5" />
-            <path d="M11 29a35 35 0 0 1 23 0M12.5 31.5h20M11.5 34.5a35 35 0 0 0 22 0" fill="none" stroke="{secondary}" stroke-linecap="butt" stroke-linejoin="miter" stroke-width="1.5" />
+            <path d="M11 38.5a35 35 0 0 0 23 0" fill="none" stroke="{primary}" stroke-linecap="butt" stroke-linejoin="miter" stroke-width="1.5" />
+            <path d="M11 29a35 35 0 0 1 23 0M12.5 31.5h20M11.5 34.5a35 35 0 0 0 22 0" fill="none" stroke="{primary}" stroke-linecap="butt" stroke-linejoin="miter" stroke-width="1.5" />
           </g>
         ''';
       default: return '';

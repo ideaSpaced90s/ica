@@ -76,6 +76,7 @@ flutter:
 
   assets:
     - assets/pieces/
+    - assets/pieces/fairytale_castle/
     - assets/board/
     - assets/persona/
     - assets/sfx/

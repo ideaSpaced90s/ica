@@ -3,7 +3,7 @@ import '../../shared/themes/chess_theme.dart';
 import '../effects/ink_theme.dart';
 
 class InkTheme extends ChessTheme {
-  const InkTheme() : super(id: 'theme3', name: 'Ink');
+  const InkTheme() : super(id: 'theme3', name: 'Calligraphy');
 
   @override
   Color get lightSquare => const Color(0xFFF5F5DC);

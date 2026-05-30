@@ -36,7 +36,7 @@ class BoardTheme {
     ),
     BoardTheme(
       id: 'theme3',
-      name: 'Ink Calligraphy',
+      name: 'Calligraphy',
       lightSquare: Color(0xFFF5F5DC), // Rice Paper
       darkSquare: Color(0xFFD6D3D1), // Faded Ink Wash
       frameColor: Color(0xFF2C2C2C), // Dark Ink Frame

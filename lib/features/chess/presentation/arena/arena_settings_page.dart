@@ -111,7 +111,7 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
                       title: 'VISUALS',
                       children: [
                         _SettingsTile(
-                          label: 'Board Theme',
+                          label: 'Chessboard Themes',
                           description: 'Current: ${ThemeRegistry.getTheme(state.boardThemeId).name}',
                           icon: Icons.palette_rounded,
                           onTap: () => _showThemeSelector(context, ref),

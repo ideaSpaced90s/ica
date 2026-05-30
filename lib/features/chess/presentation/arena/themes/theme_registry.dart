@@ -29,67 +29,57 @@ class ThemeRegistry {
     // 13 Vector-based themes from chess_assets package
     'vector_wood': const VectorChessTheme(
       id: 'vector_wood',
-      name: 'Classic Wood',
+      name: 'Wood',
       packageTheme: assets_lib.ChessThemes.classicWood,
     ),
     'vector_cyberpunk': const VectorChessTheme(
       id: 'vector_cyberpunk',
-      name: 'Cyberpunk Neon',
+      name: 'Neon',
       packageTheme: assets_lib.ChessThemes.cyberpunkNeon,
     ),
     'vector_glass': const VectorChessTheme(
       id: 'vector_glass',
-      name: 'Glass Morphic',
+      name: 'bnw',
       packageTheme: assets_lib.ChessThemes.glassMorphic,
     ),
     'vector_ice': const VectorChessTheme(
       id: 'vector_ice',
-      name: 'Ice & Glacier',
+      name: 'Glacier',
       packageTheme: assets_lib.ChessThemes.iceGlacier,
     ),
     'vector_royal': const VectorChessTheme(
       id: 'vector_royal',
-      name: 'Royal Gold & Velvet',
+      name: 'Gold',
       packageTheme: assets_lib.ChessThemes.royalGoldVelvet,
     ),
     'vector_camo': const VectorChessTheme(
       id: 'vector_camo',
-      name: 'Midnight Camo',
+      name: 'Midnight',
       packageTheme: assets_lib.ChessThemes.midnightCamo,
-    ),
-    'vector_autumn': const VectorChessTheme(
-      id: 'vector_autumn',
-      name: 'Animal Friends',
-      packageTheme: assets_lib.ChessThemes.animalFriends,
     ),
     'vector_championship': const VectorChessTheme(
       id: 'vector_championship',
-      name: 'Championship Classic',
+      name: 'Champions',
       packageTheme: assets_lib.ChessThemes.championshipClassic,
     ),
-    'vector_anime': const VectorChessTheme(
-      id: 'vector_anime',
-      name: 'Anime Ink',
-      packageTheme: assets_lib.ChessThemes.animeInk,
+    'vector_sakura': const VectorChessTheme(
+      id: 'vector_sakura',
+      name: 'Sakura',
+      packageTheme: assets_lib.ChessThemes.sakuraZen,
     ),
     'vector_holographic': const VectorChessTheme(
       id: 'vector_holographic',
-      name: 'Pink World',
+      name: 'Pinkworld',
       packageTheme: assets_lib.ChessThemes.holographicGlow,
     ),
     'vector_egyptian': const VectorChessTheme(
       id: 'vector_egyptian',
-      name: 'Egyptian Sand',
+      name: 'Sand',
       packageTheme: assets_lib.ChessThemes.egyptianSand,
-    ),
-    'vector_abyss': const VectorChessTheme(
-      id: 'vector_abyss',
-      name: 'Underwater Abyss',
-      packageTheme: assets_lib.ChessThemes.underwaterAbyss,
     ),
     'vector_steel': const VectorChessTheme(
       id: 'vector_steel',
-      name: 'Fairytale Castle',
+      name: 'Castleworld',
       packageTheme: assets_lib.ChessThemes.fairytaleCastle,
     ),
   };
@@ -99,31 +89,27 @@ class ThemeRegistry {
   }
 
   static List<ChessTheme> get allThemes => [
-        _themes['classic']!,
-        _themes['theme2']!,
-        _themes['theme3']!,
-        _themes['theme4']!,
-        _themes['theme5']!,
-        _themes['theme7']!,
-        _themes['theme8']!,
-        _themes['theme9']!,
-        _themes['theme10']!,
-        _themes['scholar']!,
-        
-        // 13 Vector-based themes from chess_assets package
-        _themes['vector_wood']!,
-        _themes['vector_cyberpunk']!,
-        _themes['vector_glass']!,
+        _themes['classic']!, // 1x1
+        _themes['scholar']!, // 2x1
         _themes['vector_ice']!,
-        _themes['vector_royal']!,
-        _themes['vector_camo']!,
+        _themes['theme4']!,
         _themes['vector_championship']!,
-        _themes['vector_anime']!,
+        _themes['theme7']!,
+        _themes['vector_wood']!,
+        _themes['theme10']!,
         _themes['vector_holographic']!,
+        _themes['theme2']!,
+        _themes['vector_camo']!,
+        _themes['theme8']!,
+        _themes['vector_cyberpunk']!,
+        _themes['theme3']!,
         _themes['vector_egyptian']!,
-        _themes['vector_abyss']!,
-        _themes['vector_steel']!,
-        _themes['vector_autumn']!,
+        _themes['theme5']!,
+        _themes['vector_glass']!,
+        _themes['theme9']!,
+        _themes['vector_royal']!,
+        _themes['vector_sakura']!,
+        _themes['vector_steel']!, // 3x7
       ];
 
   static String resolveThemeId(ChessState state) {
