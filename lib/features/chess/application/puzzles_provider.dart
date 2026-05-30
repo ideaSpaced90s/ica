@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:chess/chess.dart' as chess_lib;
@@ -7,6 +8,7 @@ import 'package:kingslayer_chess/src/rust/api/puzzles.dart' as rust_puzzles;
 import '../domain/chess_game.dart';
 import '../data/puzzle_repository.dart';
 import '../data/prescription_puzzle_repository.dart';
+import '../domain/chanakya_quotes.dart';
 import 'battleground_provider.dart';
 import '../services/chess_haptics_service.dart';
 import '../data/saved_game.dart'; // For CommentaryEntry
@@ -36,6 +38,7 @@ class PuzzlesState {
   final bool isPuzzleMode;
   final ScotomaAxis? activeAxis;
   final bool isPressureCookerActive;
+  final int solvedCount;
 
   PuzzlesState({
     required this.game,
@@ -59,6 +62,7 @@ class PuzzlesState {
     this.isPuzzleMode = false,
     this.activeAxis,
     this.isPressureCookerActive = false,
+    this.solvedCount = 0,
   });
 
   PuzzlesState copyWith({
@@ -83,6 +87,7 @@ class PuzzlesState {
     bool? isPuzzleMode,
     Object? activeAxis = _sentinel,
     bool? isPressureCookerActive,
+    int? solvedCount,
   }) {
     return PuzzlesState(
       game: game ?? this.game,
@@ -114,6 +119,7 @@ class PuzzlesState {
       isPuzzleMode: isPuzzleMode ?? this.isPuzzleMode,
       activeAxis: identical(activeAxis, _sentinel) ? this.activeAxis : activeAxis as ScotomaAxis?,
       isPressureCookerActive: isPressureCookerActive ?? this.isPressureCookerActive,
+      solvedCount: solvedCount ?? this.solvedCount,
     );
   }
 }
@@ -144,7 +150,7 @@ class PuzzlesNotifier extends StateNotifier<PuzzlesState> {
   }
 
   Future<void> startPrescriptionMode({bool silent = false}) async {
-    state = state.copyWith(isPuzzleMode: true);
+    state = state.copyWith(isPuzzleMode: true, solvedCount: 0);
     await nextPrescriptionPuzzle(silent: silent);
   }
 
@@ -261,54 +267,17 @@ class PuzzlesNotifier extends StateNotifier<PuzzlesState> {
       activeAxis: customAxis ?? state.activeAxis,
       isPressureCookerActive: customAxis == ScotomaAxis.tmp || (customAxis == null && state.isPressureCookerActive),
     );
-
-    if (!silent) {
-      String introText = "Apprentice, I have loaded puzzle #${puzzle.id}. Rating: ${puzzle.rating}. Find the best sequence for ${isPlayerWhite ? 'White' : 'Black'}.";
-      if (customAxis != null) {
-        switch (customAxis) {
-          case ScotomaAxis.dgb:
-            introText = "Apprentice, I see your eyes miss the long diagonal. Study this position — the retreating bishop is the weapon your opponent wields against you.";
-            break;
-          case ScotomaAxis.hrz:
-            introText = "Your blindness lies in the lateral files. Train your eye to sweep horizontally. Find the rook's path.";
-            break;
-          case ScotomaAxis.knf:
-            introText = "The knight on the flank haunts your games. Learn to see the L-shaped threat from the edges before it forks your pieces.";
-            break;
-          case ScotomaAxis.tmp:
-            introText = "You crumble under time pressure. 15 seconds, Apprentice. Find the move. There is no time for fear — only sight.";
-            break;
-          case ScotomaAxis.grd:
-            introText = "Greed is your enemy. Before you capture, look at what the opponent prepares. This puzzle teaches discipline.";
-            break;
-          case ScotomaAxis.tnl:
-            introText = "You focus on one side, blind to the other. The decisive blow always comes from where you are not looking.";
-            break;
-          case ScotomaAxis.pin:
-            introText = "A pinned piece is a ghost defender. You have been fooled by them before. This puzzle cures the hallucination.";
-            break;
-          case ScotomaAxis.ksb:
-            introText = "Your king breathes easy while danger forms. I will show you mating nets until they become instinct.";
-            break;
-          case ScotomaAxis.balanced:
-            introText = "Your vision is balanced, Apprentice. Now we sharpen all edges. A well-rounded tactician fears nothing. Begin.";
-            break;
-        }
-      }
-      state = state.copyWith(
-        commentaryHistory: [
-          CommentaryEntry(
-            text: introText,
-            timestamp: DateTime.now(),
-            isComplete: true,
-            isUser: false,
-          ),
-        ],
-      );
-    } else {
-      state = state.copyWith(commentaryHistory: const []);
-    }
-
+    final introText = ChanakyaQuotes.getIntro(customAxis ?? ScotomaAxis.balanced);
+    state = state.copyWith(
+      commentaryHistory: [
+        CommentaryEntry(
+          text: introText,
+          timestamp: DateTime.now(),
+          isComplete: true,
+          isUser: false,
+        ),
+      ],
+    );
     if (initialMove != null && initialMove.length >= 4) {
       final from = initialMove.substring(0, 2);
       final to = initialMove.substring(2, 4);
@@ -373,12 +342,17 @@ class PuzzlesNotifier extends StateNotifier<PuzzlesState> {
         }
 
         if (remaining.isEmpty) {
+          final newCount = min(state.solvedCount + 1, 5);
+          final quote = newCount >= 5
+              ? ChanakyaQuotes.getCompletion()
+              : ChanakyaQuotes.getProgress(newCount);
           state = state.copyWith(
             puzzleMovesRemaining: const [],
+            solvedCount: newCount,
             commentaryHistory: [
               ...state.commentaryHistory,
               CommentaryEntry(
-                text: "Brilliant execution, Apprentice! Puzzle solved perfectly.",
+                text: quote,
                 timestamp: DateTime.now(),
                 isComplete: true,
                 isUser: false,
@@ -389,7 +363,18 @@ class PuzzlesNotifier extends StateNotifier<PuzzlesState> {
         }
 
         final oppMove = remaining.removeAt(0);
-        state = state.copyWith(puzzleMovesRemaining: remaining);
+        state = state.copyWith(
+          puzzleMovesRemaining: remaining,
+          commentaryHistory: [
+            ...state.commentaryHistory,
+            CommentaryEntry(
+              text: ChanakyaQuotes.getCorrectMove(),
+              timestamp: DateTime.now(),
+              isComplete: true,
+              isUser: false,
+            ),
+          ],
+        );
 
         Future.delayed(const Duration(milliseconds: 500), () {
           if (_isDisposed || !state.isPuzzleMode) return;
@@ -418,11 +403,16 @@ class PuzzlesNotifier extends StateNotifier<PuzzlesState> {
           _onMoveCompleted(oppMove);
 
           if (remaining.isEmpty) {
+            final newCount = min(state.solvedCount + 1, 5);
+            final quote = newCount >= 5
+                ? ChanakyaQuotes.getCompletion()
+                : ChanakyaQuotes.getProgress(newCount);
             state = state.copyWith(
+              solvedCount: newCount,
               commentaryHistory: [
                 ...state.commentaryHistory,
                 CommentaryEntry(
-                  text: "Brilliant execution, Apprentice! Puzzle solved perfectly.",
+                  text: quote,
                   timestamp: DateTime.now(),
                   isComplete: true,
                   isUser: false,
@@ -452,7 +442,7 @@ class PuzzlesNotifier extends StateNotifier<PuzzlesState> {
         commentaryHistory: [
           ...state.commentaryHistory,
           CommentaryEntry(
-            text: "Ah, not quite the best continuation, Apprentice. Look closer at the tactical weaknesses.",
+            text: ChanakyaQuotes.getWrongMove(),
             timestamp: DateTime.now(),
             isComplete: true,
             isUser: false,

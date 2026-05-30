@@ -363,12 +363,12 @@ class _PuzzlesBoardState extends ConsumerState<PuzzlesBoard>
                       },
                     ),
                   ),
-                  if (chessState.moveAnimation != null)
+                  if (puzzlesState.moveAnimation != null)
                     SignatureMoveOverlay(
-                      data: chessState.moveAnimation!,
+                      data: puzzlesState.moveAnimation!,
                       boardSize: boardSize,
-                      isFlipped: chessState.isBoardFlipped,
-                      isCheckmate: chessState.game.inCheckmate,
+                      isFlipped: puzzlesState.isBoardFlipped,
+                      isCheckmate: false,
                       theme: chessTheme,
                       onComplete: () {
                         ref

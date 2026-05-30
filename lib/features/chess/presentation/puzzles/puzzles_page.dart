@@ -9,7 +9,6 @@ import 'puzzles_board.dart';
 import '../widgets/ambient_scaffold.dart';
 import '../dashboard_page.dart';
 import '../mobile_navigation_shell.dart';
-import 'widgets/prescription_banner.dart';
 import 'widgets/pressure_cooker_timer.dart';
 import 'dart:ui';
 
@@ -114,16 +113,12 @@ class _PuzzlesPageState extends ConsumerState<PuzzlesPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // 1. Board
-        const AspectRatio(
-          aspectRatio: 1.0,
-          child: PuzzlesBoard(alignment: Alignment.topCenter),
+        const SizedBox(height: 12),
+        // 1. Puzzle Info Header (Moved to top)
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          child: _PuzzleStatusHeader(state: state),
         ),
-
-        // Prescription Therapy Banner
-        if (state.activeAxis != null) ...[
-          PrescriptionBanner(axis: state.activeAxis!),
-        ],
 
         // Pressure Cooker Countdown Timer
         if (state.isPressureCookerActive && !isSolved) ...[
@@ -132,66 +127,125 @@ class _PuzzlesPageState extends ConsumerState<PuzzlesPage> {
             child: PressureCookerTimer(),
           ),
         ],
-        
-        // 2. Puzzle Info Header
-        Padding(
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-          child: _PuzzleStatusHeader(state: state),
+
+        const SizedBox(height: 8), // Snug spacing to keep board directly below Toughness Header
+
+        // 2. Board (Centered in the middle area)
+        const AspectRatio(
+          aspectRatio: 1.0,
+          child: PuzzlesBoard(alignment: Alignment.center),
         ),
 
-        // Spacer to push actions to the bottom
+        // GM Chanakya speech bubble
+        if (state.commentaryHistory.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.95),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: ScholarlyTheme.accentBlue.withValues(alpha: 0.3),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.15),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      image: DecorationImage(
+                        image: AssetImage('assets/persona/gm_chanakya.png'),
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "GM CHANAKYA",
+                          style: GoogleFonts.outfit(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: ScholarlyTheme.accentBlue,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        RichText(
+                          text: TextSpan(
+                            style: GoogleFonts.comicNeue(
+                              fontSize: 16,
+                              color: const Color(0xFF1E293B),
+                              fontWeight: FontWeight.w500,
+                              height: 1.35,
+                            ),
+                            children: _buildHighlightedText(state.commentaryHistory.last.text),
+                          ),
+                        ),
+                        if (isSolved) ...[
+                          const SizedBox(height: 10),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: ElevatedButton.icon(
+                              onPressed: () async {
+                                if (state.solvedCount >= 5) {
+                                  await ref.read(puzzlesProvider.notifier).exitPuzzleMode();
+                                  if (context.mounted) {
+                                    ref.read(mobileNavIndexProvider.notifier).state = 1; // Back to Arena
+                                  }
+                                } else {
+                                  notifier.nextPrescriptionPuzzle(silent: true);
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF10B981), // Emerald
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              icon: const Icon(Icons.arrow_forward_rounded, size: 14),
+                              label: Text(
+                                state.solvedCount >= 5 ? 'Test Progress in Arena' : 'Move to Next Puzzle',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+        // Spacer to push actions/banner to bottom
         const Spacer(),
 
         // 3. Actions / Solved CTA Button
-        if (isSolved)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 4, 12, 16),
-            child: InkWell(
-              onTap: () => notifier.nextPrescriptionPuzzle(silent: true),
-              borderRadius: BorderRadius.circular(16),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF10B981), Color(0xFF059669)], // Emerald gradients
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF10B981).withValues(alpha: 0.3),
-                      blurRadius: 10,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: Center(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Next Prescription',
-                        style: GoogleFonts.outfit(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      const Icon(
-                        Icons.arrow_forward_rounded,
-                        color: Colors.white,
-                        size: 16,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          )
-        else
+        if (!isSolved)
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 4, 12, 16),
             child: Center(
@@ -228,7 +282,7 @@ class _PuzzlesPageState extends ConsumerState<PuzzlesPage> {
           child: const Center(
             child: AspectRatio(
               aspectRatio: 1.0,
-              child: PuzzlesBoard(alignment: Alignment.topCenter),
+              child: PuzzlesBoard(alignment: Alignment.center),
             ),
           ),
         ),
@@ -247,70 +301,124 @@ class _PuzzlesPageState extends ConsumerState<PuzzlesPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Prescription Therapy Banner
-                if (state.activeAxis != null) ...[
-                  PrescriptionBanner(axis: state.activeAxis!),
-                  const SizedBox(height: 6),
-                ],
+                // 1. Puzzle Status Header (Moved to top of right column)
+                _PuzzleStatusHeader(state: state),
+                const SizedBox(height: 6),
 
                 // Pressure Cooker Countdown Timer
                 if (state.isPressureCookerActive && !isSolved) ...[
                   const PressureCookerTimer(),
                   const SizedBox(height: 6),
                 ],
-
-                // 1. Puzzle Status Header
-                _PuzzleStatusHeader(state: state),
                 
                 const Spacer(),
 
-                // 3. Actions Row / Solved CTA Button
-                if (isSolved)
-                  InkWell(
-                    onTap: () => notifier.nextPrescriptionPuzzle(silent: true),
-                    borderRadius: BorderRadius.circular(16),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF10B981), Color(0xFF059669)], // Emerald gradients
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF10B981).withValues(alpha: 0.3),
-                            blurRadius: 10,
-                            offset: const Offset(0, 3),
-                          ),
-                        ],
+                 // Chanakya Speech Bubble
+                if (state.commentaryHistory.isNotEmpty) ...[
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.95),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: ScholarlyTheme.accentBlue.withValues(alpha: 0.3),
+                        width: 1.5,
                       ),
-                      child: Center(
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'Next Prescription',
-                              style: GoogleFonts.outfit(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            const Icon(
-                              Icons.arrow_forward_rounded,
-                              color: Colors.white,
-                              size: 16,
-                            ),
-                          ],
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.15),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
                         ),
-                      ),
+                      ],
                     ),
-                  )
-                else
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            image: DecorationImage(
+                              image: AssetImage('assets/persona/gm_chanakya.png'),
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "GM CHANAKYA",
+                                style: GoogleFonts.outfit(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                  color: ScholarlyTheme.accentBlue,
+                                  letterSpacing: 0.8,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              RichText(
+                                text: TextSpan(
+                                  style: GoogleFonts.comicNeue(
+                                    fontSize: 15,
+                                    color: const Color(0xFF1E293B),
+                                    fontWeight: FontWeight.w500,
+                                    height: 1.3,
+                                  ),
+                                  children: _buildHighlightedText(state.commentaryHistory.last.text),
+                                ),
+                              ),
+                              if (isSolved) ...[
+                                const SizedBox(height: 10),
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: ElevatedButton.icon(
+                                    onPressed: () async {
+                                      if (state.solvedCount >= 5) {
+                                        await ref.read(puzzlesProvider.notifier).exitPuzzleMode();
+                                        if (context.mounted) {
+                                          ref.read(mobileNavIndexProvider.notifier).state = 1; // Back to Arena
+                                        }
+                                      } else {
+                                        notifier.nextPrescriptionPuzzle(silent: true);
+                                      }
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF10B981), // Emerald
+                                      foregroundColor: Colors.white,
+                                      elevation: 0,
+                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                    icon: const Icon(Icons.arrow_forward_rounded, size: 14),
+                                    label: Text(
+                                      state.solvedCount >= 5 ? 'Test Progress in Arena' : 'Move to Next Puzzle',
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+
+                // 3. Actions Row / Solved CTA Button
+                if (!isSolved)
                   Center(
                     child: _CompactActionIcon(
                       icon: state.isBulbGlowing
@@ -463,9 +571,9 @@ class _PuzzleStatusHeader extends ConsumerWidget {
                   children: [
                     Text(
                       isSolved
-                          ? 'SOLVED'
+                          ? 'SOLVED (DOSE ${state.solvedCount}/5)'
                           : (p != null
-                              ? '${_getToughness(p.rating).toUpperCase()} TOUGHNESS'
+                              ? '${_getToughness(p.rating).toUpperCase()} TOUGHNESS (DOSE ${state.solvedCount}/5)'
                               : (state.commentaryError != null
                                   ? 'ERROR'
                                   : 'LOADING...')),
@@ -631,3 +739,53 @@ class _CompactActionIconState extends State<_CompactActionIcon> {
     );
   }
 }
+
+List<InlineSpan> _buildHighlightedText(String text) {
+  final List<InlineSpan> spans = [];
+  final words = text.split(' ');
+  for (int i = 0; i < words.length; i++) {
+    final word = words[i];
+    final cleanWord = word.replaceAll(RegExp(r'[.,!?:;🕉️]'), '').toLowerCase();
+    
+    Color? highlightColor;
+    FontWeight fontWeight = FontWeight.normal;
+    
+    if (['apprentice', 'warrior', 'tactician'].contains(cleanWord)) {
+      highlightColor = const Color(0xFFD97706); // Warm Amber
+      fontWeight = FontWeight.bold;
+    } else if (['diagonal', 'lateral', 'horizontal', 'flank', 'board', 'coordinates'].contains(cleanWord)) {
+      highlightColor = const Color(0xFF2563EB); // Royal Blue
+      fontWeight = FontWeight.bold;
+    } else if (['bishop', 'rook', 'knight', 'king', 'piece', 'pieces', 'defender'].contains(cleanWord)) {
+      highlightColor = const Color(0xFF7C3AED); // Purple
+      fontWeight = FontWeight.bold;
+    } else if (['scotoma', 'blindness', 'threat', 'greed', 'pinned', 'panic', 'danger', 'mating', 'checkmate', 'error', 'hasty', 'regret', 'vulnerable', 'frustration'].contains(cleanWord)) {
+      highlightColor = const Color(0xFFDC2626); // Crimson Red
+      fontWeight = FontWeight.bold;
+    } else if (['discipline', 'calculation', 'sight', 'victory', 'patience', 'complete', 'completed', 'prescription', 'balance', 'mastery'].contains(cleanWord)) {
+      highlightColor = const Color(0xFF059669); // Emerald Green
+      fontWeight = FontWeight.bold;
+    } else if (RegExp(r'^\d+$').hasMatch(cleanWord)) {
+      highlightColor = const Color(0xFF4F46E5); // Indigo for numbers
+      fontWeight = FontWeight.bold;
+    }
+    
+    if (highlightColor != null) {
+      spans.add(TextSpan(
+        text: word,
+        style: TextStyle(
+          color: highlightColor,
+          fontWeight: fontWeight,
+        ),
+      ));
+    } else {
+      spans.add(TextSpan(text: word));
+    }
+    
+    if (i < words.length - 1) {
+      spans.add(const TextSpan(text: ' '));
+    }
+  }
+  return spans;
+}
+
