@@ -91,10 +91,10 @@ class ChessThemes {
     darkSquare: Color(0xFF87CEEB),  // Frosted blue
     boardBorder: Color(0xFF4682B4),
     activeHighlight: Color(0x66FFFFFF),
-    whitePiecePrimary: Color(0xFFFFFFFF),
-    whitePieceSecondary: Color(0xFF87CEEB),
-    blackPiecePrimary: Color(0xFF4682B4),
-    blackPieceSecondary: Color(0xFF000000),
+    whitePiecePrimary: Color(0xFF0D1440),   // Deep midnight navy
+    whitePieceSecondary: Color(0xFFFFD700), // Gold accent
+    blackPiecePrimary: Color(0xFFFFF5CC),   // Warm ivory cream
+    blackPieceSecondary: Color(0xFF4682B4), // Steel blue trim
   );
 
   static const royalGoldVelvet = ChessTheme(

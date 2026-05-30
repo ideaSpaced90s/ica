@@ -11,6 +11,7 @@ import 'toy_theme.dart';
 import 'shadow_theme.dart';
 import 'scholar_theme.dart';
 import 'vector_chess_theme.dart';
+import 'bnw_theme.dart';
 import '../../../application/chess_provider.dart';
 
 class ThemeRegistry {
@@ -37,7 +38,7 @@ class ThemeRegistry {
       name: 'Neon',
       packageTheme: assets_lib.ChessThemes.cyberpunkNeon,
     ),
-    'vector_glass': const VectorChessTheme(
+    'vector_glass': const BnwChessTheme(
       id: 'vector_glass',
       name: 'bnw',
       packageTheme: assets_lib.ChessThemes.glassMorphic,

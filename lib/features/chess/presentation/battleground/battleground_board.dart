@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:chess/chess.dart' as chess_lib;
 
 import '../../application/chess_provider.dart';
+import '../../services/chess_sound_service.dart';
 import '../../application/battleground_provider.dart';
 import '../../domain/chess_game.dart';
 import '../scholarly_theme.dart';
@@ -384,6 +385,7 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
       _selectedSquare = squareName;
       _legalTargets = _getLegalTargetsForSquare(squareName, displayGame, bgState);
     });
+    ref.read(chessSoundServiceProvider).playSfx(SoundEffect.pieceSelect);
   }
 
   void _clearSelection() {

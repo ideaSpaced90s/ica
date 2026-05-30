@@ -107,7 +107,7 @@ class _StudyLabChessBoardState extends ConsumerState<StudyLabChessBoard> {
     } else {
       final piece = chess.get(squareName);
       if (piece != null) {
-        ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiTap);
+        ref.read(chessSoundServiceProvider).playSfx(SoundEffect.pieceSelect);
         setState(() {
           _selectedSquare = squareName;
           _legalTargets = chess.generate_moves({'square': squareName})
@@ -369,7 +369,6 @@ class _StudyLabChessBoardState extends ConsumerState<StudyLabChessBoard> {
                                   _pendingPromoTo!,
                                   type.toLowerCase(),
                                 );
-                                ref.read(chessSoundServiceProvider).playSfx(SoundEffect.pieceLand);
                                 setState(() {
                                   _pendingPromoFrom = null;
                                   _pendingPromoTo = null;

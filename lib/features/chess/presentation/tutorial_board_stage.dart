@@ -6,6 +6,8 @@ import 'package:chess/chess.dart' as chess_lib;
 import 'scholarly_theme.dart';
 import 'shared/widgets/orbiting_star_animation.dart';
 import '../application/tutorial_provider.dart';
+import '../application/chess_provider.dart';
+import '../services/chess_sound_service.dart';
 import '../domain/models/tutorial_lesson.dart';
 import 'widgets/tutorial_board_overlay.dart';
 import 'arena/themes/theme_registry.dart';
@@ -67,6 +69,7 @@ class _TutorialBoardStageState extends ConsumerState<TutorialBoardStage> with Si
             // Treat selecting off-script piece as hesitation/mistake loop
             notifier.handleMoveAttempt(squareName, squareName);
           }
+          ref.read(chessSoundServiceProvider).playSfx(SoundEffect.pieceSelect);
         }
       } else {
         // 2. Target destination selected

@@ -6,12 +6,13 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:chess/chess.dart' as chess_lib;
 
 import '../../application/chess_provider.dart';
+import '../../services/chess_sound_service.dart';
 import '../../domain/chess_game.dart';
 import '../scholarly_theme.dart';
 
 import '../shared/themes/chess_theme.dart';
 import '../shared/widgets/chess_piece_widget.dart';
-import '../shared/widgets/orbiting_star_animation.dart';
+import 'widgets/academy_system_indicators.dart';
 import '../shared/widgets/promotion_overlay.dart';
 import '../shared/animations/signature_move_overlay.dart';
 import '../shared/animations/landing_feedback.dart';
@@ -190,6 +191,7 @@ class _AcademyBoardState extends ConsumerState<AcademyBoard>
                                             ),
                                           // 4. Selection Effects
                                           if (isSelected &&
+                                              chessTheme.hasSystemIndicators &&
                                               ref
                                                   .read(
                                                     chessProvider.notifier,
@@ -197,7 +199,7 @@ class _AcademyBoardState extends ConsumerState<AcademyBoard>
                                                   .isAnimationTypeEnabled(
                                                     'indicators',
                                                   ))
-                                            const OrbitingStarAnimation(
+                                            const AcademyOrbitingStarAnimation(
                                               color: ScholarlyTheme
                                                   .accentBlueSoft,
                                               isActive: true,
@@ -211,6 +213,7 @@ class _AcademyBoardState extends ConsumerState<AcademyBoard>
                                           if (chessState
                                                       .engineSelectionSquare ==
                                                   squareName &&
+                                              chessTheme.hasSystemIndicators &&
                                               ref
                                                   .read(
                                                     chessProvider.notifier,
@@ -218,12 +221,13 @@ class _AcademyBoardState extends ConsumerState<AcademyBoard>
                                                   .isAnimationTypeEnabled(
                                                     'indicators',
                                                   ))
-                                            const OrbitingStarAnimation(
+                                            const AcademyOrbitingStarAnimation(
                                               color:
                                                   ScholarlyTheme.accentGold,
                                               isActive: true,
                                             ),
                                           if (isThreatened && !isSuggestionTarget && !isGlow &&
+                                              chessTheme.hasSystemIndicators &&
                                               ref
                                                   .read(
                                                     chessProvider.notifier,
@@ -231,12 +235,12 @@ class _AcademyBoardState extends ConsumerState<AcademyBoard>
                                                   .isAnimationTypeEnabled(
                                                     'indicators',
                                                   ))
-                                            const OrbitingStarAnimation(
+                                            const AcademyOrbitingStarAnimation(
                                               color: Colors.redAccent,
                                               isActive: true,
                                               isCircle: true,
                                             ),
-                                          if (isGlow)
+                                          if (isGlow && chessTheme.hasSystemIndicators)
                                             const AcademySquareGlow(
                                               color: ScholarlyTheme.accentBlue,
                                             ),
@@ -301,6 +305,7 @@ class _AcademyBoardState extends ConsumerState<AcademyBoard>
                                           if (chessState.isHintBlinking &&
                                               (isSuggestedFrom ||
                                                   isSuggestedTo) &&
+                                              chessTheme.hasSystemIndicators &&
                                               ref
                                                   .read(
                                                     chessProvider.notifier,
@@ -308,7 +313,7 @@ class _AcademyBoardState extends ConsumerState<AcademyBoard>
                                                   .isAnimationTypeEnabled(
                                                     'indicators',
                                                   ))
-                                            const OrbitingStarAnimation(
+                                            const AcademyOrbitingStarAnimation(
                                               color:
                                                   ScholarlyTheme.accentYellow,
                                               isActive: true,
@@ -513,6 +518,7 @@ class _AcademyBoardState extends ConsumerState<AcademyBoard>
       _selectedSquare = squareName;
       _legalTargets = displayGame.legalDestinations(squareName);
     });
+    ref.read(chessSoundServiceProvider).playSfx(SoundEffect.pieceSelect);
   }
 
   void _clearSelection() {
@@ -938,57 +944,4 @@ class AcademyArrowPainter extends CustomPainter {
       oldDelegate.progress != progress ||
       oldDelegate.from != from ||
       oldDelegate.to != to;
-}
-
-class AcademySquareGlow extends StatefulWidget {
-  final Color color;
-
-  const AcademySquareGlow({super.key, required this.color});
-
-  @override
-  State<AcademySquareGlow> createState() => _AcademySquareGlowState();
-}
-
-class _AcademySquareGlowState extends State<AcademySquareGlow>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1000),
-    )..forward();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return Container(
-          decoration: BoxDecoration(
-            boxShadow: [
-              BoxShadow(
-                color: widget.color.withValues(alpha: 0.6 * (1.0 - _controller.value)),
-                blurRadius: 20 * _controller.value,
-                spreadRadius: 10 * _controller.value,
-              ),
-            ],
-            border: Border.all(
-              color: widget.color.withValues(alpha: 0.8 * (1.0 - _controller.value)),
-              width: 2,
-            ),
-          ),
-        );
-      },
-    );
-  }
 }

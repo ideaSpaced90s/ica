@@ -86,13 +86,15 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
     final isPuzzle = ref.read(puzzlesProvider).isPuzzleMode;
     _profile = isPuzzle
         ? _puzzleStandardProfile
-        : PieceMotionProfile.forCode(widget.data.pieceCode);
+        : (widget.theme?.getPieceMotionProfile(widget.data.pieceCode) ??
+            PieceMotionProfile.forCode(widget.data.pieceCode));
 
     if (widget.data.isCastle) {
       _rookPath = _calculatePath(widget.data.rookFrom!, widget.data.rookTo!);
       _rookProfile = isPuzzle
           ? _puzzleStandardProfile
-          : PieceMotionProfile.forCode(widget.data.rookPieceCode!);
+          : (widget.theme?.getPieceMotionProfile(widget.data.rookPieceCode!) ??
+              PieceMotionProfile.forCode(widget.data.rookPieceCode!));
     } else {
       _rookPath = null;
       _rookProfile = null;
@@ -144,7 +146,8 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
     final pieceMotionEnabled = ref
         .read(chessProvider.notifier)
         .isAnimationTypeEnabled('pieceMotion');
-    if (!pieceMotionEnabled) {
+    final isInstant = widget.theme?.isInstantMovements ?? false;
+    if (!pieceMotionEnabled || isInstant) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           widget.onLand?.call(
@@ -221,13 +224,15 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
       final isPuzzle = ref.read(puzzlesProvider).isPuzzleMode;
       _profile = isPuzzle
           ? _puzzleStandardProfile
-          : PieceMotionProfile.forCode(widget.data.pieceCode);
+          : (widget.theme?.getPieceMotionProfile(widget.data.pieceCode) ??
+              PieceMotionProfile.forCode(widget.data.pieceCode));
 
       if (widget.data.isCastle) {
         _rookPath = _calculatePath(widget.data.rookFrom!, widget.data.rookTo!);
         _rookProfile = isPuzzle
             ? _puzzleStandardProfile
-            : PieceMotionProfile.forCode(widget.data.rookPieceCode!);
+            : (widget.theme?.getPieceMotionProfile(widget.data.rookPieceCode!) ??
+                PieceMotionProfile.forCode(widget.data.rookPieceCode!));
       } else {
         _rookPath = null;
         _rookProfile = null;

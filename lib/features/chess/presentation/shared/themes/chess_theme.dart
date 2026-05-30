@@ -43,9 +43,32 @@ abstract class ChessTheme {
   // Last move highlight
   Widget buildLastMoveHighlight(BuildContext context, double opacity);
 
-  // Piece motion profile (affects animation styles)
+  // Animation/FX Capability flags
+  bool get hasInteractionFeedback => true;
+  bool get hasSystemIndicators => true;
+  bool get hasSFX => true;
+  bool get isInstantMovements => false;
+
+  // Standard/flat glide motion profile for non-signature themes
+  static const PieceMotionProfile standardPieceMotionProfile = PieceMotionProfile(
+    moveDuration: Duration(milliseconds: 300),
+    moveCurve: Curves.easeOutCubic,
+    verticalArcFactor: 0.0,
+    midRotationDeg: 0.0,
+    hasGhostTrail: false,
+    isTeleport: false,
+    landingCompression: 0.0,
+    hasBreathingSelection: false,
+    selectionBreathScale: 0.0,
+    breathingPeriod: Duration(milliseconds: 1000),
+    levitationHeight: 0.0,
+    isInfantry: false,
+  );
+
+  // Piece motion profile (affects animation styles).
+  // Standard themes return the flat glide standardPieceMotionProfile.
   PieceMotionProfile getPieceMotionProfile(String pieceCode) {
-    return PieceMotionProfile.forCode(pieceCode);
+    return standardPieceMotionProfile;
   }
 
   // Border radius for squares (if any)

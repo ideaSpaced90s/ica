@@ -12,12 +12,6 @@ enum SoundEffect {
   uiClick,
   uiNavigate,
   uiToggle,
-  // Arcade mode SFX (Kenney packs)
-  captureImpact,
-  pieceLand,
-  checkAlert,
-  uiTap,
-  moveSoft,
   // Kenney-based RPG/UI sound enhancements
   gmchanakyaThinking,
   gmchanakyaComplete,
@@ -28,6 +22,9 @@ enum SoundEffect {
   promote,
   tabSwipe,
   switchToggle,
+  pieceSelect,
+  bookFlip,
+  chanakyaNotify,
 }
 
 class ChessSoundService {
@@ -50,12 +47,6 @@ class ChessSoundService {
     'ui_click': 'assets/sfx/ui_click.ogg',
     'ui_navigate': 'assets/sfx/ui_navigate.ogg',
     'ui_toggle': 'assets/sfx/ui_toggle.ogg',
-    // Arcade mode SFX (Kenney packs)
-    'capture_impact': 'assets/sfx/capture_impact.ogg',
-    'move_soft': 'assets/sfx/move_soft.ogg',
-    'piece_land': 'assets/sfx/piece_land.ogg',
-    'check_alert': 'assets/sfx/check_alert.ogg',
-    'ui_tap': 'assets/sfx/ui_tap.ogg',
     // Kenney-based RPG/UI sound enhancements
     'book_open': 'assets/sfx/book_open.ogg',
     'book_close': 'assets/sfx/book_close.ogg',
@@ -64,13 +55,14 @@ class ChessSoundService {
     'click_soft3': 'assets/sfx/click_soft3.ogg',
     'click_soft4': 'assets/sfx/click_soft4.ogg',
     'click_soft5': 'assets/sfx/click_soft5.ogg',
-    'coins': 'assets/sfx/coins.ogg',
     'creak': 'assets/sfx/creak.ogg',
     'metal_latch': 'assets/sfx/metal_latch.ogg',
     'castle_impact': 'assets/sfx/castle_impact.ogg',
     'promotion_bell': 'assets/sfx/promotion_bell.ogg',
     'tab_swipe': 'assets/sfx/tab_swipe.ogg',
     'switch_toggle': 'assets/sfx/switch_toggle.ogg',
+    'laser_small': 'assets/sfx/laserSmall_004.ogg',
+    'book_flip': 'assets/sfx/book_flip.ogg',
   };
 
   final List<AudioSource> _bgmSources = [];
@@ -82,6 +74,8 @@ class ChessSoundService {
   bool isSfxEnabled = true;
   bool isGameSoundEnabled = true;
   bool isAcademySoundEnabled = true;
+  bool isThemeSoundEnabled = true;
+  String boardThemeId = 'classic';
   bool isAcademyActive = false;
   bool isRatedMode = false;
   Map<String, bool> soundSettings = const {
@@ -266,9 +260,9 @@ class ChessSoundService {
     _currentBgmSource = null;
   }
 
-  Future<void> _playSound(String key) async {
+  Future<void> _playSound(String key, {bool isThemeSound = true}) async {
     await initialized;
-    if (!isSfxEnabled || !_isInitialized || !SoLoud.instance.isInitialized) return;
+    if (!isSfxEnabled || (isThemeSound && !isThemeSoundEnabled) || !_isInitialized || !SoLoud.instance.isInitialized) return;
 
     final source = _sfxSources[key];
     if (source != null) {
@@ -296,19 +290,22 @@ class ChessSoundService {
   Future<void> playMove() async {
     if (isRatedMode) return;
     if (!_isCategoryEnabled('moveSounds')) return;
-    await _playSound('move');
+    final soundKey = _getMoveSoundForTheme(boardThemeId);
+    await _playSound(soundKey);
   }
 
   Future<void> playCapture() async {
     if (isRatedMode) return;
     if (!_isCategoryEnabled('captureSounds')) return;
-    await _playSound('capture');
+    final soundKey = _getCaptureSoundForTheme(boardThemeId);
+    await _playSound(soundKey);
   }
 
   Future<void> playNotify() async {
     if (isRatedMode) return;
     if (!_isCategoryEnabled('alertSounds')) return;
-    await _playSound('notify');
+    final soundKey = _getCheckSoundForTheme(boardThemeId);
+    await _playSound(soundKey);
   }
 
   Future<void> playWhoosh() async {
@@ -357,10 +354,6 @@ class ChessSoundService {
       case SoundEffect.illegal:
       case SoundEffect.check:
       case SoundEffect.gameover:
-      case SoundEffect.captureImpact:
-      case SoundEffect.pieceLand:
-      case SoundEffect.checkAlert:
-      case SoundEffect.moveSoft:
       case SoundEffect.gmchanakyaThinking:
       case SoundEffect.gmchanakyaComplete:
       case SoundEffect.victory:
@@ -368,14 +361,16 @@ class ChessSoundService {
       case SoundEffect.draw:
       case SoundEffect.castle:
       case SoundEffect.promote:
+      case SoundEffect.pieceSelect:
         return true;
       case SoundEffect.click:
       case SoundEffect.uiClick:
       case SoundEffect.uiNavigate:
       case SoundEffect.uiToggle:
-      case SoundEffect.uiTap:
       case SoundEffect.tabSwipe:
       case SoundEffect.switchToggle:
+      case SoundEffect.bookFlip:
+      case SoundEffect.chanakyaNotify:
         return false;
     }
   }
@@ -383,6 +378,7 @@ class ChessSoundService {
   void playSfx(SoundEffect effect) {
     if (!isSfxEnabled) return;
     final isGame = _isGameSound(effect);
+    if (isGame && !isThemeSoundEnabled) return;
     if (isGame && isRatedMode) return;
     final enabled = isGame
         ? (isAcademyActive ? isAcademySoundEnabled : isGameSoundEnabled)
@@ -393,19 +389,15 @@ class ChessSoundService {
     if (isGame) {
       switch (effect) {
         case SoundEffect.move:
-        case SoundEffect.moveSoft:
         case SoundEffect.castle:
         case SoundEffect.promote:
           if (!_isCategoryEnabled('moveSounds')) return;
           break;
         case SoundEffect.capture:
-        case SoundEffect.captureImpact:
           if (!_isCategoryEnabled('captureSounds')) return;
           break;
         case SoundEffect.illegal:
         case SoundEffect.check:
-        case SoundEffect.checkAlert:
-        case SoundEffect.pieceLand:
           if (!_isCategoryEnabled('alertSounds')) return;
           break;
         case SoundEffect.gameover:
@@ -435,35 +427,19 @@ class ChessSoundService {
         break;
       case SoundEffect.click:
       case SoundEffect.uiClick:
-        _playSound('ui_click');
+        _playSound('ui_click', isThemeSound: false);
         break;
       case SoundEffect.uiNavigate:
-        _playSound('ui_navigate');
+        _playSound('ui_navigate', isThemeSound: false);
         break;
       case SoundEffect.uiToggle:
-        _playSound('ui_toggle');
+        _playSound('ui_toggle', isThemeSound: false);
         break;
       case SoundEffect.check:
         playNotify();
         break;
       case SoundEffect.gameover:
         playWhoosh();
-        break;
-      // Arcade mode SFX
-      case SoundEffect.captureImpact:
-        _playSound('capture_impact');
-        break;
-      case SoundEffect.pieceLand:
-        _playSound('piece_land');
-        break;
-      case SoundEffect.checkAlert:
-        _playSound('check_alert');
-        break;
-      case SoundEffect.uiTap:
-        _playSound('ui_tap');
-        break;
-      case SoundEffect.moveSoft:
-        _playSound('move_soft');
         break;
       // Kenney-based RPG/UI sound enhancements
       case SoundEffect.gmchanakyaThinking:
@@ -473,7 +449,6 @@ class ChessSoundService {
         _playSound('book_close');
         break;
       case SoundEffect.victory:
-        _playSound('coins');
         break;
       case SoundEffect.defeat:
         _playSound('creak');
@@ -482,16 +457,27 @@ class ChessSoundService {
         _playSound('metal_latch');
         break;
       case SoundEffect.castle:
-        _playSound('castle_impact');
+        final soundKey = _getCastleSoundForTheme(boardThemeId);
+        _playSound(soundKey);
         break;
       case SoundEffect.promote:
         _playSound('promotion_bell');
         break;
       case SoundEffect.tabSwipe:
-        _playSound('tab_swipe');
+        _playSound('tab_swipe', isThemeSound: false);
         break;
       case SoundEffect.switchToggle:
-        _playSound('switch_toggle');
+        _playSound('switch_toggle', isThemeSound: false);
+        break;
+      case SoundEffect.pieceSelect:
+        final soundKey = _getSelectSoundForTheme(boardThemeId);
+        _playSound(soundKey);
+        break;
+      case SoundEffect.bookFlip:
+        _playSound('book_flip', isThemeSound: false);
+        break;
+      case SoundEffect.chanakyaNotify:
+        _playSound('notify', isThemeSound: false);
         break;
     }
   }
@@ -511,6 +497,29 @@ class ChessSoundService {
     } catch (e) {
       debugPrint('Error ducking BGM: $e');
     }
+  }
+
+  String _getMoveSoundForTheme(String themeId) {
+    return 'move';
+  }
+
+  String _getCaptureSoundForTheme(String themeId) {
+    return 'creak';
+  }
+
+  String _getCheckSoundForTheme(String themeId) {
+    return 'thud';
+  }
+
+  String _getSelectSoundForTheme(String themeId) {
+    return 'castle_impact';
+  }
+
+  String _getCastleSoundForTheme(String themeId) {
+    if (themeId == 'classic' || themeId == 'scholar' || themeId == 'vector_glass') {
+      return 'laser_small';
+    }
+    return 'metal_latch';
   }
 
   void dispose() {

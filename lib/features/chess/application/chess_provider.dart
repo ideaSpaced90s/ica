@@ -603,6 +603,8 @@ class ChessNotifier extends StateNotifier<ChessState> {
         userName: s.userName,
         userAvatarPath: s.userAvatarPath,
       );
+      _soundService.boardThemeId = s.boardThemeId;
+      _soundService.isThemeSoundEnabled = true;
       await _engine.setChess960Mode(is960);
       final avatar = AiAvatar.getAvatar(s.engineLevel);
       await _engine.setSkillLevel(
@@ -788,6 +790,8 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
   void setBoardTheme(String themeId) {
     state = state.copyWith(boardThemeId: themeId);
+    _soundService.boardThemeId = themeId;
+    _soundService.isThemeSoundEnabled = true;
     _saveSettings();
   }
 
@@ -2478,7 +2482,11 @@ class ChessNotifier extends StateNotifier<ChessState> {
       isCommentaryStreaming: false,
     );
 
-    _soundService.playSfx(SoundEffect.gmchanakyaThinking);
+    if (state.isAcademyActive) {
+      _soundService.playSfx(SoundEffect.bookFlip);
+    } else {
+      _soundService.playSfx(SoundEffect.gmchanakyaThinking);
+    }
 
     try {
       // 1. Wait briefly for a fresh evaluation if it's the start of a turn
@@ -2668,6 +2676,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
   }
 
   void _stopClock() {
+    if (_isDisposed) return;
     final clockState = ref.read(gameClockProvider);
     ref.read(gameClockProvider.notifier).stopClock();
     state = state.copyWith(

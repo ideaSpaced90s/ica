@@ -172,7 +172,7 @@ class TutorialNotifier extends StateNotifier<TutorialState> {
       mistakesMadeInChapter: 0,
     );
 
-    _sounds.playSfx(SoundEffect.click);
+    _sounds.playSfx(SoundEffect.bookFlip);
     _startHesitationTimer();
   }
 
@@ -210,7 +210,7 @@ class TutorialNotifier extends StateNotifier<TutorialState> {
       mistakesMadeInChapter: 0,
     );
 
-    _sounds.playSfx(SoundEffect.click);
+    _sounds.playSfx(SoundEffect.bookFlip);
     _startHesitationTimer();
     
     // Autosave progress update incrementally per action loop
@@ -271,7 +271,7 @@ class TutorialNotifier extends StateNotifier<TutorialState> {
       clearIllegalMessage: true,
     );
 
-    _sounds.playSfx(SoundEffect.click);
+    _sounds.playSfx(SoundEffect.bookFlip);
     _startHesitationTimer();
     _autosave();
   }

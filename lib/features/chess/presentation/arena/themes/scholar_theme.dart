@@ -5,6 +5,18 @@ class ScholarTheme extends ChessTheme {
   const ScholarTheme() : super(id: 'scholar', name: 'Scholar');
 
   @override
+  bool get hasInteractionFeedback => false;
+
+  @override
+  bool get hasSystemIndicators => false;
+
+  @override
+  bool get hasSFX => false;
+
+  @override
+  bool get isInstantMovements => true;
+
+  @override
   Color get lightSquare => const Color(0xFFFDF6E2); // Cream
 
   @override

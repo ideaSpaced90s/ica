@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../application/chess_provider.dart';
 import '../../application/arena_provider.dart';
 import '../shared/widgets/chess_piece_widget.dart';
-import '../shared/widgets/orbiting_star_animation.dart';
+import 'widgets/arena_system_indicators.dart';
 import '../../domain/chess_game.dart';
 import '../shared/widgets/promotion_overlay.dart';
 import 'effects/forest_effects.dart';
@@ -304,6 +304,7 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
                                               ),
                                             // 4. Selection Effects
                                             if (isSelected &&
+                                                chessTheme.hasSystemIndicators &&
                                                 ref
                                                     .read(
                                                       chessProvider.notifier,
@@ -319,7 +320,7 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
                                                           )
                                                           .runtimeType ==
                                                       SizedBox
-                                                  ? const OrbitingStarAnimation(
+                                                  ? const ArenaOrbitingStarAnimation(
                                                       color: ScholarlyTheme
                                                           .accentBlueSoft,
                                                       isActive: true,
@@ -349,6 +350,7 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
                                             if (isThreatened &&
                                                 !isSuggestionTarget &&
                                                 !isGlow &&
+                                                chessTheme.hasSystemIndicators &&
                                                 ref
                                                     .read(
                                                       chessProvider.notifier,
@@ -356,7 +358,7 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
                                                     .isAnimationTypeEnabled(
                                                       'indicators',
                                                     ))
-                                              const OrbitingStarAnimation(
+                                              const ArenaOrbitingStarAnimation(
                                                 color: Colors.redAccent,
                                                 isActive: true,
                                                 isCircle: true,
@@ -432,6 +434,7 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
                                             if (arenaState.isHintBlinking &&
                                                 (isSuggestedFrom ||
                                                     isSuggestedTo) &&
+                                                chessTheme.hasSystemIndicators &&
                                                 ref
                                                     .read(
                                                       chessProvider.notifier,
@@ -439,7 +442,7 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
                                                     .isAnimationTypeEnabled(
                                                       'indicators',
                                                     ))
-                                              const OrbitingStarAnimation(
+                                              const ArenaOrbitingStarAnimation(
                                                 color:
                                                     ScholarlyTheme.accentYellow,
                                                 isActive: true,
@@ -730,16 +733,12 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
     haptics.selection();
     final chessState = ref.read(chessProvider);
     final displayGame = ChessGame(fen: ref.read(arenaProvider).currentBoardFen);
+    final themeId = chessState.boardThemeId;
+    final chessTheme = ThemeRegistry.getTheme(themeId);
 
     // Tap ripple on every tap (gated by animations setting)
     if (ref.read(chessProvider.notifier).isAnimationTypeEnabled('feedback')) {
       _triggerTapRipple(squareName);
-      // Arcade: play UI tap sound on square select
-      if (ref
-          .read(chessProvider.notifier)
-          .isAnimationTypeEnabled('arcadeMode')) {
-        ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiTap);
-      }
     }
 
     if (_selectedSquare != null && _legalTargets.contains(squareName)) {
@@ -784,8 +783,9 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
                 .read(chessProvider.notifier)
                 .isAnimationTypeEnabled('themeEffects') &&
             ['theme2', 'theme3', 'theme4', 'theme5', 'theme7', 'theme8', 'theme9', 'theme10'].contains(themeId);
-        _triggerArcadeCaptureBurst(squareName, reduced: hasThemeEffect);
-        ref.read(chessSoundServiceProvider).playSfx(SoundEffect.captureImpact);
+        if (chessTheme.hasInteractionFeedback) {
+          _triggerArcadeCaptureBurst(squareName, reduced: hasThemeEffect);
+        }
       }
       ref.read(arenaProvider.notifier).makeMove(_selectedSquare!, squareName);
       _clearSelection();
@@ -840,7 +840,7 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
       _selectedSquare = squareName;
       _legalTargets = displayGame.legalDestinations(squareName);
     });
-    ref.read(arenaProvider.notifier).playNotify();
+    ref.read(chessSoundServiceProvider).playSfx(SoundEffect.pieceSelect);
   }
 
   void _clearSelection() {
@@ -1190,6 +1190,9 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
   // ── Signature Animation Triggers ─────────────────────────────────────────
 
   void _triggerTapRipple(String squareName) {
+    final themeId = ref.read(chessProvider).boardThemeId;
+    final chessTheme = ThemeRegistry.getTheme(themeId);
+    if (!chessTheme.hasInteractionFeedback) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final box = context.findRenderObject() as RenderBox?;
@@ -1216,29 +1219,20 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
     bool isCritical = false,
   }) {
     if (!mounted) return;
+    final themeId = ref.read(chessProvider).boardThemeId;
+    final chessTheme = ThemeRegistry.getTheme(themeId);
 
-    if (ref.read(chessProvider.notifier).isAnimationTypeEnabled('feedback')) {
+    if (chessTheme.hasInteractionFeedback &&
+        ref.read(chessProvider.notifier).isAnimationTypeEnabled('feedback')) {
       _triggerLandingFeedback(to, profile, boardSize, isCritical: isCritical);
     }
 
     if (ref
         .read(chessProvider.notifier)
         .isAnimationTypeEnabled('arcadeMode')) {
-      _triggerLandingShockwave(to, boardSize);
-      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.pieceLand);
-    }
-
-    if (ref
-            .read(chessProvider.notifier)
-            .isAnimationTypeEnabled('arcadeMode') &&
-        ref.read(chessProvider).game.inCheck) {
-      Future.delayed(const Duration(milliseconds: 120), () {
-        if (mounted) {
-          ref
-              .read(chessSoundServiceProvider)
-              .playSfx(SoundEffect.checkAlert);
-        }
-      });
+      if (chessTheme.hasInteractionFeedback) {
+        _triggerLandingShockwave(to, boardSize);
+      }
     }
 
     if (ref

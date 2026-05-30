@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../application/chess_provider.dart';
 import '../../../domain/chess_game.dart';
 import '../../scholarly_theme.dart';
-import '../animations/piece_motion_profile.dart';
 
 import '../../utils/contrast_utility.dart';
 import '../themes/chess_theme.dart';
@@ -118,12 +117,13 @@ class _ChessPieceWidgetState extends ConsumerState<ChessPieceWidget>
 
     // ── Resolve piece motion profile ─────────────────────────────────────
     // code is guaranteed non-null here (resolved above)
-    final profile = PieceMotionProfile.forCode(code);
+    final profile = theme.getPieceMotionProfile(code);
 
     // Note: Global piece selection enlargement and movement stretch animations have been disabled/removed.
 
     // ── Breathing selection scale (Option B: always running, applied when highlighted) ──
-    if (ref.read(chessProvider.notifier).isAnimationTypeEnabled('feedback') &&
+    if (theme.hasInteractionFeedback &&
+        ref.read(chessProvider.notifier).isAnimationTypeEnabled('feedback') &&
         widget.highlighted &&
         profile.hasBreathingSelection) {
       pieceWidget = AnimatedBuilder(
@@ -139,7 +139,8 @@ class _ChessPieceWidgetState extends ConsumerState<ChessPieceWidget>
       );
     }
 
-    if (widget.highlighted &&
+    if (theme.hasInteractionFeedback &&
+        widget.highlighted &&
         ref.read(chessProvider.notifier).isAnimationTypeEnabled('feedback')) {
       final glowColor = theme.id == 'theme10'
           ? ContrastUtility.selectionGlow
@@ -179,6 +180,7 @@ class _ChessPieceWidgetState extends ConsumerState<ChessPieceWidget>
     // ── King check pulse: subtle scale oscillation when King is in check ──
     if (widget.pieceCode == null &&
         widget.squareName != 'none' &&
+        theme.hasInteractionFeedback &&
         ref.read(chessProvider.notifier).isAnimationTypeEnabled('feedback') &&
         !widget.highlighted) {
       final activeGame = widget.game ?? chessState.game;

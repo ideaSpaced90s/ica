@@ -12,7 +12,8 @@ import '../domain/chanakya_quotes.dart';
 import 'battleground_provider.dart';
 import '../services/chess_haptics_service.dart';
 import '../data/saved_game.dart'; // For CommentaryEntry
-import 'chess_provider.dart' show MoveAnimationData, chessProvider, chessHapticsServiceProvider;
+import 'chess_provider.dart' show MoveAnimationData, chessProvider, chessHapticsServiceProvider, chessSoundServiceProvider;
+import '../services/chess_sound_service.dart';
 
 const _sentinel = Object();
 
@@ -278,6 +279,7 @@ class PuzzlesNotifier extends StateNotifier<PuzzlesState> {
         ),
       ],
     );
+    ref.read(chessSoundServiceProvider).playSfx(SoundEffect.chanakyaNotify);
     if (initialMove != null && initialMove.length >= 4) {
       final from = initialMove.substring(0, 2);
       final to = initialMove.substring(2, 4);
@@ -359,6 +361,7 @@ class PuzzlesNotifier extends StateNotifier<PuzzlesState> {
               ),
             ],
           );
+          ref.read(chessSoundServiceProvider).playSfx(SoundEffect.chanakyaNotify);
           return;
         }
 
@@ -375,6 +378,7 @@ class PuzzlesNotifier extends StateNotifier<PuzzlesState> {
             ),
           ],
         );
+        ref.read(chessSoundServiceProvider).playSfx(SoundEffect.chanakyaNotify);
 
         Future.delayed(const Duration(milliseconds: 500), () {
           if (_isDisposed || !state.isPuzzleMode) return;
@@ -419,6 +423,7 @@ class PuzzlesNotifier extends StateNotifier<PuzzlesState> {
                 ),
               ],
             );
+            ref.read(chessSoundServiceProvider).playSfx(SoundEffect.chanakyaNotify);
           }
         });
       }
@@ -449,6 +454,7 @@ class PuzzlesNotifier extends StateNotifier<PuzzlesState> {
           ),
         ],
       );
+      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.chanakyaNotify);
     }
   }
 

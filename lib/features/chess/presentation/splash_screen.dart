@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -28,6 +29,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   bool _isVideoFinished = false;
   bool _hasTransitioned = false;
   late Future<void> _servicesInitFuture;
+  Timer? _fallbackTimer;
 
   @override
   void initState() {
@@ -113,7 +115,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     _videoController!.addListener(_videoListener);
 
     // Safety fallback: transition to loading screen if video player hangs (10s timeout)
-    Future.delayed(const Duration(seconds: 10), () {
+    _fallbackTimer = Timer(const Duration(seconds: 10), () {
       if (mounted && !_hasTransitioned) {
         debugPrint('Splash video fallback triggered due to timeout.');
         setState(() {
@@ -193,6 +195,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
   @override
   void dispose() {
+    _fallbackTimer?.cancel();
     _videoController?.removeListener(_videoListener);
     _videoController?.dispose();
     _progressController.dispose();
