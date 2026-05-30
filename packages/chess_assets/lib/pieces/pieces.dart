@@ -64,9 +64,15 @@ class ChessPieceWidget extends StatelessWidget {
     primaryColorHex = '#$primaryColorHex';
     secondaryColorHex = '#$secondaryColorHex';
 
+    String stripeColorHex = secondaryColorHex;
+    if (theme.name == 'Pinkworld') {
+      stripeColorHex = primaryColorHex;
+    }
+
     svgContent = svgContent
         .replaceAll('{primary}', primaryColorHex)
-        .replaceAll('{secondary}', secondaryColorHex);
+        .replaceAll('{secondary}', secondaryColorHex)
+        .replaceAll('{pawn_stripe}', stripeColorHex);
 
     final String fullSvg = '''
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45" width="100%" height="100%">
