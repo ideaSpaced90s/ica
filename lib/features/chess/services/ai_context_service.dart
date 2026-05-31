@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../domain/chess_game.dart';
 import '../domain/models/position_context.dart';
 import '../domain/models/candidate_move.dart';
+import '../domain/models/precomputed_rust_context.dart';
 import '../data/saved_game.dart';
 import 'position_context_builder.dart';
 import 'prompt_builder.dart';
@@ -10,8 +11,12 @@ class AiContextService {
   PositionContext? _lastContext;
   PositionContext? get lastContext => _lastContext;
 
+  void setLastContext(PositionContext context) {
+    _lastContext = context;
+  }
+
   /// Builds a new context and returns the generated prompt.
-  String generateCommentaryPrompt({
+  Future<String> generateCommentaryPrompt({
     required String move,
     required double currentEval,
     required double previousEval,
@@ -22,8 +27,9 @@ class AiContextService {
     List<CandidateMove> candidates = const [],
     String? userQuery,
     String? systemInstructionOverride,
-  }) {
-    _lastContext = PositionContextBuilder.build(
+    PrecomputedRustContext? precomputed,
+  }) async {
+    _lastContext = await PositionContextBuilder.build(
       move: move,
       currentEval: currentEval,
       previousEval: previousEval,
@@ -31,6 +37,7 @@ class AiContextService {
       bestMove: bestMove,
       pvLine: pvLine,
       candidates: candidates,
+      precomputed: precomputed,
     );
 
     return PromptBuilder.buildCommentaryPrompt(

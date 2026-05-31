@@ -199,8 +199,18 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
     );
   }
 
+  static const Map<String, String> _chipPresets = {
+    'Analyze':    'Let me survey the board as it stands, Apprentice. ',
+    'Why':        "Your opponent's last move was no accident, Apprentice. ",
+    'Candidates': 'I shall lay before you the most worthy paths forward, Apprentice. ',
+    'Tactics':    'The board harbours hidden danger — let me expose it, Apprentice. ',
+    'Plan':       'A true master acts on a plan, not on instinct alone, Apprentice. ',
+    'Defend':     'When under pressure, the wise first consolidate, Apprentice. ',
+  };
+
   void _handlePromptTap(String label) {
-    ref.read(chessProvider.notifier).sendUserQuery(label);
+    final preset = _chipPresets[label];
+    ref.read(chessProvider.notifier).sendUserQuery(label, titlePrefix: preset);
     FocusScope.of(context).unfocus();
   }
 
@@ -398,10 +408,11 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
                                   ..._parseAcademyRichText(entry.text, widget.state),
                                   if (!entry.isComplete && !isStreaming)
                                     TextSpan(
-                                      text: ' •••',
+                                      text: ' ${'.' * ((_pulse % 3) + 1)}',
                                       style: GoogleFonts.fraunces(
-                                        color: ScholarlyTheme.textMuted,
+                                        color: ScholarlyTheme.accentBlue,
                                         fontSize: 14,
+                                        fontWeight: FontWeight.bold,
                                       ),
                                     ),
                                   if (isStreaming)
@@ -442,6 +453,13 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
                                 ],
                               ),
                             ],
+                            if (widget.state.isAcademyBlunderActive &&
+                                entry.isComplete &&
+                                widget.state.commentaryHistory.indexOf(entry) ==
+                                    widget.state.commentaryHistory.length - 1) ...[
+                              const SizedBox(height: 12),
+                              _buildContinueButton(),
+                            ],
                           ],
                         ),
                 ),
@@ -449,6 +467,52 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildContinueButton() {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          ref.read(chessProvider.notifier).continueAfterBlunder();
+        },
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+          decoration: BoxDecoration(
+            color: ScholarlyTheme.accentBlue,
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: [
+              BoxShadow(
+                color: ScholarlyTheme.accentBlue.withValues(alpha: 0.3),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.play_arrow_rounded,
+                color: Colors.white,
+                size: 16,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                'CONTINUE',
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -615,7 +679,37 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
           caseSensitive: false,
         );
 
-        if (moveRegex.hasMatch(content)) {
+        final blunderMatch = RegExp(
+          r'^(.+?):\s+(Pawn|Knight|Bishop|Rook|Queen|King)\s+([a-h][1-8]-[a-h][1-8])$',
+          caseSensitive: false,
+        ).firstMatch(content);
+
+        if (blunderMatch != null) {
+          final userName = blunderMatch.group(1)!;
+          final pieceName = blunderMatch.group(2)!;
+          final moveNotation = blunderMatch.group(3)!;
+
+          // 1. User Name + Colon
+          spans.add(TextSpan(
+            text: '$userName: ',
+            style: baseStyle.copyWith(
+              color: const Color(0xFFD4AF37), // Academy Gold
+              fontWeight: FontWeight.bold,
+            ),
+          ));
+
+          // 2. Piece Name (Red and Bold)
+          spans.add(TextSpan(
+            text: '$pieceName ',
+            style: baseStyle.copyWith(
+              color: Colors.redAccent,
+              fontWeight: FontWeight.bold,
+            ),
+          ));
+
+          // 3. Move notation in red and boxed
+          spans.addAll(_buildSplitNotationSpans(moveNotation, baseStyle, state, isRed: true));
+        } else if (moveRegex.hasMatch(content)) {
           spans.addAll(_buildSplitNotationSpans(content, baseStyle, state));
         } else {
           spans.add(TextSpan(
@@ -705,18 +799,26 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
   List<InlineSpan> _buildSplitNotationSpans(
     String notation,
     TextStyle baseStyle,
-    ChessState state,
-  ) {
+    ChessState state, {
+    bool isRed = false,
+  }) {
     final List<InlineSpan> spans = [];
+    final themeColor = isRed ? Colors.redAccent : ScholarlyTheme.accentBlue;
 
     if (notation.contains('-')) {
       final parts = notation.split('-');
       // First square chip
-      spans.add(_buildSingleNotationChip(parts[0], parts[0], state));
+      spans.add(_buildSingleNotationChip(parts[0], parts[0], state, isRed: isRed));
       // Hyphen
-      spans.add(TextSpan(text: '-', style: baseStyle));
+      spans.add(TextSpan(
+        text: '-',
+        style: baseStyle.copyWith(
+          color: themeColor,
+          fontWeight: FontWeight.bold,
+        ),
+      ));
       // Second square chip (targets the actual destination square)
-      spans.add(_buildSingleNotationChip(parts[1], parts[1], state));
+      spans.add(_buildSingleNotationChip(parts[1], parts[1], state, isRed: isRed));
     } else {
       // Single notation chip
       String? targetSquare;
@@ -724,7 +826,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
       if (squareMatches.isNotEmpty) {
         targetSquare = squareMatches.last.group(0);
       }
-      spans.add(_buildSingleNotationChip(notation, targetSquare, state));
+      spans.add(_buildSingleNotationChip(notation, targetSquare, state, isRed: isRed));
     }
     return spans;
   }
@@ -732,8 +834,10 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
   WidgetSpan _buildSingleNotationChip(
     String label,
     String? targetSquare,
-    ChessState state,
-  ) {
+    ChessState state, {
+    bool isRed = false,
+  }) {
+    final themeColor = isRed ? Colors.redAccent : ScholarlyTheme.accentBlue;
     return WidgetSpan(
       alignment: PlaceholderAlignment.middle,
       child: GestureDetector(
@@ -747,17 +851,17 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
           margin: const EdgeInsets.symmetric(horizontal: 2),
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
           decoration: BoxDecoration(
-            color: ScholarlyTheme.accentBlue.withValues(alpha: 0.1),
+            color: themeColor.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(4),
             border: Border.all(
-              color: ScholarlyTheme.accentBlue.withValues(alpha: 0.3),
+              color: themeColor.withValues(alpha: 0.3),
               width: 1,
             ),
           ),
           child: Text(
             label,
             style: GoogleFonts.firaCode(
-              color: ScholarlyTheme.accentBlue,
+              color: themeColor,
               fontSize: 12,
               fontWeight: FontWeight.bold,
             ),

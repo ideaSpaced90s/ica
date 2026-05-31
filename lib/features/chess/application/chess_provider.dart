@@ -7,7 +7,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import 'game_clock_provider.dart';
 import 'package:kingslayer_chess/src/rust/api/threats.dart';
+import 'package:kingslayer_chess/src/rust/api/humanizer.dart';
+import 'package:kingslayer_chess/src/rust/api/context.dart';
 import 'package:kingslayer_chess/src/rust/api/chanakya.dart' as rust_chanakya;
+import '../domain/models/precomputed_rust_context.dart';
 
 
 import '../data/saved_game.dart';
@@ -1053,6 +1056,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
   final List<_BoardSnapshot> _undoStack = [];
   final List<_BoardSnapshot> _redoStack = [];
   final List<CandidateMove> _currentCandidates = [];
+  Future<PrecomputedRustContext>? _pendingRustContextFuture;
 
   String? _pendingHintFen;
   Future<void>? _startupFuture;
@@ -1195,31 +1199,6 @@ class ChessNotifier extends StateNotifier<ChessState> {
       final rawBestMove = parsed['bestMove'] as String?;
       final aiTurn = _isAiTurn();
 
-      // Check if we are in Academy Mode and it was the user who just moved
-      if (state.isAcademyActive &&
-          aiTurn &&
-          !state.isWaitingForSideChoice &&
-          !state.isAcademyBlunderActive &&
-          !state.game.gameOver &&
-          !state.isPaused &&
-          state.game.history.length >= 3) {
-        
-        // Calculate evaluation delta
-        final double prevEval = state.previousEvaluation;
-        final double currEval = newEval ?? state.currentEvaluation;
-        final double evalDiff = -currEval - prevEval;
-
-        debugPrint('Academy Mode evaluation check: prev=$prevEval, curr=$currEval, diff=$evalDiff, history=${state.game.history.length}');
-
-        if (evalDiff <= -1.2) {
-          // It's an absolute blunder! Set flag and trigger Chanakya's intervention
-          state = state.copyWith(isAcademyBlunderActive: true);
-          final lastMoveStr = state.lastMove ?? '';
-          unawaited(_handleAcademyBlunderIntervention(evalDiff, lastMoveStr));
-          // Do NOT pause or return early. Let the engine make its response move.
-        }
-      }
-
       String? bestMoveToPlay = rawBestMove;
 
       if (rawBestMove != null && _currentCandidates.isNotEmpty) {
@@ -1241,6 +1220,47 @@ class ChessNotifier extends StateNotifier<ChessState> {
             state.game,
             rawBestMove,
           );
+        }
+      }
+
+      // Check if we are in Academy Mode and it was the user who just moved
+      if (state.isAcademyActive &&
+          aiTurn &&
+          !state.isWaitingForSideChoice &&
+          !state.isAcademyBlunderActive &&
+          !state.game.gameOver &&
+          !state.isPaused &&
+          state.game.history.length >= 3) {
+        
+        // Calculate evaluation delta
+        final double prevEval = state.previousEvaluation;
+        final double currEval = newEval ?? state.currentEvaluation;
+        final double evalDiff = -currEval - prevEval;
+
+        debugPrint('Academy Mode evaluation check: prev=$prevEval, curr=$currEval, diff=$evalDiff, history=${state.game.history.length}');
+
+        if (evalDiff <= -1.2) {
+          // It's an absolute blunder! Set flag and trigger Chanakya's intervention
+          final lastMove = _lastMoveFromHistory();
+          final friendlyMoveName = lastMove != null
+              ? _formatMoveFriendly(lastMove)
+              : (state.recentMoves.isNotEmpty ? state.recentMoves.last : (state.lastMove ?? ''));
+          final titlePrefix = "**${state.userName}: $friendlyMoveName**\n\n";
+
+          state = state.copyWith(
+            isAcademyBlunderActive: true,
+            pendingEngineMove: bestMoveToPlay,
+          );
+
+          final lastMoveStr = state.lastMove ?? '';
+          unawaited(_handleAcademyBlunderIntervention(
+            evalDiff: evalDiff,
+            lastMove: lastMoveStr,
+            titlePrefix: titlePrefix,
+          ));
+
+          // Return early! Do NOT schedule the engine move.
+          return;
         }
       }
 
@@ -1271,22 +1291,18 @@ class ChessNotifier extends StateNotifier<ChessState> {
         _engineMoveTimer?.cancel();
 
         final finalMove = bestMoveToPlay;
-        if (state.isAnimationsEnabled) {
-          final now = DateTime.now();
-          final elapsed = now
-              .difference(_engineStartTime ?? now)
-              .inMilliseconds;
-          // Ensure at least 2s total time (thinking + delay)
-          final remainingDelay = math.max(0, 2000 - elapsed);
+        final now = DateTime.now();
+        final elapsed = now
+            .difference(_engineStartTime ?? now)
+            .inMilliseconds;
+        final randomDelayMs = 1500 + math.Random().nextInt(3000); // 1.5s to 4.5s
+        final remainingDelay = math.max(0, randomDelayMs - elapsed);
 
-          _engineMoveTimer = Timer(Duration(milliseconds: remainingDelay), () {
-            if (!_isDisposed && !state.isPaused) {
-              _makeEngineMove(finalMove);
-            }
-          });
-        } else {
-          _makeEngineMove(finalMove);
-        }
+        _engineMoveTimer = Timer(Duration(milliseconds: remainingDelay), () {
+          if (!_isDisposed && !state.isPaused) {
+            _makeEngineMove(finalMove);
+          }
+        });
       }
     }
   }
@@ -1849,7 +1865,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
       isPlayerWhite: snapshot.isPlayerWhite,
       isBoardFlipped: snapshot.isBoardFlipped,
       gameMode: snapshot.gameMode,
-
+      isAcademyBlunderActive: false,
     );
     _syncUndoRedoFlags();
     if (state.clockStarted) {
@@ -1982,7 +1998,10 @@ class ChessNotifier extends StateNotifier<ChessState> {
     if (state.game.gameOver) return;
 
     if (state.isAcademyBlunderActive) {
-      state = state.copyWith(isAcademyBlunderActive: false);
+      state = state.copyWith(
+        isAcademyBlunderActive: false,
+        pendingEngineMove: null,
+      );
     }
 
     // 1. Handle branching from history viewing
@@ -2343,7 +2362,10 @@ class ChessNotifier extends StateNotifier<ChessState> {
     }
 
     if (state.isAcademyBlunderActive) {
-      state = state.copyWith(isAcademyBlunderActive: false);
+      state = state.copyWith(
+        isAcademyBlunderActive: false,
+        pendingEngineMove: null,
+      );
     }
 
     final from = state.promotionSource!;
@@ -2396,7 +2418,96 @@ class ChessNotifier extends StateNotifier<ChessState> {
     state = state.copyWith(isEngineThinking: state.engineReady);
   }
 
+  void _startPrecomputingRustContext(String move, ChessGame game) {
+    // Compute FEN before the move
+    String fenBefore = game.fen;
+    if (game.history.isNotEmpty) {
+      try {
+        final temp = ChessGame(fen: game.fen, isChess960: game.isChess960);
+        temp.undo();
+        fenBefore = temp.fen;
+      } catch (e) {
+        debugPrint('ContextBuilder: Error calculating FEN before move: $e');
+      }
+    }
+
+    final fen = game.fen;
+    final historyLength = game.history.length;
+
+    _pendingRustContextFuture = Future.wait([
+      Future(() {
+        try {
+          return humanizeMoveRust(fenBefore: fenBefore, moveUci: move);
+        } catch (e) {
+          debugPrint('ContextBuilder: Error calling humanizeMoveRust: $e');
+          return move;
+        }
+      }),
+      Future(() {
+        try {
+          return analyzeTacticalThreats(fen: fen);
+        } catch (e) {
+          debugPrint('ContextBuilder: Error calling analyzeTacticalThreats: $e');
+          return <String>[];
+        }
+      }),
+      Future(() {
+        try {
+          final metrics = evaluatePositionMetrics(
+            fen: fen,
+            historyLength: historyLength,
+          );
+          return metrics.gamePhase;
+        } catch (e) {
+          debugPrint('Rust Context Engine Error: $e');
+          final moveCount = historyLength;
+          if (moveCount <= 20) return 'Opening';
+          return 'Middlegame';
+        }
+      }),
+    ]).then((results) {
+      return PrecomputedRustContext(
+        moveDescription: results[0] as String,
+        tacticalThreats: results[1] as List<String>,
+        gamePhase: results[2] as String,
+      );
+    });
+  }
+
+  Stream<String> _typewriterStream(Stream<String> source) async* {
+    String targetText = '';
+    String currentTypedText = '';
+    bool sourceDone = false;
+
+    final subscription = source.listen(
+      (text) {
+        targetText = text;
+      },
+      onDone: () {
+        sourceDone = true;
+      },
+      onError: (e) {
+        sourceDone = true;
+      },
+    );
+
+    try {
+      while (!sourceDone || currentTypedText.length < targetText.length) {
+        if (currentTypedText.length < targetText.length) {
+          currentTypedText = targetText.substring(0, currentTypedText.length + 1);
+          yield currentTypedText;
+          await Future.delayed(const Duration(milliseconds: 25));
+        } else {
+          await Future.delayed(const Duration(milliseconds: 50));
+        }
+      }
+    } finally {
+      await subscription.cancel();
+    }
+  }
+
   void _onMoveCompleted(String lastMove) {
+    _startPrecomputingRustContext(lastMove, state.game);
     if (state.clockStarted) {
       final clockState = ref.read(gameClockProvider);
       state = state.copyWith(
@@ -2504,6 +2615,33 @@ class ChessNotifier extends StateNotifier<ChessState> {
     return lastState.move as chess_lib.Move?;
   }
 
+  String _formatMoveFriendly(chess_lib.Move move) {
+    String pieceName = 'Pawn';
+    switch (move.piece) {
+      case chess_lib.PieceType.PAWN:
+        pieceName = 'Pawn';
+        break;
+      case chess_lib.PieceType.KNIGHT:
+        pieceName = 'Knight';
+        break;
+      case chess_lib.PieceType.BISHOP:
+        pieceName = 'Bishop';
+        break;
+      case chess_lib.PieceType.ROOK:
+        pieceName = 'Rook';
+        break;
+      case chess_lib.PieceType.QUEEN:
+        pieceName = 'Queen';
+        break;
+      case chess_lib.PieceType.KING:
+        pieceName = 'King';
+        break;
+    }
+    final from = chess_lib.Chess.algebraic(move.from);
+    final to = chess_lib.Chess.algebraic(move.to);
+    return '$pieceName $from-$to';
+  }
+
   void _playMoveSound() {
     final lastMove = _lastMoveFromHistory();
 
@@ -2574,7 +2712,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
     });
   }
 
-  Future<void> sendUserQuery(String query) async {
+  Future<void> sendUserQuery(String query, {String? titlePrefix}) async {
     if (query.trim().isEmpty) return;
 
     final userEntry = CommentaryEntry(
@@ -2594,6 +2732,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
       move: _formatMoveForPrompt(state.lastMove ?? 'Opening'),
       evalScore: _formatEvalForPrompt(state.currentEvaluation),
       userQuery: query,
+      titlePrefix: titlePrefix ?? '',
     );
   }
 
@@ -2640,7 +2779,17 @@ class ChessNotifier extends StateNotifier<ChessState> {
         final pvRaw = state.analysis['pv'];
         final List<String> pv = pvRaw is List ? List<String>.from(pvRaw) : [];
 
-        structuredPrompt = _aiContextService.generateCommentaryPrompt(
+        PrecomputedRustContext? precomputed;
+        if (_pendingRustContextFuture != null) {
+          try {
+            precomputed = await _pendingRustContextFuture;
+          } catch (e) {
+            debugPrint('Error awaiting precomputed context: $e');
+          }
+          _pendingRustContextFuture = null;
+        }
+
+        structuredPrompt = await _aiContextService.generateCommentaryPrompt(
           move: move,
           currentEval: state.currentEvaluation,
           previousEval: state.previousEvaluation,
@@ -2651,6 +2800,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
           candidates: _currentCandidates,
           userQuery: userQuery,
           systemInstructionOverride: _commentaryEngine.systemInstruction,
+          precomputed: precomputed,
         );
       } catch (e) {
         debugPrint('KingSlayer: Context injection failed: $e');
@@ -2664,7 +2814,8 @@ class ChessNotifier extends StateNotifier<ChessState> {
         userQuery: userQuery,
       );
 
-      await for (final chunk in stream) {
+      int charCount = 0;
+      await for (final chunk in _typewriterStream(stream)) {
         if (_isDisposed) break;
 
         final updatedHistory = List<CommentaryEntry>.from(
@@ -2681,7 +2832,10 @@ class ChessNotifier extends StateNotifier<ChessState> {
           isCommentaryStreaming: true,
         );
 
-        _soundService.playWriting();
+        charCount++;
+        if (charCount % 2 == 0) {
+          _soundService.playWriting();
+        }
 
         if (state.academyHouseAnimations) {
           _extractMoveSuggestion(chunk);
@@ -2694,7 +2848,12 @@ class ChessNotifier extends StateNotifier<ChessState> {
           state.commentaryHistory,
         );
         if (finalHistory.isNotEmpty) {
+          var textToSet = finalHistory.last.text;
+          if (isNested) {
+            textToSet = '$textToSet\n\nWould you like to proceed or alter course? To alter course, use the Back button.';
+          }
           finalHistory[finalHistory.length - 1] = finalHistory.last.copyWith(
+            text: textToSet,
             isComplete: true,
           );
         }
@@ -2903,6 +3062,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
       state = state.copyWith(
         isPaused: false,
         isAcademyBlunderActive: false,
+        pendingEngineMove: null,
         commentaryHistory: cachedCommentary,
       );
       if (state.clockStarted) {
@@ -2914,6 +3074,21 @@ class ChessNotifier extends StateNotifier<ChessState> {
       if (bestMove != null) {
         unawaited(_runHintFlow(bestMove));
       }
+    }
+  }
+
+  void continueAfterBlunder() {
+    if (state.pendingEngineMove != null) {
+      final engineMove = state.pendingEngineMove!;
+      state = state.copyWith(
+        pendingEngineMove: null,
+        isAcademyBlunderActive: false,
+      );
+      _makeEngineMove(engineMove);
+    } else {
+      state = state.copyWith(
+        isAcademyBlunderActive: false,
+      );
     }
   }
 
@@ -3201,26 +3376,21 @@ class ChessNotifier extends StateNotifier<ChessState> {
     }
   }
 
-  Future<void> _handleAcademyBlunderIntervention(double evalDiff, String lastMove) async {
+  Future<void> _handleAcademyBlunderIntervention({
+    required double evalDiff,
+    required String lastMove,
+    required String titlePrefix,
+  }) async {
     // 1. Play thinking sound
     _soundService.playSfx(SoundEffect.gmchanakyaThinking);
 
-    // 2. Calculate blunder sequence numbers and format titlePrefix
-    final blunderCount = state.commentaryHistory
-            .where((entry) => entry.text.startsWith('**Blunder #'))
-            .length + 1;
-    final moveNum = (state.game.history.length / 2).ceil();
-    final moveSan = state.recentMoves.isNotEmpty ? state.recentMoves.last : lastMove;
-    final prefix = state.isPlayerWhite ? "$moveNum." : "$moveNum...";
-    final titlePrefix = "**Blunder #$blunderCount: $prefix $moveSan**\n\n";
-
-    // 3. Construct a blunder prompt instructing the AI to output exactly one brief sentence
+    // 2. Construct a blunder prompt instructing the AI to output exactly one brief sentence
     final prompt = "The user playing as ${state.isPlayerWhite ? 'White' : 'Black'} just blundered by playing $lastMove. "
         "The position evaluation dropped by ${evalDiff.abs().toStringAsFixed(1)} pawns. "
         "Write exactly one very brief sentence explaining why this move is a blunder and what threat it creates. "
         "Do not include any greeting, intro, outro, or conversational filler. Keep it under 25 words.";
 
-    // 4. Run commentary stream for the blunder
+    // 3. Run commentary stream for the blunder
     await _runCommentary(
       player: state.isPlayerWhite ? 'White' : 'Black',
       move: _formatMoveForPrompt(lastMove),

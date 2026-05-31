@@ -6,6 +6,7 @@ import 'package:kingslayer_chess/src/rust/api/threats.dart';
 import '../domain/chess_game.dart';
 import '../domain/models/position_context.dart';
 import '../domain/models/candidate_move.dart';
+import '../domain/models/precomputed_rust_context.dart';
 
 class PositionContextBuilder {
   static List<String> _humanizeUciSequence(String startFen, List<String> uciMoves) {
@@ -43,7 +44,7 @@ class PositionContextBuilder {
     return humanized.isEmpty ? uciMoves : humanized;
   }
 
-  static PositionContext build({
+  static Future<PositionContext> build({
     required String move,
     required double currentEval,
     required double previousEval,
@@ -51,36 +52,55 @@ class PositionContextBuilder {
     String? bestMove,
     List<String> pvLine = const [],
     List<CandidateMove> candidates = const [],
-  }) {
+    PrecomputedRustContext? precomputed,
+  }) async {
     final evalDiff = currentEval - previousEval;
     final quality = _classifyQuality(evalDiff);
-    final gamePhase = _detectGamePhase(game);
 
-    // Compute FEN before the move
-    String fenBefore = game.fen;
-    if (game.history.isNotEmpty) {
-      try {
-        final temp = ChessGame(fen: game.fen, isChess960: game.isChess960);
-        temp.undo();
-        fenBefore = temp.fen;
-      } catch (e) {
-        debugPrint('ContextBuilder: Error calculating FEN before move: $e');
+    String moveDescription;
+    List<String> tacticalThreats;
+    String gamePhase;
+
+    if (precomputed != null) {
+      moveDescription = precomputed.moveDescription;
+      tacticalThreats = precomputed.tacticalThreats;
+      gamePhase = precomputed.gamePhase;
+    } else {
+      // Compute FEN before the move
+      String fenBefore = game.fen;
+      if (game.history.isNotEmpty) {
+        try {
+          final temp = ChessGame(fen: game.fen, isChess960: game.isChess960);
+          temp.undo();
+          fenBefore = temp.fen;
+        } catch (e) {
+          debugPrint('ContextBuilder: Error calculating FEN before move: $e');
+        }
       }
-    }
 
-    // Call Rust humanizer and tactical scan
-    String moveDescription = move;
-    try {
-      moveDescription = humanizeMoveRust(fenBefore: fenBefore, moveUci: move);
-    } catch (e) {
-      debugPrint('ContextBuilder: Error calling humanizeMoveRust: $e');
-    }
+      final results = await Future.wait([
+        Future(() {
+          try {
+            return humanizeMoveRust(fenBefore: fenBefore, moveUci: move);
+          } catch (e) {
+            debugPrint('ContextBuilder: Error calling humanizeMoveRust: $e');
+            return move;
+          }
+        }),
+        Future(() {
+          try {
+            return analyzeTacticalThreats(fen: game.fen);
+          } catch (e) {
+            debugPrint('ContextBuilder: Error calling analyzeTacticalThreats: $e');
+            return <String>[];
+          }
+        }),
+        Future(() => _detectGamePhase(game)),
+      ]);
 
-    List<String> tacticalThreats = [];
-    try {
-      tacticalThreats = analyzeTacticalThreats(fen: game.fen);
-    } catch (e) {
-      debugPrint('ContextBuilder: Error calling analyzeTacticalThreats: $e');
+      moveDescription = results[0] as String;
+      tacticalThreats = results[1] as List<String>;
+      gamePhase = results[2] as String;
     }
 
     final isBestMove = _compareMoves(move, bestMove);

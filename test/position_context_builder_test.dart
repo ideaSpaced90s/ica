@@ -5,10 +5,10 @@ import 'package:kingslayer_chess/features/chess/services/prompt_builder.dart';
 
 void main() {
   group('PositionContextBuilder Tests', () {
-    test('Classification of move quality', () {
+    test('Classification of move quality', () async {
       final game = ChessGame();
 
-      final contextPos = PositionContextBuilder.build(
+      final contextPos = await PositionContextBuilder.build(
         move: 'e2e4',
         currentEval: 1.2,
         previousEval: 0.3,
@@ -16,7 +16,7 @@ void main() {
       );
       expect(contextPos.quality, 'Strong');
 
-      final contextBrilliant = PositionContextBuilder.build(
+      final contextBrilliant = await PositionContextBuilder.build(
         move: 'e2e4',
         currentEval: 2.5,
         previousEval: 0.5,
@@ -24,7 +24,7 @@ void main() {
       );
       expect(contextBrilliant.quality, 'Brilliant');
 
-      final contextBlunder = PositionContextBuilder.build(
+      final contextBlunder = await PositionContextBuilder.build(
         move: 'e2e4',
         currentEval: -1.5,
         previousEval: 1.0,
@@ -33,9 +33,9 @@ void main() {
       expect(contextBlunder.quality, 'Blunder');
     });
 
-    test('Game phase detection', () {
+    test('Game phase detection', () async {
       final game = ChessGame(); // Start position
-      final contextOpening = PositionContextBuilder.build(
+      final contextOpening = await PositionContextBuilder.build(
         move: 'e2e4',
         currentEval: 0.3,
         previousEval: 0.3,
@@ -44,9 +44,9 @@ void main() {
       expect(contextOpening.gamePhase, 'Opening');
     });
 
-    test('PromptBuilder Gemma 3 construction', () {
+    test('PromptBuilder Gemma 3 construction', () async {
       final game = ChessGame();
-      final context = PositionContextBuilder.build(
+      final context = await PositionContextBuilder.build(
         move: 'e2e4',
         currentEval: 0.4,
         previousEval: 0.2,

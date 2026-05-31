@@ -90,18 +90,20 @@ Rules:
     if (userQuery != null && userQuery.isNotEmpty) {
       final queryLower = userQuery.toLowerCase();
       String customTask = "Answer the Apprentice's query directly and concisely using the provided context. Limit to max 2 sentences.";
-      if (queryLower.contains('analyze')) {
-        customTask = "Perform a brief positional analysis of the current board state, highlighting the strategic situation and move recommendations. Max 2 sentences.";
+      if (queryLower.contains('blunder')) {
+        customTask = "Explain why the played move is a blunder and what threat it creates. Limit to exactly 1 sentence. Keep your entire response under 120 characters.";
+      } else if (queryLower.contains('analyze')) {
+        customTask = "Perform a brief positional analysis of the current board state, highlighting the strategic situation and move recommendations. Max 2 sentences. Keep your entire response under 180 characters.";
       } else if (queryLower.contains('why') || queryLower.contains('opponent')) {
-        customTask = "Briefly explain the goal and threats of the opponent's last move, and suggest a countermove. Max 2 sentences.";
+        customTask = "Briefly explain the goal and threats of the opponent's last move, and suggest a countermove. Max 2 sentences. Keep your entire response under 140 characters.";
       } else if (queryLower.contains('candidate') || queryLower.contains('what to play')) {
-        customTask = "Review candidate moves, recommend the best option, and explain its main benefit. Max 2 sentences.";
+        customTask = "Review candidate moves, recommend the best option, and explain its main benefit. Max 2 sentences. Keep your entire response under 220 characters.";
       } else if (queryLower.contains('tactics') || queryLower.contains('threat')) {
-        customTask = "Identify any tactical threats, pins, or forks, and recommend a response move. Max 2 sentences.";
+        customTask = "Identify any tactical threats, pins, or forks, and recommend a response move. Max 2 sentences. Keep your entire response under 160 characters.";
       } else if (queryLower.contains('plan')) {
-        customTask = "Briefly outline a clear mid-term strategic plan with specific move recommendations. Max 2 sentences.";
+        customTask = "Briefly outline a clear mid-term strategic plan with specific move recommendations. Max 2 sentences. Keep your entire response under 200 characters.";
       } else if (queryLower.contains('defend') || queryLower.contains('protect')) {
-        customTask = "Recommend a defensive move to consolidate the position. Max 2 sentences.";
+        customTask = "Recommend a defensive move to consolidate the position. Max 2 sentences. Keep your entire response under 130 characters.";
       } else if (queryLower.contains('what') || queryLower.contains('play') || queryLower.contains('advice') || queryLower.contains('should')) {
         customTask = "Recommend the best move continuation and explain its direct benefit. Max 2 sentences.";
       }
