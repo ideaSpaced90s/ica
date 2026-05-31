@@ -20,7 +20,7 @@ import '../shared/animations/tap_ripple.dart';
 import '../shared/animations/piece_motion_profile.dart';
 import '../shared/animations/shake_animation.dart';
 
-import 'themes/academy_classic_theme.dart';
+import 'themes/academy_scholar_theme.dart';
 
 class AcademyBoard extends ConsumerStatefulWidget {
   final AlignmentGeometry alignment;
@@ -45,7 +45,7 @@ class _AcademyBoardState extends ConsumerState<AcademyBoard>
   @override
   Widget build(BuildContext context) {
     final chessState = ref.watch(chessProvider);
-    const chessTheme = AcademyClassicTheme();
+    const chessTheme = AcademyScholarTheme();
 
     // Use currentBoardFen for display during analysis/history viewing
     final displayGame = ChessGame(fen: chessState.currentBoardFen);
@@ -475,6 +475,7 @@ class _AcademyBoardState extends ConsumerState<AcademyBoard>
     }
 
     if (_selectedSquare != null && _legalTargets.contains(squareName)) {
+      if (chessState.isWaitingForSideChoice) return;
       ref.read(chessProvider.notifier).makeMove(_selectedSquare!, squareName);
       _clearSelection();
       return;
@@ -505,11 +506,11 @@ class _AcademyBoardState extends ConsumerState<AcademyBoard>
       return;
     }
 
-    // Lock board controls if game is over, it's AI turn, or engine vs engine
+    // Lock board controls if game is over, it's AI turn, or engine vs engine, or waiting for side choice
     final isGameOver = chessState.game.gameOver;
     final isAiTurn = _isAiTurn(chessState);
     final isEvE = chessState.isEngineVsEngine;
-    if (isGameOver || isAiTurn || isEvE) {
+    if (isGameOver || isAiTurn || isEvE || chessState.isWaitingForSideChoice) {
       _clearSelection();
       return;
     }

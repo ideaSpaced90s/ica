@@ -7,7 +7,7 @@ import '../../application/chess_provider.dart';
 import '../scholarly_theme.dart';
 import '../widgets/commentary_history.dart';
 import 'academy_board.dart';
-import 'themes/academy_classic_theme.dart';
+import 'themes/academy_scholar_theme.dart';
 import 'academy_settings_page.dart';
 import '../widgets/ambient_scaffold.dart';
 import '../widgets/classic_windows_tabs.dart';
@@ -652,7 +652,7 @@ class _InlineCapturedGroup extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    const theme = AcademyClassicTheme();
+    const theme = AcademyScholarTheme();
 
     final sortedPieces = List<chess_lib.Piece>.from(pieces)
       ..sort((a, b) => _getPieceValue(a.type).compareTo(_getPieceValue(b.type)));

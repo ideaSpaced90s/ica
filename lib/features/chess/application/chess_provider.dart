@@ -231,6 +231,7 @@ class ChessState {
     this.isTimeOut = false,
     this.userName = 'Apprentice',
     this.userAvatarPath = 'assets/persona/user_profile_0.png',
+    this.isWaitingForSideChoice = false,
 
   });
 
@@ -314,6 +315,7 @@ class ChessState {
   final bool isTimeOut;
   final String userName;
   final String userAvatarPath;
+  final bool isWaitingForSideChoice;
 
 
   bool get isChess960 => gameMode == 'chess960';
@@ -410,6 +412,7 @@ class ChessState {
     bool? isTimeOut,
     String? userName,
     String? userAvatarPath,
+    bool? isWaitingForSideChoice,
 
   }) {
     return ChessState(
@@ -532,6 +535,7 @@ class ChessState {
       isTimeOut: isTimeOut ?? this.isTimeOut,
       userName: userName ?? this.userName,
       userAvatarPath: userAvatarPath ?? this.userAvatarPath,
+      isWaitingForSideChoice: isWaitingForSideChoice ?? this.isWaitingForSideChoice,
 
     );
   }
@@ -2889,7 +2893,6 @@ class ChessNotifier extends StateNotifier<ChessState> {
     // and servicesStarted is set to false so the Crafty engine can be clean-started.
     await _cancelEngineSubscriptions();
 
-    // Force state to Engine as White, Board Flipped
     _undoStack.clear();
     _redoStack.clear();
     _cancelCommentaryReveal();
@@ -2912,10 +2915,12 @@ class ChessNotifier extends StateNotifier<ChessState> {
     final preserveLevel = state.engineLevel;
     final preserveBottomLevel = state.bottomAvatarId;
 
+    final bool waitingForChoice = customFen == null;
+
     state = ChessState(
       game: ChessGame(fen: customFen, isChess960: false),
-      isPlayerWhite: false, // Engine is White
-      isBoardFlipped: true, // White is at the top
+      isPlayerWhite: false, // Default placeholder, will be set by user choice
+      isBoardFlipped: true, // Default placeholder
       engineLevel: preserveLevel,
       bottomAvatarId: preserveBottomLevel,
       boardThemeId: preserveTheme,
@@ -2934,7 +2939,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
       blackTimeLeft: baseTime,
       baseTimeDuration: baseTime,
       isEngineThinking: false,
-      servicesStarted: false, // Will start Crafty on-demand below
+      servicesStarted: false, // Will start on-demand
       servicesStarting: false,
       engineReady: false,
       isCommentaryEngineLoading: _commentaryEngine.isInitializing,
@@ -2943,11 +2948,13 @@ class ChessNotifier extends StateNotifier<ChessState> {
       isAcademyActive: true,
       userName: state.userName,
       userAvatarPath: state.userAvatarPath,
+      isWaitingForSideChoice: waitingForChoice,
+      isPaused: waitingForChoice, // Pause only if waiting for choice
       commentaryHistory: [
         CommentaryEntry(
           text: customFen != null
               ? "Ah, you bring me a position from your Study Lab! Let me examine this setup. What would you like to know or practice from here?"
-              : "Welcome back to the Academy, Apprentice. Today, I shall take the first step. Observe how I open the board to secure the center, then the path will be yours to choose.",
+              : "Hello, ${state.userName}! Welcome to the GM Chanakya Chess School. Please select whether you wish to play as White or Black to begin our training:",
           timestamp: DateTime.now(),
           isComplete: true,
           isUser: false,
@@ -2957,11 +2964,13 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
     _syncUndoRedoFlags();
 
-    // Start analysis which will trigger the engine move
-    await ensureGameServicesStarted(analyzeCurrentPosition: true);
-    await _engine.setSkillLevel(AiAvatar.getAvatar(preserveLevel).skillLevel,
-        multiPV: 3); // Academy uses MultiPV=3
-    state = state.copyWith(isEngineThinking: state.engineReady);
+    if (!waitingForChoice) {
+      // Start analysis which will trigger the engine move for custom positions
+      await ensureGameServicesStarted(analyzeCurrentPosition: true);
+      await _engine.setSkillLevel(AiAvatar.getAvatar(preserveLevel).skillLevel,
+          multiPV: 3); // Academy uses MultiPV=3
+      state = state.copyWith(isEngineThinking: state.engineReady);
+    }
 
     _soundService.updateSettings(
       sfxEnabled: state.isSoundEnabled,
@@ -2973,6 +2982,57 @@ class ChessNotifier extends StateNotifier<ChessState> {
       isAcademyActive: true,
       isRatedMode: false,
     );
+  }
+
+  Future<void> selectAcademySide(bool playAsWhite) async {
+    // 1. Update state flags
+    state = state.copyWith(
+      isWaitingForSideChoice: false,
+      isPlayerWhite: playAsWhite,
+      isBoardFlipped: !playAsWhite,
+      isPaused: false,
+    );
+
+    // 2. Add user choice message to history
+    final choiceStr = playAsWhite ? "White" : "Black";
+    final userEntry = CommentaryEntry(
+      text: "I choose to play as $choiceStr.",
+      timestamp: DateTime.now(),
+      isUser: true,
+      isComplete: true,
+    );
+
+    // 3. Prepare GM's response text
+    String gmResponse = "";
+    if (playAsWhite) {
+      gmResponse = "Excellent, you have chosen to play as White. Go ahead, make your opening move to secure the center, and I shall observe.";
+    } else {
+      gmResponse = "Excellent, you have chosen to play as Black. Today, I shall take the first step. Observe how I open the board to secure the center, then the path will be yours to choose.";
+    }
+
+    final gmEntry = CommentaryEntry(
+      text: gmResponse,
+      timestamp: DateTime.now(),
+      isUser: false,
+      isComplete: true,
+    );
+
+    state = state.copyWith(
+      commentaryHistory: [...state.commentaryHistory, userEntry, gmEntry],
+    );
+
+    // Play complete sound
+    _soundService.playSfx(SoundEffect.gmchanakyaComplete);
+
+    // 4. Start engine services
+    await ensureGameServicesStarted(analyzeCurrentPosition: true);
+    await _engine.setSkillLevel(AiAvatar.getAvatar(state.engineLevel).skillLevel,
+        multiPV: 3); // Academy uses MultiPV=3
+
+    // 5. If playing as Black, the engine (White) must think/make the first move!
+    if (!playAsWhite) {
+      state = state.copyWith(isEngineThinking: state.engineReady);
+    }
   }
 
   Future<void> shutdown() async {

@@ -101,7 +101,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
 
   Widget _buildInput(BuildContext context) {
     final state = widget.state;
-    final bool isBusy = state.isCommentaryLoading || state.isCommentaryStreaming;
+    final bool isBusy = state.isCommentaryLoading || state.isCommentaryStreaming || state.isWaitingForSideChoice;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
@@ -380,35 +380,113 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
                             ),
                           ],
                         )
-                      : Text.rich(
-                          TextSpan(
-                            children: [
-                              ..._parseAcademyRichText(entry.text, widget.state),
-                              if (!entry.isComplete && !isStreaming)
-                                TextSpan(
-                                  text: ' •••',
-                                  style: GoogleFonts.fraunces(
-                                    color: ScholarlyTheme.textMuted,
-                                    fontSize: 14,
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text.rich(
+                              TextSpan(
+                                children: [
+                                  ..._parseAcademyRichText(entry.text, widget.state),
+                                  if (!entry.isComplete && !isStreaming)
+                                    TextSpan(
+                                      text: ' •••',
+                                      style: GoogleFonts.fraunces(
+                                        color: ScholarlyTheme.textMuted,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  if (isStreaming)
+                                    TextSpan(
+                                      text: _pulse % 2 == 0 ? ' ┃' : '  ',
+                                      style: GoogleFonts.fraunces(
+                                        color: ScholarlyTheme.accentBlue,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                            if (widget.state.isWaitingForSideChoice &&
+                                widget.state.commentaryHistory.indexOf(entry) ==
+                                    widget.state.commentaryHistory.length - 1) ...[
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildSideSelectionButton(
+                                      context: context,
+                                      label: "PLAY AS WHITE",
+                                      isWhite: true,
+                                    ),
                                   ),
-                                ),
-                              if (isStreaming)
-                                TextSpan(
-                                  text: _pulse % 2 == 0 ? ' ┃' : '  ',
-                                  style: GoogleFonts.fraunces(
-                                    color: ScholarlyTheme.accentBlue,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: _buildSideSelectionButton(
+                                      context: context,
+                                      label: "PLAY AS BLACK",
+                                      isWhite: false,
+                                    ),
                                   ),
-                                ),
+                                ],
+                              ),
                             ],
-                          ),
+                          ],
                         ),
                 ),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSideSelectionButton({
+    required BuildContext context,
+    required String label,
+    required bool isWhite,
+  }) {
+    final activeColor = isWhite ? Colors.white : Colors.grey.shade900;
+    final textColor = isWhite ? Colors.black87 : Colors.white;
+    final strokeColor = isWhite ? const Color(0xFFD4AF37) : ScholarlyTheme.accentBlue;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          ref.read(chessProvider.notifier).selectAcademySide(isWhite);
+        },
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+          decoration: BoxDecoration(
+            color: activeColor,
+            border: Border.all(
+              color: strokeColor,
+              width: 1.5,
+            ),
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: [
+              BoxShadow(
+                color: strokeColor.withValues(alpha: 0.25),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: textColor,
+              letterSpacing: 0.5,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
       ),
     );
   }
