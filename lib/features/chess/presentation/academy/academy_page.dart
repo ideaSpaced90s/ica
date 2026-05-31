@@ -36,9 +36,10 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
     );
     // Listener to handle panel collapse: ensure the commentary list scrolls to the latest message.
     _slideController.addListener(() {
-      // When the panel is fully collapsed (value == 0.0), scroll to the bottom.
+      // When the panel is fully collapsed (value == 0.0), scroll to the bottom if we have multiple messages.
       if (_slideController.value == 0.0) {
-        if (_chatScrollController.hasClients) {
+        final historyLength = ref.read(chessProvider).commentaryHistory.length;
+        if (historyLength > 1 && _chatScrollController.hasClients) {
           // Use a post‑frame callback to guarantee the list has been laid out before scrolling.
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (_chatScrollController.hasClients) {
@@ -278,72 +279,63 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
     return JuicyGlassCard(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       borderRadius: 20,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        child: Row(
-          children: [
-            _CompactActionIcon(
-              icon: Icons.add_box_rounded,
-              tooltip: 'New Game',
-              onTap: () => _handleNewGame(context, ref),
-            ),
-            const SizedBox(width: 8),
-            _CompactActionIcon(
-              icon: Icons.tune_rounded,
-              tooltip: 'Settings',
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => const AcademySettingsPage(),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(width: 8),
-            _CompactActionIcon(
-              icon: Icons.undo_rounded,
-              tooltip: 'Undo',
-              isEnabled: state.canUndo,
-              isBlinking: state.isAcademyBlunderActive,
-              onTap: state.canUndo ? () => notifier.undo() : null,
-            ),
-            const SizedBox(width: 8),
-            _CompactActionIcon(
-              icon: Icons.redo_rounded,
-              tooltip: 'Redo',
-              isEnabled: state.canRedo,
-              onTap: state.canRedo ? () => notifier.redo() : null,
-            ),
-            const SizedBox(width: 8),
-            _CompactActionIcon(
-              icon: Icons.flip_camera_android_outlined,
-              tooltip: 'Flip Board',
-              isActive: state.isBoardFlipped,
-              onTap: () => notifier.toggleBoardOrientation(),
-            ),
-            const SizedBox(width: 8),
-            _CompactActionIcon(
-              icon: state.isBulbGlowing
-                  ? Icons.lightbulb_rounded
-                  : Icons.lightbulb_outline_rounded,
-              tooltip: 'Hint',
-              isEnabled: !state.isHintLoading,
-              isActive: state.isBulbGlowing,
-              activeColor: ScholarlyTheme.accentYellowSoft,
-              activeIconColor: ScholarlyTheme.accentYellow,
-              onTap: () => notifier.requestHint(),
-            ),
-            const SizedBox(width: 8),
-            _CompactActionIcon(
-              icon: state.showLog
-                  ? Icons.chat_bubble_outline_rounded
-                  : Icons.history_edu_rounded,
-              tooltip: 'Toggle Log',
-              isActive: state.showLog,
-              onTap: () => notifier.toggleLog(),
-            ),
-          ],
+      child: Center(
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _CompactActionIcon(
+                icon: Icons.add_box_rounded,
+                tooltip: 'New Game',
+                onTap: () => _handleNewGame(context, ref),
+              ),
+              const SizedBox(width: 8),
+              _CompactActionIcon(
+                icon: Icons.tune_rounded,
+                tooltip: 'Settings',
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const AcademySettingsPage(),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(width: 8),
+              _CompactActionIcon(
+                icon: Icons.undo_rounded,
+                tooltip: 'Undo',
+                isEnabled: state.canUndo,
+                isBlinking: state.isAcademyBlunderActive,
+                onTap: state.canUndo ? () => notifier.undo() : null,
+              ),
+  
+              const SizedBox(width: 8),
+              _CompactActionIcon(
+                icon: state.isBulbGlowing
+                    ? Icons.lightbulb_rounded
+                    : Icons.lightbulb_outline_rounded,
+                tooltip: 'Hint',
+                isEnabled: !state.isHintLoading,
+                isActive: state.isBulbGlowing,
+                activeColor: ScholarlyTheme.accentYellowSoft,
+                activeIconColor: ScholarlyTheme.accentYellow,
+                onTap: () => notifier.requestHint(),
+              ),
+              const SizedBox(width: 8),
+              _CompactActionIcon(
+                icon: state.showLog
+                    ? Icons.chat_bubble_outline_rounded
+                    : Icons.history_edu_rounded,
+                tooltip: 'Toggle Log',
+                isActive: state.showLog,
+                onTap: () => notifier.toggleLog(),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -357,96 +349,82 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
     final double borderRadius = _lerp(20.0, 0.0, factor);
     final double horizontalPadding = _lerp(12.0, 0.0, factor);
 
+    final dragHandler = GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onVerticalDragUpdate: (details) {
+        final delta = -details.primaryDelta! / MediaQuery.of(context).size.height;
+        _slideController.value = (_slideController.value + delta * 1.5).clamp(0.0, 1.0);
+      },
+      onVerticalDragEnd: (details) {
+        final velocity = details.primaryVelocity ?? 0;
+        if (velocity < -300 || _slideController.value > 0.4) {
+          _slideController.forward();
+        } else if (velocity > 300 || _slideController.value <= 0.4) {
+          _slideController.reverse();
+        }
+      },
+      child: Container(
+        color: Colors.transparent,
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: ScholarlyTheme.textMuted.withValues(alpha: 0.35),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            if (state.game.capturedByWhite.isNotEmpty || state.game.capturedByBlack.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              _CompactCapturedPiecesHeader(state: state),
+            ],
+          ],
+        ),
+      ),
+    );
+
     return Container(
       margin: EdgeInsets.symmetric(horizontal: horizontalPadding),
-      child: GestureDetector(
-        onVerticalDragUpdate: (details) {
-          final delta = -details.primaryDelta! / MediaQuery.of(context).size.height;
-          _slideController.value = (_slideController.value + delta * 1.5).clamp(0.0, 1.0);
-        },
-        onVerticalDragEnd: (details) {
-          final velocity = details.primaryVelocity ?? 0;
-          if (velocity < -300 || _slideController.value > 0.4) {
-            _slideController.forward();
-          } else if (velocity > 300 || _slideController.value <= 0.4) {
-            _slideController.reverse();
-          }
-        },
-        child: JuicyGlassCard(
-          borderRadius: borderRadius,
-          padding: EdgeInsets.fromLTRB(10, 6, 10, factor > 0.8 ? 24 : 6),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 4),
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: ScholarlyTheme.textMuted.withValues(alpha: 0.35),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
+      child: JuicyGlassCard(
+        borderRadius: borderRadius,
+        padding: EdgeInsets.fromLTRB(10, 6, 10, factor > 0.8 ? 24 : 6),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            dragHandler,
+            const SizedBox(height: 6),
+            Expanded(
+              child: ShaderMask(
+                shaderCallback: (Rect bounds) {
+                  final stop = _lerp(0.20, 0.08, factor);
+                  return LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: const [Colors.transparent, Colors.white],
+                    stops: [0.0, stop],
+                  ).createShader(bounds);
+                },
+                blendMode: BlendMode.dstIn,
+                child: state.showLog
+                    ? _buildMoveLog(
+                        context,
+                        state,
+                        const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                      )
+                    : CommentaryHistory(
+                        state: state,
+                        physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                        controller: _chatScrollController,
+                      ),
               ),
-              const SizedBox(height: 6),
-              _CompactCapturedPiecesHeader(state: state),
-              const SizedBox(height: 6),
-              Expanded(
-                child: NotificationListener<ScrollNotification>(
-                  onNotification: (ScrollNotification notification) {
-                    if (notification.depth == 0) {
-                      final metrics = notification.metrics;
-                      if (factor == 1.0) {
-                        if (metrics.pixels >= metrics.maxScrollExtent) {
-                          final isUserDrag = notification is ScrollUpdateNotification && notification.dragDetails != null;
-                          final isOverscroll = notification is OverscrollNotification && notification.dragDetails != null;
-                          if (isUserDrag || isOverscroll) {
-                            _slideController.reverse();
-                          }
-                        } else if (metrics.pixels <= 0.0) {
-                          final isTopOverscroll = notification is OverscrollNotification &&
-                              notification.dragDetails != null &&
-                              notification.overscroll < 0;
-                          if (isTopOverscroll) {
-                            _slideController.reverse();
-                          }
-                        }
-                      }
-                    }
-                    return false;
-                  },
-                  child: ShaderMask(
-                    shaderCallback: (Rect bounds) {
-                      final stop = _lerp(0.20, 0.08, factor);
-                      return LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: const [Colors.transparent, Colors.white],
-                        stops: [0.0, stop],
-                      ).createShader(bounds);
-                    },
-                    blendMode: BlendMode.dstIn,
-                    child: state.showLog
-                        ? _buildMoveLog(
-                            context,
-                            state,
-                            factor < 1.0
-                                ? const NeverScrollableScrollPhysics()
-                                : const BouncingScrollPhysics(),
-                          )
-                        : CommentaryHistory(
-                            state: state,
-                            physics: factor < 1.0
-                                ? const NeverScrollableScrollPhysics()
-                                : const BouncingScrollPhysics(),
-                            controller: _chatScrollController,
-                          ),
-                  ),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

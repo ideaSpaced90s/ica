@@ -3107,7 +3107,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
         CommentaryEntry(
           text: customFen != null
               ? "Ah, you bring me a position from your Study Lab! Let me examine this setup. What would you like to know or practice from here?"
-              : "Hello, ${state.userName}! Welcome to the GM Chanakya Chess School. Please select whether you wish to play as White or Black to begin our training:",
+              : "Hello, ${state.userName}! Welcome to the GM Chanakya Chess School. Please select whether you wish to play Classic Chess or Chess960, and choose to play as White or Black to begin our training:",
           timestamp: DateTime.now(),
           isComplete: true,
           isUser: false,
@@ -3137,19 +3137,32 @@ class ChessNotifier extends StateNotifier<ChessState> {
     );
   }
 
-  Future<void> selectAcademySide(bool playAsWhite) async {
+  Future<void> selectAcademySide(bool playAsWhite, {required String gameMode}) async {
+    final is960 = gameMode == 'chess960';
+    await _engine.setChess960Mode(is960);
+
+    final newGame = is960
+        ? ChessGame(
+            fen: Chess960Generator.generateRandomPosition().fen,
+            isChess960: true,
+          )
+        : ChessGame(isChess960: false);
+
     // 1. Update state flags
     state = state.copyWith(
       isWaitingForSideChoice: false,
       isPlayerWhite: playAsWhite,
       isBoardFlipped: !playAsWhite,
       isPaused: false,
+      gameMode: gameMode,
+      game: newGame,
     );
 
     // 2. Add user choice message to history
     final choiceStr = playAsWhite ? "White" : "Black";
+    final modeStr = is960 ? "Chess 960" : "Classic Chess";
     final userEntry = CommentaryEntry(
-      text: "I choose to play as $choiceStr.",
+      text: "I choose to play as $choiceStr in $modeStr mode.",
       timestamp: DateTime.now(),
       isUser: true,
       isComplete: true,
@@ -3158,9 +3171,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
     // 3. Prepare GM's response text
     String gmResponse = "";
     if (playAsWhite) {
-      gmResponse = "Excellent, you have chosen to play as White. Go ahead, make your opening move to secure the center, and I shall observe.";
+      gmResponse = "Excellent, you have chosen to play as White in $modeStr. Go ahead, make your opening move to secure the center, and I shall observe.";
     } else {
-      gmResponse = "Excellent, you have chosen to play as Black. Today, I shall take the first step. Observe how I open the board to secure the center, then the path will be yours to choose.";
+      gmResponse = "Excellent, you have chosen to play as Black in $modeStr. Today, I shall take the first step. Observe how I open the board to secure the center, then the path will be yours to choose.";
     }
 
     final gmEntry = CommentaryEntry(

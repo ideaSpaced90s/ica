@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../application/chess_provider.dart';
 import '../../data/saved_game.dart';
+import '../../services/chess_sound_service.dart';
 import '../scholarly_theme.dart';
 
 class CommentaryHistory extends ConsumerStatefulWidget {
@@ -22,6 +23,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
   late final Ticker _ticker;
   int _pulse = 0;
   late final ScrollController _scrollController;
+  String _selectedMode = 'classic';
 
 
   @override
@@ -42,10 +44,10 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
     final history = widget.state.commentaryHistory;
     final oldHistory = oldWidget.state.commentaryHistory;
 
-    if (history.length != oldHistory.length ||
+    if (history.length > 1 && (history.length != oldHistory.length ||
         widget.state.isCommentaryStreaming ||
         widget.state.isCommentaryLoading ||
-        (history.isNotEmpty && oldHistory.isNotEmpty && history.last.text != oldHistory.last.text)) {
+        (history.isNotEmpty && oldHistory.isNotEmpty && history.last.text != oldHistory.last.text))) {
       _scrollToBottom();
     }
   }
@@ -418,12 +420,14 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
                                 widget.state.commentaryHistory.indexOf(entry) ==
                                     widget.state.commentaryHistory.length - 1) ...[
                               const SizedBox(height: 12),
+                              _buildModeTabs(),
+                              const SizedBox(height: 8),
                               Row(
                                 children: [
                                   Expanded(
                                     child: _buildSideSelectionButton(
                                       context: context,
-                                      label: "PLAY AS WHITE",
+                                      label: "WHITE",
                                       isWhite: true,
                                     ),
                                   ),
@@ -431,7 +435,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
                                   Expanded(
                                     child: _buildSideSelectionButton(
                                       context: context,
-                                      label: "PLAY AS BLACK",
+                                      label: "BLACK",
                                       isWhite: false,
                                     ),
                                   ),
@@ -449,6 +453,85 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
     );
   }
 
+  Widget _buildModeTabs() {
+    return Container(
+      padding: const EdgeInsets.all(2),
+      decoration: BoxDecoration(
+        color: ScholarlyTheme.panelStroke.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: ScholarlyTheme.panelStroke.withValues(alpha: 0.5),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildModeTabButton(
+              label: 'CLASSIC',
+              isActive: _selectedMode == 'classic',
+              onTap: () {
+                setState(() {
+                  _selectedMode = 'classic';
+                });
+                ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+              },
+            ),
+          ),
+          Expanded(
+            child: _buildModeTabButton(
+              label: 'CHESS 960',
+              isActive: _selectedMode == 'chess960',
+              onTap: () {
+                setState(() {
+                  _selectedMode = 'chess960';
+                });
+                ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModeTabButton({
+    required String label,
+    required bool isActive,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        decoration: BoxDecoration(
+          color: isActive ? ScholarlyTheme.accentBlue : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: isActive
+              ? [
+                  BoxShadow(
+                    color: ScholarlyTheme.accentBlue.withValues(alpha: 0.3),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
+                  ),
+                ]
+              : null,
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+            color: isActive ? Colors.white : ScholarlyTheme.textMuted,
+            letterSpacing: 0.5,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ),
+    );
+  }
+
   Widget _buildSideSelectionButton({
     required BuildContext context,
     required String label,
@@ -462,7 +545,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
       color: Colors.transparent,
       child: InkWell(
         onTap: () {
-          ref.read(chessProvider.notifier).selectAcademySide(isWhite);
+          ref.read(chessProvider.notifier).selectAcademySide(isWhite, gameMode: _selectedMode);
         },
         borderRadius: BorderRadius.circular(8),
         child: Container(
