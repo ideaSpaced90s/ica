@@ -350,6 +350,76 @@ class _AboutUsPageState extends ConsumerState<AboutUsPage> {
                     ),
                   ),
                 ),
+                const SizedBox(height: 20),
+
+                CollapsibleSection(
+                  title: 'PUZZLE',
+                  initiallyExpanded: false,
+                  child: JuicyGlassCard(
+                    padding: const EdgeInsets.all(24),
+                    borderRadius: 24,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildMathSectionHeader('1. DYNAMIC DEFICIT ALLOCATION'),
+                        const SizedBox(height: 10),
+                        _buildMathText(
+                          'Rather than serving arbitrary tactical scenarios, the academy training loops dynamically adapt to your style. '
+                          'By parsing your Arena game logs, the system builds a vulnerability vector V tracking calculation deficits across '
+                          'eight geometric axes. If your peak vulnerability exceeds the activation threshold (0.30), the training engine '
+                          'allocates puzzles matching your dominant blind spot. Otherwise, it defaults to a balanced, general training mix.',
+                        ),
+                        const SizedBox(height: 12),
+                        _buildMathFormula(
+                          'Vector V = { V   , V   , V   , V   , V   , V   , V   , V    }\n'
+                          '              dgb   hrz   knf   tmp   grd   tnl   pin   ksb\n\n'
+                          '                  ┌ argmax(V)    if max(V) > 0.30\n'
+                          'Training Focus = ─┤\n'
+                          '                  └ Balanced     otherwise'
+                        ),
+                        const SizedBox(height: 24),
+                        
+                        _buildMathSectionHeader('2. COMPLEXITY TIERS & SKILL CALIBRATION'),
+                        const SizedBox(height: 10),
+                        _buildMathText(
+                          'To ensure effective training, complexity calibration maps tactical puzzles to your current strength tier. '
+                          'The database filters candidate puzzles using your rating (R) to target your calculation limits.',
+                        ),
+                        const SizedBox(height: 12),
+                        _buildMathFormula(
+                          '                       ┌ Tier 1 (Tactical Fundamentals)      if R < 1200\n'
+                          'Complexity Tier (T) = ─┼ Tier 2 (Intermediate Calculation)   if 1200 ≤ R ≤ 1800\n'
+                          '                       └ Tier 3 (Advanced Sight Masterclass) if R > 1800'
+                        ),
+                        const SizedBox(height: 24),
+
+                        _buildMathSectionHeader('3. COGNITIVE-VISUAL SPATIAL CHANNELS'),
+                        const SizedBox(height: 10),
+                        _buildMathText(
+                          'Each training channel filters tactical coordinates to systematically rebuild your board vision and eliminate calculation gaps:',
+                        ),
+                        const SizedBox(height: 12),
+                        _buildMathFormula(
+                          'Diagonal Retreat (DGB) : |x  - x | = |y  - y | ≥ 3  AND  y  < y  (White) / y  > y  (Black)\n'
+                          '                          2    1      2    1              2    1              2    1\n\n'
+                          'Horizontal Sweep (HRZ) : y  = y   AND  |x  - x | ≥ 3\n'
+                          '                          1    2         2    1\n\n'
+                          'Knight Vision (KNF)    : x  ∈ {0, 7}  OR  x  ∈ {0, 7} (Outer files A & H)\n'
+                          '                          1                2\n\n'
+                          'Board-Wide Vision (TNL): |x       - mean(x      )| ≥ 4\n'
+                          '                           threat        recent\n\n'
+                          'Pressure Cooker (TMP)  : Remaining game time < 45 seconds'
+                        ),
+                        const SizedBox(height: 12),
+                        _buildMathText(
+                          '• Poisoned Apple (GRD): Trains players to override material greed bias and check for tactical traps and sacrifices.\n'
+                          '• Unpinning the Mind (PIN): Reinforces tactical pin detection and geometry validation lines.\n'
+                          '• King Radar (KSB): Sharpens checkmate warning signs and king defense calculations.'
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 32),
 
                 // Footer credits

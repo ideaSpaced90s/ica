@@ -10,6 +10,8 @@ import '../../domain/models/ai_avatar.dart';
 import '../widgets/ambient_scaffold.dart';
 import 'dart:ui';
 import 'arena_personas_selection_page.dart';
+import '../../application/store_provider.dart';
+import '../mobile_navigation_shell.dart';
 
 
 class ArenaSettingsPage extends ConsumerStatefulWidget {
@@ -297,8 +299,13 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
                             return GestureDetector(
                               onTap: () {
                                 ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                                notifier.setBoardTheme(theme.id);
-                                Navigator.of(context).popUntil((route) => route.isFirst);
+                                final isUnlocked = ref.read(storeProvider.notifier).isThemeUnlocked(theme.id);
+                                if (isUnlocked) {
+                                  notifier.setBoardTheme(theme.id);
+                                  Navigator.of(context).popUntil((route) => route.isFirst);
+                                } else {
+                                  _showThemeLockedDialog(context, ref, theme.name);
+                                }
                               },
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
@@ -585,6 +592,53 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
     );
   }
 
+  void _showThemeLockedDialog(BuildContext context, WidgetRef ref, String themeName) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: Row(
+            children: [
+              const Icon(Icons.lock_rounded, color: Colors.amber),
+              const SizedBox(width: 8),
+              Text(
+                'Theme Locked',
+                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary),
+              ),
+            ],
+          ),
+          content: Text(
+            'The "$themeName" chessboard theme is premium and currently locked. Go to the Store to buy or renew it!',
+            style: GoogleFonts.inter(fontSize: 13, color: ScholarlyTheme.textPrimary),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                Navigator.pop(context); // Close dialog
+                Navigator.pop(context); // Close theme sheet
+                // Redirect to store
+                ref.read(mobileNavIndexProvider.notifier).state = 10;
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: ScholarlyTheme.accentBlue,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: Text('Go to Store', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    );
+  }
 }
 
 class _SettingsCategory extends StatelessWidget {

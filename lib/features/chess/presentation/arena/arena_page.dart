@@ -427,22 +427,26 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ActiveAvatarWrapper(
-                    isActive: !isTurn,
-                    child: OpponentAvatarIndicator(
-                      avatar: AiAvatar.getAvatar(state.engineLevel),
-                      onTap: null, // Read-only from unrated arena
+              Expanded(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ActiveAvatarWrapper(
+                      isActive: !isTurn,
+                      child: OpponentAvatarIndicator(
+                        avatar: AiAvatar.getAvatar(state.engineLevel),
+                        onTap: null, // Read-only from unrated arena
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  CapturedPiecesInline(
-                    pieces: topPieces,
-                    opponentPieces: bottomPieces,
-                  ),
-                ],
+                    const SizedBox(width: 12),
+                    Flexible(
+                      child: CapturedPiecesInline(
+                        pieces: topPieces,
+                        opponentPieces: bottomPieces,
+                      ),
+                    ),
+                  ],
+                ),
               ),
               _buildThinkingFlashButton(context: context, ref: ref, state: state),
             ],
@@ -450,11 +454,14 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
         ),
         // Board
         Expanded(
-          child: Stack(
-            children: [
-              const ArenaChessBoard(alignment: Alignment.center),
-              if (state.isPaused) _buildPauseOverlay(context, ref),
-            ],
+          child: Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Stack(
+              children: [
+                const ArenaChessBoard(alignment: Alignment.center),
+                if (state.isPaused) _buildPauseOverlay(context, ref),
+              ],
+            ),
           ),
         ),
         // User with active wrapper

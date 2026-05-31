@@ -382,22 +382,26 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ActiveAvatarWrapper(
-                    isActive: !isTurn,
-                    child: OpponentAvatarIndicator(
-                      avatar: opponentAvatar,
-                      onTap: null, // Read-only from rated arena
+              Expanded(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ActiveAvatarWrapper(
+                      isActive: !isTurn,
+                      child: OpponentAvatarIndicator(
+                        avatar: opponentAvatar,
+                        onTap: null, // Read-only from rated arena
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  CapturedPiecesInline(
-                    pieces: topPieces,
-                    opponentPieces: bottomPieces,
-                  ),
-                ],
+                    const SizedBox(width: 12),
+                    Flexible(
+                      child: CapturedPiecesInline(
+                        pieces: topPieces,
+                        opponentPieces: bottomPieces,
+                      ),
+                    ),
+                  ],
+                ),
               ),
               _buildThinkingFlashButton(context: context, ref: ref, state: state),
             ],
@@ -405,10 +409,13 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
         ),
         // Board
         Expanded(
-          child: Stack(
-            children: [
-              const BattlegroundBoard(alignment: Alignment.center),
-            ],
+          child: Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Stack(
+              children: [
+                const BattlegroundBoard(alignment: Alignment.center),
+              ],
+            ),
           ),
         ),
         // User with inline captured pieces

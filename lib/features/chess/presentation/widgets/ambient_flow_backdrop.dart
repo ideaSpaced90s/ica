@@ -1,5 +1,4 @@
 import 'dart:math';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../application/chess_provider.dart';
@@ -27,9 +26,7 @@ class AmbientFlowBackdrop extends ConsumerStatefulWidget {
 
 class _AmbientFlowBackdropState extends ConsumerState<AmbientFlowBackdrop>
     with TickerProviderStateMixin {
-  late AnimationController _controller1;
-  late AnimationController _controller2;
-  late AnimationController _controller3;
+  late AnimationController _waveController;
 
   /// Slow shimmer controller for arcade mode (30s full cycle)
   late AnimationController _arcadeShimmer;
@@ -37,18 +34,8 @@ class _AmbientFlowBackdropState extends ConsumerState<AmbientFlowBackdrop>
   @override
   void initState() {
     super.initState();
-    // Use different durations to avoid synchronized repetition
-    _controller1 = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 15),
-    )..repeat();
-
-    _controller2 = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 22),
-    )..repeat();
-
-    _controller3 = AnimationController(
+    // Very slow wave duration for a subtle shifting effect
+    _waveController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 18),
     )..repeat();
@@ -62,9 +49,7 @@ class _AmbientFlowBackdropState extends ConsumerState<AmbientFlowBackdrop>
 
   @override
   void dispose() {
-    _controller1.dispose();
-    _controller2.dispose();
-    _controller3.dispose();
+    _waveController.dispose();
     _arcadeShimmer.dispose();
     super.dispose();
   }
@@ -79,100 +64,34 @@ class _AmbientFlowBackdropState extends ConsumerState<AmbientFlowBackdrop>
 
     return Stack(
       children: [
-        // Base background color matching scholarly theme backgroundStart
+        // Base background color
         Container(
           color: widget.backgroundColor,
         ),
-        // Blob 1: Soft Indigo/Blue
-        AnimatedBuilder(
-          animation: _controller1,
-          builder: (context, child) {
-            final angle = _controller1.value * 2 * pi;
-            // Orbit around center-left
-            final dx = size.width * 0.2 + cos(angle) * 80;
-            final dy = size.height * 0.3 + sin(angle) * 120;
-            return Positioned(
-              left: dx - 180,
-              top: dy - 180,
-              child: Container(
-                width: 360,
-                height: 360,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      widget.blob1Color,
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
-        // Blob 2: Soft Amber/Yellow
-        AnimatedBuilder(
-          animation: _controller2,
-          builder: (context, child) {
-            final angle = _controller2.value * 2 * pi;
-            // Orbit around center-right
-            final dx = size.width * 0.8 + sin(angle) * 100;
-            final dy = size.height * 0.6 + cos(angle) * 140;
-            return Positioned(
-              left: dx - 200,
-              top: dy - 200,
-              child: Container(
-                width: 400,
-                height: 400,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      widget.blob2Color,
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
-        // Blob 3: Soft Lavender/Pink
-        AnimatedBuilder(
-          animation: _controller3,
-          builder: (context, child) {
-            final angle = _controller3.value * 2 * pi;
-            // Orbit around center-bottom
-            final dx = size.width * 0.4 + cos(angle) * 120;
-            final dy = size.height * 0.85 + sin(angle) * 70;
-            return Positioned(
-              left: dx - 160,
-              top: dy - 160,
-              child: Container(
-                width: 320,
-                height: 320,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      widget.blob3Color,
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
-        // Blur Filter to merge them into a smooth liquid gradient
+        // Flowing shadow waves on top
         Positioned.fill(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 70, sigmaY: 70),
-            child: Container(
-              color: widget.overlayColor ?? Colors.white.withValues(alpha: 0.15),
-            ),
+          child: AnimatedBuilder(
+            animation: _waveController,
+            builder: (context, child) {
+              return CustomPaint(
+                size: Size.infinite,
+                painter: AmbientWavePainter(
+                  _waveController.value,
+                  widget.blob1Color,
+                  widget.blob2Color,
+                  widget.blob3Color,
+                ),
+              );
+            },
           ),
         ),
+        // Optional overlay color if specified
+        if (widget.overlayColor != null)
+          Positioned.fill(
+            child: Container(
+              color: widget.overlayColor,
+            ),
+          ),
         // ── Arcade Mode: slow-drifting shimmer orbs ──────────────────────
         if (arcadeMode)
           AnimatedBuilder(
@@ -186,6 +105,104 @@ class _AmbientFlowBackdropState extends ConsumerState<AmbientFlowBackdrop>
           ),
       ],
     );
+  }
+}
+
+class AmbientWavePainter extends CustomPainter {
+  final double t;
+  final Color color1;
+  final Color color2;
+  final Color color3;
+
+  AmbientWavePainter(this.t, this.color1, this.color2, this.color3);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double w = size.width;
+    final double h = size.height;
+
+    // Wave 1: Soft Back Layer (using color2 - default warm amber)
+    final paint1 = Paint()
+      ..shader = LinearGradient(
+        colors: [
+          color2.withValues(alpha: 0.0),
+          color2.withValues(alpha: 0.08),
+          color2.withValues(alpha: 0.0),
+        ],
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+      ).createShader(Rect.fromLTWH(0, 0, w, h));
+
+    final path1 = Path();
+    path1.moveTo(0, h * 0.4);
+    for (double x = 0; x <= w; x++) {
+      final y = h * 0.4 +
+          sin((x / w * 2 * pi) + (t * 2 * pi)) * 30 +
+          cos((x / w * pi) - (t * pi)) * 12;
+      path1.lineTo(x, y);
+    }
+    path1.lineTo(w, h);
+    path1.lineTo(0, h);
+    path1.close();
+    canvas.drawPath(path1, paint1);
+
+    // Wave 2: Soft Middle Layer (using color1 - default soft blue)
+    final paint2 = Paint()
+      ..shader = LinearGradient(
+        colors: [
+          color1.withValues(alpha: 0.0),
+          color1.withValues(alpha: 0.18),
+          color1.withValues(alpha: 0.0),
+        ],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ).createShader(Rect.fromLTWH(0, 0, w, h));
+
+    final path2 = Path();
+    path2.moveTo(0, h * 0.6);
+    for (double x = 0; x <= w; x++) {
+      final y = h * 0.6 +
+          cos((x / w * 2 * pi) - (t * 2 * pi * 1.1)) * 35 +
+          sin((x / w * 1.5 * pi) + (t * pi)) * 18;
+      path2.lineTo(x, y);
+    }
+    path2.lineTo(w, h);
+    path2.lineTo(0, h);
+    path2.close();
+    canvas.drawPath(path2, paint2);
+
+    // Wave 3: Soft Front Layer (using color3 - default soft purple)
+    final paint3 = Paint()
+      ..shader = LinearGradient(
+        colors: [
+          color3.withValues(alpha: 0.0),
+          color3.withValues(alpha: 0.06),
+          color3.withValues(alpha: 0.0),
+        ],
+        begin: Alignment.bottomLeft,
+        end: Alignment.topRight,
+      ).createShader(Rect.fromLTWH(0, 0, w, h));
+
+    final path3 = Path();
+    path3.moveTo(0, h * 0.78);
+    for (double x = 0; x <= w; x++) {
+      final y = h * 0.78 +
+          sin((x / w * 2 * pi) + (t * 2 * pi * 0.9) + 1.2) * 25 +
+          cos((x / w * pi) + (t * 2 * pi)) * 15;
+      path3.lineTo(x, y);
+    }
+    path3.lineTo(w, h);
+    path3.lineTo(0, h);
+    path3.close();
+    canvas.drawPath(path3, paint3);
+  }
+
+  @override
+  bool shouldRepaint(covariant AmbientWavePainter oldDelegate) {
+    return oldDelegate.t != t ||
+        oldDelegate.color1 != color1 ||
+        oldDelegate.color2 != color2 ||
+        oldDelegate.color3 != color3;
   }
 }
 

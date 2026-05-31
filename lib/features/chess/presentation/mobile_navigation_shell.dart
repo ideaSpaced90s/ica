@@ -19,8 +19,10 @@ import 'history_page.dart';
 import 'tutorial_page.dart';
 import 'about_us_page.dart';
 import 'settings_page.dart';
+import 'store/store_page.dart';
 
 import 'widgets/welcome_guide_page.dart';
+import 'widgets/sidebar_dynamic_bg.dart';
 import '../application/onboarding_provider.dart';
 
 
@@ -52,6 +54,7 @@ class MobileNavigationShell extends ConsumerWidget {
       const TutorialPage(),
       const AboutUsPage(),
       const SettingsPage(),
+      const StorePage(),
     ];
 
     // Determine logical title based on active tab
@@ -77,6 +80,8 @@ class MobileNavigationShell extends ConsumerWidget {
           return 'ABOUT US';
         case 9:
           return 'SETTINGS';
+        case 10:
+          return 'STORE';
         default:
           return 'IDEASPACE CHESS ACADEMY';
       }
@@ -180,7 +185,7 @@ class _MobileSidebarDrawer extends ConsumerWidget {
     final currentIndex = ref.watch(mobileNavIndexProvider);
 
     return Drawer(
-      backgroundColor: ScholarlyTheme.backgroundStart,
+      backgroundColor: Colors.transparent,
       surfaceTintColor: Colors.transparent,
       elevation: 16.0,
       shadowColor: Colors.black.withValues(alpha: 0.15),
@@ -191,16 +196,20 @@ class _MobileSidebarDrawer extends ConsumerWidget {
           bottomRight: Radius.circular(20),
         ),
       ),
-      child: Column(
+      child: Stack(
         children: [
-          // Elegant Drawer Header
-          _buildHeader(context),
+          const SidebarDynamicBg(),
+          Column(
+            children: [
+              // Elegant Drawer Header
+              _buildHeader(context),
           
           // Drawer Navigation Items
           Expanded(
             child: ListView(
               padding: const EdgeInsets.symmetric(vertical: 8.0),
               children: [
+                // Top Group: Home
                 _DrawerTile(
                   label: 'Home',
                   icon: Icons.home_rounded,
@@ -209,6 +218,11 @@ class _MobileSidebarDrawer extends ConsumerWidget {
                     _navigate(ref, context, 0);
                   },
                 ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+                  child: Divider(color: Color(0xFFE2E8F0), height: 1),
+                ),
+                // Upper Group
                 _DrawerTile(
                   label: 'Arena',
                   icon: Icons.sports_esports_rounded,
@@ -257,10 +271,6 @@ class _MobileSidebarDrawer extends ConsumerWidget {
                     _navigate(ref, context, 6);
                   },
                 ),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                  child: Divider(color: Color(0xFFE2E8F0), height: 1),
-                ),
                 _DrawerTile(
                   label: 'Tutorial',
                   icon: Icons.menu_book_rounded,
@@ -269,12 +279,25 @@ class _MobileSidebarDrawer extends ConsumerWidget {
                     _navigate(ref, context, 7);
                   },
                 ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+                  child: Divider(color: Color(0xFFE2E8F0), height: 1),
+                ),
+                // Settings, Store, About Us Group
                 _DrawerTile(
                   label: 'Settings',
                   icon: Icons.settings_rounded,
                   isSelected: currentIndex == 9,
                   onTap: () {
                     _navigate(ref, context, 9);
+                  },
+                ),
+                _DrawerTile(
+                  label: 'Store',
+                  icon: Icons.storefront_rounded,
+                  isSelected: currentIndex == 10,
+                  onTap: () {
+                    _navigate(ref, context, 10);
                   },
                 ),
                 _DrawerTile(
@@ -291,6 +314,8 @@ class _MobileSidebarDrawer extends ConsumerWidget {
           
           // Drawer Footer with branding and version
           _buildFooter(context, ref),
+            ],
+          ),
         ],
       ),
     );
@@ -300,10 +325,8 @@ class _MobileSidebarDrawer extends ConsumerWidget {
     return Container(
       width: double.infinity,
       padding: EdgeInsets.only(
-        top: MediaQuery.of(context).padding.top + 24,
-        bottom: 24,
-        left: 20,
-        right: 20,
+        top: MediaQuery.of(context).padding.top + 16,
+        bottom: 12,
       ),
       decoration: const BoxDecoration(
         color: Colors.transparent,
@@ -314,43 +337,52 @@ class _MobileSidebarDrawer extends ConsumerWidget {
           ),
         ),
       ),
-      child: Row(
-        children: [
-          Image.asset(
-            'assets/splash/appicon.png',
-            width: 40,
-            height: 40,
-            errorBuilder: (context, error, stackTrace) => Container(
-              width: 40,
-              height: 40,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: ScholarlyTheme.accentBlue,
-              ),
-              child: const Icon(Icons.circle, color: Colors.white, size: 24),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'IDEASPACE CHESS ACADEMY',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.outfit(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.5,
-                    color: ScholarlyTheme.textPrimary,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'ICA',
+                    style: GoogleFonts.pirataOne(
+                      fontSize: 34, // Slightly enlarged to look bold and clean in Pirata One
+                      fontWeight: FontWeight.bold,
+                      color: ScholarlyTheme.textPrimary,
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 2),
+                  Text(
+                    'Ideaspace Chess Academy',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: ScholarlyTheme.textMuted,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+            const SizedBox(width: 12),
+            Image.asset(
+              'assets/splash/appicon.png',
+              width: 96,
+              height: 96,
+              errorBuilder: (context, error, stackTrace) => Container(
+                width: 96,
+                height: 96,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: ScholarlyTheme.accentBlue,
+                ),
+                child: const Icon(Icons.circle, color: Colors.white, size: 54),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -360,7 +392,7 @@ class _MobileSidebarDrawer extends ConsumerWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
       decoration: const BoxDecoration(
-        color: Color(0xFFF1F5F9),
+        color: Colors.transparent,
         border: Border(
           top: BorderSide(color: Color(0xFFE2E8F0), width: 1.0),
         ),
@@ -380,13 +412,13 @@ class _MobileSidebarDrawer extends ConsumerWidget {
               ),
               Image.asset(
                 'assets/splash/ideaspace.png',
-                height: 12,
+                height: 27,
                 errorBuilder: (context, error, stackTrace) => Text(
                   'ideaspace',
                   style: GoogleFonts.inter(
                     color: ScholarlyTheme.textPrimary,
                     fontWeight: FontWeight.bold,
-                    fontSize: 10,
+                    fontSize: 14,
                   ),
                 ),
               ),
@@ -436,8 +468,10 @@ class _DrawerTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
+      margin: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 2.0),
       child: ListTile(
+        dense: false,
+        visualDensity: const VisualDensity(horizontal: 0, vertical: -1.5),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12.0),
         ),
@@ -453,7 +487,7 @@ class _DrawerTile extends StatelessWidget {
         title: Text(
           label,
           style: GoogleFonts.inter(
-            fontSize: 14,
+            fontSize: 15,
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
             color: isSelected ? ScholarlyTheme.accentBlue : ScholarlyTheme.textPrimary,
           ),

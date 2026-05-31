@@ -8,6 +8,8 @@ import '../../services/chess_sound_service.dart';
 import '../../domain/models/ai_avatar.dart';
 import '../scholarly_theme.dart';
 import '../widgets/ambient_scaffold.dart';
+import '../../application/store_provider.dart';
+import '../mobile_navigation_shell.dart';
 
 class ArenaPersonasSelectionPage extends ConsumerStatefulWidget {
   const ArenaPersonasSelectionPage({super.key});
@@ -151,6 +153,7 @@ class _ArenaPersonasSelectionPageState extends ConsumerState<ArenaPersonasSelect
 
     final isUpSelected = state.engineLevel == currentAvatar.id;
     final isDownSelected = state.bottomAvatarId == currentAvatar.id;
+    final isUnlocked = ref.watch(storeProvider.notifier).isAvatarUnlocked(currentAvatar.id);
 
     // Maintain global keys to animate flips per persona card
     _cardKeys.putIfAbsent(currentAvatar.id, () => GlobalKey<FlippableCardState>());
@@ -244,7 +247,7 @@ class _ArenaPersonasSelectionPageState extends ConsumerState<ArenaPersonasSelect
                               onPanEnd: _handleDragEnd,
                               child: FlippableCard(
                                 key: _cardKeys[currentAvatar.id],
-                                front: _buildCardFront(currentAvatar, isUpSelected, isDownSelected),
+                                front: _buildCardFront(currentAvatar, isUpSelected, isDownSelected, isUnlocked),
                                 back: _buildCardBack(currentAvatar),
                               ),
                             ),
@@ -314,34 +317,50 @@ class _ArenaPersonasSelectionPageState extends ConsumerState<ArenaPersonasSelect
                       ),
                       const SizedBox(width: 8),
                       
-                      // Set as Up Engine (White/Player slot)
-                      Expanded(
-                        child: JuicySelectButton(
-                          label: isUpSelected ? 'UP ACTIVE' : 'SET UP',
-                          icon: Icons.arrow_upward_rounded,
-                          color: currentAvatar.color,
-                          isActive: isUpSelected,
-                          onPressed: () {
-                            ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                            notifier.setEngineLevel(currentAvatar.id);
-                          },
+                      if (!isUnlocked)
+                        Expanded(
+                          child: JuicySelectButton(
+                            label: 'UNLOCK IN STORE',
+                            icon: Icons.lock_rounded,
+                            color: currentAvatar.color,
+                            isActive: false,
+                            onPressed: () {
+                              ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                              Navigator.pop(context); // Close personas page
+                              ref.read(mobileNavIndexProvider.notifier).state = 10; // Go to store
+                            },
+                          ),
+                        )
+                      else ...[
+                        // Set as Up Engine (White/Player slot)
+                        Expanded(
+                          child: JuicySelectButton(
+                            label: isUpSelected ? 'UP ACTIVE' : 'SET UP',
+                            icon: Icons.arrow_upward_rounded,
+                            color: currentAvatar.color,
+                            isActive: isUpSelected,
+                            onPressed: () {
+                              ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                              notifier.setEngineLevel(currentAvatar.id);
+                            },
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
+                        const SizedBox(width: 8),
 
-                      // Set as Down Engine (Black/Opponent slot)
-                      Expanded(
-                        child: JuicySelectButton(
-                          label: isDownSelected ? 'DOWN ACTIVE' : 'SET DOWN',
-                          icon: Icons.arrow_downward_rounded,
-                          color: currentAvatar.color,
-                          isActive: isDownSelected,
-                          onPressed: () {
-                            ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                            notifier.setBottomAvatarId(currentAvatar.id);
-                          },
+                        // Set as Down Engine (Black/Opponent slot)
+                        Expanded(
+                          child: JuicySelectButton(
+                            label: isDownSelected ? 'DOWN ACTIVE' : 'SET DOWN',
+                            icon: Icons.arrow_downward_rounded,
+                            color: currentAvatar.color,
+                            isActive: isDownSelected,
+                            onPressed: () {
+                              ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                              notifier.setBottomAvatarId(currentAvatar.id);
+                            },
+                          ),
                         ),
-                      ),
+                      ],
                       const SizedBox(width: 8),
 
                       // Swipe Right (Next Button - Pulsing once every 5s)
@@ -383,7 +402,7 @@ class _ArenaPersonasSelectionPageState extends ConsumerState<ArenaPersonasSelect
   }
 
   // Frontend of the persona card
-  Widget _buildCardFront(AiAvatar avatar, bool isUpActive, bool isDownActive) {
+  Widget _buildCardFront(AiAvatar avatar, bool isUpActive, bool isDownActive, bool isUnlocked) {
     final isLightColor = avatar.color.computeLuminance() > 0.6;
     
     return Container(
@@ -556,6 +575,21 @@ class _ArenaPersonasSelectionPageState extends ConsumerState<ArenaPersonasSelect
                 ),
               ),
             ),
+            if (!isUnlocked)
+              Container(
+                color: Colors.black.withValues(alpha: 0.35),
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.7),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white30),
+                    ),
+                    child: const Icon(Icons.lock_rounded, color: Colors.amber, size: 36),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
