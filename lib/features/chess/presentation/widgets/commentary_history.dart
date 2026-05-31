@@ -101,7 +101,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
 
   Widget _buildInput(BuildContext context) {
     final state = widget.state;
-    final bool isBusy = state.isCommentaryLoading || state.isCommentaryStreaming || state.isWaitingForSideChoice;
+    final bool isBusy = state.isCommentaryLoading || state.isCommentaryStreaming || state.isWaitingForSideChoice || state.isAcademyBlunderActive;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),

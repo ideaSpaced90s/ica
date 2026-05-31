@@ -66,6 +66,7 @@ class _BoardSnapshot {
     required this.isPlayerWhite,
     required this.isBoardFlipped,
     required this.gameMode,
+    required this.analysis,
 
   });
 
@@ -100,6 +101,7 @@ class _BoardSnapshot {
   final bool isPlayerWhite;
   final bool isBoardFlipped;
   final String gameMode;
+  final Map<String, dynamic> analysis;
 
 }
 
@@ -232,6 +234,7 @@ class ChessState {
     this.userName = 'Apprentice',
     this.userAvatarPath = 'assets/persona/user_profile_0.png',
     this.isWaitingForSideChoice = false,
+    this.isAcademyBlunderActive = false,
 
   });
 
@@ -316,6 +319,7 @@ class ChessState {
   final String userName;
   final String userAvatarPath;
   final bool isWaitingForSideChoice;
+  final bool isAcademyBlunderActive;
 
 
   bool get isChess960 => gameMode == 'chess960';
@@ -413,6 +417,7 @@ class ChessState {
     String? userName,
     String? userAvatarPath,
     bool? isWaitingForSideChoice,
+    bool? isAcademyBlunderActive,
 
   }) {
     return ChessState(
@@ -536,6 +541,7 @@ class ChessState {
       userName: userName ?? this.userName,
       userAvatarPath: userAvatarPath ?? this.userAvatarPath,
       isWaitingForSideChoice: isWaitingForSideChoice ?? this.isWaitingForSideChoice,
+      isAcademyBlunderActive: isAcademyBlunderActive ?? this.isAcademyBlunderActive,
 
     );
   }
@@ -1187,6 +1193,31 @@ class ChessNotifier extends StateNotifier<ChessState> {
       final rawBestMove = parsed['bestMove'] as String?;
       final aiTurn = _isAiTurn();
 
+      // Check if we are in Academy Mode and it was the user who just moved
+      if (state.isAcademyActive &&
+          aiTurn &&
+          !state.isWaitingForSideChoice &&
+          !state.isAcademyBlunderActive &&
+          !state.game.gameOver &&
+          !state.isPaused &&
+          state.game.history.length >= 3) {
+        
+        // Calculate evaluation delta
+        final double prevEval = state.previousEvaluation;
+        final double currEval = newEval ?? state.currentEvaluation;
+        final double evalDiff = -currEval - prevEval;
+
+        debugPrint('Academy Mode evaluation check: prev=$prevEval, curr=$currEval, diff=$evalDiff, history=${state.game.history.length}');
+
+        if (evalDiff <= -1.2) {
+          // It's an absolute blunder! Set flag and trigger Chanakya's intervention
+          state = state.copyWith(isAcademyBlunderActive: true);
+          final lastMoveStr = state.lastMove ?? '';
+          unawaited(_handleAcademyBlunderIntervention(evalDiff, lastMoveStr));
+          // Do NOT pause or return early. Let the engine make its response move.
+        }
+      }
+
       String? bestMoveToPlay = rawBestMove;
 
       if (rawBestMove != null && _currentCandidates.isNotEmpty) {
@@ -1544,6 +1575,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
       isPlayerWhite: entry.isPlayerWhite,
       isBoardFlipped: entry.isBoardFlipped,
       gameMode: entry.gameMode,
+      analysis: const {},
     ));
 
     // 2. Replay all moves and add snapshots
@@ -1585,6 +1617,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
         isPlayerWhite: entry.isPlayerWhite,
         isBoardFlipped: entry.isBoardFlipped,
         gameMode: entry.gameMode,
+        analysis: const {},
       ));
     }
 
@@ -1717,6 +1750,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
       isPlayerWhite: state.isPlayerWhite,
       isBoardFlipped: state.isBoardFlipped,
       gameMode: state.gameMode,
+      analysis: Map<String, dynamic>.from(state.analysis),
 
     );
   }
@@ -1740,7 +1774,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
       isCommentaryEngineLoading: snapshot.isCommentaryEngineLoading,
       commentaryError: snapshot.commentaryError,
       isEngineThinking: snapshot.isEngineThinking,
-      analysis: const {},
+      analysis: snapshot.analysis,
       hintBestMove: snapshot.hintBestMove,
       hintFrom: snapshot.hintFrom,
       hintTo: snapshot.hintTo,
@@ -1891,6 +1925,10 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
   Future<void> makeMove(String from, String to) async {
     if (state.game.gameOver) return;
+
+    if (state.isAcademyBlunderActive) {
+      state = state.copyWith(isAcademyBlunderActive: false);
+    }
 
     // 1. Handle branching from history viewing
     if (state.viewingMoveIndex != null) {
@@ -2218,6 +2256,10 @@ class ChessNotifier extends StateNotifier<ChessState> {
       return;
     }
 
+    if (state.isAcademyBlunderActive) {
+      state = state.copyWith(isAcademyBlunderActive: false);
+    }
+
     final from = state.promotionSource!;
     final to = state.promotionDestination!;
 
@@ -2476,11 +2518,12 @@ class ChessNotifier extends StateNotifier<ChessState> {
     String? userQuery,
     bool revealHintAfterTyping = false,
     bool isNested = false,
+    String titlePrefix = '',
   }) async {
     _cancelCommentaryReveal();
 
     final newEntry = CommentaryEntry(
-      text: '',
+      text: titlePrefix,
       timestamp: DateTime.now(),
       isComplete: false,
       isUser: false,
@@ -2543,7 +2586,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
         );
         if (updatedHistory.isNotEmpty) {
           updatedHistory[updatedHistory.length - 1] = updatedHistory.last
-              .copyWith(text: chunk);
+              .copyWith(text: '$titlePrefix$chunk');
         }
 
         state = state.copyWith(
@@ -2733,11 +2776,17 @@ class ChessNotifier extends StateNotifier<ChessState> {
       return;
     }
 
+    _engineMoveTimer?.cancel();
+    _maxThinkingTimer?.cancel();
+    _maxThinkingTimer = null;
+
+    final bool wasBlunderActive = state.isAcademyBlunderActive;
+    final cachedCommentary = List<CommentaryEntry>.from(state.commentaryHistory);
+
     // 1. Always pause when navigating history to prevent engine interference
-    if (!state.isPaused) {
+    if (!state.isPaused && !wasBlunderActive) {
       state = state.copyWith(isPaused: true);
       _stopClock();
-      _engineMoveTimer?.cancel();
     }
 
     // 2. Full-turn undo logic:
@@ -2749,12 +2798,12 @@ class ChessNotifier extends StateNotifier<ChessState> {
         !state.game.gameOver &&
         !state.isEngineVsEngine;
 
-    // First undo (Engine's move)
+    // First undo
     _redoStack.add(_captureCurrentSnapshot());
     final snapshot = _undoStack.removeLast();
     _restoreSnapshot(snapshot);
 
-    // Second undo (Player's move)
+    // Second undo
     if (shouldUndoTwice && _undoStack.isNotEmpty) {
       _redoStack.add(_captureCurrentSnapshot());
       final snapshot2 = _undoStack.removeLast();
@@ -2762,6 +2811,24 @@ class ChessNotifier extends StateNotifier<ChessState> {
     }
 
     _syncUndoRedoFlags();
+
+    if (wasBlunderActive) {
+      // Restore gameplay
+      state = state.copyWith(
+        isPaused: false,
+        isAcademyBlunderActive: false,
+        commentaryHistory: cachedCommentary,
+      );
+      if (state.clockStarted) {
+        _startClockTicker();
+      }
+
+      // Show glowing clue for the best move in this restored position
+      final bestMove = state.analysis['bestMove'] as String?;
+      if (bestMove != null) {
+        unawaited(_runHintFlow(bestMove));
+      }
+    }
   }
 
   void redo() {
@@ -3033,6 +3100,36 @@ class ChessNotifier extends StateNotifier<ChessState> {
     if (!playAsWhite) {
       state = state.copyWith(isEngineThinking: state.engineReady);
     }
+  }
+
+  Future<void> _handleAcademyBlunderIntervention(double evalDiff, String lastMove) async {
+    // 1. Play thinking sound
+    _soundService.playSfx(SoundEffect.gmchanakyaThinking);
+
+    // 2. Calculate blunder sequence numbers and format titlePrefix
+    final blunderCount = state.commentaryHistory
+            .where((entry) => entry.text.startsWith('**Blunder #'))
+            .length + 1;
+    final moveNum = (state.game.history.length / 2).ceil();
+    final moveSan = state.recentMoves.isNotEmpty ? state.recentMoves.last : lastMove;
+    final prefix = state.isPlayerWhite ? "$moveNum." : "$moveNum...";
+    final titlePrefix = "**Blunder #$blunderCount: $prefix $moveSan**\n\n";
+
+    // 3. Construct a blunder prompt instructing the AI to output exactly one brief sentence
+    final prompt = "The user playing as ${state.isPlayerWhite ? 'White' : 'Black'} just blundered by playing $lastMove. "
+        "The position evaluation dropped by ${evalDiff.abs().toStringAsFixed(1)} pawns. "
+        "Write exactly one very brief sentence explaining why this move is a blunder and what threat it creates. "
+        "Do not include any greeting, intro, outro, or conversational filler. Keep it under 25 words.";
+
+    // 4. Run commentary stream for the blunder
+    await _runCommentary(
+      player: state.isPlayerWhite ? 'White' : 'Black',
+      move: _formatMoveForPrompt(lastMove),
+      evalScore: _formatEvalForPrompt(state.currentEvaluation),
+      userQuery: prompt,
+      isNested: true,
+      titlePrefix: titlePrefix,
+    );
   }
 
   Future<void> shutdown() async {

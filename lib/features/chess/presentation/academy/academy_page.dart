@@ -321,6 +321,7 @@ class _AcademyPageState extends ConsumerState<AcademyPage> {
                           icon: Icons.undo_rounded,
                           tooltip: 'Undo',
                           isEnabled: state.canUndo,
+                          isBlinking: state.isAcademyBlunderActive,
                           onTap: state.canUndo ? () => notifier.undo() : null,
                         ),
                         const SizedBox(width: 8),
@@ -457,6 +458,7 @@ class _AcademyPageState extends ConsumerState<AcademyPage> {
                             icon: Icons.undo_rounded,
                             tooltip: 'Undo',
                             isEnabled: state.canUndo,
+                            isBlinking: state.isAcademyBlunderActive,
                             onTap: state.canUndo ? () => notifier.undo() : null,
                           ),
                           const SizedBox(width: 8),
@@ -515,6 +517,7 @@ class _CompactActionIcon extends StatefulWidget {
     this.tooltip,
     this.isEnabled = true,
     this.isActive = false,
+    this.isBlinking = false,
     this.activeColor,
     this.activeIconColor,
   });
@@ -524,6 +527,7 @@ class _CompactActionIcon extends StatefulWidget {
   final String? tooltip;
   final bool isEnabled;
   final bool isActive;
+  final bool isBlinking;
   final Color? activeColor;
   final Color? activeIconColor;
 
@@ -531,50 +535,114 @@ class _CompactActionIcon extends StatefulWidget {
   State<_CompactActionIcon> createState() => _CompactActionIconState();
 }
 
-class _CompactActionIconState extends State<_CompactActionIcon> {
+class _CompactActionIconState extends State<_CompactActionIcon>
+    with SingleTickerProviderStateMixin {
   bool _isPressed = false;
+  late AnimationController _blinkController;
+  late Animation<double> _blinkAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _blinkController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _blinkAnimation = Tween<double>(begin: 1.0, end: 0.2).animate(
+      CurvedAnimation(parent: _blinkController, curve: Curves.easeInOut),
+    );
+
+    if (widget.isBlinking) {
+      _blinkController.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _CompactActionIcon oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isBlinking != oldWidget.isBlinking) {
+      if (widget.isBlinking) {
+        _blinkController.repeat(reverse: true);
+      } else {
+        _blinkController.stop();
+        _blinkController.value = 0.0;
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _blinkController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final content = AnimatedContainer(
-      duration: const Duration(milliseconds: 100),
-      width: 34,
-      height: 34,
-      decoration: BoxDecoration(
-        color: (widget.isActive || _isPressed)
-            ? (widget.activeColor?.withValues(alpha: 0.3) ?? ScholarlyTheme.accentBlue.withValues(alpha: 0.25))
-            : Colors.white.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: (widget.isActive || _isPressed)
-              ? (widget.activeIconColor ?? ScholarlyTheme.accentBlue).withValues(alpha: 0.5)
-              : Colors.white.withValues(alpha: 0.45),
-          width: 1.2,
-        ),
-      ),
-      child: Center(
-        child: Icon(
-          widget.icon,
-          size: 18,
-          color: widget.isEnabled
-              ? (widget.isActive
-                    ? (widget.activeIconColor ?? ScholarlyTheme.accentBlue)
-                    : ScholarlyTheme.textPrimary)
-              : ScholarlyTheme.textSubtle,
-        ),
-      ),
-    );
-
-    final wrappedContent = widget.tooltip != null
-        ? Tooltip(message: widget.tooltip!, child: content)
-        : content;
-
     return GestureDetector(
       onTapDown: widget.isEnabled ? (_) => setState(() => _isPressed = true) : null,
       onTapUp: widget.isEnabled ? (_) => setState(() => _isPressed = false) : null,
       onTapCancel: () => setState(() => _isPressed = false),
       onTap: widget.isEnabled ? widget.onTap : null,
-      child: wrappedContent,
+      child: AnimatedBuilder(
+        animation: _blinkAnimation,
+        builder: (context, child) {
+          final opacity = widget.isBlinking ? _blinkAnimation.value : 1.0;
+
+          final Color bgColor = widget.isBlinking
+              ? Colors.redAccent.withValues(alpha: 0.25 * opacity)
+              : ((widget.isActive || _isPressed)
+                  ? (widget.activeColor?.withValues(alpha: 0.3) ??
+                      ScholarlyTheme.accentBlue.withValues(alpha: 0.25))
+                  : Colors.white.withValues(alpha: 0.2));
+
+          final Color borderColor = widget.isBlinking
+              ? Colors.redAccent.withValues(alpha: 0.6 * opacity)
+              : ((widget.isActive || _isPressed)
+                  ? (widget.activeIconColor ?? ScholarlyTheme.accentBlue).withValues(alpha: 0.5)
+                  : Colors.white.withValues(alpha: 0.45));
+
+          final Color iconColor = widget.isBlinking
+              ? Colors.redAccent.withValues(alpha: 0.3 + 0.7 * opacity)
+              : (widget.isEnabled
+                  ? (widget.isActive
+                      ? (widget.activeIconColor ?? ScholarlyTheme.accentBlue)
+                      : ScholarlyTheme.textPrimary)
+                  : ScholarlyTheme.textSubtle);
+
+          final container = Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: bgColor,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: borderColor,
+                width: 1.2,
+              ),
+              boxShadow: widget.isBlinking
+                  ? [
+                      BoxShadow(
+                        color: Colors.redAccent.withValues(alpha: 0.3 * opacity),
+                        blurRadius: 8,
+                        spreadRadius: 1,
+                      )
+                    ]
+                  : null,
+            ),
+            child: Center(
+              child: Icon(
+                widget.icon,
+                size: 18,
+                color: iconColor,
+              ),
+            ),
+          );
+
+          return widget.tooltip != null
+              ? Tooltip(message: widget.tooltip!, child: container)
+              : container;
+        },
+      ),
     );
   }
 }
