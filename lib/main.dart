@@ -33,8 +33,6 @@ void main() {
       await SystemChrome.setPreferredOrientations([
         DeviceOrientation.portraitUp,
         DeviceOrientation.portraitDown,
-        DeviceOrientation.landscapeLeft,
-        DeviceOrientation.landscapeRight,
       ]);
 
       await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);

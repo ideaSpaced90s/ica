@@ -34,11 +34,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   @override
   void initState() {
     super.initState();
-    // Enforce Portrait for the Splash Screen (or allow landscape)
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
+      DeviceOrientation.portraitDown,
     ]);
 
     _progressController = AnimationController(
@@ -161,12 +159,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     }
 
     if (mounted) {
-      // Allow Landscape
       await SystemChrome.setPreferredOrientations([
         DeviceOrientation.portraitUp,
         DeviceOrientation.portraitDown,
-        DeviceOrientation.landscapeLeft,
-        DeviceOrientation.landscapeRight,
       ]);
 
       if (!mounted) return;

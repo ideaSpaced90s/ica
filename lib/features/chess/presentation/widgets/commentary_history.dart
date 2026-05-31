@@ -8,9 +8,11 @@ import '../../data/saved_game.dart';
 import '../scholarly_theme.dart';
 
 class CommentaryHistory extends ConsumerStatefulWidget {
-  const CommentaryHistory({super.key, required this.state});
+  const CommentaryHistory({super.key, required this.state, this.physics, this.controller});
 
   final ChessState state;
+  final ScrollPhysics? physics;
+  final ScrollController? controller;
 
   @override
   ConsumerState<CommentaryHistory> createState() => _CommentaryHistoryState();
@@ -19,12 +21,13 @@ class CommentaryHistory extends ConsumerStatefulWidget {
 class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
   late final Ticker _ticker;
   int _pulse = 0;
-  final ScrollController _scrollController = ScrollController();
+  late final ScrollController _scrollController;
 
 
   @override
   void initState() {
     super.initState();
+    _scrollController = widget.controller ?? ScrollController();
     _ticker = Ticker((elapsed) {
       if (!mounted) return;
       setState(() {
@@ -68,7 +71,9 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
   @override
   void dispose() {
     _ticker.dispose();
-    _scrollController.dispose();
+    if (widget.controller == null) {
+      _scrollController.dispose();
+    }
 
     super.dispose();
   }
@@ -242,6 +247,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
 
     return ListView.builder(
       controller: _scrollController,
+      physics: widget.physics,
       padding: EdgeInsets.zero,
       itemCount: history.length,
       itemBuilder: (context, index) {
