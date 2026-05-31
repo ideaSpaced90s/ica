@@ -3,6 +3,7 @@
 
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
+import 'api/chanakya.dart';
 import 'api/cognitive.dart';
 import 'api/context.dart';
 import 'api/history.dart';
@@ -35,10 +36,25 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool dco_decode_bool(dynamic raw);
 
   @protected
+  ChanakyaPlaystyle dco_decode_box_autoadd_chanakya_playstyle(dynamic raw);
+
+  @protected
+  ChanakyaScotoma dco_decode_box_autoadd_chanakya_scotoma(dynamic raw);
+
+  @protected
   int dco_decode_box_autoadd_i_32(dynamic raw);
 
   @protected
   Puzzle dco_decode_box_autoadd_puzzle(dynamic raw);
+
+  @protected
+  ChanakyaCandidate dco_decode_chanakya_candidate(dynamic raw);
+
+  @protected
+  ChanakyaPlaystyle dco_decode_chanakya_playstyle(dynamic raw);
+
+  @protected
+  ChanakyaScotoma dco_decode_chanakya_scotoma(dynamic raw);
 
   @protected
   double dco_decode_f_64(dynamic raw);
@@ -51,6 +67,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<String> dco_decode_list_String(dynamic raw);
+
+  @protected
+  List<ChanakyaCandidate> dco_decode_list_chanakya_candidate(dynamic raw);
 
   @protected
   List<PersonaCandidate> dco_decode_list_persona_candidate(dynamic raw);
@@ -104,10 +123,29 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool sse_decode_bool(SseDeserializer deserializer);
 
   @protected
+  ChanakyaPlaystyle sse_decode_box_autoadd_chanakya_playstyle(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ChanakyaScotoma sse_decode_box_autoadd_chanakya_scotoma(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   int sse_decode_box_autoadd_i_32(SseDeserializer deserializer);
 
   @protected
   Puzzle sse_decode_box_autoadd_puzzle(SseDeserializer deserializer);
+
+  @protected
+  ChanakyaCandidate sse_decode_chanakya_candidate(SseDeserializer deserializer);
+
+  @protected
+  ChanakyaPlaystyle sse_decode_chanakya_playstyle(SseDeserializer deserializer);
+
+  @protected
+  ChanakyaScotoma sse_decode_chanakya_scotoma(SseDeserializer deserializer);
 
   @protected
   double sse_decode_f_64(SseDeserializer deserializer);
@@ -122,6 +160,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<String> sse_decode_list_String(SseDeserializer deserializer);
+
+  @protected
+  List<ChanakyaCandidate> sse_decode_list_chanakya_candidate(
+    SseDeserializer deserializer,
+  );
 
   @protected
   List<PersonaCandidate> sse_decode_list_persona_candidate(
@@ -179,10 +222,40 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_bool(bool self, SseSerializer serializer);
 
   @protected
+  void sse_encode_box_autoadd_chanakya_playstyle(
+    ChanakyaPlaystyle self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_chanakya_scotoma(
+    ChanakyaScotoma self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_i_32(int self, SseSerializer serializer);
 
   @protected
   void sse_encode_box_autoadd_puzzle(Puzzle self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_chanakya_candidate(
+    ChanakyaCandidate self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_chanakya_playstyle(
+    ChanakyaPlaystyle self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_chanakya_scotoma(
+    ChanakyaScotoma self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_f_64(double self, SseSerializer serializer);
@@ -198,6 +271,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_list_String(List<String> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_chanakya_candidate(
+    List<ChanakyaCandidate> self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_list_persona_candidate(

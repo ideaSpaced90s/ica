@@ -9,5 +9,6 @@ pub mod puzzles;
 pub mod humanizer;
 pub mod cognitive;
 pub mod persona;
+pub mod chanakya;
 
 

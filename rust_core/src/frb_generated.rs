@@ -38,7 +38,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.12.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1430464884;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1152572295;
 
 // Section: executor
 
@@ -459,6 +459,54 @@ fn wire__crate__api__puzzles__search_puzzles_impl(
         },
     )
 }
+fn wire__crate__api__chanakya__select_chanakya_move_rust_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "select_chanakya_move_rust",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_fen = <String>::sse_decode(&mut deserializer);
+            let api_candidates =
+                <Vec<crate::api::chanakya::ChanakyaCandidate>>::sse_decode(&mut deserializer);
+            let api_scotoma =
+                <crate::api::chanakya::ChanakyaScotoma>::sse_decode(&mut deserializer);
+            let api_playstyle =
+                <crate::api::chanakya::ChanakyaPlaystyle>::sse_decode(&mut deserializer);
+            let api_half_move_count = <i32>::sse_decode(&mut deserializer);
+            let api_eval_abs = <f64>::sse_decode(&mut deserializer);
+            let api_is_chess960 = <bool>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok =
+                    Result::<_, ()>::Ok(crate::api::chanakya::select_chanakya_move_rust(
+                        api_fen,
+                        api_candidates,
+                        api_scotoma,
+                        api_playstyle,
+                        api_half_move_count,
+                        api_eval_abs,
+                        api_is_chess960,
+                    ))?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
 fn wire__crate__api__persona__select_persona_move_rust_impl(
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -559,6 +607,56 @@ impl SseDecode for bool {
     }
 }
 
+impl SseDecode for crate::api::chanakya::ChanakyaCandidate {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_uciMove = <String>::sse_decode(deserializer);
+        let mut var_evaluation = <f64>::sse_decode(deserializer);
+        return crate::api::chanakya::ChanakyaCandidate {
+            uci_move: var_uciMove,
+            evaluation: var_evaluation,
+        };
+    }
+}
+
+impl SseDecode for crate::api::chanakya::ChanakyaPlaystyle {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_aggression = <f64>::sse_decode(deserializer);
+        let mut var_intensity = <f64>::sse_decode(deserializer);
+        let mut var_speed = <f64>::sse_decode(deserializer);
+        return crate::api::chanakya::ChanakyaPlaystyle {
+            aggression: var_aggression,
+            intensity: var_intensity,
+            speed: var_speed,
+        };
+    }
+}
+
+impl SseDecode for crate::api::chanakya::ChanakyaScotoma {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_diagonalRetreats = <f64>::sse_decode(deserializer);
+        let mut var_horizontalSwings = <f64>::sse_decode(deserializer);
+        let mut var_knightForks = <f64>::sse_decode(deserializer);
+        let mut var_pinnedPieces = <f64>::sse_decode(deserializer);
+        let mut var_kingSafety = <f64>::sse_decode(deserializer);
+        let mut var_materialGreed = <f64>::sse_decode(deserializer);
+        let mut var_tunnelVision = <f64>::sse_decode(deserializer);
+        let mut var_timePanic = <f64>::sse_decode(deserializer);
+        return crate::api::chanakya::ChanakyaScotoma {
+            diagonal_retreats: var_diagonalRetreats,
+            horizontal_swings: var_horizontalSwings,
+            knight_forks: var_knightForks,
+            pinned_pieces: var_pinnedPieces,
+            king_safety: var_kingSafety,
+            material_greed: var_materialGreed,
+            tunnel_vision: var_tunnelVision,
+            time_panic: var_timePanic,
+        };
+    }
+}
+
 impl SseDecode for f64 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -598,6 +696,20 @@ impl SseDecode for Vec<String> {
         let mut ans_ = Vec::with_capacity(len_ as usize);
         for idx_ in 0..len_ {
             ans_.push(<String>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::api::chanakya::ChanakyaCandidate> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::chanakya::ChanakyaCandidate>::sse_decode(
+                deserializer,
+            ));
         }
         return ans_;
     }
@@ -826,14 +938,87 @@ fn pde_ffi_dispatcher_sync_impl(
         8 => wire__crate__api__threats__get_threatened_squares_impl(ptr, rust_vec_len, data_len),
         9 => wire__crate__api__simple__greet_impl(ptr, rust_vec_len, data_len),
         10 => wire__crate__api__humanizer__humanize_move_rust_impl(ptr, rust_vec_len, data_len),
-        13 => wire__crate__api__persona__select_persona_move_rust_impl(ptr, rust_vec_len, data_len),
-        14 => wire__crate__api__state__validate_and_apply_move_impl(ptr, rust_vec_len, data_len),
+        13 => {
+            wire__crate__api__chanakya__select_chanakya_move_rust_impl(ptr, rust_vec_len, data_len)
+        }
+        14 => wire__crate__api__persona__select_persona_move_rust_impl(ptr, rust_vec_len, data_len),
+        15 => wire__crate__api__state__validate_and_apply_move_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
 
 // Section: rust2dart
 
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::chanakya::ChanakyaCandidate {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.uci_move.into_into_dart().into_dart(),
+            self.evaluation.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::chanakya::ChanakyaCandidate
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::chanakya::ChanakyaCandidate>
+    for crate::api::chanakya::ChanakyaCandidate
+{
+    fn into_into_dart(self) -> crate::api::chanakya::ChanakyaCandidate {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::chanakya::ChanakyaPlaystyle {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.aggression.into_into_dart().into_dart(),
+            self.intensity.into_into_dart().into_dart(),
+            self.speed.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::chanakya::ChanakyaPlaystyle
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::chanakya::ChanakyaPlaystyle>
+    for crate::api::chanakya::ChanakyaPlaystyle
+{
+    fn into_into_dart(self) -> crate::api::chanakya::ChanakyaPlaystyle {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::chanakya::ChanakyaScotoma {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.diagonal_retreats.into_into_dart().into_dart(),
+            self.horizontal_swings.into_into_dart().into_dart(),
+            self.knight_forks.into_into_dart().into_dart(),
+            self.pinned_pieces.into_into_dart().into_dart(),
+            self.king_safety.into_into_dart().into_dart(),
+            self.material_greed.into_into_dart().into_dart(),
+            self.tunnel_vision.into_into_dart().into_dart(),
+            self.time_panic.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::chanakya::ChanakyaScotoma
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::chanakya::ChanakyaScotoma>
+    for crate::api::chanakya::ChanakyaScotoma
+{
+    fn into_into_dart(self) -> crate::api::chanakya::ChanakyaScotoma {
+        self
+    }
+}
 // Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::status::GameTerminationStatus {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
@@ -988,6 +1173,37 @@ impl SseEncode for bool {
     }
 }
 
+impl SseEncode for crate::api::chanakya::ChanakyaCandidate {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.uci_move, serializer);
+        <f64>::sse_encode(self.evaluation, serializer);
+    }
+}
+
+impl SseEncode for crate::api::chanakya::ChanakyaPlaystyle {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <f64>::sse_encode(self.aggression, serializer);
+        <f64>::sse_encode(self.intensity, serializer);
+        <f64>::sse_encode(self.speed, serializer);
+    }
+}
+
+impl SseEncode for crate::api::chanakya::ChanakyaScotoma {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <f64>::sse_encode(self.diagonal_retreats, serializer);
+        <f64>::sse_encode(self.horizontal_swings, serializer);
+        <f64>::sse_encode(self.knight_forks, serializer);
+        <f64>::sse_encode(self.pinned_pieces, serializer);
+        <f64>::sse_encode(self.king_safety, serializer);
+        <f64>::sse_encode(self.material_greed, serializer);
+        <f64>::sse_encode(self.tunnel_vision, serializer);
+        <f64>::sse_encode(self.time_panic, serializer);
+    }
+}
+
 impl SseEncode for f64 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -1019,6 +1235,16 @@ impl SseEncode for Vec<String> {
         <i32>::sse_encode(self.len() as _, serializer);
         for item in self {
             <String>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::api::chanakya::ChanakyaCandidate> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::chanakya::ChanakyaCandidate>::sse_encode(item, serializer);
         }
     }
 }

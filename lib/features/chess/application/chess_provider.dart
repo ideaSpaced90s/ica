@@ -7,6 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import 'game_clock_provider.dart';
 import 'package:kingslayer_chess/src/rust/api/threats.dart';
+import 'package:kingslayer_chess/src/rust/api/chanakya.dart' as rust_chanakya;
+
 
 import '../data/saved_game.dart';
 import '../data/saved_game_repository.dart';
@@ -1289,6 +1291,19 @@ class ChessNotifier extends StateNotifier<ChessState> {
     }
   }
 
+  /// Selects the best move for the current AI persona from Stockfish's MultiPV
+  /// candidate list.
+  ///
+  /// **Academy mode** is fully routed through the Rust FFI
+  /// (`selectChanakyaMoveRust`) which applies three layers of adaptive
+  /// intelligence:
+  ///   1. Opening jitter (Elo-gap variety, decays after move 12)
+  ///   2. Cognitive scotoma targeting (exploits the user's blindspot profile)
+  ///   3. Playstyle countering (solid defence vs attackers / aggression vs
+  ///      passifiers)
+  ///
+  /// **Non-Academy play** is handled by the existing Dart-side heuristics that
+  /// give each AI avatar (Pawnzy, Molly, Blaire, etc.) its characteristic style.
   String _applyPersonaHeuristics(
     List<CandidateMove> candidates,
     AiAvatar avatar,
@@ -1297,43 +1312,82 @@ class ChessNotifier extends StateNotifier<ChessState> {
   ) {
     if (candidates.isEmpty) return engineBestMove;
 
+    // ── Academy Mode: route through Rust adaptive intelligence filter ──────
+    if (state.isAcademyActive) {
+      try {
+        final bgState = ref.read(battlegroundProvider);
+        final scotomaRaw = bgState.cachedScotoma;
+        final playstyleRaw = bgState.cachedPlaystyle;
+
+        // Map Dart domain objects → Rust FFI structs
+        final rustScotoma = rust_chanakya.ChanakyaScotoma(
+          diagonalRetreats: scotomaRaw?.diagonalRetreats ?? 0.15,
+          horizontalSwings: scotomaRaw?.horizontalSwings ?? 0.15,
+          knightForks: scotomaRaw?.knightForks ?? 0.15,
+          pinnedPieces: scotomaRaw?.pinnedPieces ?? 0.15,
+          kingSafety: scotomaRaw?.kingSafety ?? 0.15,
+          materialGreed: scotomaRaw?.materialGreed ?? 0.15,
+          tunnelVision: scotomaRaw?.tunnelVision ?? 0.15,
+          timePanic: scotomaRaw?.timePanic ?? 0.15,
+        );
+
+        final rustPlaystyle = rust_chanakya.ChanakyaPlaystyle(
+          aggression: playstyleRaw?.aggression ?? 0.5,
+          intensity: playstyleRaw?.intensity ?? 0.5,
+          speed: playstyleRaw?.speed ?? 0.7,
+        );
+
+        final rustCandidates = candidates.map((c) => rust_chanakya.ChanakyaCandidate(
+          uciMove: c.uciMove,
+          evaluation: c.evaluation,
+        )).toList();
+
+        final halfMoveCount = game.history.length;
+        final evalAbs = (state.currentEvaluation).abs();
+
+        final selected = rust_chanakya.selectChanakyaMoveRust(
+          fen: game.fen,
+          candidates: rustCandidates,
+          scotoma: rustScotoma,
+          playstyle: rustPlaystyle,
+          halfMoveCount: halfMoveCount,
+          evalAbs: evalAbs,
+          isChess960: game.isChess960,
+        );
+
+        if (selected.isNotEmpty) {
+          debugPrint(
+            '🧠 Chanakya [Rust Filter] selected: $selected '
+            '| ELO-gap jitter: move $halfMoveCount | evalAbs: ${evalAbs.toStringAsFixed(2)} '
+            '| scotoma dgb=${rustScotoma.diagonalRetreats.toStringAsFixed(2)} '
+            'knf=${rustScotoma.knightForks.toStringAsFixed(2)} '
+            'ksb=${rustScotoma.kingSafety.toStringAsFixed(2)} '
+            '| aggression=${rustPlaystyle.aggression.toStringAsFixed(2)}',
+          );
+          return selected;
+        }
+      } catch (e) {
+        debugPrint('⚠️  Chanakya Rust FFI failed, falling back to engine best: $e');
+      }
+      // Fallback to Stockfish best if Rust call fails
+      return engineBestMove;
+    }
+
+    // ── Non-Academy Mode: existing Dart persona heuristics ────────────────
     String bestCandidateMove = candidates.first.uciMove;
     double highestAdjustedScore = -999.0;
 
-    debugPrint('--- Academy Mode Candidate Interception ---');
+    debugPrint('--- Persona Candidate Interception [${avatar.name}] ---');
 
     for (final candidate in candidates) {
       if (candidate.uciMove.length < 4) continue;
-      final fromSq = candidate.uciMove.substring(0, 2);
-      final toSq = candidate.uciMove.substring(2, 4);
 
-      double adjustedScore = candidate.evaluation;
-
-      // Academy Variation Heuristics (Move 1-10)
-      if (state.isAcademyActive) {
-        final halfMoveCount = game.history.length;
-        if (halfMoveCount < 20) {
-          // Decay factor: high randomization at start, decreasing as opening progresses
-          final decay = math.max(0.0, (20 - halfMoveCount) / 20.0);
-          final random = math.Random();
-          // Up to 5.0 points of random variance to allow "odd" but legal moves
-          final randomBonus = random.nextDouble() * 5.0 * decay;
-
-          // Subtle bonus for "odd" flank openings mentioned by user
-          final isFlankMove = toSq.startsWith('a') ||
-              toSq.startsWith('h') ||
-              fromSq.startsWith('a') ||
-              fromSq.startsWith('h');
-          if (isFlankMove && candidate.evaluation > -1.5) {
-            adjustedScore += 1.5 * decay;
-          }
-
-          adjustedScore += randomBonus;
-        }
-      }
+      final adjustedScore = candidate.evaluation;
 
       debugPrint(
-        '  Candidate ${candidate.multipvIndex}: ${candidate.uciMove} | Base Eval: ${candidate.evaluation.toStringAsFixed(2)} | Adjusted: ${adjustedScore.toStringAsFixed(2)}',
+        '  Candidate ${candidate.multipvIndex}: ${candidate.uciMove} | '
+        'Base Eval: ${candidate.evaluation.toStringAsFixed(2)} | '
+        'Adjusted: ${adjustedScore.toStringAsFixed(2)}',
       );
 
       if (adjustedScore > highestAdjustedScore) {
@@ -1342,9 +1396,10 @@ class ChessNotifier extends StateNotifier<ChessState> {
       }
     }
 
-    debugPrint('  Selected Academy Move: $bestCandidateMove');
+    debugPrint('  Selected Persona Move [${avatar.name}]: $bestCandidateMove');
     return bestCandidateMove;
   }
+
 
   void sendCommand(String command) {
     _engine.sendCommand(command);
@@ -2063,8 +2118,38 @@ class ChessNotifier extends StateNotifier<ChessState> {
         ? state.bottomAvatarId
         : state.engineLevel;
 
-    final avatar = AiAvatar.getAvatar(activeAvatarId);
-    final targetDepth = depth ?? avatar.depth;
+    AiAvatar avatar = AiAvatar.getAvatar(activeAvatarId);
+    int targetDepth = depth ?? avatar.depth;
+
+    // ── Academy Mode: dynamic Elo-based difficulty calibration ─────────────
+    if (state.isAcademyActive) {
+      final bgState = ref.read(battlegroundProvider);
+      final userElo = bgState.consolidatedRating;
+
+      // Chanakya targets User ELO + 200 (clamped to range of known avatars)
+      const chanakyaEloGap = 200;
+      final targetElo = (userElo + chanakyaEloGap).clamp(400, 3200);
+      final chanakyaAvatar = AiAvatar.getBestMatch(targetElo);
+
+      // Tight-fight detection: game is close (eval within ±1.5) past move 20
+      final halfMoveCount = state.game.history.length;
+      final evalAbs = state.currentEvaluation.abs();
+      final isTightFight = halfMoveCount >= 20 && evalAbs <= 1.5;
+
+      // Apply boosted depth in tight-fight mode
+      final baseDepth = chanakyaAvatar.depth;
+      final chanakyaDepth = isTightFight ? (baseDepth + 2) : baseDepth;
+
+      avatar = chanakyaAvatar;
+      targetDepth = depth ?? chanakyaDepth;
+
+      debugPrint(
+        '🧠 Chanakya level calibration: userElo=$userElo → target=${chanakyaAvatar.name} '
+        '(skillLevel=${chanakyaAvatar.skillLevel}, depth=$chanakyaDepth) '
+        '| tightFight=$isTightFight | evalAbs=${evalAbs.toStringAsFixed(2)}',
+      );
+    }
+    // ────────────────────────────────────────────────────────────────────────
 
     // Dynamically apply current moving engine's skill level constraints
     _currentCandidates.clear();
@@ -2093,6 +2178,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
       debugPrint('ChessNotifier: Failed to trigger engine analysis: $e');
     }
   }
+
 
   Future<void> switchSides() async {
     _undoStack.clear();

@@ -420,6 +420,105 @@ class _AboutUsPageState extends ConsumerState<AboutUsPage> {
                     ),
                   ),
                 ),
+                const SizedBox(height: 20),
+
+                CollapsibleSection(
+                  title: 'ACADEMY INTELLIGENCE',
+                  initiallyExpanded: false,
+                  child: JuicyGlassCard(
+                    padding: const EdgeInsets.all(24),
+                    borderRadius: 24,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildMathSectionHeader('1. ADAPTIVE HEURISTIC SCORE'),
+                        const SizedBox(height: 10),
+                        _buildMathText(
+                          'In the Academy, GM Chanakya does not simply play the absolute best engine move. '
+                          'Instead, he filters and weights Stockfish candidates to challenge your specific cognitive '
+                          'blindspots (scotomas) and dynamically adapt to your playstyle.',
+                        ),
+                        const SizedBox(height: 12),
+                        _buildMathFormula(
+                          'Heuristic Score = Engine Evaluation + Jitter + ∑ Scotoma Bonuses + ∑ Playstyle Counter-Steer\n\n'
+                          'Chanakya Play Choice = argmax(Heuristic Score(Move))'
+                        ),
+                        const SizedBox(height: 12),
+                        _buildMathText(
+                          'By maximizing this adaptive scoring function, Chanakya plays moves that are both '
+                          'strategically sound and specifically calibrated to exploit and train your tactical deficits.'
+                        ),
+                        const SizedBox(height: 24),
+
+                        _buildMathSectionHeader('2. DYNAMIC OPENING JITTER & DECAY'),
+                        const SizedBox(height: 10),
+                        _buildMathText(
+                          'To mimic human intuition and keep games varied, Chanakya applies a deterministic '
+                          'opening variety jitter. However, when the game enters critical moments, Chanakya drops '
+                          'all variance to play with perfect tactical calculation precision.',
+                        ),
+                        const SizedBox(height: 12),
+                        _buildMathFormula(
+                          'Jitter = base_jitter(FEN, Move) × Jitter Scale\n\n'
+                          '               ┌ (24 - Half-Moves) / 24   if Half-Moves < 24 AND Tight Fight is False\n'
+                          'Jitter Scale = ─┤\n'
+                          '               └ 0.0                      otherwise\n\n'
+                          'Tight Fight = (Absolute Evaluation ≤ 1.50) AND (Half-Moves ≥ 20)'
+                        ),
+                        const SizedBox(height: 12),
+                        _buildMathText(
+                          '• base_jitter: A pseudo-random value between -1.0 and +1.0, seeded on the FEN and UCI move string to remain stable within the session.\n'
+                          '• Jitter Scale: Decays linearly to 0.0 over the first 24 half-moves (12 full moves) of the game.\n'
+                          '• Tight Fight: If the absolute evaluation margin is close (within 1.5 centipawns) and the game is in the middle-game (20+ half-moves), Chanakya disables all jitter (Scale = 0.0) to avoid handing over the win due to random variance.'
+                        ),
+                        const SizedBox(height: 24),
+
+                        _buildMathSectionHeader('3. COGNITIVE SCOTOMA TARGET WEIGHTS'),
+                        const SizedBox(height: 10),
+                        _buildMathText(
+                          'If your vulnerability profile (V) for a specific tactical theme is active (V > 0.20), '
+                          'Chanakya scales up candidate moves that feature that theme, challenging you to see through the blindspot.',
+                        ),
+                        const SizedBox(height: 12),
+                        _buildMathFormula(
+                          'Diagonal Retreat (DGB) Bonus  = V_dgb × 2.50    (For Bishop/Queen retreats ≥ 3 squares)\n'
+                          'Horizontal Swing (HRZ) Bonus  = V_hrz × 2.00    (For Rook/Queen swings ≥ 3 squares)\n'
+                          'Knight Fork (KNF) Bonus       = V_knf × 3.00    (Attacking 2+ high-value target pieces)\n'
+                          'Pinned Pieces (PIN) Bonus     = V_pin × 2.00    (Attacking pinned piece; +1.50 if pinning)\n'
+                          'King Safety (KSB) Bonus       = V_ksb × 2.50    (For checks; checkmate is forced with +99.0)\n'
+                          'Material Greed (GRD) Bonus    = V_grd × 1.80    (Captures with safe-looking eval drop ≤ 2.50)'
+                        ),
+                        const SizedBox(height: 12),
+                        _buildMathText(
+                          '• V_theme: Your historical vulnerability coefficient (0.0 to 1.0) derived by the diagnostic engine in Rust.\n'
+                          '• Calculation Check: Before making a move, Chanakya runs a mini-sandbox simulation using the Shakmaty chess library to check if candidate moves meet geometric and tactical conditions (e.g. counting valuable targets after a knight jump to verify a fork, or removing pieces to verify absolute pins).'
+                        ),
+                        const SizedBox(height: 24),
+
+                        _buildMathSectionHeader('4. PLAYSTYLE COUNTER-STEERING'),
+                        const SizedBox(height: 10),
+                        _buildMathText(
+                          'Chanakya analyzes your aggression score (A) from the tactical radar map and '
+                          'shapes his own strategy to force you out of your comfort zone:',
+                        ),
+                        const SizedBox(height: 12),
+                        _buildMathFormula(
+                          'Solid Defense (A > 0.60)   = ΔMobility × 0.15 × (A - 0.60) × 2.50\n'
+                          '                             + minor piece exchange bonus (+1.50)\n'
+                          '                             + tactical retreat bonus (+0.80)\n\n'
+                          'Aggressive Attack (A < 0.40) = (0.40 - A) × 3.00 (applied to checking lines)\n'
+                          '                             + open-file rook/queen activation (+1.50)\n'
+                          '                             + advanced pawn push bonus (+1.20)'
+                        ),
+                        const SizedBox(height: 12),
+                        _buildMathText(
+                          '• Countering Aggressors: Against aggressive players, Chanakya plays solid defensive squeeze-out chess. He gets bonuses for restricting your pieces\' legal mobility (ΔMobility), trading off minor pieces to reduce your attacking force, and playing consolidating retreats.\n'
+                          '• Countering Passifiers: Against passive, defensive players, Chanakya plays sharp attacking chess. He prioritizes check-giving lines, rook/queen activation on open files, and advancing pawns deep into your territory to create imbalances.'
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 32),
 
                 // Footer credits

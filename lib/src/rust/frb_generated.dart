@@ -3,6 +3,7 @@
 
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
+import 'api/chanakya.dart';
 import 'api/cognitive.dart';
 import 'api/context.dart';
 import 'api/history.dart';
@@ -76,7 +77,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.12.0';
 
   @override
-  int get rustContentHash => -1430464884;
+  int get rustContentHash => -1152572295;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -139,6 +140,16 @@ abstract class RustLibApi extends BaseApi {
     int? minRating,
     int? maxRating,
     int? limit,
+  });
+
+  String crateApiChanakyaSelectChanakyaMoveRust({
+    required String fen,
+    required List<ChanakyaCandidate> candidates,
+    required ChanakyaScotoma scotoma,
+    required ChanakyaPlaystyle playstyle,
+    required int halfMoveCount,
+    required double evalAbs,
+    required bool isChess960,
   });
 
   String crateApiPersonaSelectPersonaMoveRust({
@@ -526,6 +537,62 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  String crateApiChanakyaSelectChanakyaMoveRust({
+    required String fen,
+    required List<ChanakyaCandidate> candidates,
+    required ChanakyaScotoma scotoma,
+    required ChanakyaPlaystyle playstyle,
+    required int halfMoveCount,
+    required double evalAbs,
+    required bool isChess960,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(fen, serializer);
+          sse_encode_list_chanakya_candidate(candidates, serializer);
+          sse_encode_box_autoadd_chanakya_scotoma(scotoma, serializer);
+          sse_encode_box_autoadd_chanakya_playstyle(playstyle, serializer);
+          sse_encode_i_32(halfMoveCount, serializer);
+          sse_encode_f_64(evalAbs, serializer);
+          sse_encode_bool(isChess960, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 13)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiChanakyaSelectChanakyaMoveRustConstMeta,
+        argValues: [
+          fen,
+          candidates,
+          scotoma,
+          playstyle,
+          halfMoveCount,
+          evalAbs,
+          isChess960,
+        ],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiChanakyaSelectChanakyaMoveRustConstMeta =>
+      const TaskConstMeta(
+        debugName: "select_chanakya_move_rust",
+        argNames: [
+          "fen",
+          "candidates",
+          "scotoma",
+          "playstyle",
+          "halfMoveCount",
+          "evalAbs",
+          "isChess960",
+        ],
+      );
+
+  @override
   String crateApiPersonaSelectPersonaMoveRust({
     required String fen,
     required List<PersonaCandidate> candidates,
@@ -542,7 +609,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_String(avatarName, serializer);
           sse_encode_bool(isChess960, serializer);
           sse_encode_i_32(moveCount, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 13)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 14)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -584,7 +651,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_String(toStr, serializer);
           sse_encode_String(promotionStr, serializer);
           sse_encode_bool(isChess960, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 14)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 15)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_opt_String,
@@ -622,6 +689,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ChanakyaPlaystyle dco_decode_box_autoadd_chanakya_playstyle(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_chanakya_playstyle(raw);
+  }
+
+  @protected
+  ChanakyaScotoma dco_decode_box_autoadd_chanakya_scotoma(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_chanakya_scotoma(raw);
+  }
+
+  @protected
   int dco_decode_box_autoadd_i_32(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as int;
@@ -631,6 +710,49 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Puzzle dco_decode_box_autoadd_puzzle(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_puzzle(raw);
+  }
+
+  @protected
+  ChanakyaCandidate dco_decode_chanakya_candidate(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return ChanakyaCandidate(
+      uciMove: dco_decode_String(arr[0]),
+      evaluation: dco_decode_f_64(arr[1]),
+    );
+  }
+
+  @protected
+  ChanakyaPlaystyle dco_decode_chanakya_playstyle(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return ChanakyaPlaystyle(
+      aggression: dco_decode_f_64(arr[0]),
+      intensity: dco_decode_f_64(arr[1]),
+      speed: dco_decode_f_64(arr[2]),
+    );
+  }
+
+  @protected
+  ChanakyaScotoma dco_decode_chanakya_scotoma(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 8)
+      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    return ChanakyaScotoma(
+      diagonalRetreats: dco_decode_f_64(arr[0]),
+      horizontalSwings: dco_decode_f_64(arr[1]),
+      knightForks: dco_decode_f_64(arr[2]),
+      pinnedPieces: dco_decode_f_64(arr[3]),
+      kingSafety: dco_decode_f_64(arr[4]),
+      materialGreed: dco_decode_f_64(arr[5]),
+      tunnelVision: dco_decode_f_64(arr[6]),
+      timePanic: dco_decode_f_64(arr[7]),
+    );
   }
 
   @protected
@@ -664,6 +786,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   List<String> dco_decode_list_String(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_String).toList();
+  }
+
+  @protected
+  List<ChanakyaCandidate> dco_decode_list_chanakya_candidate(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_chanakya_candidate).toList();
   }
 
   @protected
@@ -813,6 +941,22 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ChanakyaPlaystyle sse_decode_box_autoadd_chanakya_playstyle(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_chanakya_playstyle(deserializer));
+  }
+
+  @protected
+  ChanakyaScotoma sse_decode_box_autoadd_chanakya_scotoma(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_chanakya_scotoma(deserializer));
+  }
+
+  @protected
   int sse_decode_box_autoadd_i_32(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_i_32(deserializer));
@@ -822,6 +966,54 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Puzzle sse_decode_box_autoadd_puzzle(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_puzzle(deserializer));
+  }
+
+  @protected
+  ChanakyaCandidate sse_decode_chanakya_candidate(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_uciMove = sse_decode_String(deserializer);
+    var var_evaluation = sse_decode_f_64(deserializer);
+    return ChanakyaCandidate(uciMove: var_uciMove, evaluation: var_evaluation);
+  }
+
+  @protected
+  ChanakyaPlaystyle sse_decode_chanakya_playstyle(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_aggression = sse_decode_f_64(deserializer);
+    var var_intensity = sse_decode_f_64(deserializer);
+    var var_speed = sse_decode_f_64(deserializer);
+    return ChanakyaPlaystyle(
+      aggression: var_aggression,
+      intensity: var_intensity,
+      speed: var_speed,
+    );
+  }
+
+  @protected
+  ChanakyaScotoma sse_decode_chanakya_scotoma(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_diagonalRetreats = sse_decode_f_64(deserializer);
+    var var_horizontalSwings = sse_decode_f_64(deserializer);
+    var var_knightForks = sse_decode_f_64(deserializer);
+    var var_pinnedPieces = sse_decode_f_64(deserializer);
+    var var_kingSafety = sse_decode_f_64(deserializer);
+    var var_materialGreed = sse_decode_f_64(deserializer);
+    var var_tunnelVision = sse_decode_f_64(deserializer);
+    var var_timePanic = sse_decode_f_64(deserializer);
+    return ChanakyaScotoma(
+      diagonalRetreats: var_diagonalRetreats,
+      horizontalSwings: var_horizontalSwings,
+      knightForks: var_knightForks,
+      pinnedPieces: var_pinnedPieces,
+      kingSafety: var_kingSafety,
+      materialGreed: var_materialGreed,
+      tunnelVision: var_tunnelVision,
+      timePanic: var_timePanic,
+    );
   }
 
   @protected
@@ -863,6 +1055,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var ans_ = <String>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
       ans_.add(sse_decode_String(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<ChanakyaCandidate> sse_decode_list_chanakya_candidate(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <ChanakyaCandidate>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_chanakya_candidate(deserializer));
     }
     return ans_;
   }
@@ -1055,6 +1261,24 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_box_autoadd_chanakya_playstyle(
+    ChanakyaPlaystyle self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_chanakya_playstyle(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_chanakya_scotoma(
+    ChanakyaScotoma self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_chanakya_scotoma(self, serializer);
+  }
+
+  @protected
   void sse_encode_box_autoadd_i_32(int self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self, serializer);
@@ -1064,6 +1288,43 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   void sse_encode_box_autoadd_puzzle(Puzzle self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_puzzle(self, serializer);
+  }
+
+  @protected
+  void sse_encode_chanakya_candidate(
+    ChanakyaCandidate self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.uciMove, serializer);
+    sse_encode_f_64(self.evaluation, serializer);
+  }
+
+  @protected
+  void sse_encode_chanakya_playstyle(
+    ChanakyaPlaystyle self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_f_64(self.aggression, serializer);
+    sse_encode_f_64(self.intensity, serializer);
+    sse_encode_f_64(self.speed, serializer);
+  }
+
+  @protected
+  void sse_encode_chanakya_scotoma(
+    ChanakyaScotoma self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_f_64(self.diagonalRetreats, serializer);
+    sse_encode_f_64(self.horizontalSwings, serializer);
+    sse_encode_f_64(self.knightForks, serializer);
+    sse_encode_f_64(self.pinnedPieces, serializer);
+    sse_encode_f_64(self.kingSafety, serializer);
+    sse_encode_f_64(self.materialGreed, serializer);
+    sse_encode_f_64(self.tunnelVision, serializer);
+    sse_encode_f_64(self.timePanic, serializer);
   }
 
   @protected
@@ -1097,6 +1358,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
       sse_encode_String(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_chanakya_candidate(
+    List<ChanakyaCandidate> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_chanakya_candidate(item, serializer);
     }
   }
 
