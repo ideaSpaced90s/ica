@@ -1026,6 +1026,37 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
     }
   }
 
+  void clearBoard() {
+    _clockTimer?.cancel();
+    _engineMoveTimer?.cancel();
+
+    final is960 = state.gameMode == 'chess960';
+    final initialGame = is960
+        ? ChessGame(fen: Chess960Generator.generateRandomPosition().fen, isChess960: true)
+        : ChessGame(isChess960: false);
+
+    state = state.copyWith(
+      game: initialGame,
+      lastMove: null,
+      recentMoves: const [],
+      analysis: const {},
+      previousEvaluation: 0.0,
+      currentEvaluation: 0.0,
+      isEngineThinking: false,
+      clockStarted: false,
+      activeClockSide: null,
+      threatenedSquares: const [],
+      moveAnimation: null,
+      isPaused: false,
+      viewingMoveIndex: null,
+      isGameOverDismissed: false,
+      isPromoting: false,
+      promotionSource: null,
+      promotionDestination: null,
+      isTimeOut: false,
+    );
+  }
+
   void reset({bool forcedPlayerWhite = true}) {
     _clockTimer?.cancel();
     _engineMoveTimer?.cancel();

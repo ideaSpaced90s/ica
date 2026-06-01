@@ -35,6 +35,8 @@ class MobileNavigationShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentIndex = ref.watch(mobileNavIndexProvider);
+    final bgState = ref.watch(battlegroundProvider);
+    final isBgMatchActive = currentIndex == 2 && bgState.recentMoves.isNotEmpty && !bgState.game.gameOver;
 
     // Mute background music when in Arena (1), Battleground (2), Academy (3), or Puzzles (4)
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -91,6 +93,7 @@ class MobileNavigationShell extends ConsumerWidget {
 
     Widget result = Scaffold(
       backgroundColor: ScholarlyTheme.backgroundStart,
+      drawerEnableOpenDragGesture: !isBgMatchActive,
       appBar: AppBar(
         backgroundColor: ScholarlyTheme.backgroundStart,
         elevation: 0,

@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../application/chess_provider.dart';
 import '../../application/battleground_provider.dart';
-import '../../application/study_lab_provider.dart';
 import '../mobile_navigation_shell.dart';
 import '../scholarly_theme.dart';
 import '../widgets/game_controls.dart';
@@ -38,6 +37,7 @@ class BattlegroundPage extends ConsumerStatefulWidget {
 class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with WidgetsBindingObserver {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   bool _hasShownRatedCaution = false;
+  bool _wasVisible = false;
   bool _isDiceRolling = false;
   bool _assignedWhite = true;
   late ConfettiController _confettiController;
@@ -76,6 +76,20 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
     final isLandscape = MediaQuery.of(context).size.width > MediaQuery.of(context).size.height;
     final currentNavIndex = ref.watch(mobileNavIndexProvider);
     final isVisible = currentNavIndex == 2; // Tab 2 in MobileNavigationShell is BattlegroundPage
+
+    if (isVisible && !_wasVisible) {
+      _wasVisible = true;
+      if (state.activeRatedMatchId == null) {
+        _hasShownRatedCaution = false;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            ref.read(battlegroundProvider.notifier).clearBoard();
+          }
+        });
+      }
+    } else if (!isVisible && _wasVisible) {
+      _wasVisible = false;
+    }
 
     // One-time Rated Caution Popup, only show if this page/tab is currently active/visible to the user and the Chanakya intro has been seen/dismissed
     if (isVisible && !showIntro && !_hasShownRatedCaution) {
@@ -549,14 +563,20 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
       _confettiController.play();
     }
 
-    String title = isDraw ? 'Match Draw' : (didWin ? 'Victory!' : 'Match Lost');
-    String msg = isDraw 
-        ? 'A well-fought strategic stalemate.' 
-        : (didWin ? 'Congratulations, you have dominated the arena!' : 'Defeat is but a stepping stone to mastery.');
-    
-    if (state.isTimeOut) {
-      title = didWin ? 'Victory (Time)' : 'Loss (Time)';
-      msg = didWin ? 'Opponent ran out of time!' : 'You ran out of time!';
+    String title = '';
+    String msg = '';
+
+    if (isDraw) {
+      title = 'MATCH TIED';
+      msg = 'A well-fought game.';
+    } else {
+      if (didWin) {
+        title = state.isTimeOut ? 'VICTORY (TIME)' : 'VICTORY!';
+        msg = state.isTimeOut ? 'Opponent ran out of time!' : 'Congratulations, you have won!';
+      } else {
+        title = state.isTimeOut ? 'LOSS (TIME)' : 'MATCH LOST';
+        msg = state.isTimeOut ? 'You ran out of time!' : 'Defeat is but a stepping stone to mastery.';
+      }
     }
 
     final accentColor = isDraw
@@ -599,19 +619,18 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (!(state.isTimeOut && !didWin))
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: Text(
-                            title.toUpperCase(),
-                            style: GoogleFonts.inter(
-                              color: accentColor,
-                              fontWeight: FontWeight.w900,
-                              fontSize: 24,
-                              letterSpacing: 1.5,
-                            ),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Text(
+                          title.toUpperCase(),
+                          style: GoogleFonts.inter(
+                            color: accentColor,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 24,
+                            letterSpacing: 1.5,
                           ),
                         ),
+                      ),
                       Icon(
                         isDraw
                             ? Icons.handshake_rounded
@@ -658,9 +677,10 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
                                 onPressed: () {
                                   setState(() {
                                     _hasTriggeredConfetti = false;
+                                    _hasShownRatedCaution = false;
                                   });
                                   ref.read(battlegroundProvider.notifier).dismissGameOver();
-                                  _triggerDiceRoll();
+                                  ref.read(battlegroundProvider.notifier).clearBoard();
                                 },
                                 style: FilledButton.styleFrom(
                                   backgroundColor: Colors.transparent,
@@ -675,35 +695,6 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
                                     letterSpacing: 1.2,
                                   ),
                                 ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          SizedBox(
-                            width: double.infinity,
-                            height: 46,
-                            child: OutlinedButton.icon(
-                              onPressed: () async {
-                                final savedGames = ref.read(chessProvider).savedGames;
-                                final entry = savedGames.lastOrNull;
-                                if (entry != null) {
-                                  ref.read(studyLabProvider.notifier).loadGameEntry(entry);
-                                  ref.read(battlegroundProvider.notifier).dismissGameOver();
-                                  ref.read(mobileNavIndexProvider.notifier).state = 5;
-                                }
-                              },
-                              icon: const Icon(Icons.science_rounded),
-                              label: Text(
-                                'ANALYZE GAME',
-                                style: GoogleFonts.inter(fontWeight: FontWeight.bold),
-                              ),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: ScholarlyTheme.accentBlue,
-                                side: BorderSide(
-                                  color: ScholarlyTheme.accentBlue.withValues(alpha: 0.6),
-                                  width: 1.5,
-                                ),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                               ),
                             ),
                           ),
@@ -825,7 +816,7 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
         content: Column(mainAxisSize: MainAxisSize.min, children: [
           const Text('A decision must be made regarding your current sanctioned game.', textAlign: TextAlign.center),
           const SizedBox(height: 12),
-          Text('Starting a new match now requires you to formally Resign from the present game. This will be recorded as a loss and will affect your competitive rating.', textAlign: TextAlign.center, style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 12, height: 1.5)),
+          Text('Starting a new match now requires you to formally Resign from the present game. This will be recorded as a loss and will affect your rating.', textAlign: TextAlign.center, style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 12, height: 1.5)),
         ]),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('CANCEL')),
@@ -849,9 +840,9 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
           Text('Rated Arena Entry', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary, fontSize: 20)),
         ]),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Text('Welcome to the competitive arena.', textAlign: TextAlign.center),
+          const Text('Welcome to the Battleground.', textAlign: TextAlign.center),
           const SizedBox(height: 16),
-          Text('Every match played here is recorded for your professional standing. Resigning or abandoning a game prematurely will negatively impact your ELO rating.', textAlign: TextAlign.center, style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 12, height: 1.6)),
+          Text('Every match played here is recorded for your rating and the same will be displayed in the home page. Resigning or abandoning a game prematurely will negatively impact your ELO rating. Proceed if you can completly dedicate focus and time.', textAlign: TextAlign.center, style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 12, height: 1.6)),
         ]),
         actions: [
           Padding(
@@ -1371,7 +1362,7 @@ Future<bool?> showRatedExitDialog(BuildContext context) async {
       content: Column(mainAxisSize: MainAxisSize.min, children: [
         const Text('Are you sure you wish to leave the match?', textAlign: TextAlign.center),
         const SizedBox(height: 12),
-        Text('As this is a sanctioned Rated Arena game, exiting now will result in an automatic Loss and a deduction from your competitive ELO rating.', textAlign: TextAlign.center, style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 12, height: 1.5)),
+        Text('As this is a Rated game, exiting now will result in an automatic Loss and a deduction from your current ratings.', textAlign: TextAlign.center, style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 12, height: 1.5)),
       ]),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('STAY & PLAY')),
