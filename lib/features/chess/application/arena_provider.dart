@@ -600,6 +600,11 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
     );
 
     final promotion = move.length > 4 ? move[4] : 'q';
+
+    if (state.isEngineVsEngine) {
+      _saveSnapshotForUndo();
+    }
+
     final moveMade = state.game.makeMove({
       'from': from,
       'to': to,
@@ -731,6 +736,14 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
     }
 
     if (!_isPlayerTurn() && !state.isEngineVsEngine) return;
+
+    if (state.isEngineVsEngine) {
+      final turnColor = state.game.turn;
+      state = state.copyWith(
+        isEngineVsEngine: false,
+        isPlayerWhite: turnColor == chess_lib.Color.WHITE,
+      );
+    }
 
     final piece = state.game.getPiece(from);
     final colorPrefix = piece?.color == chess_lib.Color.WHITE ? 'w' : 'b';
@@ -911,6 +924,14 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
       promotionSource: null,
       promotionDestination: null,
     );
+
+    if (state.isEngineVsEngine) {
+      final turnColor = state.game.turn;
+      state = state.copyWith(
+        isEngineVsEngine: false,
+        isPlayerWhite: turnColor == chess_lib.Color.WHITE,
+      );
+    }
 
     _saveSnapshotForUndo();
 

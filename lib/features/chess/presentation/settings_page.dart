@@ -10,6 +10,7 @@ import 'scholarly_theme.dart';
 import 'widgets/ambient_scaffold.dart';
 import 'sign_in_page.dart';
 import 'mobile_navigation_shell.dart';
+import '../application/onboarding_provider.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -88,6 +89,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                           final repo = ref.read(tutorialProgressRepositoryProvider);
                           await repo.setIsGoogleSignedIn(false);
                           await repo.setWelcomeGuideSeen(false);
+                          await repo.setArenaIntroSeen(false);
+                          await repo.setBattlegroundIntroSeen(false);
+                          await repo.setPuzzlesIntroSeen(false);
+
+                          ref.read(showArenaIntroProvider.notifier).state = true;
+                          ref.read(showBattlegroundIntroProvider.notifier).state = true;
+                          ref.read(showPuzzlesIntroProvider.notifier).state = true;
+
                           ref.read(mobileNavIndexProvider.notifier).state = 0;
                           if (context.mounted) {
                             Navigator.of(context).pushReplacement(

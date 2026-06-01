@@ -29,7 +29,13 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    final initialTab = ref.read(storeActiveTabProvider);
+    _tabController = TabController(length: 2, vsync: this, initialIndex: initialTab);
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        ref.read(storeActiveTabProvider.notifier).state = _tabController.index;
+      }
+    });
   }
 
   @override
@@ -40,6 +46,12 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<int>(storeActiveTabProvider, (previous, next) {
+      if (_tabController.index != next) {
+        _tabController.animateTo(next);
+      }
+    });
+
     final storeState = ref.watch(storeProvider);
     final storeNotifier = ref.read(storeProvider.notifier);
 
@@ -1210,6 +1222,24 @@ class _StoreAvatarCardState extends State<StoreAvatarCard> with SingleTickerProv
               fit: BoxFit.cover,
             ),
 
+            // Locked Translucent Overlay
+            if (!widget.isUnlocked)
+              Container(
+                color: Colors.black.withValues(alpha: 0.25),
+                child: Align(
+                  alignment: const Alignment(0, -0.2),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.65),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white30),
+                    ),
+                    child: const Icon(Icons.lock_rounded, color: Colors.white, size: 24),
+                  ),
+                ),
+              ),
+
             // Top Status Badge Overlay
             Positioned(
               top: 8,
@@ -1293,23 +1323,6 @@ class _StoreAvatarCardState extends State<StoreAvatarCard> with SingleTickerProv
                 ),
               ),
             ),
-
-            // Locked Translucent Overlay
-            if (!widget.isUnlocked)
-              Container(
-                color: Colors.black.withValues(alpha: 0.25),
-                child: Center(
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.65),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white30),
-                    ),
-                    child: const Icon(Icons.lock_rounded, color: Colors.white, size: 24),
-                  ),
-                ),
-              ),
           ],
         ),
       ),

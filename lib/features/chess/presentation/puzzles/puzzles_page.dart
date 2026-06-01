@@ -11,6 +11,11 @@ import '../dashboard_page.dart';
 import '../mobile_navigation_shell.dart';
 import 'widgets/pressure_cooker_timer.dart';
 import 'dart:ui';
+import '../../application/onboarding_provider.dart';
+import '../../application/chess_provider.dart';
+import '../../application/tutorial_provider.dart';
+import '../../services/chess_sound_service.dart';
+import '../widgets/gm_chanakya_intro_overlay.dart';
 
 class PuzzlesPage extends ConsumerStatefulWidget {
   const PuzzlesPage({super.key});
@@ -444,6 +449,7 @@ class _PuzzlesPageState extends ConsumerState<PuzzlesPage> {
   Widget build(BuildContext context) {
     final state = ref.watch(puzzlesProvider);
     final notifier = ref.read(puzzlesProvider.notifier);
+    final showIntro = ref.watch(showPuzzlesIntroProvider);
     final isLandscape = MediaQuery.of(context).size.width > MediaQuery.of(context).size.height;
 
     ref.listen<int>(mobileNavIndexProvider, (previous, current) {
@@ -500,6 +506,18 @@ class _PuzzlesPageState extends ConsumerState<PuzzlesPage> {
                 ],
               ),
             ),
+            if (showIntro)
+              GMChanakyaIntroOverlay(
+                pageTitle: 'PUZZLES',
+                text: "The Puzzles chamber, Apprentice, is where we cure chess blindness and train your tactical sight. Chess is won in the details—the double attacks, the pins, the sudden checkmates that the untrained mind overlooks. In this room, you must solve a daily tailored prescription of hand-picked puzzle scenarios. Each puzzle is a tactical riddle designed to sharpen your pattern recognition and build muscle memory. The puzzles will help you even more if you play more rated games. Tap the thumbs up to begin your mental conditioning. Let us see how quickly you spot the winning line.",
+                onDismiss: () {
+                  ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                  ref.read(showPuzzlesIntroProvider.notifier).state = false;
+                  final repo = ref.read(tutorialProgressRepositoryProvider);
+                  // Non-blocking save
+                  repo.setPuzzlesIntroSeen(true);
+                },
+              ),
           ],
         ),
       ),

@@ -23,6 +23,10 @@ import '../widgets/ambient_scaffold.dart';
 import '../widgets/classic_windows_tabs.dart';
 import 'package:confetti/confetti.dart';
 import '../dashboard_page.dart';
+import '../../application/onboarding_provider.dart';
+import '../../application/tutorial_provider.dart';
+import '../../services/chess_sound_service.dart';
+import '../widgets/gm_chanakya_intro_overlay.dart';
 
 class BattlegroundPage extends ConsumerStatefulWidget {
   const BattlegroundPage({super.key});
@@ -68,12 +72,13 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(battlegroundProvider);
+    final showIntro = ref.watch(showBattlegroundIntroProvider);
     final isLandscape = MediaQuery.of(context).size.width > MediaQuery.of(context).size.height;
     final currentNavIndex = ref.watch(mobileNavIndexProvider);
     final isVisible = currentNavIndex == 2; // Tab 2 in MobileNavigationShell is BattlegroundPage
 
-    // One-time Rated Caution Popup, only show if this page/tab is currently active/visible to the user
-    if (isVisible && !_hasShownRatedCaution) {
+    // One-time Rated Caution Popup, only show if this page/tab is currently active/visible to the user and the Chanakya intro has been seen/dismissed
+    if (isVisible && !showIntro && !_hasShownRatedCaution) {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (mounted && !_hasShownRatedCaution) {
           setState(() => _hasShownRatedCaution = true);
@@ -141,6 +146,18 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
                 gravity: 0.2,
               ),
             ),
+            if (showIntro)
+              GMChanakyaIntroOverlay(
+                pageTitle: 'BATTLEGROUND',
+                text: "Step forward into the Battleground, Apprentice! This is where your academy studies under my guidance, your lessons, and your arena practices will be calculated and battle-tested, and where every decision directly affects your standing. Here, you will face rated opponents in real-time combat against bots close to your strength, managing both your pieces and your clock. There is no room for hesitation, escape, or casual blunders in this crucible. The machines are watching, and every rating point is a mark of human resilience. Tap the thumbs up to enter the field of honor, and show them the power of human intuition.",
+                onDismiss: () {
+                  ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                  ref.read(showBattlegroundIntroProvider.notifier).state = false;
+                  final repo = ref.read(tutorialProgressRepositoryProvider);
+                  // Non-blocking save
+                  repo.setBattlegroundIntroSeen(true);
+                },
+              ),
           ],
         ),
       ),
@@ -206,19 +223,15 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     Flexible(
-                      flex: 2,
                       child: CapturedPiecesInline(
                         pieces: bottomPieces,
                         opponentPieces: topPieces,
                       ),
                     ),
                     const SizedBox(width: 12),
-                    Flexible(
-                      flex: 3,
-                      child: ActiveAvatarWrapper(
-                        isActive: isTurn,
-                        child: const UserAvatarIndicator(isRated: true),
-                      ),
+                    ActiveAvatarWrapper(
+                      isActive: isTurn,
+                      child: const UserAvatarIndicator(isRated: true),
                     ),
                   ],
                 ),
@@ -425,19 +438,15 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               Flexible(
-                flex: 2,
                 child: CapturedPiecesInline(
                   pieces: bottomPieces,
                   opponentPieces: topPieces,
                 ),
               ),
               const SizedBox(width: 12),
-              Flexible(
-                flex: 3,
-                child: ActiveAvatarWrapper(
-                  isActive: isTurn,
-                  child: const UserAvatarIndicator(isRated: true),
-                ),
+              ActiveAvatarWrapper(
+                isActive: isTurn,
+                child: const UserAvatarIndicator(isRated: true),
               ),
             ],
           ),

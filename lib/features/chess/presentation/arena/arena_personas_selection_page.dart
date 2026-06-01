@@ -249,6 +249,12 @@ class _ArenaPersonasSelectionPageState extends ConsumerState<ArenaPersonasSelect
                                 key: _cardKeys[currentAvatar.id],
                                 front: _buildCardFront(currentAvatar, isUpSelected, isDownSelected, isUnlocked),
                                 back: _buildCardBack(currentAvatar),
+                                onTap: isUnlocked ? null : () {
+                                  ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                                  ref.read(storeActiveTabProvider.notifier).state = 1; // 1 = AI Avatars
+                                  Navigator.pop(context); // Close personas page
+                                  ref.read(mobileNavIndexProvider.notifier).state = 10; // Go to store
+                                },
                               ),
                             ),
                           ),
@@ -765,8 +771,9 @@ class _ArenaPersonasSelectionPageState extends ConsumerState<ArenaPersonasSelect
 class FlippableCard extends StatefulWidget {
   final Widget front;
   final Widget back;
+  final VoidCallback? onTap;
 
-  const FlippableCard({super.key, required this.front, required this.back});
+  const FlippableCard({super.key, required this.front, required this.back, this.onTap});
 
   @override
   State<FlippableCard> createState() => FlippableCardState();
@@ -812,7 +819,7 @@ class FlippableCardState extends State<FlippableCard> with SingleTickerProviderS
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: _toggleFlip,
+      onTap: widget.onTap ?? _toggleFlip,
       child: AnimatedBuilder(
         animation: _controller,
         builder: (context, child) {

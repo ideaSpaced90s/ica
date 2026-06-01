@@ -10,6 +10,7 @@ import 'mobile_navigation_shell.dart';
 import '../services/chess_sound_service.dart';
 import '../application/chess_provider.dart';
 import '../application/tutorial_provider.dart';
+import '../application/onboarding_provider.dart';
 
 class SignInPage extends ConsumerStatefulWidget {
   const SignInPage({super.key});
@@ -57,6 +58,13 @@ class _SignInPageState extends ConsumerState<SignInPage>
 
     final repo = ref.read(tutorialProgressRepositoryProvider);
     await repo.setIsGoogleSignedIn(true);
+    await repo.setArenaIntroSeen(false);
+    await repo.setBattlegroundIntroSeen(false);
+    await repo.setPuzzlesIntroSeen(false);
+
+    ref.read(showArenaIntroProvider.notifier).state = true;
+    ref.read(showBattlegroundIntroProvider.notifier).state = true;
+    ref.read(showPuzzlesIntroProvider.notifier).state = true;
 
     _navigateToNext();
   }
@@ -74,6 +82,13 @@ class _SignInPageState extends ConsumerState<SignInPage>
     await repo.setIsGoogleSignedIn(false);
     // Guest gets the onboarding every time they launch
     await repo.setWelcomeGuideSeen(false);
+    await repo.setArenaIntroSeen(false);
+    await repo.setBattlegroundIntroSeen(false);
+    await repo.setPuzzlesIntroSeen(false);
+
+    ref.read(showArenaIntroProvider.notifier).state = true;
+    ref.read(showBattlegroundIntroProvider.notifier).state = true;
+    ref.read(showPuzzlesIntroProvider.notifier).state = true;
 
     _navigateToNext();
   }

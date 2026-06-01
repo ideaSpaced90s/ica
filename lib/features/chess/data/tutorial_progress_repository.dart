@@ -16,6 +16,9 @@ class TutorialProgressRepository {
   static const String _kSettings = 'tutorial_settings';
   static const String _kWelcomeSeen = 'tutorial_welcome_guide_seen';
   static const String _kIsGoogleSignedIn = 'user_is_google_signed_in';
+  static const String _kArenaIntroSeen = 'intro_seen_arena';
+  static const String _kBattlegroundIntroSeen = 'intro_seen_battleground';
+  static const String _kPuzzlesIntroSeen = 'intro_seen_puzzles';
 
   final SharedPreferences _prefs;
 
@@ -179,5 +182,29 @@ class TutorialProgressRepository {
 
   Future<void> setWelcomeGuideSeen(bool value) async {
     await _prefs.setBool(_kWelcomeSeen, value);
+  }
+
+  bool hasSeenArenaIntro() {
+    return _prefs.getBool(_kArenaIntroSeen) ?? false;
+  }
+
+  Future<void> setArenaIntroSeen(bool value) async {
+    await _prefs.setBool(_kArenaIntroSeen, value);
+  }
+
+  bool hasSeenBattlegroundIntro() {
+    return _prefs.getBool(_kBattlegroundIntroSeen) ?? false;
+  }
+
+  Future<void> setBattlegroundIntroSeen(bool value) async {
+    await _prefs.setBool(_kBattlegroundIntroSeen, value);
+  }
+
+  bool hasSeenPuzzlesIntro() {
+    return _prefs.getBool(_kPuzzlesIntroSeen) ?? false;
+  }
+
+  Future<void> setPuzzlesIntroSeen(bool value) async {
+    await _prefs.setBool(_kPuzzlesIntroSeen, value);
   }
 }

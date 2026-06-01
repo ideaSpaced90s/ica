@@ -21,6 +21,22 @@ final showWelcomeDialogProvider = StateProvider<bool>((ref) {
   return !repo.hasSeenWelcomeGuide();
 });
 
+/// Providers tracking whether the page welcome intros should be displayed.
+final showArenaIntroProvider = StateProvider<bool>((ref) {
+  final repo = ref.watch(tutorialProgressRepositoryProvider);
+  return !repo.hasSeenArenaIntro();
+});
+
+final showBattlegroundIntroProvider = StateProvider<bool>((ref) {
+  final repo = ref.watch(tutorialProgressRepositoryProvider);
+  return !repo.hasSeenBattlegroundIntro();
+});
+
+final showPuzzlesIntroProvider = StateProvider<bool>((ref) {
+  final repo = ref.watch(tutorialProgressRepositoryProvider);
+  return !repo.hasSeenPuzzlesIntro();
+});
+
 /// The guided tour now only covers Group 1: Foundations (Chapters 1–9).
 /// After the user completes Chapter 9, the guided tour ends with a farewell message.
 enum GuidedTutorialLevel {

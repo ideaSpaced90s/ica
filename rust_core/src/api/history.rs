@@ -63,7 +63,18 @@ pub fn get_san_history(
                 let matches_dest = m_to == to_sq;
 
                 let matches_castle = match &m {
-                    Move::Castle { king: _, rook } => *rook == to_sq || m_to == to_sq,
+                    Move::Castle { king, rook } => {
+                        if *rook == to_sq || m_to == to_sq {
+                            true
+                        } else if !is_chess960 {
+                            (*king == Square::E1 && to_sq == Square::G1 && *rook == Square::H1) ||
+                            (*king == Square::E1 && to_sq == Square::C1 && *rook == Square::A1) ||
+                            (*king == Square::E8 && to_sq == Square::G8 && *rook == Square::H8) ||
+                            (*king == Square::E8 && to_sq == Square::C8 && *rook == Square::A8)
+                        } else {
+                            false
+                        }
+                    }
                     _ => false,
                 };
 
@@ -90,4 +101,30 @@ pub fn get_san_history(
     }
 
     san_list
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_standard_castling_san_history() {
+        let moves = vec![
+            "e2e4".to_string(),
+            "e7e5".to_string(),
+            "g1f3".to_string(),
+            "b8c6".to_string(),
+            "f1c4".to_string(),
+            "f8c5".to_string(),
+            "e1g1".to_string(), // White castling
+            "g8f6".to_string(),
+        ];
+        let history = get_san_history(
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1".to_string(),
+            moves,
+            false,
+        );
+        assert_eq!(history.len(), 8);
+        assert_eq!(history[6], "O-O");
+    }
 }

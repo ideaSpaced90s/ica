@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
@@ -5,9 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../application/chess_provider.dart';
 import '../../application/arena_provider.dart';
-import '../../application/study_lab_provider.dart';
 import '../../services/chess_sound_service.dart';
-import '../mobile_navigation_shell.dart';
 import '../scholarly_theme.dart';
 import '../widgets/game_controls.dart';
 import 'arena_board.dart';
@@ -22,6 +21,9 @@ import '../widgets/ambient_flow_backdrop.dart';
 import '../widgets/classic_windows_tabs.dart';
 import '../dashboard_page.dart';
 import 'arena_settings_page.dart';
+import '../../application/onboarding_provider.dart';
+import '../../application/tutorial_provider.dart';
+import '../widgets/gm_chanakya_intro_overlay.dart';
 
 class ArenaPage extends ConsumerStatefulWidget {
   const ArenaPage({super.key});
@@ -35,6 +37,8 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
   late ConfettiController _confettiController;
   late ConfettiController _confettiBottomController;
   bool _hasTriggeredConfetti = false;
+  bool _showGameOverOverlayDelayed = false;
+  Timer? _gameOverDelayTimer;
 
   @override
   void initState() {
@@ -42,6 +46,9 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
     WidgetsBinding.instance.addObserver(this);
     _confettiController = ConfettiController(duration: const Duration(seconds: 3));
     _confettiBottomController = ConfettiController(duration: const Duration(seconds: 3));
+    
+    final initialState = ref.read(arenaProvider);
+    _showGameOverOverlayDelayed = (initialState.game.gameOver || initialState.isTimeOut) && !initialState.isGameOverDismissed;
   }
 
   @override
@@ -49,6 +56,7 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
     WidgetsBinding.instance.removeObserver(this);
     _confettiController.dispose();
     _confettiBottomController.dispose();
+    _gameOverDelayTimer?.cancel();
     super.dispose();
   }
 
@@ -69,7 +77,33 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(arenaProvider);
+    final showIntro = ref.watch(showArenaIntroProvider);
     final isLandscape = MediaQuery.of(context).size.width > MediaQuery.of(context).size.height;
+
+    ref.listen<ArenaState>(arenaProvider, (previous, next) {
+      final wasGameOver = (previous?.game.gameOver ?? false) || (previous?.isTimeOut ?? false);
+      final isGameOver = next.game.gameOver || next.isTimeOut;
+      final wasDismissed = previous?.isGameOverDismissed ?? false;
+      final isDismissed = next.isGameOverDismissed;
+
+      if (isGameOver && !wasGameOver) {
+        _gameOverDelayTimer?.cancel();
+        _gameOverDelayTimer = Timer(const Duration(milliseconds: 1300), () {
+          if (mounted) {
+            setState(() {
+              _showGameOverOverlayDelayed = true;
+            });
+          }
+        });
+      } else if (!isGameOver || (isDismissed && !wasDismissed)) {
+        _gameOverDelayTimer?.cancel();
+        if (_showGameOverOverlayDelayed) {
+          setState(() {
+            _showGameOverOverlayDelayed = false;
+          });
+        }
+      }
+    });
 
     return PopScope(
       canPop: false,
@@ -93,7 +127,7 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                   ? _buildLandscapeLayout(context, ref, state)
                   : _buildPortraitLayout(context, ref, state),
             ),
-            if ((state.game.gameOver || state.isTimeOut) && !state.isGameOverDismissed)
+            if (_showGameOverOverlayDelayed && !state.isGameOverDismissed)
               state.isTimeOut && !state.game.gameOver
                   ? _buildTimeOutOverlay(context, ref, state)
                   : _buildGameOverOverlay(context, ref, state),
@@ -156,6 +190,18 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                   },
                 ),
               ),
+            if (showIntro)
+              GMChanakyaIntroOverlay(
+                pageTitle: 'ARENA',
+                text: "Welcome to the Arena, Apprentice. This is your practice chamber—the place where you can test theories, experiment, and hone your strategies. The more you grind here, the sharper you become. This is a sanctuary where you can practice without the burden of ratings. Here, defeat is simply data, and victory is a silent step toward mastery. Adjust the engine's level, select your opponent's persona, and play at your own pace. There are no stakes here; it exists solely to raise your understanding. Tap the thumbs up when you are ready to begin.",
+                onDismiss: () {
+                  ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                  ref.read(showArenaIntroProvider.notifier).state = false;
+                  final repo = ref.read(tutorialProgressRepositoryProvider);
+                  // Non-blocking save
+                  repo.setArenaIntroSeen(true);
+                },
+              ),
           ],
         ),
       ),
@@ -182,26 +228,20 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        ActiveAvatarWrapper(
-                          isActive: !isTurn,
-                          child: OpponentAvatarIndicator(
-                            avatar: AiAvatar.getAvatar(state.engineLevel),
-                            onTap: null, // Read-only from unrated arena
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        CapturedPiecesInline(
-                          pieces: topPieces,
-                          opponentPieces: bottomPieces,
-                        ),
-                      ],
+                    ActiveAvatarWrapper(
+                      isActive: !isTurn,
+                      child: OpponentAvatarIndicator(
+                        avatar: AiAvatar.getAvatar(state.engineLevel),
+                        onTap: null, // Read-only from unrated arena
+                      ),
                     ),
-                    _buildThinkingFlashButton(context: context, ref: ref, state: state),
+                    const SizedBox(width: 12),
+                    CapturedPiecesInline(
+                      pieces: topPieces,
+                      opponentPieces: bottomPieces,
+                    ),
                   ],
                 ),
               ),
@@ -221,24 +261,20 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     Flexible(
-                      flex: 2,
                       child: CapturedPiecesInline(
                         pieces: bottomPieces,
                         opponentPieces: topPieces,
                       ),
                     ),
                     const SizedBox(width: 12),
-                    Flexible(
-                      flex: 3,
-                      child: ActiveAvatarWrapper(
-                        isActive: isTurn,
-                        child: state.isEngineVsEngine
-                            ? OpponentAvatarIndicator(
-                                avatar: AiAvatar.getAvatar(state.bottomAvatarId),
-                                onTap: null, // Read-only from unrated arena
-                              )
-                            : const UserAvatarIndicator(),
-                      ),
+                    ActiveAvatarWrapper(
+                      isActive: isTurn,
+                      child: state.isEngineVsEngine
+                          ? OpponentAvatarIndicator(
+                              avatar: AiAvatar.getAvatar(state.bottomAvatarId),
+                              onTap: null, // Read-only from unrated arena
+                            )
+                          : const UserAvatarIndicator(),
                     ),
                   ],
                 ),
@@ -425,30 +461,22 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Expanded(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    ActiveAvatarWrapper(
-                      isActive: !isTurn,
-                      child: OpponentAvatarIndicator(
-                        avatar: AiAvatar.getAvatar(state.engineLevel),
-                        onTap: null, // Read-only from unrated arena
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Flexible(
-                      child: CapturedPiecesInline(
-                        pieces: topPieces,
-                        opponentPieces: bottomPieces,
-                      ),
-                    ),
-                  ],
+              ActiveAvatarWrapper(
+                isActive: !isTurn,
+                child: OpponentAvatarIndicator(
+                  avatar: AiAvatar.getAvatar(state.engineLevel),
+                  onTap: null, // Read-only from unrated arena
                 ),
               ),
-              _buildThinkingFlashButton(context: context, ref: ref, state: state),
+              const SizedBox(width: 12),
+              Flexible(
+                child: CapturedPiecesInline(
+                  pieces: topPieces,
+                  opponentPieces: bottomPieces,
+                ),
+              ),
             ],
           ),
         ),
@@ -471,24 +499,20 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               Flexible(
-                flex: 2,
                 child: CapturedPiecesInline(
                   pieces: bottomPieces,
                   opponentPieces: topPieces,
                 ),
               ),
               const SizedBox(width: 12),
-              Flexible(
-                flex: 3,
-                child: ActiveAvatarWrapper(
-                  isActive: isTurn,
-                  child: state.isEngineVsEngine
-                      ? OpponentAvatarIndicator(
-                          avatar: AiAvatar.getAvatar(state.bottomAvatarId),
-                          onTap: null, // Read-only from unrated arena
-                        )
-                      : const UserAvatarIndicator(),
-                ),
+              ActiveAvatarWrapper(
+                isActive: isTurn,
+                child: state.isEngineVsEngine
+                    ? OpponentAvatarIndicator(
+                        avatar: AiAvatar.getAvatar(state.bottomAvatarId),
+                        onTap: null, // Read-only from unrated arena
+                      )
+                    : const UserAvatarIndicator(),
               ),
             ],
           ),
@@ -537,35 +561,17 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                   onTap: () => _handleNewGame(context, ref),
                 ),
                 const SizedBox(width: 8),
-                if (state.isInReviewMode) ...[
-                  ActionIconButton(
-                    icon: Icons.skip_previous_rounded,
-                    isEnabled: state.canNavigateBack,
-                    onTap: state.canNavigateBack
-                        ? () => ref.read(arenaProvider.notifier).navigateBack()
-                        : null,
-                  ),
-                  const SizedBox(width: 8),
-                  ActionIconButton(
-                    icon: Icons.skip_next_rounded,
-                    isEnabled: state.canNavigateForward,
-                    onTap: state.canNavigateForward
-                        ? () => ref.read(arenaProvider.notifier).navigateForward()
-                        : null,
-                  ),
-                ] else ...[
-                  ActionIconButton(
-                    icon: Icons.undo_rounded,
-                    isEnabled: state.canUndo,
-                    onTap: state.canUndo ? () => ref.read(arenaProvider.notifier).undo() : null,
-                  ),
-                  const SizedBox(width: 8),
-                  ActionIconButton(
-                    icon: Icons.redo_rounded,
-                    isEnabled: state.canRedo,
-                    onTap: state.canRedo ? () => ref.read(arenaProvider.notifier).redo() : null,
-                  ),
-                ],
+                ActionIconButton(
+                  icon: Icons.undo_rounded,
+                  isEnabled: state.canUndo,
+                  onTap: state.canUndo ? () => ref.read(arenaProvider.notifier).undo() : null,
+                ),
+                const SizedBox(width: 8),
+                ActionIconButton(
+                  icon: Icons.redo_rounded,
+                  isEnabled: state.canRedo,
+                  onTap: state.canRedo ? () => ref.read(arenaProvider.notifier).redo() : null,
+                ),
                 const SizedBox(width: 8),
                 ActionIconButton(
                   icon: Icons.flip_camera_android_outlined,
@@ -583,6 +589,34 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                   icon: state.isEngineVsEngine ? Icons.smart_toy_rounded : Icons.smart_toy_outlined,
                   isActive: state.isEngineVsEngine,
                   onTap: () => ref.read(arenaProvider.notifier).toggleEngineVsEngine(),
+                ),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onLongPress: () {
+                    final currentQuickPlay = ref.read(chessProvider).quickPlay;
+                    ref.read(chessSoundServiceProvider).playSfx(SoundEffect.switchToggle);
+                    ref.read(chessProvider.notifier).toggleQuickPlay(!currentQuickPlay);
+                    if (!currentQuickPlay) {
+                      ref.read(arenaProvider.notifier).forcePlay();
+                    } else {
+                      ref.read(arenaProvider.notifier).restartNormalAnalysis();
+                    }
+                  },
+                  child: ActionIconButton(
+                    icon: Icons.flash_on_rounded,
+                    isActive: state.isEngineThinking && !_isPlayerTurn(state),
+                    activeColor: Colors.amber,
+                    activeIconColor: Colors.black,
+                    baseColor: ref.watch(chessProvider).quickPlay ? Colors.amber : Colors.white.withValues(alpha: 0.12),
+                    iconColor: ref.watch(chessProvider).quickPlay ? Colors.black : Colors.white.withValues(alpha: 0.35),
+                    onTap: (state.isEngineThinking && !_isPlayerTurn(state))
+                        ? () => ref.read(arenaProvider.notifier).forcePlay()
+                        : () {
+                            final currentQuickPlay = ref.read(chessProvider).quickPlay;
+                            ref.read(chessSoundServiceProvider).playSfx(SoundEffect.switchToggle);
+                            ref.read(chessProvider.notifier).toggleQuickPlay(!currentQuickPlay);
+                          },
+                  ),
                 ),
                 const SizedBox(width: 8),
                 ActionIconButton(
@@ -790,7 +824,7 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                       // Buttons
                       SizedBox(
                         width: double.infinity,
-                        height: 50,
+                        height: 58,
                         child: DecoratedBox(
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
@@ -809,10 +843,11 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                             ],
                           ),
                           child: FilledButton(
-                            onPressed: () {
+                            onPressed: () async {
                               setState(() {
                                 _hasTriggeredConfetti = false;
                               });
+                              await ref.read(arenaProvider.notifier).saveCurrentGame();
                               ref.read(arenaProvider.notifier).reset();
                             },
                             style: FilledButton.styleFrom(
@@ -821,29 +856,39 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                               shadowColor: Colors.transparent,
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                             ),
-                            child: Text(
-                              'PLAY NEW MATCH',
-                              style: GoogleFonts.inter(
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 1.2,
-                              ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  'START NEW GAME',
+                                  style: GoogleFonts.inter(
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 1.2,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Last game will be saved',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w500,
+                                    color: didWin ? Colors.black54 : Colors.white70,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 12),
                       SizedBox(
                         width: double.infinity,
-                        height: 46,
-                        child: OutlinedButton.icon(
+                        height: 58,
+                        child: OutlinedButton(
                           onPressed: () {
-                            _handleSaveGame(context, ref);
+                            ref.read(arenaProvider.notifier).dismissGameOver();
                           },
-                          icon: const Icon(Icons.save_rounded),
-                          label: Text(
-                            'SAVE GAME',
-                            style: GoogleFonts.inter(fontWeight: FontWeight.bold),
-                          ),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: ScholarlyTheme.accentBlue,
                             side: BorderSide(
@@ -853,61 +898,68 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(14)),
                           ),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 46,
-                        child: OutlinedButton.icon(
-                          onPressed: () async {
-                            final notifier = ref.read(arenaProvider.notifier);
-                            // 1. Save current game
-                            final entry = await notifier.saveCurrentGame();
-                            // 2. Lock for analysis
-                            await ref.read(chessProvider.notifier).lockGameForAnalysis(entry.id);
-                            // 3. Load into study lab
-                            ref.read(studyLabProvider.notifier).loadGameEntry(entry);
-                            // 4. Reset Arena state to clean slate
-                            notifier.reset();
-                            // 5. Navigate to analysis tab
-                            ref.read(mobileNavIndexProvider.notifier).state = 5;
-                          },
-                          icon: const Icon(Icons.science_rounded),
-                          label: Text(
-                            'ANALYZE GAME',
-                            style: GoogleFonts.inter(fontWeight: FontWeight.bold),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: ScholarlyTheme.accentGold,
-                            side: BorderSide(
-                              color: ScholarlyTheme.accentGold.withValues(alpha: 0.6),
-                              width: 1.5,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14)),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                'BACK TO BOARD',
+                                style: GoogleFonts.inter(
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 1.2,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Review the final board position',
+                                style: GoogleFonts.inter(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w500,
+                                  color: ScholarlyTheme.accentBlue,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 12),
                       SizedBox(
                         width: double.infinity,
-                        height: 46,
+                        height: 58,
                         child: OutlinedButton(
                           onPressed: () {
-                            ref.read(arenaProvider.notifier).dismissGameOver();
+                            exitToDashboardWithSidebar(context, ref);
                           },
                           style: OutlinedButton.styleFrom(
                             foregroundColor: ScholarlyTheme.textMuted,
                             side: BorderSide(
                               color: ScholarlyTheme.panelStroke.withValues(alpha: 0.6),
+                              width: 1.5,
                             ),
                             shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14)),
+                              borderRadius: BorderRadius.circular(14)),
                           ),
-                          child: Text(
-                            'REVIEW BOARD',
-                            style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                'CLOSE',
+                                style: GoogleFonts.inter(
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 1.2,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Game will not be saved',
+                                style: GoogleFonts.inter(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w500,
+                                  color: ScholarlyTheme.textMuted,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
@@ -1030,7 +1082,7 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                       // Buttons
                       SizedBox(
                         width: double.infinity,
-                        height: 50,
+                        height: 58,
                         child: DecoratedBox(
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
@@ -1058,29 +1110,40 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                               shadowColor: Colors.transparent,
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                             ),
-                            child: Text(
-                              'CONTINUE PLAYING',
-                              style: GoogleFonts.inter(
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 1.2,
-                              ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  'CONTINUE PLAYING',
+                                  style: GoogleFonts.inter(
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 1.2,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Clock will be disabled',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.white70,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 12),
                       SizedBox(
                         width: double.infinity,
-                        height: 46,
-                        child: OutlinedButton.icon(
-                          onPressed: () {
-                            ref.read(arenaProvider.notifier).dismissGameOver();
+                        height: 58,
+                        child: OutlinedButton(
+                          onPressed: () async {
+                            await ref.read(arenaProvider.notifier).saveCurrentGame();
+                            ref.read(arenaProvider.notifier).reset();
                           },
-                          icon: const Icon(Icons.palette_rounded),
-                          label: Text(
-                            'REVIEW BOARD',
-                            style: GoogleFonts.inter(fontWeight: FontWeight.bold),
-                          ),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: ScholarlyTheme.accentGold,
                             side: BorderSide(
@@ -1090,27 +1153,109 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(14)),
                           ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                'START NEW GAME',
+                                style: GoogleFonts.inter(
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 1.2,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Last game will be saved',
+                                style: GoogleFonts.inter(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w500,
+                                  color: ScholarlyTheme.accentGold,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 12),
                       SizedBox(
                         width: double.infinity,
-                        height: 46,
+                        height: 58,
                         child: OutlinedButton(
                           onPressed: () {
-                            ref.read(arenaProvider.notifier).reset();
+                            ref.read(arenaProvider.notifier).dismissGameOver();
+                          },
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: ScholarlyTheme.accentBlue,
+                            side: BorderSide(
+                              color: ScholarlyTheme.accentBlue.withValues(alpha: 0.6),
+                              width: 1.5,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14)),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                'BACK TO BOARD',
+                                style: GoogleFonts.inter(
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 1.2,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Review the final board position',
+                                style: GoogleFonts.inter(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w500,
+                                  color: ScholarlyTheme.accentBlue,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 58,
+                        child: OutlinedButton(
+                          onPressed: () {
+                            exitToDashboardWithSidebar(context, ref);
                           },
                           style: OutlinedButton.styleFrom(
                             foregroundColor: ScholarlyTheme.textMuted,
                             side: BorderSide(
                               color: ScholarlyTheme.panelStroke.withValues(alpha: 0.6),
+                              width: 1.5,
                             ),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(14)),
                           ),
-                          child: Text(
-                            'PLAY NEW MATCH',
-                            style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                'CLOSE',
+                                style: GoogleFonts.inter(
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 1.2,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Game will not be saved',
+                                style: GoogleFonts.inter(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w500,
+                                  color: ScholarlyTheme.textMuted,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
@@ -1125,85 +1270,6 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
     );
   }
 
-
-  Widget _buildThinkingFlashButton({
-    required BuildContext context,
-    required WidgetRef ref,
-    required ArenaState state,
-  }) {
-    final isAiTurn = !_isPlayerTurn(state);
-    final isThinking = state.isEngineThinking && isAiTurn;
-    final quickPlay = ref.watch(chessProvider).quickPlay;
-
-    return Tooltip(
-      message: isThinking 
-          ? (quickPlay ? 'Quick play active (instantly play)' : 'Force AI to play immediately') 
-          : 'AI Thinking Indicator',
-      child: TweenAnimationBuilder<double>(
-        tween: Tween<double>(begin: 1.0, end: isThinking ? 1.25 : 1.0),
-        duration: const Duration(milliseconds: 500),
-        curve: Curves.easeInOut,
-        builder: (context, scale, child) {
-          return Transform.scale(
-            scale: scale,
-            child: child,
-          );
-        },
-        child: Container(
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: quickPlay
-                ? (isThinking 
-                    ? Colors.amber.withValues(alpha: 0.25) 
-                    : Colors.white.withValues(alpha: 0.1))
-                : null,
-            border: quickPlay
-                ? Border.all(
-                    color: isThinking 
-                        ? Colors.amber.withValues(alpha: 0.8) 
-                        : Colors.white.withValues(alpha: 0.3),
-                    width: 2.0,
-                  )
-                : null,
-            boxShadow: isThinking
-                ? [
-                    BoxShadow(
-                      color: Colors.amber.withValues(alpha: 0.4),
-                      blurRadius: 10,
-                      spreadRadius: 1,
-                    ),
-                  ]
-                : null,
-          ),
-          child: GestureDetector(
-            onLongPress: () {
-              final currentQuickPlay = ref.read(chessProvider).quickPlay;
-              ref.read(chessSoundServiceProvider).playSfx(SoundEffect.switchToggle);
-              ref.read(chessProvider.notifier).toggleQuickPlay(!currentQuickPlay);
-              if (!currentQuickPlay) {
-                ref.read(arenaProvider.notifier).forcePlay();
-              } else {
-                ref.read(arenaProvider.notifier).restartNormalAnalysis();
-              }
-            },
-            onTap: isThinking
-                ? () => ref.read(arenaProvider.notifier).forcePlay()
-                : null,
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Icon(
-                Icons.flash_on_rounded,
-                color: isThinking 
-                    ? Colors.amber 
-                    : (quickPlay ? Colors.amber : Colors.white.withValues(alpha: 0.3)),
-                size: 24,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 
   bool _didPlayerWin(ArenaState state) {
     if (state.game.inDraw) return false;

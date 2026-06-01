@@ -302,3 +302,5 @@ class StoreNotifier extends StateNotifier<StoreState> {
     _checkExpirationsAndSync();
   }
 }
+
+final storeActiveTabProvider = StateProvider<int>((ref) => 0);

@@ -304,7 +304,10 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
                                   notifier.setBoardTheme(theme.id);
                                   Navigator.of(context).popUntil((route) => route.isFirst);
                                 } else {
-                                  _showThemeLockedDialog(context, ref, theme.name);
+                                  ref.read(storeActiveTabProvider.notifier).state = 0; // 0 = Board Themes
+                                  Navigator.of(context).pop(); // Close bottom sheet
+                                  Navigator.of(context).pop(); // Close settings page
+                                  ref.read(mobileNavIndexProvider.notifier).state = 10; // Go to store
                                 }
                               },
                               child: Column(
@@ -591,54 +594,6 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
       },
     );
   }
-
-  void _showThemeLockedDialog(BuildContext context, WidgetRef ref, String themeName) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: Colors.white,
-          surfaceTintColor: Colors.transparent,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          title: Row(
-            children: [
-              const Icon(Icons.lock_rounded, color: Colors.amber),
-              const SizedBox(width: 8),
-              Text(
-                'Theme Locked',
-                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary),
-              ),
-            ],
-          ),
-          content: Text(
-            'The "$themeName" chessboard theme is premium and currently locked. Go to the Store to buy or renew it!',
-            style: GoogleFonts.inter(fontSize: 13, color: ScholarlyTheme.textPrimary),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('Cancel', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted)),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                Navigator.pop(context); // Close dialog
-                Navigator.pop(context); // Close theme sheet
-                // Redirect to store
-                ref.read(mobileNavIndexProvider.notifier).state = 10;
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: ScholarlyTheme.accentBlue,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              child: Text('Go to Store', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-            ),
-          ],
-        );
-      },
-    );
-  }
 }
 
 class _SettingsCategory extends StatelessWidget {
@@ -793,10 +748,30 @@ class _SettingsSwitchTile extends ConsumerWidget {
             fontWeight: FontWeight.w600,
           ),
         ),
-        subtitle: Text(
-          description,
-          style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 11),
-        ),
+        subtitle: label == 'Quick play'
+            ? GestureDetector(
+                onTap: () {
+                  ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                  ScaffoldMessenger.of(context).clearSnackBars();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text('⚠️ Opponents may not play at full strength!'),
+                      backgroundColor: Colors.orangeAccent,
+                      duration: const Duration(seconds: 2),
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  );
+                },
+                child: Text(
+                  description,
+                  style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 11),
+                ),
+              )
+            : Text(
+                description,
+                style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 11),
+              ),
         activeThumbColor: ScholarlyTheme.accentBlue,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       ),

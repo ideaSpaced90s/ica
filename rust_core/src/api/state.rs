@@ -49,7 +49,18 @@ pub fn validate_and_apply_move(
             let matches_dest = m_to == to_sq;
 
             let matches_castle = match &m {
-                Move::Castle { king: _, rook } => *rook == to_sq || m_to == to_sq,
+                Move::Castle { king, rook } => {
+                    if *rook == to_sq || m_to == to_sq {
+                        true
+                    } else if !is_chess960 {
+                        (*king == Square::E1 && to_sq == Square::G1 && *rook == Square::H1) ||
+                        (*king == Square::E1 && to_sq == Square::C1 && *rook == Square::A1) ||
+                        (*king == Square::E8 && to_sq == Square::G8 && *rook == Square::H8) ||
+                        (*king == Square::E8 && to_sq == Square::C8 && *rook == Square::A8)
+                    } else {
+                        false
+                    }
+                }
                 _ => false,
             };
 
