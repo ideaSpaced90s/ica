@@ -1084,7 +1084,7 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
     );
   }
 
-  void reset({bool forcedPlayerWhite = true}) {
+  void reset({bool forcedPlayerWhite = true, String? customFen}) {
     _clockTimer?.cancel();
     _engineMoveTimer?.cancel();
     _stopAnalysisAndReset();
@@ -1092,9 +1092,12 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
     _redoStack.clear();
 
     final is960 = state.gameMode == 'chess960';
-    final initialGame = is960
-        ? ChessGame(fen: Chess960Generator.generateRandomPosition().fen, isChess960: true)
-        : ChessGame(isChess960: false);
+    final initialGame = customFen != null
+        ? ChessGame(fen: customFen, isChess960: false)
+        : (is960
+            ? ChessGame(fen: Chess960Generator.generateRandomPosition().fen, isChess960: true)
+            : ChessGame(isChess960: false));
+
 
     state = state.copyWith(
       game: initialGame,

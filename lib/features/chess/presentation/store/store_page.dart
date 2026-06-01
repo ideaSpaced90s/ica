@@ -677,13 +677,17 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              statusText,
-                              style: GoogleFonts.inter(
-                                fontSize: 9,
-                                fontWeight: FontWeight.w900,
-                                color: statusColor,
-                                letterSpacing: 0.5,
+                            Expanded(
+                              child: Text(
+                                statusText,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.inter(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w900,
+                                  color: statusColor,
+                                  letterSpacing: 0.5,
+                                ),
                               ),
                             ),
                             if (!isFree)

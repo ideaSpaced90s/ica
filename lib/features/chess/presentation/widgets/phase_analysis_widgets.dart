@@ -30,15 +30,19 @@ class OpeningRepertoireCard extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'REPERTOIRE',
-                style: GoogleFonts.inter(
-                  color: ScholarlyTheme.accentBlue,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1.0,
+              Expanded(
+                child: Text(
+                  'REPERTOIRE',
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                    color: ScholarlyTheme.accentBlue,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.0,
+                  ),
                 ),
               ),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
@@ -98,14 +102,18 @@ class OpeningRepertoireCard extends ConsumerWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'Played ${stats.plays} times (${playPercentage.toStringAsFixed(0)}% of matches)',
-                        style: GoogleFonts.inter(
-                          color: ScholarlyTheme.textMuted,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w500,
+                      Expanded(
+                        child: Text(
+                          'Played ${stats.plays} times (${playPercentage.toStringAsFixed(0)}% of matches)',
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.inter(
+                            color: ScholarlyTheme.textMuted,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ),
+                      const SizedBox(width: 8),
                       Text(
                         '${stats.wins}W - ${stats.draws}D - ${stats.losses}L',
                         style: GoogleFonts.jetBrainsMono(
@@ -225,15 +233,19 @@ class EndgameTechniqueCard extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'ENDGAME PERFORMANCE',
-                style: GoogleFonts.inter(
-                  color: ScholarlyTheme.accentBlue,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1.0,
+              Expanded(
+                child: Text(
+                  'ENDGAME PERFORMANCE',
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                    color: ScholarlyTheme.accentBlue,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.0,
+                  ),
                 ),
               ),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
@@ -351,26 +363,29 @@ class EndgameTechniqueCard extends ConsumerWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: GoogleFonts.inter(
-                    color: ScholarlyTheme.textPrimary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: GoogleFonts.inter(
+                      color: ScholarlyTheme.textPrimary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                Text(
-                  description,
-                  style: GoogleFonts.inter(
-                    color: ScholarlyTheme.textMuted,
-                    fontSize: 9,
+                  Text(
+                    description,
+                    style: GoogleFonts.inter(
+                      color: ScholarlyTheme.textMuted,
+                      fontSize: 9,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
+            const SizedBox(width: 8),
             Text(
               gamesCount > 0 ? '${value.toStringAsFixed(0)}% ($gamesCount matches)' : 'N/A',
               style: GoogleFonts.jetBrainsMono(

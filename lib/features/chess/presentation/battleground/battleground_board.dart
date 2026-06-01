@@ -105,8 +105,20 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
                         final piece = displayGame.getPiece(squareName);
 
                         return DragTarget<String>(
-                           onWillAcceptWithDetails: (details) =>
-                               _legalTargets.contains(squareName),
+                           onWillAcceptWithDetails: (details) {
+                             // Accept during player's turn (normal move hints)
+                             if (_legalTargets.contains(squareName)) return true;
+                             // Accept during opponent's turn for premove (dragged piece belongs to player)
+                             if (!_isPlayerTurn(bgState)) {
+                               final draggingPiece = displayGame.getPiece(details.data);
+                               if (draggingPiece != null) {
+                                 final isPlayerPiece =
+                                     (draggingPiece.color == chess_lib.Color.WHITE) == bgState.isPlayerWhite;
+                                 return isPlayerPiece && squareName != details.data;
+                               }
+                             }
+                             return false;
+                           },
                            onAcceptWithDetails: (details) {
                              ref
                                  .read(battlegroundProvider.notifier)
@@ -395,7 +407,14 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
     });
   }
 
-
+  bool _isPlayerTurn(BattlegroundState bgState) {
+    final fenParts = bgState.currentBoardFen.split(' ');
+    if (fenParts.length > 1) {
+      final turnWhite = fenParts[1] == 'w';
+      return bgState.isPlayerWhite == turnWhite;
+    }
+    return true;
+  }
 
   String _getSquareName(int row, int col, bool isFlipped) {
     final files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];

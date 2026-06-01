@@ -14,7 +14,7 @@ void main() {
     expect(state.nodes, isEmpty);
     expect(state.currentNodeIndex, isNull);
     expect(state.activeFen, chess_lib.Chess.DEFAULT_POSITION);
-    expect(state.isAnalysisActive, isFalse);
+    expect(state.isGuessingMode, isFalse);
   });
 
   test('makeMove correctly adds nodes and computes SAN', () {

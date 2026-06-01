@@ -1062,11 +1062,13 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
     _clockTimer?.cancel();
     _engineMoveTimer?.cancel();
 
-
     final is960 = state.gameMode == 'chess960';
     final initialGame = is960
         ? ChessGame(fen: Chess960Generator.generateRandomPosition().fen, isChess960: true)
         : ChessGame(isChess960: false);
+
+    // Determine if AI moves first (player is Black means White = AI goes first)
+    final aiMovesFirst = !forcedPlayerWhite;
 
     state = state.copyWith(
       game: initialGame,
@@ -1075,7 +1077,8 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
       analysis: const {},
       previousEvaluation: 0.0,
       currentEvaluation: 0.0,
-      isEngineThinking: false,
+      // Immediately show thinking indicator if AI moves first
+      isEngineThinking: aiMovesFirst && state.servicesStarted && state.engineReady,
       isPlayerWhite: forcedPlayerWhite,
       isBoardFlipped: !forcedPlayerWhite,
       whiteTimeLeft: state.baseTimeDuration,
@@ -1091,12 +1094,18 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
       promotionSource: null,
       promotionDestination: null,
       isTimeOut: false,
+      premoveFrom: null,
+      premoveTo: null,
     );
 
     _autoSelectRatedOpponent();
     _startClockTicker();
-    if (_isAiTurn()) {
-      unawaited(ensureGameServicesStarted(analyzeCurrentPosition: true));
+    if (aiMovesFirst) {
+      unawaited(ensureGameServicesStarted(analyzeCurrentPosition: true).then((_) {
+        if (!_isDisposed && state.engineReady && _isAiTurn()) {
+          state = state.copyWith(isEngineThinking: true);
+        }
+      }));
     }
 
     // Sound effects disabled in Battleground

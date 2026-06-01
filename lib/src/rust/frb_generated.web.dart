@@ -13,6 +13,7 @@ import 'api/history.dart';
 import 'api/humanizer.dart';
 import 'api/moves.dart';
 import 'api/persona.dart';
+import 'api/pgn_db.dart';
 import 'api/puzzles.dart';
 import 'api/simple.dart';
 import 'api/state.dart';
@@ -47,6 +48,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   int dco_decode_box_autoadd_i_32(dynamic raw);
 
   @protected
+  PgnGameHeader dco_decode_box_autoadd_pgn_game_header(dynamic raw);
+
+  @protected
+  PgnGameRecord dco_decode_box_autoadd_pgn_game_record(dynamic raw);
+
+  @protected
   Puzzle dco_decode_box_autoadd_puzzle(dynamic raw);
 
   @protected
@@ -77,6 +84,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<PersonaCandidate> dco_decode_list_persona_candidate(dynamic raw);
 
   @protected
+  List<PgnGameRecord> dco_decode_list_pgn_game_record(dynamic raw);
+
+  @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
 
   @protected
@@ -98,10 +108,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PersonaCandidate dco_decode_persona_candidate(dynamic raw);
 
   @protected
+  PgnGameHeader dco_decode_pgn_game_header(dynamic raw);
+
+  @protected
+  PgnGameRecord dco_decode_pgn_game_record(dynamic raw);
+
+  @protected
   PositionMetrics dco_decode_position_metrics(dynamic raw);
 
   @protected
   Puzzle dco_decode_puzzle(dynamic raw);
+
+  @protected
+  (String, String) dco_decode_record_string_string(dynamic raw);
 
   @protected
   SavedGameUci dco_decode_saved_game_uci(dynamic raw);
@@ -117,6 +136,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void dco_decode_unit(dynamic raw);
+
+  @protected
+  BigInt dco_decode_usize(dynamic raw);
 
   @protected
   String sse_decode_String(SseDeserializer deserializer);
@@ -136,6 +158,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   int sse_decode_box_autoadd_i_32(SseDeserializer deserializer);
+
+  @protected
+  PgnGameHeader sse_decode_box_autoadd_pgn_game_header(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  PgnGameRecord sse_decode_box_autoadd_pgn_game_record(
+    SseDeserializer deserializer,
+  );
 
   @protected
   Puzzle sse_decode_box_autoadd_puzzle(SseDeserializer deserializer);
@@ -174,6 +206,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<PgnGameRecord> sse_decode_list_pgn_game_record(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
 
   @protected
@@ -197,10 +234,21 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PersonaCandidate sse_decode_persona_candidate(SseDeserializer deserializer);
 
   @protected
+  PgnGameHeader sse_decode_pgn_game_header(SseDeserializer deserializer);
+
+  @protected
+  PgnGameRecord sse_decode_pgn_game_record(SseDeserializer deserializer);
+
+  @protected
   PositionMetrics sse_decode_position_metrics(SseDeserializer deserializer);
 
   @protected
   Puzzle sse_decode_puzzle(SseDeserializer deserializer);
+
+  @protected
+  (String, String) sse_decode_record_string_string(
+    SseDeserializer deserializer,
+  );
 
   @protected
   SavedGameUci sse_decode_saved_game_uci(SseDeserializer deserializer);
@@ -216,6 +264,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_decode_unit(SseDeserializer deserializer);
+
+  @protected
+  BigInt sse_decode_usize(SseDeserializer deserializer);
 
   @protected
   void sse_encode_String(String self, SseSerializer serializer);
@@ -237,6 +288,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_box_autoadd_i_32(int self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_pgn_game_header(
+    PgnGameHeader self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_pgn_game_record(
+    PgnGameRecord self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_box_autoadd_puzzle(Puzzle self, SseSerializer serializer);
@@ -287,6 +350,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_pgn_game_record(
+    List<PgnGameRecord> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_prim_u_8_strict(
     Uint8List self,
     SseSerializer serializer,
@@ -320,6 +389,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_pgn_game_header(PgnGameHeader self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_pgn_game_record(PgnGameRecord self, SseSerializer serializer);
+
+  @protected
   void sse_encode_position_metrics(
     PositionMetrics self,
     SseSerializer serializer,
@@ -327,6 +402,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_puzzle(Puzzle self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_record_string_string(
+    (String, String) self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_saved_game_uci(SavedGameUci self, SseSerializer serializer);
@@ -342,6 +423,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_unit(void self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_usize(BigInt self, SseSerializer serializer);
 }
 
 // Section: wire_class

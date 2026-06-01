@@ -38,7 +38,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.12.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1152572295;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1972798024;
 
 // Section: executor
 
@@ -109,6 +109,68 @@ fn wire__crate__api__threats__analyze_tactical_threats_impl(
         },
     )
 }
+fn wire__crate__api__pgn_db__classify_opening_eco_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "classify_opening_eco",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_moves_san = <Vec<String>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok =
+                    Result::<_, ()>::Ok(crate::api::pgn_db::classify_opening_eco(api_moves_san))?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__pgn_db__clear_all_studies_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "clear_all_studies",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_db_path = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok =
+                    Result::<_, ()>::Ok(crate::api::pgn_db::clear_all_studies(api_db_path))?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
 fn wire__crate__api__status__evaluate_game_status_impl(
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -171,6 +233,40 @@ fn wire__crate__api__context__evaluate_position_metrics_impl(
                 let output_ok = Result::<_, ()>::Ok(
                     crate::api::context::evaluate_position_metrics(api_fen, api_history_length),
                 )?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__pgn_db__export_pgn_with_headers_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "export_pgn_with_headers",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_header = <crate::api::pgn_db::PgnGameHeader>::sse_decode(&mut deserializer);
+            let api_annotated_pgn = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok = Result::<_, ()>::Ok(crate::api::pgn_db::export_pgn_with_headers(
+                    api_header,
+                    api_annotated_pgn,
+                ))?;
                 Ok(output_ok)
             })())
         },
@@ -413,6 +509,102 @@ fn wire__crate__api__simple__init_app_impl(
                     Ok(output_ok)
                 })())
             }
+        },
+    )
+}
+fn wire__crate__api__pgn_db__load_studies_from_db_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "load_studies_from_db",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_db_path = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok =
+                    Result::<_, ()>::Ok(crate::api::pgn_db::load_studies_from_db(api_db_path))?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__pgn_db__parse_pgn_database_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "parse_pgn_database",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_pgn_text = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok =
+                    Result::<_, ()>::Ok(crate::api::pgn_db::parse_pgn_database(api_pgn_text))?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__pgn_db__save_study_to_db_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "save_study_to_db",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_db_path = <String>::sse_decode(&mut deserializer);
+            let api_game = <crate::api::pgn_db::PgnGameRecord>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok = Result::<_, ()>::Ok(crate::api::pgn_db::save_study_to_db(
+                    api_db_path,
+                    api_game,
+                ))?;
+                Ok(output_ok)
+            })())
         },
     )
 }
@@ -729,6 +921,20 @@ impl SseDecode for Vec<crate::api::persona::PersonaCandidate> {
     }
 }
 
+impl SseDecode for Vec<crate::api::pgn_db::PgnGameRecord> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::pgn_db::PgnGameRecord>::sse_decode(
+                deserializer,
+            ));
+        }
+        return ans_;
+    }
+}
+
 impl SseDecode for Vec<u8> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -812,6 +1018,48 @@ impl SseDecode for crate::api::persona::PersonaCandidate {
     }
 }
 
+impl SseDecode for crate::api::pgn_db::PgnGameHeader {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_event = <String>::sse_decode(deserializer);
+        let mut var_site = <String>::sse_decode(deserializer);
+        let mut var_date = <String>::sse_decode(deserializer);
+        let mut var_white = <String>::sse_decode(deserializer);
+        let mut var_black = <String>::sse_decode(deserializer);
+        let mut var_whiteElo = <Option<i32>>::sse_decode(deserializer);
+        let mut var_blackElo = <Option<i32>>::sse_decode(deserializer);
+        let mut var_result = <String>::sse_decode(deserializer);
+        let mut var_eco = <String>::sse_decode(deserializer);
+        let mut var_opening = <String>::sse_decode(deserializer);
+        return crate::api::pgn_db::PgnGameHeader {
+            event: var_event,
+            site: var_site,
+            date: var_date,
+            white: var_white,
+            black: var_black,
+            white_elo: var_whiteElo,
+            black_elo: var_blackElo,
+            result: var_result,
+            eco: var_eco,
+            opening: var_opening,
+        };
+    }
+}
+
+impl SseDecode for crate::api::pgn_db::PgnGameRecord {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_header = <crate::api::pgn_db::PgnGameHeader>::sse_decode(deserializer);
+        let mut var_movesPgn = <String>::sse_decode(deserializer);
+        let mut var_index = <usize>::sse_decode(deserializer);
+        return crate::api::pgn_db::PgnGameRecord {
+            header: var_header,
+            moves_pgn: var_movesPgn,
+            index: var_index,
+        };
+    }
+}
+
 impl SseDecode for crate::api::context::PositionMetrics {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -839,6 +1087,15 @@ impl SseDecode for crate::api::puzzles::Puzzle {
             rating: var_rating,
             themes: var_themes,
         };
+    }
+}
+
+impl SseDecode for (String, String) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_field0 = <String>::sse_decode(deserializer);
+        let mut var_field1 = <String>::sse_decode(deserializer);
+        return (var_field0, var_field1);
     }
 }
 
@@ -905,6 +1162,13 @@ impl SseDecode for () {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {}
 }
 
+impl SseDecode for usize {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        deserializer.cursor.read_u64::<NativeEndian>().unwrap() as _
+    }
+}
+
 fn pde_ffi_dispatcher_primary_impl(
     func_id: i32,
     port: flutter_rust_bridge::for_generated::MessagePort,
@@ -914,9 +1178,9 @@ fn pde_ffi_dispatcher_primary_impl(
 ) {
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
-        6 => wire__crate__api__puzzles__get_random_puzzle_impl(port, ptr, rust_vec_len, data_len),
-        11 => wire__crate__api__simple__init_app_impl(port, ptr, rust_vec_len, data_len),
-        12 => wire__crate__api__puzzles__search_puzzles_impl(port, ptr, rust_vec_len, data_len),
+        9 => wire__crate__api__puzzles__get_random_puzzle_impl(port, ptr, rust_vec_len, data_len),
+        14 => wire__crate__api__simple__init_app_impl(port, ptr, rust_vec_len, data_len),
+        18 => wire__crate__api__puzzles__search_puzzles_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -931,18 +1195,24 @@ fn pde_ffi_dispatcher_sync_impl(
     match func_id {
         1 => wire__crate__api__cognitive__analyze_scotoma_impl(ptr, rust_vec_len, data_len),
         2 => wire__crate__api__threats__analyze_tactical_threats_impl(ptr, rust_vec_len, data_len),
-        3 => wire__crate__api__status__evaluate_game_status_impl(ptr, rust_vec_len, data_len),
-        4 => wire__crate__api__context__evaluate_position_metrics_impl(ptr, rust_vec_len, data_len),
-        5 => wire__crate__api__moves__get_legal_destinations_impl(ptr, rust_vec_len, data_len),
-        7 => wire__crate__api__history__get_san_history_impl(ptr, rust_vec_len, data_len),
-        8 => wire__crate__api__threats__get_threatened_squares_impl(ptr, rust_vec_len, data_len),
-        9 => wire__crate__api__simple__greet_impl(ptr, rust_vec_len, data_len),
-        10 => wire__crate__api__humanizer__humanize_move_rust_impl(ptr, rust_vec_len, data_len),
-        13 => {
+        3 => wire__crate__api__pgn_db__classify_opening_eco_impl(ptr, rust_vec_len, data_len),
+        4 => wire__crate__api__pgn_db__clear_all_studies_impl(ptr, rust_vec_len, data_len),
+        5 => wire__crate__api__status__evaluate_game_status_impl(ptr, rust_vec_len, data_len),
+        6 => wire__crate__api__context__evaluate_position_metrics_impl(ptr, rust_vec_len, data_len),
+        7 => wire__crate__api__pgn_db__export_pgn_with_headers_impl(ptr, rust_vec_len, data_len),
+        8 => wire__crate__api__moves__get_legal_destinations_impl(ptr, rust_vec_len, data_len),
+        10 => wire__crate__api__history__get_san_history_impl(ptr, rust_vec_len, data_len),
+        11 => wire__crate__api__threats__get_threatened_squares_impl(ptr, rust_vec_len, data_len),
+        12 => wire__crate__api__simple__greet_impl(ptr, rust_vec_len, data_len),
+        13 => wire__crate__api__humanizer__humanize_move_rust_impl(ptr, rust_vec_len, data_len),
+        15 => wire__crate__api__pgn_db__load_studies_from_db_impl(ptr, rust_vec_len, data_len),
+        16 => wire__crate__api__pgn_db__parse_pgn_database_impl(ptr, rust_vec_len, data_len),
+        17 => wire__crate__api__pgn_db__save_study_to_db_impl(ptr, rust_vec_len, data_len),
+        19 => {
             wire__crate__api__chanakya__select_chanakya_move_rust_impl(ptr, rust_vec_len, data_len)
         }
-        14 => wire__crate__api__persona__select_persona_move_rust_impl(ptr, rust_vec_len, data_len),
-        15 => wire__crate__api__state__validate_and_apply_move_impl(ptr, rust_vec_len, data_len),
+        20 => wire__crate__api__persona__select_persona_move_rust_impl(ptr, rust_vec_len, data_len),
+        21 => wire__crate__api__state__validate_and_apply_move_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -1061,6 +1331,57 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::persona::PersonaCandidate>
     for crate::api::persona::PersonaCandidate
 {
     fn into_into_dart(self) -> crate::api::persona::PersonaCandidate {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::pgn_db::PgnGameHeader {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.event.into_into_dart().into_dart(),
+            self.site.into_into_dart().into_dart(),
+            self.date.into_into_dart().into_dart(),
+            self.white.into_into_dart().into_dart(),
+            self.black.into_into_dart().into_dart(),
+            self.white_elo.into_into_dart().into_dart(),
+            self.black_elo.into_into_dart().into_dart(),
+            self.result.into_into_dart().into_dart(),
+            self.eco.into_into_dart().into_dart(),
+            self.opening.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::pgn_db::PgnGameHeader
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::pgn_db::PgnGameHeader>
+    for crate::api::pgn_db::PgnGameHeader
+{
+    fn into_into_dart(self) -> crate::api::pgn_db::PgnGameHeader {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::pgn_db::PgnGameRecord {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.header.into_into_dart().into_dart(),
+            self.moves_pgn.into_into_dart().into_dart(),
+            self.index.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::pgn_db::PgnGameRecord
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::pgn_db::PgnGameRecord>
+    for crate::api::pgn_db::PgnGameRecord
+{
+    fn into_into_dart(self) -> crate::api::pgn_db::PgnGameRecord {
         self
     }
 }
@@ -1259,6 +1580,16 @@ impl SseEncode for Vec<crate::api::persona::PersonaCandidate> {
     }
 }
 
+impl SseEncode for Vec<crate::api::pgn_db::PgnGameRecord> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::pgn_db::PgnGameRecord>::sse_encode(item, serializer);
+        }
+    }
+}
+
 impl SseEncode for Vec<u8> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -1327,6 +1658,31 @@ impl SseEncode for crate::api::persona::PersonaCandidate {
     }
 }
 
+impl SseEncode for crate::api::pgn_db::PgnGameHeader {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.event, serializer);
+        <String>::sse_encode(self.site, serializer);
+        <String>::sse_encode(self.date, serializer);
+        <String>::sse_encode(self.white, serializer);
+        <String>::sse_encode(self.black, serializer);
+        <Option<i32>>::sse_encode(self.white_elo, serializer);
+        <Option<i32>>::sse_encode(self.black_elo, serializer);
+        <String>::sse_encode(self.result, serializer);
+        <String>::sse_encode(self.eco, serializer);
+        <String>::sse_encode(self.opening, serializer);
+    }
+}
+
+impl SseEncode for crate::api::pgn_db::PgnGameRecord {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <crate::api::pgn_db::PgnGameHeader>::sse_encode(self.header, serializer);
+        <String>::sse_encode(self.moves_pgn, serializer);
+        <usize>::sse_encode(self.index, serializer);
+    }
+}
+
 impl SseEncode for crate::api::context::PositionMetrics {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -1343,6 +1699,14 @@ impl SseEncode for crate::api::puzzles::Puzzle {
         <Vec<String>>::sse_encode(self.moves, serializer);
         <i32>::sse_encode(self.rating, serializer);
         <String>::sse_encode(self.themes, serializer);
+    }
+}
+
+impl SseEncode for (String, String) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.0, serializer);
+        <String>::sse_encode(self.1, serializer);
     }
 }
 
@@ -1389,6 +1753,16 @@ impl SseEncode for u8 {
 impl SseEncode for () {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {}
+}
+
+impl SseEncode for usize {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        serializer
+            .cursor
+            .write_u64::<NativeEndian>(self as _)
+            .unwrap();
+    }
 }
 
 #[cfg(not(target_family = "wasm"))]

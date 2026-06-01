@@ -43,7 +43,7 @@ dependencies:
   flutter_soloud: ^3.2.7
   google_fonts: ^6.2.1
   intl: ^0.19.0
-  share_plus: ^13.1.0
+  share_plus: ^12.0.2
   rust_lib_kingslayer_chess:
     path: rust_builder
   flutter_rust_bridge: 2.12.0
@@ -52,7 +52,7 @@ dependencies:
   fl_chart: ^1.2.0
   confetti: ^0.7.0
   image_picker: ^1.1.2
-  file_picker: any
+  file_picker: ^8.0.0
   video_player: ^2.11.1
   chess_assets:
     path: packages/chess_assets
@@ -117,3 +117,4 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+

@@ -10,5 +10,6 @@ pub mod humanizer;
 pub mod cognitive;
 pub mod persona;
 pub mod chanakya;
+pub mod pgn_db;
 
 
