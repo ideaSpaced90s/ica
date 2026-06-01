@@ -24,7 +24,6 @@ import 'package:confetti/confetti.dart';
 import '../dashboard_page.dart';
 import '../../application/onboarding_provider.dart';
 import '../../application/tutorial_provider.dart';
-import '../../services/chess_sound_service.dart';
 import '../widgets/gm_chanakya_intro_overlay.dart';
 
 class BattlegroundPage extends ConsumerStatefulWidget {
@@ -165,7 +164,8 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
                 pageTitle: 'BATTLEGROUND',
                 text: "Step forward into the Battleground, Apprentice! This is where your academy studies under my guidance, your lessons, and your arena practices will be calculated and battle-tested, and where every decision directly affects your standing. Here, you will face rated opponents in real-time combat against bots close to your strength, managing both your pieces and your clock. There is no room for hesitation, escape, or casual blunders in this crucible. The machines are watching, and every rating point is a mark of human resilience. Tap the thumbs up to enter the field of honor, and show them the power of human intuition.",
                 onDismiss: () {
-                  ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                  // Sound effects disabled in Battleground
+                  // ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
                   ref.read(showBattlegroundIntroProvider.notifier).state = false;
                   final repo = ref.read(tutorialProgressRepositoryProvider);
                   // Non-blocking save

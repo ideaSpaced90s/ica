@@ -304,6 +304,7 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
   final StockfishService _stockfishEngine;
   final SavedGameRepository _savedGameRepository;
   final PerformanceLedgerRepository _performanceLedgerRepository;
+  // ignore: unused_field
   final ChessSoundService _soundService;
   // ignore: unused_field
   final ChessHapticsService _hapticsService;
@@ -1098,14 +1099,16 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
       unawaited(ensureGameServicesStarted(analyzeCurrentPosition: true));
     }
 
-    _soundService.playSfx(SoundEffect.uiClick);
+    // Sound effects disabled in Battleground
+    // _soundService.playSfx(SoundEffect.uiClick);
   }
 
   void toggleBoardOrientation() {
     state = state.copyWith(
       isBoardFlipped: !state.isBoardFlipped,
     );
-    _soundService.playSfx(SoundEffect.uiClick);
+    // Sound effects disabled in Battleground
+    // _soundService.playSfx(SoundEffect.uiClick);
   }
 
   void setGameMode(String mode) {

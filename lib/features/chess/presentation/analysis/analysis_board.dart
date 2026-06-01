@@ -58,8 +58,8 @@ class _StudyLabChessBoardState extends ConsumerState<StudyLabChessBoard> {
   }
 
   Widget _buildCoordinatesForSquare(int row, int col, bool isLight, bool isFlipped) {
-    final showFile = isFlipped ? row == 0 : row == 7;
-    final showRank = isFlipped ? col == 7 : col == 0;
+    final showFile = row == 7;
+    final showRank = col == 0;
 
     const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
     const ranks = ['8', '7', '6', '5', '4', '3', '2', '1'];
