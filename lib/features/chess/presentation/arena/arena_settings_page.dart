@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../application/arena_provider.dart';
 import '../../application/chess_provider.dart';
 import '../../services/chess_sound_service.dart';
 import '../scholarly_theme.dart';
@@ -402,7 +403,6 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
         return Consumer(
           builder: (context, ref, _) {
             final state = ref.watch(chessProvider);
-            final notifier = ref.read(chessProvider.notifier);
 
             final bulletPresets = [
               {'label': '0.5+0', 'min': 0, 'sec': 30, 'inc': 0},
@@ -452,7 +452,7 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
                         selected: isSelected,
                         onSelected: (selected) {
                           if (selected) {
-                            notifier.setTimeControl(
+                            ref.read(arenaProvider.notifier).setTimeControl(
                               Duration(minutes: p['min'] as int, seconds: p['sec'] as int),
                               Duration(seconds: p['inc'] as int),
                             );
@@ -574,7 +574,7 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
               child: FilledButton(
                 onPressed: () {
                   ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                  ref.read(chessProvider.notifier).setTimeControl(
+                  ref.read(arenaProvider.notifier).setTimeControl(
                         Duration(minutes: totalMinutes),
                         Duration(seconds: incrementSeconds),
                       );

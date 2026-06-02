@@ -659,38 +659,78 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
           child: Container(
             color: Colors.black.withValues(alpha: 0.3),
             child: Center(
-              child: GestureDetector(
-                onTap: () => ref.read(arenaProvider.notifier).togglePause(),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: ScholarlyTheme.accentBlue,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: ScholarlyTheme.accentBlue.withValues(alpha: 0.4),
-                        blurRadius: 15,
-                        spreadRadius: 2,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  GestureDetector(
+                    onTap: () => ref.read(arenaProvider.notifier).togglePause(),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: ScholarlyTheme.accentBlue,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: ScholarlyTheme.accentBlue.withValues(alpha: 0.4),
+                            blurRadius: 15,
+                            spreadRadius: 2,
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 28),
-                      const SizedBox(width: 8),
-                      Text(
-                        'RESUME GAME',
-                        style: GoogleFonts.inter(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 14,
-                          letterSpacing: 1.2,
-                        ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 28),
+                          const SizedBox(width: 8),
+                          Text(
+                            'RESUME GAME',
+                            style: GoogleFonts.inter(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 14,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 12),
+                  GestureDetector(
+                    onTap: () => ref.read(arenaProvider.notifier).reset(),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.92),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFFFC8181), width: 1.5),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.16),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.flag_rounded, color: Color(0xFFFC8181), size: 22),
+                          const SizedBox(width: 8),
+                          Text(
+                            'QUIT',
+                            style: GoogleFonts.inter(
+                              color: const Color(0xFFFC8181),
+                              fontWeight: FontWeight.w900,
+                              fontSize: 13,
+                              letterSpacing: 1.0,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

@@ -288,36 +288,78 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
   }
 
   void _loadInitialState() {
+    _prepareNewGameFromSettings(
+      playSound: false,
+      forcedPlayerWhite: true,
+    );
+    if (_isAiTurn()) {
+      unawaited(ensureGameServicesStarted(analyzeCurrentPosition: true));
+    }
+  }
+
+  void _prepareNewGameFromSettings({
+    bool forcedPlayerWhite = true,
+    String? customFen,
+    bool playSound = true,
+  }) {
+    _stopClockTimer();
+    _engineMoveTimer?.cancel();
+    _engineMoveTimer = null;
+    _stopAnalysisAndReset();
+    _undoStack.clear();
+    _redoStack.clear();
+
     final settings = ref.read(chessProvider);
-    final is960 = settings.gameMode == 'chess960';
-    final initialGame = is960
-        ? ChessGame(
-            fen: Chess960Generator.generateRandomPosition().fen,
-            isChess960: true,
-          )
-        : ChessGame(isChess960: false);
+    final mode = customFen != null ? 'classic' : settings.gameMode;
+    final is960 = mode == 'chess960';
+    final initialGame = customFen != null
+        ? ChessGame(fen: customFen, isChess960: false)
+        : (is960
+            ? ChessGame(fen: Chess960Generator.generateRandomPosition().fen, isChess960: true)
+            : ChessGame(isChess960: false));
 
     state = state.copyWith(
       game: initialGame,
       lastMove: null,
       recentMoves: const [],
-      isBoardFlipped: settings.isBoardFlipped,
-      isPlayerWhite: settings.isPlayerWhite,
+      analysis: const {},
+      previousEvaluation: 0.0,
+      currentEvaluation: 0.0,
+      isEngineThinking: false,
+      isPlayerWhite: forcedPlayerWhite,
+      isBoardFlipped: !forcedPlayerWhite,
+      isEngineVsEngine: false,
       engineLevel: settings.engineLevel,
       bottomAvatarId: settings.bottomAvatarId,
+      canUndo: false,
+      canRedo: false,
+      hintBestMove: null,
+      hintFrom: null,
+      hintTo: null,
+      isHintVisible: false,
+      isHintLoading: false,
+      isHintBlinking: false,
+      isBulbGlowing: false,
       whiteTimeLeft: settings.baseTimeDuration,
       blackTimeLeft: settings.baseTimeDuration,
       baseTimeDuration: settings.baseTimeDuration,
       incrementDuration: settings.incrementDuration,
-      gameMode: settings.gameMode,
-      clockStarted: true,
-      activeClockSide: _clockWhite,
+      gameMode: mode,
+      clockStarted: false,
+      activeClockSide: null,
+      threatenedSquares: const [],
+      moveAnimation: null,
       isPaused: false,
+      viewingMoveIndex: null,
+      isGameOverDismissed: false,
+      isPromoting: false,
+      promotionSource: null,
+      promotionDestination: null,
+      isTimeOut: false,
     );
 
-    _startClockTicker();
-    if (_isAiTurn()) {
-      unawaited(ensureGameServicesStarted(analyzeCurrentPosition: true));
+    if (playSound) {
+      _soundService.playSfx(SoundEffect.uiClick);
     }
   }
 
@@ -612,7 +654,15 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
     });
 
     if (moveMade) {
+      final wasClockStarted = state.clockStarted;
       _onMoveCompleted('$from$to$promotion');
+      if (!wasClockStarted) {
+        state = state.copyWith(
+          clockStarted: true,
+          activeClockSide: _clockSideForTurn(),
+        );
+        _startClockTicker();
+      }
       if (_isAiTurn() && !state.game.gameOver && !state.isPaused) {
         unawaited(ensureGameServicesStarted(analyzeCurrentPosition: true));
       }
@@ -1085,66 +1135,31 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
   }
 
   void reset({bool forcedPlayerWhite = true, String? customFen}) {
-    _clockTimer?.cancel();
-    _engineMoveTimer?.cancel();
-    _stopAnalysisAndReset();
-    _undoStack.clear();
-    _redoStack.clear();
-
-    final is960 = state.gameMode == 'chess960';
-    final initialGame = customFen != null
-        ? ChessGame(fen: customFen, isChess960: false)
-        : (is960
-            ? ChessGame(fen: Chess960Generator.generateRandomPosition().fen, isChess960: true)
-            : ChessGame(isChess960: false));
-
-
-    state = state.copyWith(
-      game: initialGame,
-      lastMove: null,
-      recentMoves: const [],
-      analysis: const {},
-      previousEvaluation: 0.0,
-      currentEvaluation: 0.0,
-      isEngineThinking: false,
-      isPlayerWhite: forcedPlayerWhite,
-      isBoardFlipped: !forcedPlayerWhite,
-      canUndo: false,
-      canRedo: false,
-      whiteTimeLeft: state.baseTimeDuration,
-      blackTimeLeft: state.baseTimeDuration,
-      clockStarted: true,
-      activeClockSide: _clockWhite,
-      threatenedSquares: const [],
-      moveAnimation: null,
-      isPaused: false,
-      viewingMoveIndex: null,
-      isGameOverDismissed: false,
-      isPromoting: false,
-      promotionSource: null,
-      promotionDestination: null,
-      isTimeOut: false,
+    _prepareNewGameFromSettings(
+      forcedPlayerWhite: forcedPlayerWhite,
+      customFen: customFen,
     );
-
-    _startClockTicker();
     if (_isAiTurn()) {
       unawaited(ensureGameServicesStarted(analyzeCurrentPosition: true));
     }
-
-    _soundService.playSfx(SoundEffect.uiClick);
   }
 
   void toggleBoardOrientation() {
+    final isFlipped = !state.isBoardFlipped;
     state = state.copyWith(
-      isBoardFlipped: !state.isBoardFlipped,
+      isBoardFlipped: isFlipped,
+      isPlayerWhite: !isFlipped,
     );
+    if (_isAiTurn()) {
+      unawaited(ensureGameServicesStarted(analyzeCurrentPosition: true));
+    }
     _soundService.playSfx(SoundEffect.uiClick);
   }
 
   void setGameMode(String mode) {
     if (state.gameMode == mode) return;
-    state = state.copyWith(gameMode: mode);
-    reset();
+    unawaited(ref.read(chessProvider.notifier).setGameMode(mode));
+    reset(forcedPlayerWhite: state.isPlayerWhite);
   }
 
   void setBoardTheme(String themeId) {
@@ -1153,13 +1168,14 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
   }
 
   void setTimeControl(Duration total, Duration increment) {
+    ref.read(chessProvider.notifier).setTimeControl(total, increment);
+    final canUpdateReadyBoard = state.recentMoves.isEmpty && !state.clockStarted;
     state = state.copyWith(
       baseTimeDuration: total,
       incrementDuration: increment,
-      whiteTimeLeft: total,
-      blackTimeLeft: total,
+      whiteTimeLeft: canUpdateReadyBoard ? total : state.whiteTimeLeft,
+      blackTimeLeft: canUpdateReadyBoard ? total : state.blackTimeLeft,
     );
-    reset();
   }
 
   void selectUpperAvatar(String avatarId) {

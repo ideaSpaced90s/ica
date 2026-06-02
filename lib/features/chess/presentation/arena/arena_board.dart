@@ -917,7 +917,7 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
   void _triggerLeafScatter(String squareName) {
     final col = squareName.codeUnitAt(0) - 'a'.codeUnitAt(0);
     final row = 8 - int.parse(squareName[1]);
-    final isFlipped = ref.read(chessProvider).isBoardFlipped;
+    final isFlipped = ref.read(arenaProvider).isBoardFlipped;
 
     final effectiveCol = isFlipped ? 7 - col : col;
     final effectiveRow = isFlipped ? 7 - row : row;
@@ -941,7 +941,7 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
   void _triggerInkSplash(String squareName) {
     final col = squareName.codeUnitAt(0) - 'a'.codeUnitAt(0);
     final row = 8 - int.parse(squareName[1]);
-    final isFlipped = ref.read(chessProvider).isBoardFlipped;
+    final isFlipped = ref.read(arenaProvider).isBoardFlipped;
 
     final effectiveCol = isFlipped ? 7 - col : col;
     final effectiveRow = isFlipped ? 7 - row : row;
@@ -965,7 +965,7 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
   void _triggerOilSplash(String squareName) {
     final col = squareName.codeUnitAt(0) - 'a'.codeUnitAt(0);
     final row = 8 - int.parse(squareName[1]);
-    final isFlipped = ref.read(chessProvider).isBoardFlipped;
+    final isFlipped = ref.read(arenaProvider).isBoardFlipped;
 
     final effectiveCol = isFlipped ? 7 - col : col;
     final effectiveRow = isFlipped ? 7 - row : row;
@@ -989,7 +989,7 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
   void _triggerMetalShatter(String squareName, bool isWhite) {
     final col = squareName.codeUnitAt(0) - 'a'.codeUnitAt(0);
     final row = 8 - int.parse(squareName[1]);
-    final isFlipped = ref.read(chessProvider).isBoardFlipped;
+    final isFlipped = ref.read(arenaProvider).isBoardFlipped;
 
     final effectiveCol = isFlipped ? 7 - col : col;
     final effectiveRow = isFlipped ? 7 - row : row;
@@ -1021,7 +1021,7 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
 
       final boardSize = box.size.width;
       final squareSize = boardSize / 8;
-      final isFlipped = ref.read(chessProvider).isBoardFlipped;
+      final isFlipped = ref.read(arenaProvider).isBoardFlipped;
 
       Offset getOffset(String square) {
         final col = square.codeUnitAt(0) - 'a'.codeUnitAt(0);
@@ -1048,7 +1048,7 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
 
       final boardSize = box.size.width;
       final squareSize = boardSize / 8;
-      final isFlipped = ref.read(chessProvider).isBoardFlipped;
+      final isFlipped = ref.read(arenaProvider).isBoardFlipped;
 
       Offset getOffset(String square) {
         final col = square.codeUnitAt(0) - 'a'.codeUnitAt(0);
@@ -1070,7 +1070,7 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
   void _triggerToyConfetti(String squareName) {
     final col = squareName.codeUnitAt(0) - 'a'.codeUnitAt(0);
     final row = 8 - int.parse(squareName[1]);
-    final isFlipped = ref.read(chessProvider).isBoardFlipped;
+    final isFlipped = ref.read(arenaProvider).isBoardFlipped;
 
     final effectiveCol = isFlipped ? 7 - col : col;
     final effectiveRow = isFlipped ? 7 - row : row;
@@ -1094,7 +1094,7 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
   void _triggerPlatinumCapture(String squareName) {
     final col = squareName.codeUnitAt(0) - 'a'.codeUnitAt(0);
     final row = 8 - int.parse(squareName[1]);
-    final isFlipped = ref.read(chessProvider).isBoardFlipped;
+    final isFlipped = ref.read(arenaProvider).isBoardFlipped;
 
     final effectiveCol = isFlipped ? 7 - col : col;
     final effectiveRow = isFlipped ? 7 - row : row;
@@ -1118,7 +1118,7 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
   void _triggerSlateCapture(String squareName) {
     final col = squareName.codeUnitAt(0) - 'a'.codeUnitAt(0);
     final row = 8 - int.parse(squareName[1]);
-    final isFlipped = ref.read(chessProvider).isBoardFlipped;
+    final isFlipped = ref.read(arenaProvider).isBoardFlipped;
 
     final effectiveCol = isFlipped ? 7 - col : col;
     final effectiveRow = isFlipped ? 7 - row : row;
@@ -1142,7 +1142,7 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
   void _triggerShadowCapture(String squareName, chess_lib.Piece piece) {
     final col = squareName.codeUnitAt(0) - 'a'.codeUnitAt(0);
     final row = 8 - int.parse(squareName[1]);
-    final isFlipped = ref.read(chessProvider).isBoardFlipped;
+    final isFlipped = ref.read(arenaProvider).isBoardFlipped;
 
     final effectiveCol = isFlipped ? 7 - col : col;
     final effectiveRow = isFlipped ? 7 - row : row;
@@ -1166,7 +1166,7 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
   void _triggerLiquidSplash(String squareName) {
     final col = squareName.codeUnitAt(0) - 'a'.codeUnitAt(0);
     final row = 8 - int.parse(squareName[1]);
-    final isFlipped = ref.read(chessProvider).isBoardFlipped;
+    final isFlipped = ref.read(arenaProvider).isBoardFlipped;
 
     final effectiveCol = isFlipped ? 7 - col : col;
     final effectiveRow = isFlipped ? 7 - row : row;
@@ -1199,7 +1199,7 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
       if (box == null) return;
       final boardSize = box.size.width;
       final squareSize = boardSize / 8;
-      final isFlipped = ref.read(chessProvider).isBoardFlipped;
+      final isFlipped = ref.read(arenaProvider).isBoardFlipped;
       final col = squareName.codeUnitAt(0) - 'a'.codeUnitAt(0);
       final row = 8 - int.parse(squareName[1]);
       final effectiveCol = isFlipped ? 7 - col : col;
@@ -1335,7 +1335,7 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
       if (box == null) return;
       final boardSize = box.size.width;
       final squareSize = boardSize / 8;
-      final isFlipped = ref.read(chessProvider).isBoardFlipped;
+      final isFlipped = ref.read(arenaProvider).isBoardFlipped;
       final col = squareName.codeUnitAt(0) - 'a'.codeUnitAt(0);
       final row = 8 - int.parse(squareName[1]);
       final effectiveCol = isFlipped ? 7 - col : col;
@@ -1376,7 +1376,7 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
       final nextSquare = _getSquareName(
         nextRow,
         nextCol,
-        ref.read(chessProvider).isBoardFlipped,
+        ref.read(arenaProvider).isBoardFlipped,
       );
       setState(() {
         _impactShakes.add({
@@ -1398,7 +1398,7 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
     final squareSize = boardSize / 8;
     final col = square.codeUnitAt(0) - 'a'.codeUnitAt(0);
     final row = 8 - int.parse(square[1]);
-    final isFlipped = ref.read(chessProvider).isBoardFlipped;
+    final isFlipped = ref.read(arenaProvider).isBoardFlipped;
     final effectiveCol = isFlipped ? 7 - col : col;
     final effectiveRow = isFlipped ? 7 - row : row;
     return Offset(
