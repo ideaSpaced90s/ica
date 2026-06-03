@@ -16,6 +16,7 @@ import '../../application/study_lab_provider.dart';
 import '../../application/chess_provider.dart';
 import '../../services/chess_sound_service.dart';
 import '../../application/analysis_engine_controller.dart';
+import '../../application/practice_lab_provider.dart';
 import 'widgets/game_report_panel.dart';
 import 'widgets/practice_mode_panel.dart';
 
@@ -85,7 +86,7 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
         overlayBody = _buildGameLibraryOverlayTab(context, state, notifier);
         break;
       case 3:
-        title = 'PRACTICE LAB';
+        title = 'SPARRING';
         overlayBody = const PracticeModePanel();
         break;
       case 4:
@@ -107,6 +108,14 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
           ),
           onPressed: () {
             ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+            if (_workspaceTabIndex == 3) {
+              final practiceState = ref.read(practiceLabProvider);
+              if (practiceState.isSessionActive) {
+                final studyState = ref.read(studyLabProvider);
+                ref.read(practiceLabProvider.notifier).endSession(studyState.activeFen);
+                return;
+              }
+            }
             Navigator.pop(context);
           },
         ),

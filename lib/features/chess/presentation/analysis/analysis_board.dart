@@ -395,14 +395,14 @@ class _StudyLabChessBoardState extends ConsumerState<StudyLabChessBoard> {
                                 if (highlightColor != null)
                                   Container(color: highlightColor),
 
-                                // Last move overlay
+                                // Last move overlay (light green highlight)
                                 if (isLastStart || isLastEnd)
                                   Container(
                                     decoration: BoxDecoration(
-                                      color: ScholarlyTheme.accentBlue.withValues(alpha: 0.12),
+                                      color: const Color(0x73A3D28E), // Soft light green overlay
                                       border: isLastEnd
                                           ? Border.all(
-                                              color: ScholarlyTheme.accentBlue.withValues(alpha: 0.5),
+                                              color: const Color(0xCCA3D28E),
                                               width: 1.5)
                                           : null,
                                     ),
@@ -421,6 +421,17 @@ class _StudyLabChessBoardState extends ConsumerState<StudyLabChessBoard> {
                                   Center(
                                     child: Draggable<String>(
                                       data: squareName,
+                                      onDragStarted: () {
+                                        setState(() {
+                                          _selectedSquare = squareName;
+                                          _legalTargets = chess
+                                              .generate_moves({'square': squareName})
+                                              .map((m) => chess_lib.Chess.algebraic(m.to))
+                                              .toList();
+                                        });
+                                      },
+                                      onDraggableCanceled: (velocity, offset) => _clearSelection(),
+                                      onDragEnd: (_) => _clearSelection(),
                                       feedback: Material(
                                         color: Colors.transparent,
                                         child: SizedBox(

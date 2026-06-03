@@ -609,7 +609,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
                   MaterialPageRoute(builder: (context) => const WorkspacePage(initialTabIndex: 3)),
                 );
               },
-              tooltip: 'Practice Mode',
+              tooltip: 'Sparring',
             ),
             IconButton(
               icon: const Icon(Icons.analytics_rounded, color: Colors.redAccent, size: 26),
