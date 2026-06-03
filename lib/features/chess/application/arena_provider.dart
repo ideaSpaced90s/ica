@@ -95,6 +95,7 @@ class ArenaState {
   final bool servicesStarting;
   final bool engineReady;
   final String? startupError;
+  final String? loadedGameId;
 
   ArenaState({
     required this.game,
@@ -139,6 +140,7 @@ class ArenaState {
     this.servicesStarting = false,
     this.engineReady = false,
     this.startupError,
+    this.loadedGameId,
   });
 
   bool get isChess960 => gameMode == 'chess960';
@@ -209,6 +211,7 @@ class ArenaState {
     bool? servicesStarting,
     bool? engineReady,
     Object? startupError = const Object(),
+    Object? loadedGameId = const Object(),
   }) {
     return ArenaState(
       game: game ?? this.game,
@@ -253,6 +256,7 @@ class ArenaState {
       servicesStarting: servicesStarting ?? this.servicesStarting,
       engineReady: engineReady ?? this.engineReady,
       startupError: startupError == const Object() ? this.startupError : startupError as String?,
+      loadedGameId: loadedGameId == const Object() ? this.loadedGameId : loadedGameId as String?,
     );
   }
 }
@@ -356,6 +360,7 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
       promotionSource: null,
       promotionDestination: null,
       isTimeOut: false,
+      loadedGameId: null,
     );
 
     if (playSound) {
@@ -1318,8 +1323,27 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
     final isWhite = state.isPlayerWhite;
     final fen = state.game.fen;
 
+    String? existingCustomName;
+    bool existingIsFavorite = false;
+    final finalId = state.loadedGameId ?? DateTime.now().millisecondsSinceEpoch.toString();
+
+    if (state.loadedGameId != null) {
+      try {
+        final repository = ref.read(savedGameRepositoryProvider);
+        final saves = await repository.listSaves();
+        final index = saves.indexWhere((e) => e.id == state.loadedGameId);
+        if (index != -1) {
+          final existing = saves[index];
+          existingCustomName = existing.customName;
+          existingIsFavorite = existing.isFavorite;
+        }
+      } catch (e) {
+        debugPrint('Failed to load existing game details for overwrite: $e');
+      }
+    }
+
     final entry = SavedGameEntry(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      id: finalId,
       savedAt: DateTime.now(),
       fen: fen,
       recentMoves: moves,
@@ -1329,7 +1353,8 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
       blackTimeLeftMs: state.blackTimeLeft.inMilliseconds,
       clockStarted: false,
       activeClockSide: null,
-      customName: 'Arena Game',
+      customName: existingCustomName ?? 'Arena Game',
+      isFavorite: existingIsFavorite,
       isRatedMode: false,
       result: resultOverride,
     );
@@ -1366,6 +1391,7 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
       isPromoting: false,
       isGameOverDismissed: false,
       isTimeOut: false,
+      loadedGameId: entry.id,
     );
   }
 

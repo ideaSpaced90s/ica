@@ -37,10 +37,18 @@ class _HistoryCardState extends State<HistoryCard> {
     final shortId = widget.game.id.length >= 4
         ? widget.game.id.substring(0, 4)
         : widget.game.id;
-    final title =
-        (widget.game.customName != null && widget.game.customName!.isNotEmpty)
-        ? widget.game.customName!
-        : 'untitled$shortId';
+    final String title;
+    if (widget.game.isRatedMode) {
+      title = (widget.game.customName != null && widget.game.customName!.isNotEmpty)
+          ? widget.game.customName!
+          : 'Rated Game $shortId';
+    } else {
+      title = (widget.game.customName != null &&
+              widget.game.customName!.isNotEmpty &&
+              widget.game.customName != 'Arena Game')
+          ? widget.game.customName!
+          : 'Unrated ID: ${widget.game.id}';
+    }
 
     Color resultColor = ScholarlyTheme.panelStroke;
     if (widget.game.result == 'W') resultColor = const Color(0xFF10B981);
@@ -59,109 +67,118 @@ class _HistoryCardState extends State<HistoryCard> {
         borderColor: widget.game.isRatedMode
             ? ScholarlyTheme.realGold.withValues(alpha: 0.25)
             : const Color(0xFF0D9488).withValues(alpha: 0.25),
-        child: InkWell(
-          onTap: widget.onTap,
-          onTapDown: (_) => setState(() => _scale = 0.98),
-          onTapUp: (_) => setState(() => _scale = 1.0),
-          onTapCancel: () => setState(() => _scale = 1.0),
-          child: Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Row(
-              children: [
-                // Mini Board Preview with colored border
-                Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: resultColor.withValues(alpha: 0.65),
-                      width: 1.2,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: resultColor.withValues(alpha: 0.12),
-                        blurRadius: 4,
-                        spreadRadius: 0.5,
-                      ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(6.8),
-                    child: MiniBoardPreview(fen: widget.game.fen),
-                  ),
+        child: Row(
+          children: [
+            Expanded(
+              child: InkWell(
+                onTap: widget.onTap,
+                onTapDown: (_) => setState(() => _scale = 0.98),
+                onTapUp: (_) => setState(() => _scale = 1.0),
+                onTapCancel: () => setState(() => _scale = 1.0),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  bottomLeft: Radius.circular(16),
                 ),
-                const SizedBox(width: 16),
-
-                // Details
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                child: Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Row(
                     children: [
-                      Text(
-                        title,
-                        style: GoogleFonts.inter(
-                          color: ScholarlyTheme.textPrimary,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        dateFormat.format(widget.game.savedAt),
-                        style: GoogleFonts.inter(
-                          color: ScholarlyTheme.textMuted,
-                          fontSize: 10,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 4,
-                        alignment: WrapAlignment.start,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          _buildTimeBadge(
-                            'W',
-                            Duration(milliseconds: widget.game.whiteTimeLeftMs),
+                      // Mini Board Preview with colored border
+                      Container(
+                        width: 50,
+                        height: 50,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: resultColor.withValues(alpha: 0.65),
+                            width: 1.2,
                           ),
-                          _buildTimeBadge(
-                            'B',
-                            Duration(milliseconds: widget.game.blackTimeLeftMs),
-                          ),
-                          _buildModeBadge(widget.game.isRatedMode),
-                          if (widget.game.result != null)
-                            _buildResultBadge(widget.game.result!),
-                          if (widget.game.isLockedForAnalysis)
-                            _buildLockedBadge(),
-                        ],
+                          boxShadow: [
+                            BoxShadow(
+                              color: resultColor.withValues(alpha: 0.12),
+                              blurRadius: 4,
+                              spreadRadius: 0.5,
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(6.8),
+                          child: MiniBoardPreview(fen: widget.game.fen),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+
+                      // Details
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              title,
+                              style: GoogleFonts.inter(
+                                color: ScholarlyTheme.textPrimary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              dateFormat.format(widget.game.savedAt),
+                              style: GoogleFonts.inter(
+                                color: ScholarlyTheme.textMuted,
+                                fontSize: 10,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 4,
+                              alignment: WrapAlignment.start,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                _buildTimeBadge(
+                                  'W',
+                                  Duration(milliseconds: widget.game.whiteTimeLeftMs),
+                                ),
+                                _buildTimeBadge(
+                                  'B',
+                                  Duration(milliseconds: widget.game.blackTimeLeftMs),
+                                ),
+                                _buildModeBadge(widget.game.isRatedMode),
+                                if (widget.game.result != null)
+                                  _buildResultBadge(widget.game.result!),
+                                if (widget.game.isLockedForAnalysis)
+                                  _buildLockedBadge(),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 12),
-
-                // Only star button on the right side
-                GestureDetector(
-                  onTap: widget.onToggleFavorite,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 12.0),
-                    child: Icon(
-                      widget.game.isFavorite
-                          ? Icons.star_rounded
-                          : Icons.star_outline_rounded,
-                      color: widget.game.isFavorite
-                          ? ScholarlyTheme.accentYellow
-                          : ScholarlyTheme.textMuted,
-                      size: 24,
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
+            // Only star button on the right side - completely outside the InkWell
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: widget.onToggleFavorite,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+                child: Icon(
+                  widget.game.isFavorite
+                      ? Icons.star_rounded
+                      : Icons.star_outline_rounded,
+                  color: widget.game.isFavorite
+                      ? ScholarlyTheme.accentYellow
+                      : ScholarlyTheme.textMuted,
+                  size: 24,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -14,7 +14,6 @@ import 'scholarly_theme.dart';
 import 'widgets/history_card.dart';
 import 'widgets/ambient_scaffold.dart';
 import 'dashboard_page.dart';
-import '../application/study_lab_provider.dart';
 import 'mobile_navigation_shell.dart';
 
 enum HistoryFilter { all, favorites, rated, unrated }
@@ -30,6 +29,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final TextEditingController _searchController = TextEditingController();
   HistoryFilter _currentFilter = HistoryFilter.all;
+  bool _isSearchExpanded = false;
 
 
   @override
@@ -59,9 +59,16 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
       final timeFormat = DateFormat('hh:mm a');
       filteredSaves = filteredSaves.where((s) {
         final shortId = s.id.length >= 4 ? s.id.substring(0, 4) : s.id;
-        final name = (s.customName != null && s.customName!.isNotEmpty)
-            ? s.customName!.toLowerCase()
-            : 'untitled$shortId';
+        final String name;
+        if (s.isRatedMode) {
+          name = (s.customName != null && s.customName!.isNotEmpty)
+              ? s.customName!.toLowerCase()
+              : 'rated game $shortId';
+        } else {
+          name = (s.customName != null && s.customName!.isNotEmpty && s.customName != 'Arena Game')
+              ? s.customName!.toLowerCase()
+              : 'unrated id: ${s.id.toLowerCase()}';
+        }
         
         final formattedDate = dateFormat.format(s.savedAt).toLowerCase();
         final fullDate = fullDateFormat.format(s.savedAt).toLowerCase();
@@ -119,55 +126,98 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Row(
-                          children: [
-                            Expanded(child: _buildSearchBar()),
-                            if (state.savedGames.any((g) => !g.isRatedMode)) ...[
-                              const SizedBox(width: 12),
+                        if (_isSearchExpanded)
+                          Row(
+                            children: [
                               IconButton(
                                 icon: const Icon(
-                                  Icons.delete_sweep_rounded,
-                                  color: Colors.redAccent,
-                                  size: 24,
+                                  Icons.arrow_back_rounded,
+                                  color: ScholarlyTheme.textMuted,
+                                  size: 22,
                                 ),
-                                tooltip: 'Clear All',
                                 onPressed: () {
                                   ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                                  _confirmClearAll(context, notifier);
+                                  setState(() {
+                                    _isSearchExpanded = false;
+                                    _searchController.clear();
+                                  });
                                 },
                               ),
-                            ],
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          physics: const BouncingScrollPhysics(),
-                          child: Row(
-                            children: [
-                              _buildFilterTab('All', HistoryFilter.all),
-                              const SizedBox(width: 8),
-                              _buildFilterTab('Favorites', HistoryFilter.favorites),
-                              const SizedBox(width: 8),
-                              _buildFilterTab('Rated', HistoryFilter.rated),
-                              const SizedBox(width: 8),
-                              _buildFilterTab('Unrated', HistoryFilter.unrated),
-                              const SizedBox(width: 16),
-                              Text(
-                                  '${filteredSaves.length} matches',
-                                  style: GoogleFonts.inter(
+                              const SizedBox(width: 4),
+                              Expanded(child: _buildSearchBar()),
+                              if (_searchController.text.isNotEmpty) ...[
+                                const SizedBox(width: 4),
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.close_rounded,
                                     color: ScholarlyTheme.textMuted,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
+                                    size: 22,
                                   ),
+                                  onPressed: () {
+                                    ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                                    setState(() {
+                                      _searchController.clear();
+                                    });
+                                  },
                                 ),
                               ],
-                            ),
+                            ],
+                          )
+                        else
+                          Row(
+                            children: [
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.search_rounded,
+                                  color: ScholarlyTheme.textMuted,
+                                  size: 22,
+                                ),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                                onPressed: () {
+                                  ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                                  setState(() {
+                                    _isSearchExpanded = true;
+                                  });
+                                },
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Row(
+                                  children: [
+                                    Expanded(child: _buildFilterTab('All', HistoryFilter.all)),
+                                    const SizedBox(width: 4),
+                                    Expanded(child: _buildFilterTab('Favs', HistoryFilter.favorites)),
+                                    const SizedBox(width: 4),
+                                    Expanded(child: _buildFilterTab('Rated', HistoryFilter.rated)),
+                                    const SizedBox(width: 4),
+                                    Expanded(child: _buildFilterTab('Unrated', HistoryFilter.unrated)),
+                                  ],
+                                ),
+                              ),
+                              if (state.savedGames.any((g) => !g.isRatedMode)) ...[
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.delete_sweep_rounded,
+                                    color: Colors.redAccent,
+                                    size: 22,
+                                  ),
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(),
+                                  tooltip: 'Clear All',
+                                  onPressed: () {
+                                    ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                                    _confirmClearAll(context, notifier);
+                                  },
+                                ),
+                              ],
+                            ],
                           ),
-                        ],
-                      ),
+                      ],
                     ),
                   ),
+                ),
 
                 // Scrollable List
                 Expanded(
@@ -179,15 +229,29 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Icon(
-                                    Icons.history_rounded,
+                                    _currentFilter == HistoryFilter.favorites
+                                        ? Icons.star_rounded
+                                        : Icons.history_rounded,
                                     size: 64,
-                                    color: ScholarlyTheme.panelStroke,
+                                    color: _currentFilter == HistoryFilter.favorites
+                                        ? ScholarlyTheme.accentYellow.withValues(alpha: 0.5)
+                                        : ScholarlyTheme.panelStroke,
                                   ),
                                   const SizedBox(height: 16),
-                                  Text(
-                                    'No games found',
-                                    style: GoogleFonts.inter(
-                                      color: ScholarlyTheme.textMuted,
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                                    child: Text(
+                                      _currentFilter == HistoryFilter.favorites
+                                          ? 'Add games to favorites to analyze and study'
+                                          : 'No games found',
+                                      textAlign: TextAlign.center,
+                                      style: GoogleFonts.outfit(
+                                        color: ScholarlyTheme.textMuted,
+                                        fontSize: _currentFilter == HistoryFilter.favorites ? 16 : 14,
+                                        fontWeight: _currentFilter == HistoryFilter.favorites
+                                            ? FontWeight.w500
+                                            : FontWeight.normal,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -202,22 +266,15 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
                                 return Padding(
                                   padding: const EdgeInsets.only(bottom: 12),
                                   child: HistoryCard(
+                                    key: ValueKey(game.id),
                                     game: game,
                                     onTap: () {
-                                      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                                      if (game.isLockedForAnalysis) {
-                                        _showLockedGameOptions(context, game);
-                                      } else if (game.isRatedMode) {
-                                        ref.read(studyLabProvider.notifier).loadGameEntry(game);
-                                        ref.read(mobileNavIndexProvider.notifier).state = 4;
-                                        Navigator.of(context).popUntil(
-                                          (route) => route.isFirst,
-                                        );
-                                      } else if (game.result == null) {
-                                        _showActiveArenaOptions(context, game, notifier);
-                                      } else {
-                                        _showCompletedArenaOptions(context, game, notifier);
+                                      if (game.isRatedMode) {
+                                        // Rated games do nothing when clicked
+                                        return;
                                       }
+                                      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                                      _showArenaOptions(context, game, notifier);
                                     },
                                     onDelete: () {
                                       ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
@@ -265,7 +322,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
           color: isSelected
               ? activeColor.withValues(alpha: 0.15)
@@ -285,12 +342,17 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
                 ]
               : null,
         ),
-        child: Text(
-          label,
-          style: GoogleFonts.inter(
-            color: isSelected ? activeColor : ScholarlyTheme.textPrimary.withValues(alpha: 0.8),
-            fontSize: 12,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+        child: Center(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              label,
+              style: GoogleFonts.inter(
+                color: isSelected ? activeColor : ScholarlyTheme.textPrimary.withValues(alpha: 0.8),
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+              ),
+            ),
           ),
         ),
       ),
@@ -588,7 +650,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
     );
   }
 
-  void _showCompletedArenaOptions(
+  void _showArenaOptions(
     BuildContext context,
     SavedGameEntry game,
     ChessNotifier notifier,
@@ -610,466 +672,116 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
         child: JuicyGlassCard(
           borderRadius: 24,
           padding: const EdgeInsets.all(20),
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: ScholarlyTheme.accentBlue.withValues(alpha: 0.12),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.sports_esports_rounded,
-                        color: ScholarlyTheme.accentBlue,
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            game.customName?.isNotEmpty == true
-                                ? game.customName!
-                                : 'Completed Arena Game',
-                            style: GoogleFonts.outfit(
-                              color: ScholarlyTheme.textPrimary,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          Text(
-                            'Select how you want to interact with this match',
-                            style: GoogleFonts.inter(
-                              color: ScholarlyTheme.textMuted,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(
-                        Icons.close_rounded,
-                        color: ScholarlyTheme.textMuted,
-                        size: 20,
-                      ),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                // Option 1: REPLAY
-                InkWell(
-                  onTap: game.isLockedForAnalysis
-                      ? null
-                      : () {
-                          ref.read(arenaProvider.notifier).loadSavedGame(game);
-                          ref.read(mobileNavIndexProvider.notifier).state = 1;
-                          Navigator.pop(context); // Close bottom sheet
-                          Navigator.of(context).popUntil((route) => route.isFirst);
-                        },
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: game.isLockedForAnalysis
-                          ? Colors.black.withValues(alpha: 0.04)
-                          : Colors.white.withValues(alpha: 0.5),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: game.isLockedForAnalysis
-                            ? Colors.black.withValues(alpha: 0.08)
-                            : Colors.white.withValues(alpha: 0.8),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: game.isLockedForAnalysis
-                                ? Colors.grey.withValues(alpha: 0.15)
-                                : ScholarlyTheme.realGold.withValues(alpha: 0.15),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            game.isLockedForAnalysis ? Icons.lock_rounded : Icons.replay_rounded,
-                            color: game.isLockedForAnalysis ? Colors.grey : ScholarlyTheme.realGold,
-                            size: 24,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                game.isLockedForAnalysis ? 'REPLAY MATCH (LOCKED)' : 'REPLAY MATCH',
-                                style: GoogleFonts.outfit(
-                                  color: game.isLockedForAnalysis
-                                      ? ScholarlyTheme.textMuted
-                                      : ScholarlyTheme.textPrimary,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                game.isLockedForAnalysis
-                                    ? 'This match is locked for analysis and cannot be replayed.'
-                                    : 'Load into Arena, rewinding moves to try a different outcome.',
-                                style: GoogleFonts.inter(
-                                  color: ScholarlyTheme.textMuted,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Icon(
-                          Icons.chevron_right_rounded,
-                          color: ScholarlyTheme.textMuted,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                // Option 2: ANALYZE
-                InkWell(
-                  onTap: () async {
-                    ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                    if (!game.isLockedForAnalysis) {
-                      await notifier.lockGameForAnalysis(game.id);
-                    }
-                    ref.read(studyLabProvider.notifier).loadGameEntry(game);
-                    ref.read(mobileNavIndexProvider.notifier).state = 4;
-                    if (context.mounted) {
-                      Navigator.pop(context); // Close bottom sheet
-                      Navigator.of(context).popUntil((route) => route.isFirst);
-                    }
-                  },
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.5),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.8),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: ScholarlyTheme.accentBlue.withValues(alpha: 0.15),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.science_rounded,
-                            color: ScholarlyTheme.accentBlue,
-                            size: 24,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'ANALYZE BOARD',
-                                style: GoogleFonts.outfit(
-                                  color: ScholarlyTheme.textPrimary,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Explore moves, search variations, and use engine analysis.',
-                                style: GoogleFonts.inter(
-                                  color: ScholarlyTheme.textMuted,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Icon(
-                          Icons.chevron_right_rounded,
-                          color: ScholarlyTheme.textMuted,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                // Option 3: RENAME MATCH
-                InkWell(
-                  onTap: () {
-                    Navigator.pop(context); // Close bottom sheet
-                    _showRenameDialog(context, game.customName ?? 'Completed Arena Game', game.id, notifier);
-                  },
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.5),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.8)),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: ScholarlyTheme.accentBlue.withValues(alpha: 0.15),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.edit_rounded,
-                            color: ScholarlyTheme.accentBlue,
-                            size: 24,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'RENAME MATCH',
-                                style: GoogleFonts.outfit(
-                                  color: ScholarlyTheme.textPrimary,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Assign a custom name to this saved match.',
-                                style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 12),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Icon(Icons.chevron_right_rounded, color: ScholarlyTheme.textMuted),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                // Option 4: EXPORT / SHARE
-                InkWell(
-                  onTap: () {
-                    Navigator.pop(context); // Close bottom sheet
-                    _showExportOptions(context, game);
-                  },
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.5),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.8)),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: ScholarlyTheme.accentBlue.withValues(alpha: 0.15),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.share_rounded,
-                            color: ScholarlyTheme.accentBlue,
-                            size: 24,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'EXPORT / SHARE',
-                                style: GoogleFonts.outfit(
-                                  color: ScholarlyTheme.textPrimary,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Export the game as a PGN notation file or share it.',
-                                style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 12),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Icon(Icons.chevron_right_rounded, color: ScholarlyTheme.textMuted),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                // Option 5: DELETE GAME (unrated only)
-                InkWell(
-                  onTap: () {
-                    Navigator.pop(context); // Close bottom sheet
-                    _confirmDeleteGame(context, game, notifier);
-                  },
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.redAccent.withValues(alpha: 0.05),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.redAccent.withValues(alpha: 0.15)),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: Colors.redAccent.withValues(alpha: 0.15),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.delete_outline_rounded,
-                            color: Colors.redAccent,
-                            size: 24,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'DELETE GAME',
-                                style: GoogleFonts.outfit(
-                                  color: Colors.redAccent,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Permanently delete this unrated game from your archive.',
-                                style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 12),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Icon(Icons.chevron_right_rounded, color: Colors.redAccent),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showLockedGameOptions(BuildContext context, SavedGameEntry game) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Padding(
-        padding: EdgeInsets.fromLTRB(16, 16, 16, MediaQuery.of(context).padding.bottom + 20),
-        child: JuicyGlassCard(
-          borderRadius: 24,
-          padding: const EdgeInsets.all(20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.redAccent.withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.lock_rounded,
-                      color: Colors.redAccent,
-                      size: 24,
-                    ),
+
+              // Option 1: RESUME MATCH
+              InkWell(
+                onTap: () {
+                  ref.read(arenaProvider.notifier).loadSavedGame(game);
+                  ref.read(mobileNavIndexProvider.notifier).state = 1;
+                  Navigator.pop(context); // Close bottom sheet
+                  Navigator.of(context).popUntil((route) => route.isFirst);
+                },
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.8)),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          game.customName?.isNotEmpty == true ? game.customName! : 'Locked Game',
-                          style: GoogleFonts.outfit(
-                            color: ScholarlyTheme.textPrimary,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: ScholarlyTheme.accentBlue.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
                         ),
-                        Text(
-                          'Locked for Analysis',
-                          style: GoogleFonts.inter(
-                            color: ScholarlyTheme.textMuted,
-                            fontSize: 12,
-                          ),
+                        child: const Icon(
+                          Icons.play_arrow_rounded,
+                          color: ScholarlyTheme.accentBlue,
+                          size: 24,
                         ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'RESUME MATCH',
+                              style: GoogleFonts.outfit(
+                                color: ScholarlyTheme.textPrimary,
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Resume playing this match in the Arena.',
+                              style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right_rounded, color: ScholarlyTheme.textMuted),
+                    ],
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.close_rounded, color: ScholarlyTheme.textMuted, size: 20),
-                    onPressed: () => Navigator.pop(context),
+                ),
+              ),
+              const SizedBox(height: 12),
+              // Option 2: CANCEL
+              InkWell(
+                onTap: () => Navigator.pop(context),
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
                   ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              Text(
-                'This Arena game has been sent to the Analysis Board and is locked. It can no longer be played or resumed in the Arena.',
-                style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 13, height: 1.5),
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: FilledButton.icon(
-                  onPressed: () {
-                    ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                    ref.read(studyLabProvider.notifier).loadGameEntry(game);
-                    ref.read(mobileNavIndexProvider.notifier).state = 4;
-                    Navigator.pop(context); // Close bottom sheet
-                    Navigator.of(context).popUntil((route) => route.isFirst);
-                  },
-                  icon: const Icon(Icons.science_rounded),
-                  label: const Text('OPEN IN ANALYSIS BOARD'),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: ScholarlyTheme.accentBlue,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.close_rounded,
+                          color: Colors.grey,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'CANCEL',
+                              style: GoogleFonts.outfit(
+                                color: ScholarlyTheme.textMuted,
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Go back to the archive list.',
+                              style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right_rounded, color: ScholarlyTheme.textMuted),
+                    ],
                   ),
                 ),
               ),
@@ -1078,373 +790,5 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
         ),
       ),
     );
-  }
-
-  void _showActiveArenaOptions(BuildContext context, SavedGameEntry game, ChessNotifier notifier) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) => Padding(
-        padding: EdgeInsets.fromLTRB(16, 16, 16, MediaQuery.of(context).padding.bottom + 20),
-        child: JuicyGlassCard(
-          borderRadius: 24,
-          padding: const EdgeInsets.all(20),
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: ScholarlyTheme.accentBlue.withValues(alpha: 0.12),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.play_arrow_rounded,
-                        color: ScholarlyTheme.accentBlue,
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            game.customName?.isNotEmpty == true ? game.customName! : 'Active Arena Game',
-                            style: GoogleFonts.outfit(
-                              color: ScholarlyTheme.textPrimary,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          Text(
-                            'Choose an action for this active match',
-                            style: GoogleFonts.inter(
-                              color: ScholarlyTheme.textMuted,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close_rounded, color: ScholarlyTheme.textMuted, size: 20),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                // Option 1: RESUME MATCH
-                InkWell(
-                  onTap: () {
-                    ref.read(arenaProvider.notifier).loadSavedGame(game);
-                    ref.read(mobileNavIndexProvider.notifier).state = 1;
-                    Navigator.pop(context); // Close bottom sheet
-                    Navigator.of(context).popUntil((route) => route.isFirst);
-                  },
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.5),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.8)),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: ScholarlyTheme.accentBlue.withValues(alpha: 0.15),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.play_arrow_rounded,
-                            color: ScholarlyTheme.accentBlue,
-                            size: 24,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'RESUME MATCH',
-                                style: GoogleFonts.outfit(
-                                  color: ScholarlyTheme.textPrimary,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Resume playing this match in the Arena.',
-                                style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 12),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Icon(Icons.chevron_right_rounded, color: ScholarlyTheme.textMuted),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                // Option 2: ANALYZE BOARD
-                InkWell(
-                  onTap: () async {
-                    ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                    await notifier.lockGameForAnalysis(game.id);
-                    ref.read(studyLabProvider.notifier).loadGameEntry(game);
-                    ref.read(mobileNavIndexProvider.notifier).state = 4;
-                    if (context.mounted) {
-                      Navigator.pop(context); // Close bottom sheet
-                      Navigator.of(context).popUntil((route) => route.isFirst);
-                    }
-                  },
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.5),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.8)),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: ScholarlyTheme.accentGold.withValues(alpha: 0.15),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.science_rounded,
-                            color: ScholarlyTheme.accentGold,
-                            size: 24,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'SEND TO ANALYSIS',
-                                style: GoogleFonts.outfit(
-                                  color: ScholarlyTheme.textPrimary,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Lock this game and send it to the Analysis Board.',
-                                style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 12),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Icon(Icons.chevron_right_rounded, color: ScholarlyTheme.textMuted),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                // Option 3: RENAME GAME
-                InkWell(
-                  onTap: () {
-                    Navigator.pop(context); // Close bottom sheet
-                    _showRenameDialog(context, game.customName ?? 'Active Arena Game', game.id, notifier);
-                  },
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.5),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.8)),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: ScholarlyTheme.accentBlue.withValues(alpha: 0.15),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.edit_rounded,
-                            color: ScholarlyTheme.accentBlue,
-                            size: 24,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'RENAME GAME',
-                                style: GoogleFonts.outfit(
-                                  color: ScholarlyTheme.textPrimary,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Assign a custom name to this saved match.',
-                                style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 12),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Icon(Icons.chevron_right_rounded, color: ScholarlyTheme.textMuted),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                // Option 4: DELETE GAME (unrated only)
-                InkWell(
-                  onTap: () {
-                    Navigator.pop(context); // Close bottom sheet
-                    _confirmDeleteGame(context, game, notifier);
-                  },
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.redAccent.withValues(alpha: 0.05),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.redAccent.withValues(alpha: 0.15)),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: Colors.redAccent.withValues(alpha: 0.15),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.delete_outline_rounded,
-                            color: Colors.redAccent,
-                            size: 24,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'DELETE GAME',
-                                style: GoogleFonts.outfit(
-                                  color: Colors.redAccent,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Permanently delete this unrated game from your archive.',
-                                style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 12),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Icon(Icons.chevron_right_rounded, color: Colors.redAccent),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showRenameDialog(
-    BuildContext context,
-    String currentTitle,
-    String gameId,
-    ChessNotifier notifier,
-  ) {
-    final controller = TextEditingController(text: currentTitle);
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: ScholarlyTheme.panelBase,
-        title: const Text('Rename Game'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(hintText: 'Enter custom name'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-              notifier.renameSavedGame(gameId, controller.text);
-              Navigator.pop(context);
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _confirmDeleteGame(
-    BuildContext context,
-    SavedGameEntry game,
-    ChessNotifier notifier,
-  ) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: ScholarlyTheme.panelBase,
-        title: const Text('Delete Game?'),
-        content: const Text('This will permanently delete this game from your archive.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(
-              'Cancel',
-              style: TextStyle(color: ScholarlyTheme.textMuted),
-            ),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm == true) {
-      await notifier.deleteSavedGame(game.id);
-    }
   }
 }

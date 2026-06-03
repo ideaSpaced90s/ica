@@ -27,9 +27,16 @@ class SavedGameRepository {
       }
 
       final List<SavedGameEntry> saves = [];
+      final Set<String> seenIds = {};
       for (final item in decoded.whereType<Map>()) {
         try {
-          saves.add(SavedGameEntry.fromJson(Map<String, dynamic>.from(item)));
+          var entry = SavedGameEntry.fromJson(Map<String, dynamic>.from(item));
+          if (seenIds.contains(entry.id)) {
+            final newId = '${entry.id}_${saves.length}_${DateTime.now().microsecondsSinceEpoch}';
+            entry = entry.copyWith(id: newId);
+          }
+          seenIds.add(entry.id);
+          saves.add(entry);
         } catch (_) {
           // Skip malformed/outdated entry gracefully
         }
@@ -44,7 +51,12 @@ class SavedGameRepository {
 
   Future<List<SavedGameEntry>> save(SavedGameEntry entry) async {
     final saves = await listSaves();
-    saves.insert(0, entry);
+    final index = saves.indexWhere((e) => e.id == entry.id);
+    if (index != -1) {
+      saves[index] = entry;
+    } else {
+      saves.insert(0, entry);
+    }
     await writeAll(saves);
     return saves;
   }
