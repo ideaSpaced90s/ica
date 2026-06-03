@@ -1546,6 +1546,11 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
   Future<void> deleteSavedGame(String id) async {
     try {
+      final entry = state.savedGames.where((e) => e.id == id).firstOrNull;
+      if (entry != null && entry.isRatedMode) {
+        // Rated games cannot be deleted individually from the archive!
+        return;
+      }
       final saves = await _savedGameRepository.delete(id);
       state = state.copyWith(savedGames: saves);
       ref.read(battlegroundProvider.notifier).refreshDashboardStats();
@@ -1602,6 +1607,17 @@ class ChessNotifier extends StateNotifier<ChessState> {
       ref.read(battlegroundProvider.notifier).refreshDashboardStats();
     } catch (e) {
       debugPrint('Failed to clear history: $e');
+    }
+  }
+
+  Future<void> clearUnratedHistory() async {
+    try {
+      final ratedGames = state.savedGames.where((g) => g.isRatedMode).toList();
+      await _savedGameRepository.writeAll(ratedGames);
+      state = state.copyWith(savedGames: ratedGames);
+      ref.read(battlegroundProvider.notifier).refreshDashboardStats();
+    } catch (e) {
+      debugPrint('Failed to clear unrated history: $e');
     }
   }
 

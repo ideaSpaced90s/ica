@@ -224,10 +224,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     if (confirmed == true && context.mounted) {
       await ref.read(battlegroundProvider.notifier).resetRatedStats();
       await ref.read(tutorialProvider.notifier).resetAllProgress();
+      await ref.read(chessProvider.notifier).clearAllHistory();
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('All progress, rated stats, and tutorial records have been reset.'),
+            content: Text('All progress, rated stats, match history, and tutorial records have been reset.'),
             backgroundColor: Colors.redAccent,
           ),
         );

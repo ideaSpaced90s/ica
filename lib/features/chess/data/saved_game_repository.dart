@@ -45,14 +45,14 @@ class SavedGameRepository {
   Future<List<SavedGameEntry>> save(SavedGameEntry entry) async {
     final saves = await listSaves();
     saves.insert(0, entry);
-    await _writeAll(saves);
+    await writeAll(saves);
     return saves;
   }
 
   Future<List<SavedGameEntry>> delete(String id) async {
     final saves = await listSaves();
     saves.removeWhere((entry) => entry.id == id);
-    await _writeAll(saves);
+    await writeAll(saves);
     return saves;
   }
 
@@ -61,7 +61,7 @@ class SavedGameRepository {
     final index = saves.indexWhere((e) => e.id == entry.id);
     if (index != -1) {
       saves[index] = entry;
-      await _writeAll(saves);
+      await writeAll(saves);
     }
     return saves;
   }
@@ -73,7 +73,7 @@ class SavedGameRepository {
     }
   }
 
-  Future<void> _writeAll(List<SavedGameEntry> saves) async {
+  Future<void> writeAll(List<SavedGameEntry> saves) async {
     final file = await _getFile();
     await file.parent.create(recursive: true);
     final payload = saves.map((entry) => entry.toJson()).toList();

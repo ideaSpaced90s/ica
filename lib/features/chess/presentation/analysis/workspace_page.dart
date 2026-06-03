@@ -162,7 +162,7 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
     StudyLabNotifier notifier,
   ) {
     final chessState = ref.watch(chessProvider);
-    final eligibleGames = chessState.savedGames.where((s) => s.recentMoves.isNotEmpty).toList();
+    final eligibleGames = chessState.savedGames.where((s) => s.recentMoves.isNotEmpty && s.isFavorite).toList();
     final availableGames = eligibleGames.where((g) => !_pulledGameIds.contains(g.id)).toList();
 
     return SingleChildScrollView(
@@ -202,10 +202,10 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.library_books_rounded, size: 14, color: ScholarlyTheme.accentBlue),
+                    const Icon(Icons.favorite_rounded, size: 14, color: ScholarlyTheme.accentBlue),
                     const SizedBox(width: 4),
                     Text(
-                      'ARCHIVED GAMES (${availableGames.length})',
+                      'GAMES TO PULL (${availableGames.length})',
                       style: GoogleFonts.inter(
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
@@ -220,14 +220,25 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
                     ? Container(
                         padding: const EdgeInsets.all(24),
                         alignment: Alignment.center,
-                        child: Text(
-                          'No archived games to pull.',
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.inter(
-                            fontSize: 11,
-                            fontStyle: FontStyle.italic,
-                            color: ScholarlyTheme.textMuted,
-                          ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.favorite_border_rounded,
+                              size: 32,
+                              color: ScholarlyTheme.textMuted.withValues(alpha: 0.6),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              'Transfer few games to favorites to pull the game for analysis.',
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                color: ScholarlyTheme.textMuted,
+                              ),
+                            ),
+                          ],
                         ),
                       )
                     : ListView.separated(

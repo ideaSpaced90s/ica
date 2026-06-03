@@ -65,6 +65,7 @@ class JuicyGlassCard extends StatelessWidget {
   final double borderRadius;
   final Color? borderColor;
   final List<BoxShadow>? shadows;
+  final Color? backgroundColor;
 
   const JuicyGlassCard({
     super.key,
@@ -73,6 +74,7 @@ class JuicyGlassCard extends StatelessWidget {
     this.borderRadius = 16,
     this.borderColor,
     this.shadows,
+    this.backgroundColor,
   });
 
   @override
@@ -84,7 +86,7 @@ class JuicyGlassCard extends StatelessWidget {
         child: Container(
           padding: padding,
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.40),
+            color: backgroundColor ?? Colors.white.withValues(alpha: 0.40),
             borderRadius: BorderRadius.circular(borderRadius),
             border: Border.all(
               color: borderColor ?? Colors.white.withValues(alpha: 0.55),

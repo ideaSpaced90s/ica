@@ -53,6 +53,12 @@ class _HistoryCardState extends State<HistoryCard> {
       child: JuicyGlassCard(
         padding: EdgeInsets.zero,
         borderRadius: 16,
+        backgroundColor: widget.game.isRatedMode
+            ? ScholarlyTheme.realGold.withValues(alpha: 0.08)
+            : const Color(0xFF0D9488).withValues(alpha: 0.08),
+        borderColor: widget.game.isRatedMode
+            ? ScholarlyTheme.realGold.withValues(alpha: 0.25)
+            : const Color(0xFF0D9488).withValues(alpha: 0.25),
         child: InkWell(
           onTap: widget.onTap,
           onTapDown: (_) => setState(() => _scale = 0.98),
@@ -64,24 +70,24 @@ class _HistoryCardState extends State<HistoryCard> {
               children: [
                 // Mini Board Preview with colored border
                 Container(
-                  width: 80,
-                  height: 80,
+                  width: 50,
+                  height: 50,
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(8),
                     border: Border.all(
                       color: resultColor.withValues(alpha: 0.65),
-                      width: 1.5,
+                      width: 1.2,
                     ),
                     boxShadow: [
                       BoxShadow(
                         color: resultColor.withValues(alpha: 0.12),
-                        blurRadius: 8,
-                        spreadRadius: 1,
+                        blurRadius: 4,
+                        spreadRadius: 0.5,
                       ),
                     ],
                   ),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(8.5),
+                    borderRadius: BorderRadius.circular(6.8),
                     child: MiniBoardPreview(fen: widget.game.fen),
                   ),
                 ),
@@ -92,102 +98,66 @@ class _HistoryCardState extends State<HistoryCard> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              title,
-                              style: GoogleFonts.inter(
-                                color: ScholarlyTheme.textPrimary,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: widget.onToggleFavorite,
-                            child: Icon(
-                              widget.game.isFavorite
-                                  ? Icons.star_rounded
-                                  : Icons.star_outline_rounded,
-                              color: widget.game.isFavorite
-                                  ? ScholarlyTheme.accentYellow
-                                  : ScholarlyTheme.textMuted,
-                              size: 20,
-                            ),
-                          ),
-                        ],
+                      Text(
+                        title,
+                        style: GoogleFonts.inter(
+                          color: ScholarlyTheme.textPrimary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 2),
                       Text(
                         dateFormat.format(widget.game.savedAt),
                         style: GoogleFonts.inter(
                           color: ScholarlyTheme.textMuted,
-                          fontSize: 11,
+                          fontSize: 10,
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
-                        child: Row(
-                          children: [
-                            _buildTimeBadge(
-                              'W',
-                              Duration(milliseconds: widget.game.whiteTimeLeftMs),
-                            ),
-                            const SizedBox(width: 8),
-                            _buildTimeBadge(
-                              'B',
-                              Duration(milliseconds: widget.game.blackTimeLeftMs),
-                            ),
-                            const SizedBox(width: 8),
-                            _buildModeBadge(widget.game.isRatedMode),
-                            if (widget.game.result != null) ...[
-                              const SizedBox(width: 8),
-                              _buildResultBadge(widget.game.result!),
-                            ],
-                            if (widget.game.isLockedForAnalysis) ...[
-                              const SizedBox(width: 8),
-                              _buildLockedBadge(),
-                            ],
-                          ],
-                        ),
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        alignment: WrapAlignment.start,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          _buildTimeBadge(
+                            'W',
+                            Duration(milliseconds: widget.game.whiteTimeLeftMs),
+                          ),
+                          _buildTimeBadge(
+                            'B',
+                            Duration(milliseconds: widget.game.blackTimeLeftMs),
+                          ),
+                          _buildModeBadge(widget.game.isRatedMode),
+                          if (widget.game.result != null)
+                            _buildResultBadge(widget.game.result!),
+                          if (widget.game.isLockedForAnalysis)
+                            _buildLockedBadge(),
+                        ],
                       ),
                     ],
                   ),
                 ),
+                const SizedBox(width: 12),
 
-                // Actions
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.share_rounded, size: 18),
-                          color: ScholarlyTheme.accentBlue,
-                          onPressed: widget.onExport,
-                          tooltip: 'Export / Share',
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.edit_rounded, size: 18),
-                          color: ScholarlyTheme.accentBlue,
-                          onPressed: () => _showRenameDialog(context, title),
-                          tooltip: 'Rename',
-                        ),
-                      ],
+                // Only star button on the right side
+                GestureDetector(
+                  onTap: widget.onToggleFavorite,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 12.0),
+                    child: Icon(
+                      widget.game.isFavorite
+                          ? Icons.star_rounded
+                          : Icons.star_outline_rounded,
+                      color: widget.game.isFavorite
+                          ? ScholarlyTheme.accentYellow
+                          : ScholarlyTheme.textMuted,
+                      size: 24,
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline_rounded, size: 18),
-                      color: Colors.redAccent.withValues(alpha: 0.7),
-                      onPressed: widget.onDelete,
-                      tooltip: 'Delete',
-                    ),
-                  ],
+                  ),
                 ),
               ],
             ),
@@ -324,35 +294,6 @@ class _HistoryCardState extends State<HistoryCard> {
               fontSize: 9,
               fontWeight: FontWeight.bold,
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showRenameDialog(BuildContext context, String currentTitle) {
-    final controller = TextEditingController(text: currentTitle);
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: ScholarlyTheme.panelBase,
-        title: Text('Rename Game'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: InputDecoration(hintText: 'Enter custom name'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              widget.onRename(controller.text);
-              Navigator.pop(context);
-            },
-            child: Text('Save'),
           ),
         ],
       ),
