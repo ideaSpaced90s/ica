@@ -337,7 +337,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
                           : null,
                       child: const Icon(Icons.last_page_rounded),
                     ),
-                    Container(width: 1.5, height: 20, color: ScholarlyTheme.panelStroke.withValues(alpha: 0.5)),
+                    Container(width: 1.5, height: 24, color: ScholarlyTheme.panelStroke.withValues(alpha: 0.5)),
                     _CompactBoxButton(
                       tooltip: 'Flip Board',
                       activeColor: const Color(0xFFD500F9), // Vibrant Purple
@@ -405,7 +405,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
                           child: Text(_getGlyph(ann)),
                         );
                       }),
-                      Container(width: 1.5, height: 20, color: ScholarlyTheme.panelStroke.withValues(alpha: 0.5)),
+                      Container(width: 1.5, height: 24, color: ScholarlyTheme.panelStroke.withValues(alpha: 0.5)),
                       _CompactBoxButton(
                         tooltip: 'Add move comment',
                         activeColor: ScholarlyTheme.accentBlue,
@@ -718,8 +718,8 @@ class _CompactBoxButtonState extends State<_CompactBoxButton>
         child: ScaleTransition(
           scale: _scaleAnimation,
           child: Container(
-            width: 34,
-            height: 34,
+            width: 38,
+            height: 38,
             decoration: BoxDecoration(
               color: bgColor,
               borderRadius: BorderRadius.circular(8),
@@ -740,13 +740,13 @@ class _CompactBoxButtonState extends State<_CompactBoxButton>
             child: Center(
               child: IconTheme(
                 data: IconThemeData(
-                  size: 18,
+                  size: 22,
                   color: color,
                 ),
                 child: DefaultTextStyle(
                   style: GoogleFonts.inter(
                     fontWeight: FontWeight.bold,
-                    fontSize: 12,
+                    fontSize: 14,
                     color: color,
                   ),
                   child: widget.child,
