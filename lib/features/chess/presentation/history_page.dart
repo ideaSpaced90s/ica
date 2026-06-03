@@ -25,27 +25,49 @@ class HistoryPage extends ConsumerStatefulWidget {
   ConsumerState<HistoryPage> createState() => _HistoryPageState();
 }
 
-class _HistoryPageState extends ConsumerState<HistoryPage> {
+class _HistoryPageState extends ConsumerState<HistoryPage> with SingleTickerProviderStateMixin {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final TextEditingController _searchController = TextEditingController();
   HistoryFilter _currentFilter = HistoryFilter.all;
   bool _isSearchExpanded = false;
 
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
 
   @override
   void initState() {
     super.initState();
     Future.microtask(() => ref.read(chessProvider.notifier).loadSavedGames());
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    );
+    _pulseAnimation = Tween<double>(begin: 0.4, end: 1.0).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+    _pulseController.repeat(reverse: true);
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _pulseController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final activeTab = ref.watch(mobileNavIndexProvider);
+    if (activeTab == 6) {
+      if (!_pulseController.isAnimating) {
+        _pulseController.repeat(reverse: true);
+      }
+    } else {
+      if (_pulseController.isAnimating) {
+        _pulseController.stop();
+      }
+    }
+
     final state = ref.watch(chessProvider);
     final notifier = ref.read(chessProvider.notifier);
 
@@ -185,13 +207,11 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
                               Expanded(
                                 child: Row(
                                   children: [
-                                    Expanded(child: _buildFilterTab('All', HistoryFilter.all)),
-                                    const SizedBox(width: 4),
-                                    Expanded(child: _buildFilterTab('Favs', HistoryFilter.favorites)),
-                                    const SizedBox(width: 4),
-                                    Expanded(child: _buildFilterTab('Rated', HistoryFilter.rated)),
-                                    const SizedBox(width: 4),
-                                    Expanded(child: _buildFilterTab('Unrated', HistoryFilter.unrated)),
+                                    Expanded(child: _buildFilterTab('ALL', HistoryFilter.all)),
+                                    const SizedBox(width: 6),
+                                    Expanded(child: _buildFilterTab('FAV', HistoryFilter.favorites)),
+                                    const SizedBox(width: 6),
+                                    Expanded(child: _buildFilterTab('RATED', HistoryFilter.rated)),
                                   ],
                                 ),
                               ),
@@ -314,33 +334,68 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
     Color activeColor = ScholarlyTheme.accentBlue;
     if (filter == HistoryFilter.rated) activeColor = ScholarlyTheme.realGold; // Real gold from theme
     if (filter == HistoryFilter.unrated) activeColor = const Color(0xFF0D9488); // Modern teal
+    if (filter == HistoryFilter.favorites) activeColor = const Color(0xFF10B981); // Emerald green
 
-    return GestureDetector(
+    final Color bgColor;
+    final Color borderColor;
+    final Color textColor;
+    final List<BoxShadow>? shadow;
+
+    if (filter == HistoryFilter.favorites) {
+      bgColor = isSelected
+          ? activeColor.withValues(alpha: 0.18)
+          : activeColor.withValues(alpha: 0.08);
+      borderColor = isSelected
+          ? activeColor
+          : activeColor.withValues(alpha: 0.4);
+      textColor = isSelected
+          ? activeColor
+          : activeColor.withValues(alpha: 0.8);
+      shadow = [
+        BoxShadow(
+          color: activeColor.withValues(alpha: isSelected ? 0.25 : 0.1),
+          blurRadius: isSelected ? 12 : 8,
+          offset: const Offset(0, 2),
+        )
+      ];
+    } else {
+      bgColor = isSelected
+          ? activeColor.withValues(alpha: 0.15)
+          : Colors.white.withValues(alpha: 0.35);
+      borderColor = isSelected
+          ? activeColor
+          : Colors.white.withValues(alpha: 0.5);
+      textColor = isSelected
+          ? activeColor
+          : ScholarlyTheme.textPrimary.withValues(alpha: 0.8);
+      shadow = isSelected
+          ? [
+              BoxShadow(
+                color: activeColor.withValues(alpha: 0.2),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              )
+            ]
+          : null;
+    }
+
+    final Widget tabContent = GestureDetector(
       onTap: () {
         ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
         setState(() => _currentFilter = filter);
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected
-              ? activeColor.withValues(alpha: 0.15)
-              : Colors.white.withValues(alpha: 0.35),
+          color: bgColor,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? activeColor : Colors.white.withValues(alpha: 0.5),
+            color: borderColor,
             width: 1.5,
           ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: activeColor.withValues(alpha: 0.2),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  )
-                ]
-              : null,
+          boxShadow: shadow,
         ),
         child: Center(
           child: FittedBox(
@@ -348,8 +403,8 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
             child: Text(
               label,
               style: GoogleFonts.inter(
-                color: isSelected ? activeColor : ScholarlyTheme.textPrimary.withValues(alpha: 0.8),
-                fontSize: 11,
+                color: textColor,
+                fontSize: 13,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
               ),
             ),
@@ -357,6 +412,15 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
         ),
       ),
     );
+
+    if (filter == HistoryFilter.favorites) {
+      return FadeTransition(
+        opacity: _pulseAnimation,
+        child: tabContent,
+      );
+    }
+
+    return tabContent;
   }
 
   Widget _buildSearchBar() {
