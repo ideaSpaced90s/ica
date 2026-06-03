@@ -42,25 +42,7 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
     _workspaceTabIndex = widget.initialTabIndex;
   }
 
-  int _getMoveNumberFromFen(String fen) {
-    final parts = fen.split(' ');
-    if (parts.length >= 6) {
-      return int.tryParse(parts[5]) ?? 1;
-    }
-    return 1;
-  }
 
-  String _getNAGSymbol(MoveAnnotation a) {
-    switch (a) {
-      case MoveAnnotation.brilliant: return '!!';
-      case MoveAnnotation.good: return '!';
-      case MoveAnnotation.interesting: return '!?';
-      case MoveAnnotation.dubious: return '?!';
-      case MoveAnnotation.mistake: return '?';
-      case MoveAnnotation.blunder: return '??';
-      default: return '';
-    }
-  }
 
 
 
@@ -74,22 +56,18 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
 
     switch (_workspaceTabIndex) {
       case 0:
-        title = 'MOVE TREE';
-        overlayBody = _buildMoveTreeOverlayTab(context, state, notifier);
-        break;
-      case 1:
         title = 'IMPORT / EXPORT';
         overlayBody = _buildImpoExpoOverlayTab(context, state, notifier);
         break;
-      case 2:
+      case 1:
         title = 'GAME LIBRARY';
         overlayBody = _buildGameLibraryOverlayTab(context, state, notifier);
         break;
-      case 3:
+      case 2:
         title = 'SPARRING';
         overlayBody = const PracticeModePanel();
         break;
-      case 4:
+      case 3:
         title = 'GAME REPORT';
         overlayBody = const GameReportPanel();
         break;
@@ -108,7 +86,7 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
           ),
           onPressed: () {
             ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-            if (_workspaceTabIndex == 3) {
+            if (_workspaceTabIndex == 2) {
               final practiceState = ref.read(practiceLabProvider);
               if (practiceState.isSessionActive) {
                 final studyState = ref.read(studyLabProvider);
@@ -127,7 +105,7 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
           ),
         ),
         centerTitle: true,
-        actions: _workspaceTabIndex == 4
+        actions: _workspaceTabIndex == 3
             ? [
                 Builder(
                   builder: (context) {
@@ -176,272 +154,7 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
     );
   }
 
-  Widget _buildMoveTreeOverlayTab(
-    BuildContext context,
-    StudyLabState state,
-    StudyLabNotifier notifier,
-  ) {
-    final List<Widget> moveChips = [];
-    _buildMoveTreeChips(state, notifier, null, moveChips, 0);
 
-    return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
-      child: JuicyGlassCard(
-        padding: const EdgeInsets.all(16),
-        borderRadius: 16,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.schema_rounded, size: 16, color: ScholarlyTheme.accentBlue),
-                const SizedBox(width: 6),
-                Text(
-                  'STUDY LAB FLOW',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: ScholarlyTheme.accentBlue,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-                const Spacer(),
-                if (state.commentary != null)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: ScholarlyTheme.accentBlue.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.25)),
-                    ),
-                    child: Text(
-                      state.commentary!,
-                      style: GoogleFonts.inter(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: ScholarlyTheme.accentBlue,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            moveChips.isEmpty
-                ? Container(
-                    padding: const EdgeInsets.all(24),
-                    alignment: Alignment.center,
-                    child: Text(
-                      'No moves played yet. Play some moves on the board to build a variation tree!',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        color: ScholarlyTheme.textMuted,
-                      ),
-                    ),
-                  )
-                : Wrap(
-                    spacing: 6.0,
-                    runSpacing: 10.0,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: moveChips,
-                  ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _buildMoveTreeChips(
-    StudyLabState state,
-    StudyLabNotifier notifier,
-    int? parentIdx,
-    List<Widget> chips,
-    int depth,
-  ) {
-    final children = state.nodes.where((n) => n.parentIndex == parentIdx).toList();
-    if (children.isEmpty) return;
-
-    final mainNode = children.first;
-    final moveNumber = _getMoveNumberFromFen(mainNode.fen);
-    final isWhite = !mainNode.fen.contains(' b ');
-
-    if (isWhite) {
-      chips.add(Text(' $moveNumber.', style: GoogleFonts.jetBrainsMono(color: ScholarlyTheme.textMuted, fontSize: 13, fontWeight: FontWeight.bold)));
-    } else if (parentIdx == null) {
-      chips.add(Text(' ${moveNumber - 1}...', style: GoogleFonts.jetBrainsMono(color: ScholarlyTheme.textMuted, fontSize: 13, fontWeight: FontWeight.bold)));
-    }
-
-    final isCurrent = state.currentNodeIndex == mainNode.index;
-    final String glyph = _getNAGSymbol(mainNode.annotation);
-
-    chips.add(
-      GestureDetector(
-        onTap: () {
-          notifier.selectNode(mainNode.index);
-          ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-        },
-        onLongPress: () {
-          _showMoveChipContextMenu(context, mainNode, notifier);
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-          decoration: BoxDecoration(
-            color: isCurrent ? ScholarlyTheme.accentBlue : Colors.transparent,
-            borderRadius: BorderRadius.circular(4),
-            border: Border.all(
-              color: isCurrent ? ScholarlyTheme.accentBlue : Colors.transparent,
-              width: 1.5,
-            ),
-          ),
-          child: Text(
-            '${mainNode.san}$glyph',
-            style: GoogleFonts.inter(
-              color: isCurrent ? Colors.white : ScholarlyTheme.textPrimary,
-              fontWeight: isCurrent ? FontWeight.bold : FontWeight.w600,
-              fontSize: 13,
-            ),
-          ),
-        ),
-      ),
-    );
-
-    for (int i = 1; i < children.length; i++) {
-      final sideNode = children[i];
-      chips.add(Text(' (', style: GoogleFonts.inter(color: ScholarlyTheme.textSubtle, fontSize: 13)));
-
-      final isSideCurrent = state.currentNodeIndex == sideNode.index;
-      final String sideGlyph = _getNAGSymbol(sideNode.annotation);
-
-      chips.add(
-        GestureDetector(
-          onTap: () {
-            notifier.selectNode(sideNode.index);
-            ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-          },
-          onLongPress: () {
-            _showMoveChipContextMenu(context, sideNode, notifier);
-          },
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              color: isSideCurrent ? ScholarlyTheme.accentBlue : Colors.transparent,
-              borderRadius: BorderRadius.circular(4),
-              border: Border.all(
-                color: isSideCurrent ? ScholarlyTheme.accentBlue : Colors.transparent,
-                width: 1.5,
-              ),
-            ),
-            child: Text(
-              '${sideNode.san}$sideGlyph',
-              style: GoogleFonts.inter(
-                color: isSideCurrent ? Colors.white : ScholarlyTheme.textPrimary,
-                fontWeight: isSideCurrent ? FontWeight.bold : FontWeight.w600,
-                fontSize: 13,
-              ),
-            ),
-          ),
-        ),
-      );
-
-      _buildMoveTreeChips(state, notifier, sideNode.index, chips, depth + 1);
-      chips.add(Text(')', style: GoogleFonts.inter(color: ScholarlyTheme.textSubtle, fontSize: 13)));
-    }
-
-    _buildMoveTreeChips(state, notifier, mainNode.index, chips, depth);
-  }
-
-  void _showMoveChipContextMenu(BuildContext context, StudyLabMoveNode node, StudyLabNotifier notifier) {
-    ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: ScholarlyTheme.panelBase,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
-        ),
-      ),
-      builder: (context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Text(
-                  'Options for ${node.san}',
-                  style: GoogleFonts.outfit(
-                    fontWeight: FontWeight.bold,
-                    color: ScholarlyTheme.textPrimary,
-                    fontSize: 16,
-                  ),
-                ),
-              ),
-              const Divider(color: ScholarlyTheme.panelStroke),
-              ListTile(
-                leading: const Icon(Icons.star_border_rounded, color: ScholarlyTheme.accentBlue),
-                title: Text('Promote to Mainline', style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary)),
-                onTap: () {
-                  notifier.promoteVariation(node.index);
-                  Navigator.pop(context);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
-                title: Text('Delete Variation', style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary)),
-                onTap: () {
-                  notifier.deleteCurrentNode();
-                  Navigator.pop(context);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.comment_outlined, color: Colors.teal),
-                title: Text('Edit Comment', style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary)),
-                onTap: () {
-                  Navigator.pop(context);
-                  _showCommentEditDialog(context, node, notifier);
-                },
-              ),
-              const SizedBox(height: 8),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void _showCommentEditDialog(BuildContext context, StudyLabMoveNode node, StudyLabNotifier notifier) {
-    final controller = TextEditingController(text: node.comment);
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: ScholarlyTheme.panelBase,
-          title: Text('Edit comment for ${node.san}', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-          content: TextField(
-            controller: controller,
-            maxLines: 3,
-            decoration: const InputDecoration(
-              hintText: 'Type comment...',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-            ElevatedButton(
-              onPressed: () {
-                notifier.updateComment(controller.text);
-                Navigator.pop(context);
-              },
-              child: const Text('Save'),
-            ),
-          ],
-        );
-      },
-    );
-  }
 
   Widget _buildImpoExpoOverlayTab(
     BuildContext context,

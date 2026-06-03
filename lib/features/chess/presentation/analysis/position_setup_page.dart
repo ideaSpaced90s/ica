@@ -274,7 +274,7 @@ class _PositionSetupPageState extends ConsumerState<PositionSetupPage> {
         backgroundColor: ScholarlyTheme.backgroundStart,
         elevation: 0,
         title: Text(
-          'Position Setup',
+          'Board Editor',
           style: GoogleFonts.outfit(
             fontWeight: FontWeight.bold,
             color: ScholarlyTheme.textPrimary,
