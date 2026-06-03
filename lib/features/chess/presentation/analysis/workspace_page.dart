@@ -12,6 +12,7 @@ import '../scholarly_theme.dart';
 import '../../application/study_lab_provider.dart';
 import '../../application/chess_provider.dart';
 import '../../services/chess_sound_service.dart';
+import '../../application/analysis_engine_controller.dart';
 import 'widgets/game_report_panel.dart';
 import 'widgets/practice_mode_panel.dart';
 
@@ -114,6 +115,41 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
           ),
         ),
         centerTitle: true,
+        actions: _workspaceTabIndex == 4
+            ? [
+                Builder(
+                  builder: (context) {
+                    final engineState = ref.watch(analysisEngineControllerProvider);
+                    final hasReport = engineState.classifications.isNotEmpty;
+                    if (!hasReport || engineState.isAnalyzing) {
+                      return const SizedBox.shrink();
+                    }
+                    return Container(
+                      margin: const EdgeInsets.only(right: 12),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: ScholarlyTheme.panelStroke),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: IconButton(
+                        icon: const Icon(
+                          Icons.analytics_outlined,
+                          color: ScholarlyTheme.textPrimary,
+                          size: 20,
+                        ),
+                        tooltip: 'Re-Analyze Game',
+                        onPressed: () {
+                          final studyLabState = ref.read(studyLabProvider);
+                          ref.read(analysisEngineControllerProvider.notifier).classifyFullGame(
+                                studyLabState.nodes,
+                                studyLabState.startFen,
+                              );
+                        },
+                      ),
+                    );
+                  },
+                ),
+              ]
+            : null,
       ),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
