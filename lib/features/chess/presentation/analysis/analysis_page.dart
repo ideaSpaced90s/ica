@@ -633,14 +633,6 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
               },
               tooltip: 'Position Editor',
             ),
-            IconButton(
-              icon: const Icon(Icons.edit_note_rounded, color: Colors.deepOrangeAccent, size: 28),
-              onPressed: () {
-                ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                _showMetadataDialog(context, state, notifier);
-              },
-              tooltip: 'Game Headers',
-            ),
           ],
         ),
       ),
@@ -648,86 +640,6 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
   }
 
   // Workspace pages refactored to workspace_page.dart
-
-  void _showMetadataDialog(BuildContext context, StudyLabState state, StudyLabNotifier notifier) {
-    final eventController = TextEditingController(text: state.metadata.event);
-    final siteController = TextEditingController(text: state.metadata.site);
-    final dateController = TextEditingController(text: state.metadata.date);
-    final whiteController = TextEditingController(text: state.metadata.white);
-    final blackController = TextEditingController(text: state.metadata.black);
-    final whiteEloController = TextEditingController(text: state.metadata.whiteElo?.toString() ?? '');
-    final blackEloController = TextEditingController(text: state.metadata.blackElo?.toString() ?? '');
-    final resultController = TextEditingController(text: state.metadata.result);
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: ScholarlyTheme.panelBase,
-          title: Text('Edit PGN Headers', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary)),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildDialogField(eventController, 'Event'),
-                _buildDialogField(siteController, 'Site'),
-                _buildDialogField(dateController, 'Date (YYYY.MM.DD)'),
-                _buildDialogField(whiteController, 'White Player'),
-                _buildDialogField(whiteEloController, 'White Elo', isNumeric: true),
-                _buildDialogField(blackController, 'Black Player'),
-                _buildDialogField(blackEloController, 'Black Elo', isNumeric: true),
-                _buildDialogField(resultController, 'Result (*, 1-0, 0-1, 1/2-1/2)'),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('Cancel', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted)),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: ScholarlyTheme.accentBlue),
-              onPressed: () {
-                final metadata = GameMetadata(
-                  event: eventController.text,
-                  site: siteController.text,
-                  date: dateController.text,
-                  white: whiteController.text,
-                  black: blackController.text,
-                  whiteElo: int.tryParse(whiteEloController.text),
-                  blackElo: int.tryParse(blackEloController.text),
-                  result: resultController.text,
-                  eco: state.metadata.eco,
-                  opening: state.metadata.opening,
-                );
-                notifier.setMetadata(metadata);
-                Navigator.pop(context);
-              },
-              child: Text('Save', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildDialogField(TextEditingController controller, String label, {bool isNumeric = false}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6.0),
-      child: TextField(
-        controller: controller,
-        keyboardType: isNumeric ? TextInputType.number : TextInputType.text,
-        style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary),
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle: GoogleFonts.inter(color: ScholarlyTheme.textMuted),
-          filled: true,
-          fillColor: ScholarlyTheme.panelBase,
-          border: const OutlineInputBorder(),
-        ),
-      ),
-    );
-  }
 
 }
 

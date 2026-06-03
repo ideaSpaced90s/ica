@@ -1081,6 +1081,62 @@ class StudyLabNotifier extends StateNotifier<StudyLabState> {
     final dbPath = await _getDbPath();
     return rust_pgn.clearAllStudies(dbPath: dbPath);
   }
+
+  Future<bool> updateStudyHeadersInLibrary(int indexToEdit, rust_pgn.PgnGameHeader updatedHeader) async {
+    final dbPath = await _getDbPath();
+    final games = await loadGamesFromLibrary();
+    
+    if (indexToEdit < 0 || indexToEdit >= games.length) return false;
+
+    // Clear all studies
+    await clearLibrary();
+
+    var success = true;
+    for (var i = 0; i < games.length; i++) {
+      final game = games[i];
+      final header = i == indexToEdit ? updatedHeader : game.header;
+
+      final updatedRecord = rust_pgn.PgnGameRecord(
+        header: header,
+        movesPgn: game.movesPgn,
+        index: game.index,
+      );
+
+      final saveOk = rust_pgn.saveStudyToDb(dbPath: dbPath, game: updatedRecord);
+      if (!saveOk) {
+        success = false;
+      }
+    }
+    return success;
+  }
+
+  Future<bool> deleteStudyFromLibrary(int indexToDelete) async {
+    final dbPath = await _getDbPath();
+    final games = await loadGamesFromLibrary();
+    
+    if (indexToDelete < 0 || indexToDelete >= games.length) return false;
+
+    // Clear all studies
+    await clearLibrary();
+
+    var success = true;
+    for (var i = 0; i < games.length; i++) {
+      if (i == indexToDelete) continue;
+      
+      final game = games[i];
+      final record = rust_pgn.PgnGameRecord(
+        header: game.header,
+        movesPgn: game.movesPgn,
+        index: game.index,
+      );
+
+      final saveOk = rust_pgn.saveStudyToDb(dbPath: dbPath, game: record);
+      if (!saveOk) {
+        success = false;
+      }
+    }
+    return success;
+  }
 }
 
 final studyLabProvider = StateNotifierProvider<StudyLabNotifier, StudyLabState>((ref) {

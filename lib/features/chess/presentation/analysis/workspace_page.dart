@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'dart:convert';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -6,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:kingslayer_chess/src/rust/api/pgn_db.dart' as rust_pgn;
+import 'package:archive/archive.dart';
 
 import '../widgets/ambient_scaffold.dart';
 import '../scholarly_theme.dart';
@@ -463,7 +466,7 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
                   subtitle: 'Save to Downloads',
                   icon: Icons.file_download_rounded,
                   color: Colors.teal,
-                  onTap: () => _exportPgnToDownloads(context, notifier),
+                  onTap: () => _showExportSelectionDialog(context, notifier),
                 ),
               ),
             ],
@@ -480,7 +483,7 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
                     const Icon(Icons.library_books_rounded, size: 14, color: ScholarlyTheme.accentBlue),
                     const SizedBox(width: 4),
                     Text(
-                      'AVAILABLE SAVED GAMES (${availableGames.length})',
+                      'ARCHIVED GAMES (${availableGames.length})',
                       style: GoogleFonts.inter(
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
@@ -496,7 +499,7 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
                         padding: const EdgeInsets.all(24),
                         alignment: Alignment.center,
                         child: Text(
-                          'No available saved games to pull.',
+                          'No archived games to pull.',
                           textAlign: TextAlign.center,
                           style: GoogleFonts.inter(
                             fontSize: 11,
@@ -528,14 +531,20 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
                             trailing: TextButton.icon(
                               icon: const Icon(Icons.download_rounded, size: 14),
                               label: const Text('Pull'),
-                              onPressed: () {
+                              onPressed: () async {
                                 notifier.loadGameEntry(g);
                                 setState(() {
                                   _pulledGameIds.add(g.id);
                                 });
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Game loaded into study workspace!'), backgroundColor: Colors.green),
-                                );
+                                final gameName = g.customName != null && g.customName!.isNotEmpty
+                                    ? g.customName!
+                                    : 'Saved Game #${g.id.substring(0, 4)}';
+                                await notifier.saveCurrentGameToLibrary(gameName);
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Game loaded into study workspace and library!'), backgroundColor: Colors.green),
+                                  );
+                                }
                               },
                             ),
                           );
@@ -603,9 +612,15 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
 
       notifier.importPgn(pgnText);
 
+      final state = ref.read(studyLabProvider);
+      final eventName = state.metadata.event.isNotEmpty 
+          ? state.metadata.event 
+          : 'Imported PGN Game';
+      await notifier.saveCurrentGameToLibrary(eventName);
+
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('PGN Imported Successfully!'), backgroundColor: Colors.green),
+          const SnackBar(content: Text('PGN Imported and Saved to Library!'), backgroundColor: Colors.green),
         );
       }
     } catch (e) {
@@ -621,16 +636,103 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
     }
   }
 
-  Future<void> _exportPgnToDownloads(BuildContext context, StudyLabNotifier notifier) async {
-    try {
-      final pgnText = notifier.exportToPgn();
-      if (pgnText.isEmpty || pgnText == '[]') {
+  Future<void> _showExportSelectionDialog(BuildContext context, StudyLabNotifier notifier) async {
+    final records = await notifier.loadGamesFromLibrary();
+    if (records.isEmpty) {
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No moves to export!'), backgroundColor: Colors.orangeAccent),
+          const SnackBar(
+            content: Text('No saved studies in library to export! Please save a study first.'),
+            backgroundColor: Colors.orangeAccent,
+          ),
         );
-        return;
       }
+      return;
+    }
 
+    if (!context.mounted) return;
+
+    final selectedIndices = <int>{};
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: ScholarlyTheme.panelBase,
+              title: Text(
+                'Select Studies to Export',
+                style: GoogleFonts.outfit(
+                  fontWeight: FontWeight.bold,
+                  color: ScholarlyTheme.textPrimary,
+                ),
+              ),
+              content: SizedBox(
+                width: double.maxFinite,
+                height: 300,
+                child: ListView.separated(
+                  itemCount: records.length,
+                  separatorBuilder: (c, idx) => const Divider(color: ScholarlyTheme.panelStroke, height: 1),
+                  itemBuilder: (c, idx) {
+                    final r = records[idx];
+                    final isChecked = selectedIndices.contains(idx);
+                    return CheckboxListTile(
+                      activeColor: ScholarlyTheme.accentBlue,
+                      title: Text(
+                        r.header.event,
+                        style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13),
+                      ),
+                      subtitle: Text(
+                        'ECO: ${r.header.eco} | White: ${r.header.white} | Black: ${r.header.black}',
+                        style: GoogleFonts.inter(fontSize: 10, color: ScholarlyTheme.textMuted),
+                      ),
+                      value: isChecked,
+                      onChanged: (val) {
+                        setDialogState(() {
+                          if (val == true) {
+                            selectedIndices.add(idx);
+                          } else {
+                            selectedIndices.remove(idx);
+                          }
+                        });
+                      },
+                    );
+                  },
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text('Cancel', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted)),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: ScholarlyTheme.accentBlue,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onPressed: selectedIndices.isEmpty
+                      ? null
+                      : () {
+                          Navigator.pop(ctx);
+                          final chosenRecords = selectedIndices.map((i) => records[i]).toList();
+                          _performExport(context, chosenRecords);
+                        },
+                  child: Text(
+                    'Export (${selectedIndices.length})',
+                    style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _performExport(BuildContext context, List<rust_pgn.PgnGameRecord> games) async {
+    try {
       Directory? directory;
       if (Platform.isAndroid) {
         directory = Directory('/storage/emulated/0/Download');
@@ -645,24 +747,66 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
       directory ??= await getApplicationDocumentsDirectory();
 
       final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
-      final path = '${directory.path}/kingslayer_study_$timestamp.pgn';
-      final file = File(path);
-      await file.writeAsString(pgnText);
 
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('PGN exported to: $path', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 4),
-          ),
+      if (games.length == 1) {
+        final record = games.first;
+        final pgnText = rust_pgn.exportPgnWithHeaders(
+          header: record.header,
+          annotatedPgn: record.movesPgn,
         );
+
+        final fileName = '${record.header.event.replaceAll(RegExp(r"[^\w\s\-]"), '_')}_$timestamp.pgn';
+        final file = File('${directory.path}/$fileName');
+        await file.writeAsString(pgnText);
+
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('PGN exported to: ${file.path}', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        final archive = Archive();
+
+        for (final record in games) {
+          final pgnText = rust_pgn.exportPgnWithHeaders(
+            header: record.header,
+            annotatedPgn: record.movesPgn,
+          );
+          final pgnBytes = utf8.encode(pgnText);
+          final safeName = '${record.header.event.replaceAll(RegExp(r"[^\w\s\-]"), '_')}.pgn';
+          
+          archive.addFile(
+            ArchiveFile(
+              safeName,
+              pgnBytes.length,
+              pgnBytes,
+            ),
+          );
+        }
+
+        final zipBytes = ZipEncoder().encode(archive);
+
+        final zipFileName = 'kingslayer_export_$timestamp.zip';
+        final file = File('${directory.path}/$zipFileName');
+        await file.writeAsBytes(zipBytes);
+
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Exported ZIP containing ${games.length} PGNs to: ${file.path}', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
       }
     } catch (e) {
-      debugPrint('PGN Export failed: $e');
+      debugPrint('Export failed: $e');
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('PGN Export failed: $e'), backgroundColor: Colors.redAccent),
+          SnackBar(content: Text('Export failed: $e'), backgroundColor: Colors.redAccent),
         );
       }
     }
@@ -736,87 +880,12 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
                             ),
                             itemBuilder: (context, index) {
                               final record = records[index];
-                              return Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: ScholarlyTheme.accentBlue.withValues(alpha: 0.1),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Icon(Icons.bookmark_added, color: ScholarlyTheme.accentBlue, size: 18),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          record.header.event,
-                                          style: GoogleFonts.inter(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
-                                            color: ScholarlyTheme.textPrimary,
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          'ECO: ${record.header.eco} | Moves: ${record.movesPgn.split(' ').where((m) => m.isNotEmpty && !m.contains('.')).length}',
-                                          style: GoogleFonts.inter(
-                                            fontSize: 10,
-                                            color: ScholarlyTheme.textMuted,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.folder_open_rounded, color: ScholarlyTheme.accentBlue, size: 20),
-                                    onPressed: () {
-                                      notifier.loadPgnRecord(record);
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text('Study "${record.header.event}" loaded!', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-                                          backgroundColor: Colors.green,
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
-                                    onPressed: () async {
-                                      // Note: Individual record deletion is not supported by the Rust bridge.
-                                      // For now, show a confirmation to clear ALL studies.
-                                      final confirmed = await showDialog<bool>(
-                                        context: context,
-                                        builder: (ctx) => AlertDialog(
-                                          backgroundColor: ScholarlyTheme.panelBase,
-                                          title: Text('Clear Library?', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary)),
-                                          content: Text('This will remove ALL saved studies from the library. Individual deletion is not yet supported.', style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 13)),
-                                          actions: [
-                                            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Cancel', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted))),
-                                            FilledButton(
-                                              onPressed: () => Navigator.pop(ctx, true),
-                                              style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
-                                              child: Text('Clear All', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
-                                            ),
-                                          ],
-                                        ),
-                                      );
-                                      if (confirmed == true) {
-                                        await notifier.clearLibrary();
-                                        setState(() {});
-                                        if (context.mounted) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(content: Text('Library cleared.'), backgroundColor: Colors.orangeAccent),
-                                          );
-                                        }
-                                      }
-                                    },
-                                  ),
-                                ],
+                              return GameLibraryCardWidget(
+                                record: record,
+                                index: index,
+                                notifier: notifier,
+                                onRefresh: () => setState(() {}),
+                                onEdit: _promptEditStudyHeaders,
                               );
                             },
                           ),
@@ -870,4 +939,451 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
       },
     );
   }
+
+  void _promptEditStudyHeaders(BuildContext context, StudyLabNotifier notifier, int index, rust_pgn.PgnGameRecord record) {
+    final eventController = TextEditingController(text: record.header.event);
+    final siteController = TextEditingController(text: record.header.site);
+    final dateController = TextEditingController(text: record.header.date);
+    final whiteController = TextEditingController(text: record.header.white);
+    final blackController = TextEditingController(text: record.header.black);
+    final whiteEloController = TextEditingController(text: record.header.whiteElo?.toString() ?? '');
+    final blackEloController = TextEditingController(text: record.header.blackElo?.toString() ?? '');
+    final resultController = TextEditingController(text: record.header.result);
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: ScholarlyTheme.panelBase,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: ScholarlyTheme.panelStroke, width: 1.5),
+          ),
+          title: Text(
+            'Edit PGN Headers',
+            style: GoogleFonts.outfit(
+              fontWeight: FontWeight.bold,
+              color: ScholarlyTheme.textPrimary,
+            ),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildDialogField(eventController, 'Event / Name'),
+                _buildDialogField(siteController, 'Site'),
+                _buildDialogField(dateController, 'Date (YYYY.MM.DD)'),
+                _buildDialogField(whiteController, 'White Player'),
+                _buildDialogField(whiteEloController, 'White Elo', isNumeric: true),
+                _buildDialogField(blackController, 'Black Player'),
+                _buildDialogField(blackEloController, 'Black Elo', isNumeric: true),
+                _buildDialogField(resultController, 'Result (*, 1-0, 0-1, 1/2-1/2)'),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'Cancel',
+                style: GoogleFonts.inter(color: ScholarlyTheme.textMuted),
+              ),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: ScholarlyTheme.accentBlue,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              onPressed: () async {
+                final newHeader = rust_pgn.PgnGameHeader(
+                  event: eventController.text.trim().isEmpty ? 'Study' : eventController.text.trim(),
+                  site: siteController.text.trim(),
+                  date: dateController.text.trim(),
+                  white: whiteController.text.trim(),
+                  black: blackController.text.trim(),
+                  whiteElo: int.tryParse(whiteEloController.text.trim()),
+                  blackElo: int.tryParse(blackEloController.text.trim()),
+                  result: resultController.text.trim(),
+                  eco: record.header.eco,
+                  opening: record.header.opening,
+                );
+
+                await notifier.updateStudyHeadersInLibrary(index, newHeader);
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  setState(() {});
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('PGN headers updated successfully!'), backgroundColor: Colors.green),
+                  );
+                }
+              },
+              child: Text(
+                'Save',
+                style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildDialogField(TextEditingController controller, String label, {bool isNumeric = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6.0),
+      child: TextField(
+        controller: controller,
+        keyboardType: isNumeric ? TextInputType.number : TextInputType.text,
+        style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary),
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: GoogleFonts.inter(color: ScholarlyTheme.textMuted),
+          filled: true,
+          fillColor: ScholarlyTheme.panelBase,
+          border: const OutlineInputBorder(),
+          enabledBorder: const OutlineInputBorder(
+            borderSide: BorderSide(color: ScholarlyTheme.panelStroke),
+          ),
+          focusedBorder: const OutlineInputBorder(
+            borderSide: BorderSide(color: ScholarlyTheme.accentBlue),
+          ),
+        ),
+      ),
+    );
+  }
 }
+
+class GameLibraryCardWidget extends StatefulWidget {
+  final rust_pgn.PgnGameRecord record;
+  final int index;
+  final StudyLabNotifier notifier;
+  final VoidCallback onRefresh;
+  final void Function(BuildContext, StudyLabNotifier, int, rust_pgn.PgnGameRecord) onEdit;
+
+  const GameLibraryCardWidget({
+    super.key,
+    required this.record,
+    required this.index,
+    required this.notifier,
+    required this.onRefresh,
+    required this.onEdit,
+  });
+
+  @override
+  State<GameLibraryCardWidget> createState() => _GameLibraryCardWidgetState();
+}
+
+class _GameLibraryCardWidgetState extends State<GameLibraryCardWidget>
+    with SingleTickerProviderStateMixin {
+  bool _showDeleteBin = false;
+  late AnimationController _animController;
+  late Animation<double> _flipAnimation;
+  late Animation<double> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _flipAnimation = Tween<double>(begin: -math.pi / 2, end: 0.0).animate(
+      CurvedAnimation(parent: _animController, curve: Curves.easeOutBack),
+    );
+    _slideAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
+  }
+
+  void _toggleDeleteBin() {
+    setState(() {
+      _showDeleteBin = !_showDeleteBin;
+      if (_showDeleteBin) {
+        _animController.forward();
+      } else {
+        _animController.reverse();
+      }
+    });
+  }
+
+  String _buildDetailsText() {
+    final hasWhite = widget.record.header.white.isNotEmpty && widget.record.header.white != '?';
+    final hasBlack = widget.record.header.black.isNotEmpty && widget.record.header.black != '?';
+    final moveCount = widget.record.movesPgn.split(' ').where((m) => m.isNotEmpty && !m.contains('.')).length;
+    
+    String details = '';
+    if (hasWhite || hasBlack) {
+      final wName = hasWhite ? widget.record.header.white : 'Unknown';
+      final bName = hasBlack ? widget.record.header.black : 'Unknown';
+      details += '$wName vs $bName';
+      if (widget.record.header.result.isNotEmpty && widget.record.header.result != '?') {
+        details += ' (${widget.record.header.result})';
+      }
+      details += ' | ';
+    }
+    
+    details += 'Moves: $moveCount';
+    
+    if (widget.record.header.eco.isNotEmpty && widget.record.header.eco != '?') {
+      details += ' | ECO: ${widget.record.header.eco}';
+    }
+    if (widget.record.header.date.isNotEmpty && widget.record.header.date != '?') {
+      details += ' | ${widget.record.header.date}';
+    }
+    return details;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        // Background track (revealed during swipe)
+        Positioned.fill(
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.redAccent.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.redAccent.withValues(alpha: 0.3), width: 1),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            alignment: Alignment.centerLeft,
+            child: Row(
+              children: [
+                const Icon(Icons.delete_sweep_rounded, color: Colors.redAccent, size: 22),
+                const SizedBox(width: 8),
+                Text(
+                  'Release to delete...',
+                  style: GoogleFonts.inter(
+                    color: Colors.redAccent, 
+                    fontWeight: FontWeight.bold, 
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        
+        // The swipable card
+        Dismissible(
+          key: ValueKey('library-game-${widget.record.index}-${widget.index}'),
+          direction: _showDeleteBin ? DismissDirection.startToEnd : DismissDirection.none,
+          onDismissed: (_) async {
+            // Handled in confirmDismiss
+          },
+          confirmDismiss: (direction) async {
+            final confirmed = await showDialog<bool>(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                backgroundColor: ScholarlyTheme.panelBase,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: const BorderSide(color: ScholarlyTheme.panelStroke, width: 1.5),
+                ),
+                title: Text(
+                  'Delete Study?',
+                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary),
+                ),
+                content: Text(
+                  'Are you sure you want to delete "${widget.record.header.event}" from your library? This cannot be undone.',
+                  style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 13),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx, false),
+                    child: Text('Cancel', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted)),
+                  ),
+                  FilledButton(
+                    onPressed: () => Navigator.pop(ctx, true),
+                    style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+                    child: Text('Delete', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+            );
+
+            if (confirmed == true) {
+              final ok = await widget.notifier.deleteStudyFromLibrary(widget.index);
+              if (ok) {
+                widget.onRefresh();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Study deleted successfully!', style: TextStyle(fontWeight: FontWeight.bold)),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+                return true;
+              }
+            }
+            
+            // Cancel swipe and hide bin
+            setState(() {
+              _showDeleteBin = false;
+              _animController.reverse();
+            });
+            return false;
+          },
+          child: GestureDetector(
+            onLongPress: _toggleDeleteBin,
+            onTap: () {
+              if (!_showDeleteBin) {
+                widget.notifier.loadPgnRecord(widget.record);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Study "${widget.record.header.event}" loaded!', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                  Navigator.pop(context);
+                }
+              } else {
+                _toggleDeleteBin();
+              }
+            },
+            child: JuicyGlassCard(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              borderRadius: 12,
+              borderColor: _showDeleteBin 
+                  ? Colors.redAccent.withValues(alpha: 0.5) 
+                  : ScholarlyTheme.panelStroke.withValues(alpha: 0.3),
+              child: Row(
+                children: [
+                  if (_showDeleteBin) ...[
+                    const Icon(Icons.arrow_forward_rounded, color: Colors.redAccent, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Flip right to delete',
+                      style: GoogleFonts.inter(
+                        color: Colors.redAccent,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ] else ...[
+                    // Metadata Details
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.record.header.event,
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: ScholarlyTheme.textPrimary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            _buildDetailsText(),
+                            style: GoogleFonts.inter(
+                              fontSize: 10,
+                              color: ScholarlyTheme.textMuted,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    
+                    // Action buttons: Open & Edit (Always clean and premium)
+                    IconButton(
+                      icon: const Icon(Icons.folder_open_rounded, color: ScholarlyTheme.accentBlue, size: 20),
+                      tooltip: 'Open Study',
+                      onPressed: () {
+                        widget.notifier.loadPgnRecord(widget.record);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Study "${widget.record.header.event}" loaded!', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                          Navigator.pop(context);
+                        }
+                      },
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.edit_outlined, color: Colors.teal, size: 20),
+                      tooltip: 'Edit Headers',
+                      onPressed: () => widget.onEdit(context, widget.notifier, widget.index, widget.record),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+
+        // Flip-right trash bin overlay (anchored to the right)
+        if (_showDeleteBin)
+          Positioned(
+            right: 12,
+            top: 0,
+            bottom: 0,
+            child: AnimatedBuilder(
+              animation: _animController,
+              builder: (context, child) {
+                // Y-rotation flip animation: -pi/2 (90deg, flat/orthogonal) to 0 (0deg, facing forward)
+                final angle = _flipAnimation.value;
+                // Fade in based on slide animation
+                final opacity = _slideAnimation.value;
+                // Scale effect
+                final scale = 0.5 + (0.5 * _slideAnimation.value);
+
+                return Opacity(
+                  opacity: opacity,
+                  child: Transform(
+                    transform: Matrix4.identity()
+                      ..setEntry(3, 2, 0.002) // Perspective depth
+                      ..rotateY(angle)
+                      ..scaleByDouble(scale, scale, 1.0, 1.0),
+                    alignment: Alignment.centerRight,
+                    child: Center(
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.redAccent.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.redAccent, width: 1.5),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.redAccent.withValues(alpha: 0.2),
+                              blurRadius: 8,
+                              spreadRadius: 1,
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.delete_forever_rounded,
+                          color: Colors.redAccent,
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+      ],
+    );
+  }
+}
+
