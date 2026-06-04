@@ -106,7 +106,8 @@ class ThemeRegistry {
     'sprite_plasma': const SpriteChessTheme(
       id: 'sprite_plasma',
       name: 'Plasma',
-      individualPiecesFolder: 'assets/pieces/energy',
+      individualPiecesFolder: 'assets/pieces/energy-webP',
+      pieceExtension: 'webp',
       boardImagePath: 'assets/board/plasma.png',
       lightSquare: Color(0xFF0D1117),
       darkSquare: Color(0xFF0D2440),

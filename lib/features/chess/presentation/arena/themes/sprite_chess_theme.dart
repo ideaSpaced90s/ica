@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import '../../shared/themes/chess_theme.dart';
+import '../../shared/widgets/chess_piece_widget.dart';
 
 class SpriteChessTheme extends ChessTheme {
   final String? spritePath;
   final String? individualPiecesFolder;
+  final String pieceExtension;
   @override
   final String? boardImagePath;
   @override
@@ -18,6 +20,7 @@ class SpriteChessTheme extends ChessTheme {
     required super.name,
     this.spritePath,
     this.individualPiecesFolder,
+    this.pieceExtension = 'png',
     this.boardImagePath,
     required this.lightSquare,
     required this.darkSquare,
@@ -86,10 +89,25 @@ class SpriteChessTheme extends ChessTheme {
           typeStr = id == 'sprite_fairytale' ? 'pawn_hammer' : 'pawn';
           break;
       }
+      int variantIndex = 0;
+      try {
+        final widget = context.widget;
+        if (widget is ChessPieceWidget) {
+          final square = widget.squareName;
+          if (square.length >= 2) {
+            variantIndex = (square.codeUnitAt(0) + square.codeUnitAt(1)) % 3;
+          }
+        }
+      } catch (_) {}
+
+      final assetPath = pieceExtension == 'webp'
+          ? '$individualPiecesFolder/${colorStr}_${typeStr}_$variantIndex.$pieceExtension'
+          : '$individualPiecesFolder/${colorStr}_$typeStr.$pieceExtension';
+
       return AspectRatio(
         aspectRatio: 1.0,
         child: Image.asset(
-          '$individualPiecesFolder/${colorStr}_$typeStr.png',
+          assetPath,
           fit: BoxFit.contain,
           filterQuality: FilterQuality.high,
         ),

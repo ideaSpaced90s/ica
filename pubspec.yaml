@@ -94,6 +94,7 @@ flutter:
     - assets/pieces/royal/
     - assets/pieces/rootpieces/
     - assets/pieces/energy/
+    - assets/pieces/energy-webP/
     - assets/pieces/forrest/
     - assets/persona/
     - assets/sfx/
