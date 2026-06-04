@@ -15,10 +15,20 @@ class VectorChessTheme extends ChessTheme {
   });
 
   @override
-  Color get lightSquare => packageTheme.lightSquare;
+  Color get lightSquare {
+    if (id == 'vector_wood') {
+      return const Color(0xFFEAD8C3); // Lighter, creamy maple/oak color for better contrast
+    }
+    return packageTheme.lightSquare;
+  }
 
   @override
-  Color get darkSquare => packageTheme.darkSquare;
+  Color get darkSquare {
+    if (id == 'vector_wood') {
+      return const Color(0xFF6B4527); // Darker rich walnut/rosewood color that contrasts with the mahogany outlines
+    }
+    return packageTheme.darkSquare;
+  }
 
   @override
   Color get lightCoordinateColor => packageTheme.darkSquare.withValues(alpha: 0.8);
@@ -102,17 +112,6 @@ class VectorChessTheme extends ChessTheme {
       );
     }
 
-    if (id == 'vector_steel') {
-      return AspectRatio(
-        aspectRatio: 1.0,
-        child: Image.asset(
-          _fairytalePiecePath(type, isWhite),
-          fit: BoxFit.contain,
-          filterQuality: FilterQuality.high,
-        ),
-      );
-    }
-
     if (id == 'vector_glass' || id == 'vector_championship' || id == 'rated_bnw') {
       final rowIndex = isWhite ? 0 : 1;
       int colIndex;
@@ -167,23 +166,6 @@ class VectorChessTheme extends ChessTheme {
       theme: packageTheme,
       size: 48.0,
     );
-  }
-
-  String _fairytalePiecePath(String type, bool isWhite) {
-    final colorStr = isWhite ? 'white' : 'black';
-    String typeStr;
-    switch (type.toUpperCase()) {
-      case 'K': typeStr = 'king'; break;
-      case 'Q': typeStr = 'queen'; break;
-      case 'B': typeStr = 'bishop'; break;
-      case 'N': typeStr = 'knight'; break;
-      case 'R': typeStr = 'rook'; break;
-      case 'P':
-      default:
-        typeStr = 'pawn_hammer';
-        break;
-    }
-    return 'assets/pieces/fairytale_castle/${colorStr}_$typeStr.png';
   }
 
   @override

@@ -10,11 +10,21 @@ class ArcChessTheme extends SpriteChessTheme {
           name: 'Arc',
           individualPiecesFolder: 'assets/pieces/arc-webP',
           pieceExtension: 'webp',
-          boardImagePath: 'assets/board/arc.png',
           lightSquare: const Color(0xFFE4DAC3), // Warm antique ivory
           darkSquare: const Color(0xFF1C343A),  // Deep teal
           frameColor: const Color(0xFFC3A555),  // Gold trim
         );
+
+  @override
+  Widget buildBackground(BuildContext context, bool animationsEnabled) {
+    return Container(
+      color: const Color(0xFF0F1E22), // Solid space/deep teal background
+      child: CustomPaint(
+        painter: ArcBackgroundPainter(),
+        size: Size.infinite,
+      ),
+    );
+  }
 
   // Per-piece blink speed multipliers against the 2-second animation cycle
   static const Map<String, double> _speeds = {
@@ -113,4 +123,42 @@ class ArcChessTheme extends SpriteChessTheme {
       ),
     );
   }
+}
+
+class ArcBackgroundPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..color = const Color(0xFFC3A555).withValues(alpha: 0.08) // Soft gold
+      ..strokeWidth = 1.2;
+
+    final center = Offset(size.width / 2, size.height / 2);
+    
+    // Draw concentric orbital paths
+    canvas.drawCircle(center, size.width * 0.15, paint);
+    canvas.drawCircle(center, size.width * 0.32, paint);
+    canvas.drawCircle(center, size.width * 0.45, paint);
+    
+    // Draw crosshair axes lines
+    canvas.drawLine(Offset(0, size.height / 2), Offset(size.width, size.height / 2), paint);
+    canvas.drawLine(Offset(size.width / 2, 0), Offset(size.width / 2, size.height), paint);
+
+    // Draw little tick marks in corners
+    final tickLen = size.width * 0.04;
+    canvas.drawLine(Offset(tickLen, tickLen), Offset(tickLen * 2, tickLen), paint);
+    canvas.drawLine(Offset(tickLen, tickLen), Offset(tickLen, tickLen * 2), paint);
+    
+    canvas.drawLine(Offset(size.width - tickLen, tickLen), Offset(size.width - tickLen * 2, tickLen), paint);
+    canvas.drawLine(Offset(size.width - tickLen, tickLen), Offset(size.width - tickLen, tickLen * 2), paint);
+
+    canvas.drawLine(Offset(tickLen, size.height - tickLen), Offset(tickLen * 2, size.height - tickLen), paint);
+    canvas.drawLine(Offset(tickLen, size.height - tickLen), Offset(tickLen, size.height - tickLen * 2), paint);
+
+    canvas.drawLine(Offset(size.width - tickLen, size.height - tickLen), Offset(size.width - tickLen * 2, size.height - tickLen), paint);
+    canvas.drawLine(Offset(size.width - tickLen, size.height - tickLen), Offset(size.width - tickLen, size.height - tickLen * 2), paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant ArcBackgroundPainter oldDelegate) => false;
 }

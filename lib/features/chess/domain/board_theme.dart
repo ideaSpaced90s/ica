@@ -73,7 +73,7 @@ class BoardTheme {
       lightSquare: Color(0xFFFDF6E2), // Cream
       darkSquare: Color(0xFF7BCBFC), // Sky Blue
       frameColor: Color(0xFF0F172A), // Darker Slate/Navy Frame
-      pieceSetAsset: 'assets/board/sample2.png',
+      pieceSetAsset: 'assets/pieces/rootpieces/ideaspaceclassicchesssprite2.png',
     ),
     BoardTheme(
       id: 'sprite_arc',

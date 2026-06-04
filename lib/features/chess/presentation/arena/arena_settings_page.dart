@@ -308,22 +308,17 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
                                     aspectRatio: 1.0,
                                     child: Container(
                                       decoration: BoxDecoration(
-                                        image: theme.boardImagePath != null
-                                            ? DecorationImage(
-                                                image: AssetImage(theme.boardImagePath!),
-                                                fit: BoxFit.cover,
-                                              )
-                                            : null,
-                                        gradient: theme.boardImagePath == null
-                                            ? LinearGradient(
-                                                colors: [
-                                                  theme.lightSquare,
-                                                  theme.darkSquare,
-                                                ],
-                                                begin: Alignment.topLeft,
-                                                end: Alignment.bottomRight,
-                                              )
-                                            : null,
+                                        // Always use monochrome gradient — never the board PNG.
+                                        // PNG-board themes showed the full chessboard texture as
+                                        // the card background which clashed with the knight face.
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            theme.lightSquare,
+                                            theme.darkSquare,
+                                          ],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                        ),
                                         borderRadius: BorderRadius.circular(16),
                                         border: Border.all(
                                           color: isSelected
@@ -788,19 +783,12 @@ class _ThemeMiniPreview extends StatelessWidget {
       width: 32,
       height: 32,
       decoration: BoxDecoration(
-        image: theme.boardImagePath != null
-            ? DecorationImage(
-                image: AssetImage(theme.boardImagePath!),
-                fit: BoxFit.cover,
-              )
-            : null,
-        gradient: theme.boardImagePath == null
-            ? LinearGradient(
-                colors: [theme.lightSquare, theme.darkSquare],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              )
-            : null,
+        // Always use monochrome gradient, never the board PNG image.
+        gradient: LinearGradient(
+          colors: [theme.lightSquare, theme.darkSquare],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: ScholarlyTheme.panelStroke),
       ),

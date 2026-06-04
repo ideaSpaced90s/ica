@@ -12,6 +12,11 @@ import 'vector_chess_theme.dart';
 import 'bnw_theme.dart';
 import 'sprite_chess_theme.dart';
 import 'arc_theme.dart';
+import 'seasons_theme.dart';
+import 'lightning_theme.dart';
+import 'plasma_theme.dart';
+import 'overgrown_theme.dart';
+import 'fairytale_theme.dart';
 import '../../../application/chess_provider.dart';
 
 class ThemeRegistry {
@@ -45,16 +50,10 @@ class ThemeRegistry {
       name: 'Sand',
       packageTheme: assets_lib.ChessThemes.egyptianSand,
     ),
-    'vector_steel': const VectorChessTheme(
-      id: 'vector_steel',
-      name: 'Castleworld',
-      packageTheme: assets_lib.ChessThemes.fairytaleCastle,
-    ),
     'sprite_bubblegum': const SpriteChessTheme(
       id: 'sprite_bubblegum',
       name: 'Bubblegum',
       individualPiecesFolder: 'assets/pieces/bubblegum',
-      boardImagePath: 'assets/board/bubblegum.png',
       lightSquare: Color(0xFFF0E6FF),
       darkSquare: Color(0xFF7C3AED),
       frameColor: Color(0xFF4C1D95),
@@ -63,35 +62,16 @@ class ThemeRegistry {
       id: 'sprite_copper',
       name: 'Copper',
       individualPiecesFolder: 'assets/pieces/copper',
-      boardImagePath: 'assets/board/copper.png',
       lightSquare: Color(0xFFFFF0E8),
       darkSquare: Color(0xFFB87333),
       frameColor: Color(0xFF7C4A1A),
     ),
-    'sprite_plasma': const SpriteChessTheme(
-      id: 'sprite_plasma',
-      name: 'Plasma',
-      individualPiecesFolder: 'assets/pieces/energy-webP',
-      pieceExtension: 'webp',
-      boardImagePath: 'assets/board/plasma.png',
-      lightSquare: Color(0xFF0D1117),
-      darkSquare: Color(0xFF0D2440),
-      frameColor: Color(0xFF00BFFF),
-    ),
-    'sprite_overgrown': const SpriteChessTheme(
-      id: 'sprite_overgrown',
-      name: 'Overgrown',
-      individualPiecesFolder: 'assets/pieces/forrest',
-      boardImagePath: 'assets/board/overgrown.png',
-      lightSquare: Color(0xFFE8F5E9),
-      darkSquare: Color(0xFF2E7D32),
-      frameColor: Color(0xFF1B5E20),
-    ),
+    'sprite_plasma': const PlasmaChessTheme(),
+    'sprite_overgrown': const OvergrownChessTheme(),
     'sprite_goldsilver': const SpriteChessTheme(
       id: 'sprite_goldsilver',
       name: 'Silver & Gold',
       individualPiecesFolder: 'assets/pieces/goldnsilver',
-      boardImagePath: 'assets/board/goldsilver.png',
       lightSquare: Color(0xFFF8F8F0),
       darkSquare: Color(0xFF1C1C1C),
       frameColor: Color(0xFF8B6914),
@@ -100,16 +80,14 @@ class ThemeRegistry {
       id: 'sprite_marble',
       name: 'Marble',
       individualPiecesFolder: 'assets/pieces/marble',
-      boardImagePath: 'assets/board/marble.png',
-      lightSquare: Color(0xFFF5F5F0),
-      darkSquare: Color(0xFF1A1A1A),
+      lightSquare: Color(0xFFFAF9F6),
+      darkSquare: Color(0xFFB4B4B4),
       frameColor: Color(0xFFC9A84C),
     ),
     'sprite_desert': const SpriteChessTheme(
       id: 'sprite_desert',
       name: 'Desert',
       individualPiecesFolder: 'assets/pieces/sandmud',
-      boardImagePath: 'assets/board/desert.png',
       lightSquare: Color(0xFFF5DEB3),
       darkSquare: Color(0xFF8B6914),
       frameColor: Color(0xFF5C3A1E),
@@ -118,45 +96,25 @@ class ThemeRegistry {
       id: 'sprite_ivory',
       name: 'Ivory',
       individualPiecesFolder: 'assets/pieces/silky',
-      boardImagePath: 'assets/board/ivory.png',
       lightSquare: Color(0xFFFAF6F0),
       darkSquare: Color(0xFF2C2C2C),
       frameColor: Color(0xFFA09080),
     ),
-    'sprite_seasons': const SpriteChessTheme(
-      id: 'sprite_seasons',
-      name: 'Seasons',
-      individualPiecesFolder: 'assets/pieces/summernautumn',
-      boardImagePath: 'assets/board/seasons.png',
-      lightSquare: Color(0xFFFEFAE0),
-      darkSquare: Color(0xFF6B4F2A),
-      frameColor: Color(0xFF3D2B1F),
-    ),
+    'sprite_seasons': const SeasonsChessTheme(),
     'sprite_timber': const SpriteChessTheme(
       id: 'sprite_timber',
       name: 'Timber',
       individualPiecesFolder: 'assets/pieces/woodyy',
-      boardImagePath: 'assets/board/timber.png',
       lightSquare: Color(0xFFFAEBD7),
       darkSquare: Color(0xFF5C3317),
       frameColor: Color(0xFF3B1F0A),
     ),
-    'sprite_lightning': const SpriteChessTheme(
-      id: 'sprite_lightning',
-      name: 'Lightning',
-      individualPiecesFolder: 'assets/pieces/lightening-webP',
-      pieceExtension: 'webp',
-      boardImagePath: 'assets/board/lightning.png',
-      lightSquare: Color(0xFFE2F1FF),
-      darkSquare: Color(0xFF0A1128),
-      frameColor: Color(0xFF00E5FF),
-    ),
+    'sprite_lightning': const LightningChessTheme(),
     'sprite_diamonds': const SpriteChessTheme(
       id: 'sprite_diamonds',
       name: 'Diamonds',
       individualPiecesFolder: 'assets/pieces/diamonds-webP',
       pieceExtension: 'webp',
-      boardImagePath: 'assets/board/diamonds.png',
       lightSquare: Color(0xFFE0F7FA),
       darkSquare: Color(0xFF006064),
       frameColor: Color(0xFF80DEEA),
@@ -165,20 +123,11 @@ class ThemeRegistry {
       id: 'sprite_royal',
       name: 'Royal',
       individualPiecesFolder: 'assets/pieces/royal',
-      boardImagePath: 'assets/board/royal.png',
-      lightSquare: Color(0xFFFFF8E1),
-      darkSquare: Color(0xFF4A148C),
+      lightSquare: Color(0xFFF5EFEB),
+      darkSquare: Color(0xFF13223C),
       frameColor: Color(0xFFD4AF37),
     ),
-    'sprite_fairytale': const SpriteChessTheme(
-      id: 'sprite_fairytale',
-      name: 'Fairytale',
-      individualPiecesFolder: 'assets/pieces/fairytale_castle',
-      boardImagePath: 'assets/board/fairytale.png',
-      lightSquare: Color(0xFFE7DEC9),
-      darkSquare: Color(0xFF5C5346),
-      frameColor: Color(0xFF3E3930),
-    ),
+    'sprite_fairytale': const FairytaleChessTheme(),
     'sprite_arc': const ArcChessTheme(),
   };
 
@@ -187,32 +136,38 @@ class ThemeRegistry {
   }
 
   static List<ChessTheme> get allThemes => [
-        _themes['classic']!, // 1x1
-        _themes['scholar']!, // 2x1
-        _themes['theme4']!,
-        _themes['vector_championship']!,
-        _themes['vector_wood']!,
-        _themes['theme10']!,
-        _themes['theme2']!,
-        _themes['theme3']!,
-        _themes['vector_egyptian']!,
-        _themes['theme5']!,
-        _themes['vector_glass']!,
-        _themes['vector_steel']!, // 3x7
-        _themes['sprite_bubblegum']!,
+        // Pinned Top 4 Themes
+        _themes['classic']!,
+        _themes['scholar']!,
+        _themes['vector_glass']!, // BnW
+        _themes['vector_championship']!, // Champions
+
+        // Reshuffled / Jumbled Middle Themes
+        _themes['theme2']!, // Forest
         _themes['sprite_copper']!,
-        _themes['sprite_plasma']!,
+        _themes['theme3']!, // Calligraphy
         _themes['sprite_overgrown']!,
+        _themes['vector_wood']!, // Wood
+        _themes['sprite_ivory']!,
+        _themes['theme5']!, // Steampunk
+        _themes['sprite_seasons']!,
+        _themes['vector_egyptian']!, // Sand
+        _themes['sprite_timber']!,
+        _themes['theme4']!, // Platinum Metallic
+        _themes['sprite_fairytale']!,
+        _themes['theme10']!, // Shadow High-Contrast
+        _themes['sprite_royal']!,
+        _themes['sprite_bubblegum']!,
         _themes['sprite_goldsilver']!,
         _themes['sprite_marble']!,
         _themes['sprite_desert']!,
-        _themes['sprite_ivory']!,
-        _themes['sprite_seasons']!,
-        _themes['sprite_timber']!,
+
+        // WebP pieces sorted towards end
+        _themes['sprite_plasma']!,
         _themes['sprite_lightning']!,
         _themes['sprite_diamonds']!,
-        _themes['sprite_royal']!,
-        _themes['sprite_fairytale']!,
+
+        // Arc always at the very end
         _themes['sprite_arc']!,
       ];
 

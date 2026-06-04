@@ -81,7 +81,6 @@ flutter:
     - assets/pieces/classic_svg/
     - assets/pieces/fairytale_castle/
     - assets/pieces/bubblegum/
-    - assets/board/
     - assets/pieces/copper/
     - assets/pieces/goldnsilver/
     - assets/pieces/marble/

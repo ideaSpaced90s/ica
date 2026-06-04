@@ -7,7 +7,7 @@ class SpriteChessTheme extends ChessTheme {
   final String? individualPiecesFolder;
   final String pieceExtension;
   @override
-  final String? boardImagePath;
+  String? get boardImagePath => null;
   @override
   final Color lightSquare;
   @override
@@ -21,7 +21,6 @@ class SpriteChessTheme extends ChessTheme {
     this.spritePath,
     this.individualPiecesFolder,
     this.pieceExtension = 'png',
-    this.boardImagePath,
     required this.lightSquare,
     required this.darkSquare,
     required this.frameColor,
@@ -35,13 +34,6 @@ class SpriteChessTheme extends ChessTheme {
 
   @override
   Widget buildBackground(BuildContext context, bool animationsEnabled) {
-    if (boardImagePath != null) {
-      return Image.asset(
-        boardImagePath!,
-        fit: BoxFit.fill,
-        filterQuality: FilterQuality.high,
-      );
-    }
     return const SizedBox.shrink();
   }
 
