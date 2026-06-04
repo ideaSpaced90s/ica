@@ -179,7 +179,8 @@ class ThemeRegistry {
     'sprite_lightning': const SpriteChessTheme(
       id: 'sprite_lightning',
       name: 'Lightning',
-      individualPiecesFolder: 'assets/pieces/lightening',
+      individualPiecesFolder: 'assets/pieces/lightening-webP',
+      pieceExtension: 'webp',
       boardImagePath: 'assets/board/lightning.png',
       lightSquare: Color(0xFFE2F1FF),
       darkSquare: Color(0xFF0A1128),
@@ -188,7 +189,8 @@ class ThemeRegistry {
     'sprite_diamonds': const SpriteChessTheme(
       id: 'sprite_diamonds',
       name: 'Diamonds',
-      individualPiecesFolder: 'assets/pieces/diamonds',
+      individualPiecesFolder: 'assets/pieces/diamonds-webP',
+      pieceExtension: 'webp',
       boardImagePath: 'assets/board/diamonds.png',
       lightSquare: Color(0xFFE0F7FA),
       darkSquare: Color(0xFF006064),
