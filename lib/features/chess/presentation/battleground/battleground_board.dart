@@ -7,15 +7,15 @@ import 'package:chess/chess.dart' as chess_lib;
 import '../../application/chess_provider.dart';
 import '../../application/battleground_provider.dart';
 import '../../domain/chess_game.dart';
-import '../scholarly_theme.dart';
+// Removed unused import
 
 import '../shared/themes/chess_theme.dart';
 import '../shared/widgets/chess_piece_widget.dart';
 import '../shared/widgets/orbiting_star_animation.dart';
 import '../shared/widgets/promotion_overlay.dart';
-import '../shared/animations/shake_animation.dart';
+// Removed unused import
 
-import 'themes/rated_classic_theme.dart';
+import 'themes/rated_bnw_theme.dart';
 
 class BattlegroundBoard extends ConsumerStatefulWidget {
   final AlignmentGeometry alignment;
@@ -30,15 +30,34 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
     with TickerProviderStateMixin {
   String? _selectedSquare;
   List<String> _legalTargets = const [];
+  String? _dropSquare;
+  late AnimationController _dropController;
 
+  @override
+  void initState() {
+    super.initState();
+    _dropController = AnimationController(vsync: this, duration: const Duration(milliseconds: 300));
+    _dropController.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        setState(() {
+          _dropSquare = null;
+        });
+      }
+    });
+  }
 
+  @override
+  void dispose() {
+    _dropController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final chessState = ref.watch(chessProvider);
     final bgState = ref.watch(battlegroundProvider);
-    // Rated mode always uses classic theme
-    const chessTheme = RatedClassicTheme();
+    // Rated mode always uses BNW theme
+    const chessTheme = ratedBnwTheme;
 
     // Use currentBoardFen for display during analysis/history viewing
     final displayGame = ChessGame(fen: bgState.currentBoardFen);
@@ -120,9 +139,11 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
                              return false;
                            },
                            onAcceptWithDetails: (details) {
-                             ref
-                                 .read(battlegroundProvider.notifier)
-                                 .makeMove(details.data, squareName);
+                             ref.read(battlegroundProvider.notifier).makeMove(details.data, squareName);
+                             setState(() {
+                               _dropSquare = squareName;
+                             });
+                             _dropController.forward(from: 0);
                              _clearSelection();
                            },
                            builder: (context, candidateData, rejectedData) {
@@ -148,20 +169,7 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
                                     color: isLight
                                         ? chessTheme.lightSquare
                                         : chessTheme.darkSquare,
-                                    border: chessTheme.getSquareBorder(
-                                          isSelected,
-                                          isDragHover,
-                                        ) ??
-                                        Border.all(
-                                          color: isSelected
-                                              ? ScholarlyTheme.accentGold
-                                              : isDragHover
-                                              ? ScholarlyTheme.accentBlueSoft
-                                              : Colors.transparent,
-                                          width: isSelected || isDragHover
-                                              ? 3.0
-                                              : 0.0,
-                                        ),
+                                    border: chessTheme.getSquareBorder(isSelected, isDragHover),
                                   ),
                                   child: Material(
                                     color: Colors.transparent,
@@ -188,18 +196,9 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
                                             ),
                                           // 4. Selection Effects
                                           if (isSelected &&
-                                              ref
-                                                  .read(
-                                                    chessProvider.notifier,
-                                                  )
-                                                  .isAnimationTypeEnabled(
-                                                    'indicators',
-                                                  ))
-                                            const OrbitingStarAnimation(
-                                              color: ScholarlyTheme
-                                                  .accentBlueSoft,
-                                              isActive: true,
-                                            ),
+                                              ref.read(chessProvider.notifier)
+                                                  .isAnimationTypeEnabled('indicators'))
+                                            chessTheme.buildSelectionEffect(context, 1.0),
                                           // 5. Move Hints
                                           if (isHint)
                                             chessTheme.buildMoveHint(
@@ -249,33 +248,32 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
                                                 ),
                                               ),
                                             ),
-                                          ShakeAnimation(
-                                            isActive: false, // Disabled in Battleground for snappiness
-                                            child: Center(
-                                              child: ChessPieceWidget(
-                                                squareName: squareName,
-                                                game: displayGame,
-                                                highlighted: isSelected,
-                                                rotation: 0.0,
-                                                theme: chessTheme,
-                                                isMoving: false, // Disabled in Battleground for snappiness
-                                                onTap: () =>
-                                                    _handleSquareTap(
-                                                      squareName:
-                                                          squareName,
-                                                      pieceExists:
-                                                          piece != null,
-                                                    ),
-                                                onDragStarted: () =>
-                                                    _handlePieceSelection(
-                                                      squareName,
-                                                      displayGame,
-                                                    ),
-                                                onDragEnd:
-                                                    _clearSelection,
-                                              ),
-                                            ),
-                                          ),
+                                           Builder(
+                                             builder: (context) {
+                                               Widget piece = ChessPieceWidget(
+                                                 squareName: squareName,
+                                                 game: displayGame,
+                                                 highlighted: isSelected,
+                                                 rotation: 0.0,
+                                                 theme: chessTheme,
+                                                 isMoving: false,
+                                                 onTap: () => _handleSquareTap(squareName: squareName, pieceExists: displayGame.getPiece(squareName) != null),
+                                                 onDragStarted: () => _handlePieceSelection(squareName, displayGame),
+                                                 onDragEnd: _clearSelection,
+                                               );
+                                               if (squareName == _dropSquare) {
+                                                 return AnimatedBuilder(
+                                                   animation: _dropController,
+                                                   builder: (context, child) {
+                                                     double scale = 0.85 + 0.15 * Curves.elasticOut.transform(_dropController.value);
+                                                     return Transform.scale(scale: scale, child: child);
+                                                   },
+                                                   child: piece,
+                                                 );
+                                               }
+                                               return piece;
+                                             },
+                                           ),
                                           if (chessState.showCoordinates)
                                             _buildCoordinates(
                                               row,

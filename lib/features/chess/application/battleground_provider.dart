@@ -866,7 +866,9 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
       }
 
       if (isLegal) {
-        unawaited(makeMove(pFrom, pTo));
+        if (!_isDisposed && _isPlayerTurn()) {
+          makeMove(pFrom, pTo);
+        }
       }
     }
   }

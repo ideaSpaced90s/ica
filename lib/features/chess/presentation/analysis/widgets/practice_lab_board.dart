@@ -9,7 +9,7 @@ import '../../../application/study_lab_provider.dart';
 import '../../../application/practice_lab_provider.dart';
 import '../../../services/chess_sound_service.dart';
 import '../../scholarly_theme.dart';
-import '../../arena/themes/theme_registry.dart';
+import '../themes/sparring_classic_theme.dart';
 
 class PracticeLabBoard extends ConsumerStatefulWidget {
   final double boardSize;
@@ -136,9 +136,7 @@ class _PracticeLabBoardState extends ConsumerState<PracticeLabBoard> {
 
   @override
   Widget build(BuildContext context) {
-    final chessState = ref.watch(chessProvider);
-    final themeId = ThemeRegistry.resolveThemeId(chessState);
-    final theme = ThemeRegistry.getTheme(themeId);
+    const theme = SparringClassicTheme();
 
     final studyState = ref.watch(studyLabProvider);
     final state = ref.watch(practiceLabProvider);

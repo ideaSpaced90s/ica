@@ -3,7 +3,6 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../application/chess_provider.dart';
 import '../../application/battleground_provider.dart';
 import '../mobile_navigation_shell.dart';
 import '../scholarly_theme.dart';
@@ -924,7 +923,7 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
                   height: 48,
                   child: FilledButton(
                     onPressed: () {
-                      ref.read(chessProvider.notifier).setGameMode('classic');
+                      ref.read(battlegroundProvider.notifier).setGameMode('classic');
                       Navigator.pop(context);
                     },
                     style: FilledButton.styleFrom(
@@ -941,7 +940,7 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
                   height: 48,
                   child: OutlinedButton(
                     onPressed: () {
-                      ref.read(chessProvider.notifier).setGameMode('chess960');
+                      ref.read(battlegroundProvider.notifier).setGameMode('chess960');
                       Navigator.pop(context);
                     },
                     style: OutlinedButton.styleFrom(
@@ -967,8 +966,8 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
       builder: (context) {
         return Consumer(
           builder: (context, ref, _) {
-            final state = ref.watch(chessProvider);
-            final notifier = ref.read(chessProvider.notifier);
+            final state = ref.watch(battlegroundProvider);
+            final notifier = ref.read(battlegroundProvider.notifier);
             
             final bulletPresets = [
               {'label': '0.5+0', 'min': 0, 'sec': 30, 'inc': 0},
@@ -1006,6 +1005,7 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
                                        state.baseTimeDuration.inSeconds % 60 == p['sec'] &&
                                        state.incrementDuration.inSeconds == p['inc'];
                       return ChoiceChip(
+                        showCheckmark: false,
                         label: Text(p['label'] as String),
                         selected: isSelected,
                         onSelected: (selected) {
@@ -1083,8 +1083,8 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
       builder: (context) {
         return Consumer(
           builder: (context, ref, _) {
-            final state = ref.watch(chessProvider);
-            final notifier = ref.read(chessProvider.notifier);
+            final state = ref.watch(battlegroundProvider);
+            final notifier = ref.read(battlegroundProvider.notifier);
             
             final bulletPresets = [
               {'label': '0.5+0', 'min': 0, 'sec': 30, 'inc': 0},
@@ -1122,6 +1122,7 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
                                        state.baseTimeDuration.inSeconds % 60 == p['sec'] &&
                                        state.incrementDuration.inSeconds == p['inc'];
                       return ChoiceChip(
+                        showCheckmark: false,
                         label: Text(p['label'] as String),
                         selected: isSelected,
                         onSelected: (selected) {
@@ -1204,7 +1205,7 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
     );
 
     if (confirmed == true && mounted) {
-      await ref.read(chessProvider.notifier).setGameMode(targetMode);
+      ref.read(battlegroundProvider.notifier).setGameMode(targetMode);
       _triggerDiceRoll();
     }
   }

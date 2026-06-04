@@ -3,9 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:chess/chess.dart' as chess_lib;
 import '../../application/study_lab_provider.dart';
-import '../../application/chess_provider.dart';
 import '../scholarly_theme.dart';
-import '../arena/themes/theme_registry.dart';
+import 'themes/analysis_classic_theme.dart';
 
 class PositionSetupPage extends ConsumerStatefulWidget {
   const PositionSetupPage({super.key});
@@ -176,9 +175,7 @@ class _PositionSetupPageState extends ConsumerState<PositionSetupPage> {
   }
 
   Widget _buildPiecePalette(WidgetRef ref) {
-    final chessState = ref.watch(chessProvider);
-    final themeId = ThemeRegistry.resolveThemeId(chessState);
-    final theme = ThemeRegistry.getTheme(themeId);
+    const theme = AnalysisClassicTheme();
 
     final pieces = [
       'wK', 'wQ', 'wR', 'wB', 'wN', 'wP',
@@ -260,9 +257,7 @@ class _PositionSetupPageState extends ConsumerState<PositionSetupPage> {
 
   @override
   Widget build(BuildContext context) {
-    final chessState = ref.watch(chessProvider);
-    final themeId = ThemeRegistry.resolveThemeId(chessState);
-    final theme = ThemeRegistry.getTheme(themeId);
+    const theme = AnalysisClassicTheme();
 
     // Compute board width
     final screenWidth = MediaQuery.of(context).size.width;

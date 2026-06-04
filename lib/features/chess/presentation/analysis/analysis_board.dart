@@ -6,13 +6,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:chess/chess.dart' as chess_lib;
-
 import '../../application/chess_provider.dart';
 import '../../application/study_lab_provider.dart';
 import '../../application/analysis_engine_controller.dart';
 import '../../services/chess_sound_service.dart';
 import '../scholarly_theme.dart';
-import '../arena/themes/theme_registry.dart';
+import 'themes/analysis_classic_theme.dart';
 
 class StudyLabChessBoard extends ConsumerStatefulWidget {
   final StudyLabState state;
@@ -217,9 +216,7 @@ class _StudyLabChessBoardState extends ConsumerState<StudyLabChessBoard> {
 
   @override
   Widget build(BuildContext context) {
-    final chessState = ref.watch(chessProvider);
-    final themeId = ThemeRegistry.resolveThemeId(chessState);
-    final theme = ThemeRegistry.getTheme(themeId);
+    const theme = AnalysisClassicTheme();
 
     final chess = chess_lib.Chess.fromFEN(widget.state.activeFen);
     final squareSize = widget.boardSize / 8;

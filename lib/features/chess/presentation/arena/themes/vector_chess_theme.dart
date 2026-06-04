@@ -148,7 +148,7 @@ class VectorChessTheme extends ChessTheme {
       );
     }
 
-    if (id == 'vector_glass' || id == 'vector_championship') {
+    if (id == 'vector_glass' || id == 'vector_championship' || id == 'rated_bnw') {
       final rowIndex = isWhite ? 0 : 1;
       int colIndex;
       switch (type.toUpperCase()) {
