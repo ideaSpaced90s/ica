@@ -1,18 +1,13 @@
-import 'dart:async';
 import 'dart:math' as math;
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:chess/chess.dart' as chess_lib;
 
 import '../../application/chess_provider.dart';
 import '../../application/store_provider.dart';
 import '../../services/chess_sound_service.dart';
 import '../scholarly_theme.dart';
-import '../arena/themes/theme_registry.dart';
-import '../shared/themes/chess_theme.dart';
 import '../../domain/models/ai_avatar.dart';
 import '../widgets/ambient_scaffold.dart';
 
@@ -23,35 +18,9 @@ class StorePage extends ConsumerStatefulWidget {
   ConsumerState<StorePage> createState() => _StorePageState();
 }
 
-class _StorePageState extends ConsumerState<StorePage> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-
-  @override
-  void initState() {
-    super.initState();
-    final initialTab = ref.read(storeActiveTabProvider);
-    _tabController = TabController(length: 2, vsync: this, initialIndex: initialTab);
-    _tabController.addListener(() {
-      if (!_tabController.indexIsChanging) {
-        ref.read(storeActiveTabProvider.notifier).state = _tabController.index;
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
+class _StorePageState extends ConsumerState<StorePage> {
   @override
   Widget build(BuildContext context) {
-    ref.listen<int>(storeActiveTabProvider, (previous, next) {
-      if (_tabController.index != next) {
-        _tabController.animateTo(next);
-      }
-    });
-
     final storeState = ref.watch(storeProvider);
     final storeNotifier = ref.read(storeProvider.notifier);
 
@@ -91,7 +60,7 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
                           ),
                         ),
                         Text(
-                          'Unlock premium themes & personas',
+                          'Unlock premium personas',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.inter(
@@ -118,64 +87,9 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
 
             const SizedBox(height: 12),
 
-            // Custom Tab Bar
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.35),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.5), width: 1.0),
-              ),
-              child: TabBar(
-                controller: _tabController,
-                dividerColor: Colors.transparent,
-                indicatorSize: TabBarIndicatorSize.tab,
-                indicator: BoxDecoration(
-                  color: ScholarlyTheme.accentBlue,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: ScholarlyTheme.accentBlue.withValues(alpha: 0.25),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                labelColor: Colors.white,
-                unselectedLabelColor: ScholarlyTheme.textPrimary,
-                labelStyle: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold),
-                unselectedLabelStyle: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600),
-                onTap: (index) {
-                  ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                },
-                tabs: const [
-                  Tab(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text('BOARD THEMES'),
-                    ),
-                  ),
-                  Tab(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text('AI AVATARS'),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
             // Tabs Content
             Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  _buildThemesTab(context, storeState, storeNotifier),
-                  _buildAvatarsTab(context, storeState, storeNotifier),
-                ],
-              ),
+              child: _buildAvatarsTab(context, storeState, storeNotifier),
             ),
           ],
         ),
@@ -292,7 +206,10 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 6,
+                    runSpacing: 4,
                     children: [
                       Text(
                         'PREMIUM MEMBER',
@@ -303,7 +220,6 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
                           letterSpacing: 1.0,
                         ),
                       ),
-                      const SizedBox(width: 6),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
@@ -565,374 +481,7 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
     );
   }
 
-  // --- THEMES TAB ---
-  Widget _buildThemesTab(
-    BuildContext context,
-    StoreState storeState,
-    StoreNotifier storeNotifier,
-  ) {
-    final themes = ThemeRegistry.allThemes;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: GridView.builder(
-        physics: const BouncingScrollPhysics(),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          childAspectRatio: 0.84,
-        ),
-        itemCount: themes.length,
-        itemBuilder: (context, index) {
-          final theme = themes[index];
-          final isFree = theme.id == 'classic' || theme.id == 'scholar';
-          final isUnlocked = storeNotifier.isThemeUnlocked(theme.id);
-          final expiry = storeState.purchasedThemes[theme.id];
-          
-          String statusText = 'LOCKED';
-          Color statusColor = ScholarlyTheme.textMuted;
-          if (isFree) {
-            statusText = 'FREE';
-            statusColor = Colors.green;
-          } else if (isUnlocked) {
-            if (expiry != null) {
-              final diff = expiry.difference(DateTime.now());
-              if (diff.inDays > 0) {
-                statusText = 'ACTIVE (${diff.inDays}d)';
-              } else {
-                statusText = 'ACTIVE (${diff.inHours}h)';
-              }
-            } else {
-              statusText = 'ACTIVE';
-            }
-            statusColor = ScholarlyTheme.accentBlue;
-          } else if (expiry != null && expiry.isBefore(DateTime.now())) {
-            statusText = 'EXPIRED';
-            statusColor = Colors.redAccent;
-          }
-
-          return GestureDetector(
-            onTap: () {
-              ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-              _showThemePreviewModal(context, theme, storeState, storeNotifier);
-            },
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.45),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: isUnlocked ? ScholarlyTheme.accentBlue.withValues(alpha: 0.4) : Colors.white.withValues(alpha: 0.6),
-                  width: isUnlocked ? 2.0 : 1.0,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.02),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Board Snippet Preview
-                  Expanded(
-                    child: Container(
-                      margin: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [theme.lightSquare, theme.darkSquare],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Center(
-                        child: SizedBox(
-                          width: 48,
-                          height: 48,
-                          child: theme.buildPiece(context, 'N', true, false, 0.0),
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          theme.name.toUpperCase(),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.outfit(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: ScholarlyTheme.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                statusText,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: GoogleFonts.inter(
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w900,
-                                  color: statusColor,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                            ),
-                            if (!isFree)
-                              Row(
-                                children: [
-                                  const Icon(Icons.monetization_on_rounded, color: Colors.amber, size: 10),
-                                  const SizedBox(width: 2),
-                                  Text(
-                                    '100',
-                                    style: GoogleFonts.jetBrainsMono(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                      color: ScholarlyTheme.textPrimary,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  // Live Animated Board Preview Modal
-  void _showThemePreviewModal(
-    BuildContext context,
-    ChessTheme theme,
-    StoreState storeState,
-    StoreNotifier storeNotifier,
-  ) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            final isFree = theme.id == 'classic' || theme.id == 'scholar';
-            final isUnlocked = storeNotifier.isThemeUnlocked(theme.id);
-            final expiry = storeState.purchasedThemes[theme.id];
-            
-            String statusText = 'LOCKED';
-            Color statusColor = ScholarlyTheme.textMuted;
-            if (isFree) {
-              statusText = 'FREE (PERMANENT)';
-              statusColor = Colors.green;
-            } else if (isUnlocked) {
-              final dateFormat = DateFormat('yyyy-MM-dd HH:mm');
-              statusText = 'ACTIVE (EXPIRES: ${expiry != null ? dateFormat.format(expiry) : "N/A"})';
-              statusColor = ScholarlyTheme.accentBlue;
-            } else if (expiry != null) {
-              statusText = 'EXPIRED';
-              statusColor = Colors.redAccent;
-            }
-
-            return ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                child: Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.8),
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.6), width: 1.5),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Handle bar
-                      Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: ScholarlyTheme.panelStroke,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-
-                      Text(
-                        '${theme.name.toUpperCase()} THEME',
-                        style: GoogleFonts.outfit(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: ScholarlyTheme.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        statusText,
-                        style: GoogleFonts.inter(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: statusColor,
-                          letterSpacing: 0.8,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Looping live board
-                      ThemeLoopPreviewBoard(theme: theme),
-
-                      const SizedBox(height: 20),
-
-                      Text(
-                        'This theme includes custom lightweight vector pieces, ambient field effects, specialized chess sounds, and custom board shading.',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(fontSize: 12, color: ScholarlyTheme.textMuted, height: 1.4),
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Buy / Select Button
-                      SizedBox(
-                        width: double.infinity,
-                        height: 48,
-                        child: isFree
-                            ? FilledButton(
-                                onPressed: () {
-                                  ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                                  ref.read(chessProvider.notifier).setBoardTheme(theme.id);
-                                  Navigator.pop(context);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('🎨 Theme set to ${theme.name}!')),
-                                  );
-                                },
-                                style: FilledButton.styleFrom(
-                                  backgroundColor: ScholarlyTheme.accentBlue,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                ),
-                                child: Text(
-                                  'ACTIVATE THEME',
-                                  style: GoogleFonts.inter(fontWeight: FontWeight.bold),
-                                ),
-                              )
-                            : isUnlocked
-                                ? Row(
-                                    children: [
-                                      Expanded(
-                                        child: OutlinedButton(
-                                          onPressed: () {
-                                            ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                                            ref.read(chessProvider.notifier).setBoardTheme(theme.id);
-                                            Navigator.pop(context);
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              SnackBar(content: Text('🎨 Theme set to ${theme.name}!')),
-                                            );
-                                          },
-                                          style: OutlinedButton.styleFrom(
-                                            side: const BorderSide(color: ScholarlyTheme.accentBlue),
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                          ),
-                                          child: Text(
-                                            'ACTIVATE',
-                                            style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: ScholarlyTheme.accentBlue),
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: FilledButton(
-                                          onPressed: () {
-                                            Navigator.pop(context);
-                                            _buyOrRenewThemeAction(context, theme, storeState, storeNotifier);
-                                          },
-                                          style: FilledButton.styleFrom(
-                                            backgroundColor: Colors.green,
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                          ),
-                                          child: Text(
-                                            'RENEW (100 G)',
-                                            style: GoogleFonts.inter(fontWeight: FontWeight.bold),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  )
-                                : FilledButton(
-                                    onPressed: () {
-                                      Navigator.pop(context);
-                                      _buyOrRenewThemeAction(context, theme, storeState, storeNotifier);
-                                    },
-                                    style: FilledButton.styleFrom(
-                                      backgroundColor: ScholarlyTheme.accentBlue,
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                    ),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        const Icon(Icons.monetization_on_rounded, color: Colors.amber, size: 18),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          'BUY FOR 100 GOLD (7 DAYS)',
-                                          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                      ),
-                      const SizedBox(height: 16),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  void _buyOrRenewThemeAction(
-    BuildContext context,
-    ChessTheme theme,
-    StoreState storeState,
-    StoreNotifier storeNotifier,
-  ) {
-    if (storeState.goldBalance < 100) {
-      _showInsufficientFundsDialog(context);
-      return;
-    }
-
-    final success = storeNotifier.purchaseOrRenewTheme(theme.id, 100);
-    if (success) {
-      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-      // Auto-set the theme as well!
-      ref.read(chessProvider.notifier).setBoardTheme(theme.id);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('🎨 Theme ${theme.name} unlocked and activated!'),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: Colors.green,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      );
-    }
-  }
 
   // --- AVATARS TAB ---
   Widget _buildAvatarsTab(
@@ -989,130 +538,7 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
   }
 }
 
-// Stateful Animated Move Loop Board inside popup modal
-class ThemeLoopPreviewBoard extends StatefulWidget {
-  final ChessTheme theme;
 
-  const ThemeLoopPreviewBoard({super.key, required this.theme});
-
-  @override
-  State<ThemeLoopPreviewBoard> createState() => _ThemeLoopPreviewBoardState();
-}
-
-class _ThemeLoopPreviewBoardState extends State<ThemeLoopPreviewBoard> {
-  late chess_lib.Chess _chess;
-  Timer? _timer;
-  int _moveIndex = 0;
-  
-  // Scholar's Mate move sequence (white side first, black response)
-  final List<String> _moves = [
-    'e4', 'e5',
-    'Qh5', 'Nc6',
-    'Bc4', 'Nf6',
-    'Qxf7'
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    _chess = chess_lib.Chess();
-    _startLoop();
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  void _startLoop() {
-    _timer = Timer.periodic(const Duration(milliseconds: 1400), (timer) {
-      if (!mounted) return;
-      
-      setState(() {
-        if (_moveIndex < _moves.length) {
-          try {
-            _chess.move(_moves[_moveIndex]);
-            _moveIndex++;
-          } catch (_) {
-            _resetBoard();
-          }
-        } else {
-          // Pause at checkmate before restarting
-          _timer?.cancel();
-          Future.delayed(const Duration(seconds: 2), () {
-            if (mounted) {
-              _resetBoard();
-              _startLoop();
-            }
-          });
-        }
-      });
-    });
-  }
-
-  void _resetBoard() {
-    setState(() {
-      _chess = chess_lib.Chess();
-      _moveIndex = 0;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 200,
-      height: 200,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.15),
-            blurRadius: 16,
-            spreadRadius: 2,
-          ),
-        ],
-        border: Border.all(color: ScholarlyTheme.panelStroke, width: 2),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: GridView.builder(
-        padding: EdgeInsets.zero,
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 8),
-        itemCount: 64,
-        physics: const NeverScrollableScrollPhysics(),
-        itemBuilder: (context, index) {
-          final row = index ~/ 8;
-          final col = index % 8;
-          final isLight = (row + col) % 2 == 0;
-          
-          // Render ranks 8 down to 1
-          final displayRow = 8 - row;
-          final fileLetter = String.fromCharCode(97 + col);
-          final squareName = '$fileLetter$displayRow';
-          
-          final piece = _chess.get(squareName);
-
-          return Container(
-            color: isLight ? widget.theme.lightSquare : widget.theme.darkSquare,
-            child: piece != null
-                ? FractionallySizedBox(
-                    widthFactor: 0.75,
-                    heightFactor: 0.75,
-                    child: widget.theme.buildPiece(
-                      context,
-                      piece.type.toUpperCase(),
-                      piece.color == chess_lib.Color.WHITE,
-                      false,
-                      0.0,
-                    ),
-                  )
-                : null,
-          );
-        },
-      ),
-    );
-  }
-}
 
 // Flippable Card Widget adapted for Store AI opponent avatars
 class StoreAvatarCard extends StatefulWidget {

@@ -16,6 +16,9 @@ abstract class ChessTheme {
   // Frame/Border color for the whole board
   Color get frameColor => Colors.transparent;
 
+  // Custom board image path if any
+  String? get boardImagePath => null;
+
   // Background effects/overlays
   Widget buildBackground(BuildContext context, bool animationsEnabled);
 

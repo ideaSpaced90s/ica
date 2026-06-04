@@ -250,9 +250,11 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
                                         : Duration.zero,
                                     curve: Curves.easeOutCubic,
                                     decoration: BoxDecoration(
-                                      color: isLight
-                                          ? chessTheme.lightSquare
-                                          : chessTheme.darkSquare,
+                                      color: chessTheme.boardImagePath != null
+                                          ? Colors.transparent
+                                          : (isLight
+                                              ? chessTheme.lightSquare
+                                              : chessTheme.darkSquare),
                                       borderRadius:
                                           chessTheme.id == 'theme2' ||
                                               chessTheme.id == 'theme4' ||

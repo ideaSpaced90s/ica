@@ -78,8 +78,23 @@ flutter:
 
   assets:
     - assets/pieces/
+    - assets/pieces/classic_svg/
     - assets/pieces/fairytale_castle/
+    - assets/pieces/bubblegum/
     - assets/board/
+    - assets/pieces/copper/
+    - assets/pieces/goldnsilver/
+    - assets/pieces/marble/
+    - assets/pieces/sandmud/
+    - assets/pieces/silky/
+    - assets/pieces/summernautumn/
+    - assets/pieces/woodyy/
+    - assets/pieces/diamonds/
+    - assets/pieces/lightening/
+    - assets/pieces/royal/
+    - assets/pieces/rootpieces/
+    - assets/pieces/energy/
+    - assets/pieces/forrest/
     - assets/persona/
     - assets/sfx/
     - assets/bgm/

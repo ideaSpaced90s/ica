@@ -127,7 +127,7 @@ class _ArenaTurnIndicatorState extends State<ArenaTurnIndicator>
             child: Padding(
               padding: const EdgeInsets.all(5.0),
               child: SvgPicture.asset(
-                widget.isWhite ? 'assets/pieces/wN.svg' : 'assets/pieces/bN.svg',
+                widget.isWhite ? 'assets/pieces/classic_svg/wN.svg' : 'assets/pieces/classic_svg/bN.svg',
                 fit: BoxFit.contain,
                 colorFilter: widget.isWhite
                     ? null // White knight keeps its natural look

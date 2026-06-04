@@ -840,7 +840,7 @@ class _AcademySuggestionOverlayState extends State<AcademySuggestionOverlay>
                     padding: const EdgeInsets.all(4),
                     child: Center(
                       child: SvgPicture.asset(
-                        'assets/pieces/${widget.data.pieceCode}.svg',
+                        'assets/pieces/classic_svg/${widget.data.pieceCode}.svg',
                         fit: BoxFit.contain,
                       ),
                     ),

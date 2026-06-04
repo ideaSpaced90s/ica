@@ -192,7 +192,7 @@ class ClassicTheme extends ChessTheme {
             (rowIndex * 2.0 / 1.0) - 1.0,
           ),
           child: Image.asset(
-            'assets/board/ideaspaceclassicchesssprite2.png',
+            'assets/pieces/rootpieces/ideaspaceclassicchesssprite2.png',
             fit: BoxFit.fill,
             filterQuality: FilterQuality.high,
           ),

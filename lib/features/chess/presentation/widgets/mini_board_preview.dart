@@ -60,7 +60,7 @@ class MiniBoardPreview extends StatelessWidget {
   Widget _buildPiece(chess_lib.Piece piece) {
     final colorPrefix = piece.color == chess_lib.Color.WHITE ? 'w' : 'b';
     final type = piece.type.toUpperCase();
-    final assetPath = 'assets/pieces/$colorPrefix$type.svg';
+    final assetPath = 'assets/pieces/classic_svg/$colorPrefix$type.svg';
     
     return Padding(
       padding: const EdgeInsets.all(2),

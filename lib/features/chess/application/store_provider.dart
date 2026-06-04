@@ -244,16 +244,8 @@ class StoreNotifier extends StateNotifier<StoreState> {
 
   // Check if a theme is unlocked
   bool isThemeUnlocked(String themeId) {
-    // Default free themes
-    if (themeId == 'classic' || themeId == 'scholar') {
-      return true;
-    }
-    // Check purchase validity
-    final expiry = state.purchasedThemes[themeId];
-    if (expiry != null && expiry.isAfter(DateTime.now())) {
-      return true;
-    }
-    return false;
+    // All themes are free for now
+    return true;
   }
 
   // Check if an avatar is unlocked
