@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:chess/chess.dart' as chess_lib;
 import '../../shared/themes/chess_theme.dart';
 import '../effects/platinum_theme.dart';
-import '../effects/toy_effects.dart';
 
 class PlatinumTheme extends ChessTheme {
   const PlatinumTheme() : super(id: 'theme4', name: 'Platinum');

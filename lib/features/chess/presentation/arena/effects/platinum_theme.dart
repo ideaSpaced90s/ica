@@ -634,3 +634,87 @@ class PlatinumSpritePiecePainter extends CustomPainter {
       oldDelegate.isWhite != isWhite ||
       oldDelegate.isHighlighted != isHighlighted;
 }
+
+class FloatingBubblesOverlay extends StatefulWidget {
+  const FloatingBubblesOverlay({super.key});
+
+  @override
+  State<FloatingBubblesOverlay> createState() => _FloatingBubblesOverlayState();
+}
+
+class _FloatingBubblesOverlayState extends State<FloatingBubblesOverlay>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  final List<_Bubble> _bubbles = List.generate(15, (_) => _Bubble());
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 15),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return CustomPaint(
+          painter: _BubblePainter(_bubbles, _controller.value),
+          size: Size.infinite,
+        );
+      },
+    );
+  }
+}
+
+class _Bubble {
+  double x = Random().nextDouble();
+  double y = Random().nextDouble();
+  double size = Random().nextDouble() * 15 + 5;
+  double speed = Random().nextDouble() * 0.05 + 0.02;
+  double drift = Random().nextDouble() * 0.1 - 0.05;
+}
+
+class _BubblePainter extends CustomPainter {
+  final List<_Bubble> bubbles;
+  final double animationValue;
+
+  _BubblePainter(this.bubbles, this.animationValue);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+
+    for (var b in bubbles) {
+      final dx = size.width * ((b.x + animationValue * b.drift) % 1.0);
+      final dy = size.height * ((b.y - animationValue * b.speed) % 1.0);
+
+      paint.color = Colors.white.withValues(alpha: 0.3);
+      canvas.drawCircle(Offset(dx, dy), b.size, paint);
+
+      // Highlight on bubble
+      final highlightPaint = Paint()
+        ..color = Colors.white.withValues(alpha: 0.2)
+        ..style = PaintingStyle.fill;
+      canvas.drawCircle(
+        Offset(dx - b.size * 0.3, dy - b.size * 0.3),
+        b.size * 0.2,
+        highlightPaint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _BubblePainter oldDelegate) => true;
+}

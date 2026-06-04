@@ -58,30 +58,7 @@ class BoardTheme {
       frameColor: Color(0xFF3E2723),
       pieceSetAsset: 'assets/pieces/rootpieces/ideaspaceclassicchesssprite2.png',
     ),
-    BoardTheme(
-      id: 'theme7',
-      name: 'Slate Minimal',
-      lightSquare: Color(0xFFE5E7EB), // Soft neutral grey
-      darkSquare: Color(0xFF374151), // Slate grey
-      frameColor: Color(0xFF1F2937),
-      pieceSetAsset: 'assets/pieces/rootpieces/ideaspaceclassicchesssprite2.png',
-    ),
-    BoardTheme(
-      id: 'theme8',
-      name: 'Walnut Wood',
-      lightSquare: Color(0xFFE6C9A8), // Light Maple
-      darkSquare: Color(0xFF6B4F3A), // Walnut Brown
-      frameColor: Color(0xFF4A3728),
-      pieceSetAsset: 'assets/pieces/rootpieces/ideaspaceclassicchesssprite2.png',
-    ),
-    BoardTheme(
-      id: 'theme9',
-      name: 'Mummy',
-      lightSquare: Color(0xFFFFF3E0),
-      darkSquare: Color(0xFFFFB74D),
-      frameColor: Color(0xFFE65100),
-      pieceSetAsset: 'assets/pieces/rootpieces/ideaspaceclassicchesssprite2.png',
-    ),
+
     BoardTheme(
       id: 'theme10',
       name: 'Shadow High-Contrast',
@@ -97,6 +74,14 @@ class BoardTheme {
       darkSquare: Color(0xFF7BCBFC), // Sky Blue
       frameColor: Color(0xFF0F172A), // Darker Slate/Navy Frame
       pieceSetAsset: 'assets/board/sample2.png',
+    ),
+    BoardTheme(
+      id: 'sprite_arc',
+      name: 'Arc',
+      lightSquare: Color(0xFFE4DAC3),
+      darkSquare: Color(0xFF1C343A),
+      frameColor: Color(0xFFC3A555),
+      pieceSetAsset: 'assets/pieces/arc-webP/light_king_0.webp',
     ),
   ];
 

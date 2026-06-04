@@ -37,17 +37,6 @@ class ChessThemes {
     blackPieceSecondary: Color(0xFF1A0F09),
   );
 
-  static const cyberpunkNeon = ChessTheme(
-    name: 'Neon',
-    lightSquare: Color(0xFF34344A), // Dark Indigo/Slate
-    darkSquare: Color(0xFF0F0F16),  // Deep Obsidian
-    boardBorder: Color(0xFF00FFFF), // Cyan border
-    activeHighlight: Color(0x66FF00FF), // Magenta highlight
-    whitePiecePrimary: Color(0xFF00FFFF),
-    whitePieceSecondary: Color(0xFFFFFFFF),
-    blackPiecePrimary: Color(0xFFFF00FF),
-    blackPieceSecondary: Color(0xFF000000),
-  );
 
   static const retro8Bit = ChessTheme(
     name: 'Retro 8-Bit',
@@ -85,41 +74,6 @@ class ChessThemes {
     blackPieceSecondary: Color(0x33FFFFFF),
   );
 
-  static const iceGlacier = ChessTheme(
-    name: 'Glacier',
-    lightSquare: Color(0xFFE0FFFF), // Crisp white/blue
-    darkSquare: Color(0xFF87CEEB),  // Frosted blue
-    boardBorder: Color(0xFF4682B4),
-    activeHighlight: Color(0x66FFFFFF),
-    whitePiecePrimary: Color(0xFF0D1440),   // Deep midnight navy
-    whitePieceSecondary: Color(0xFFFFD700), // Gold accent
-    blackPiecePrimary: Color(0xFFFFD700),   // Gold
-    blackPieceSecondary: Color(0xFF000000), // Black trim
-  );
-
-  static const royalGoldVelvet = ChessTheme(
-    name: 'Gold',
-    lightSquare: Color(0xFFFFD700), // Metallic gold
-    darkSquare: Color(0xFF8B0000),  // Deep crimson
-    boardBorder: Color(0xFFDAA520),
-    activeHighlight: Color(0x66FFFFFF),
-    whitePiecePrimary: Color(0xFF0D1440),   // Deep midnight navy — pops on gold squares
-    whitePieceSecondary: Color(0xFFFFD700), // Gold trim on navy pieces
-    blackPiecePrimary: Color(0xFFFFF5CC),   // Warm ivory cream — pops on crimson squares
-    blackPieceSecondary: Color(0xFF8B0000), // Crimson trim on ivory pieces
-  );
-
-  static const midnightCamo = ChessTheme(
-    name: 'Midnight',
-    lightSquare: Color(0xFF708090), // Tactical grey
-    darkSquare: Color(0xFF2F4F4F),  // Deep forest
-    boardBorder: Color(0xFF1A1A1A),
-    activeHighlight: Color(0x6600FF00),
-    whitePiecePrimary: Color(0xFFA9A9A9),
-    whitePieceSecondary: Color(0xFF000000),
-    blackPiecePrimary: Color(0xFF1E2721),
-    blackPieceSecondary: Color(0xFF000000),
-  );
 
   static const spacetimeVoid = ChessTheme(
     name: 'Spacetime Void',
@@ -169,17 +123,6 @@ class ChessThemes {
     blackPieceSecondary: Color(0xFFCD7F32),
   );
 
-  static const sakuraZen = ChessTheme(
-    name: 'Sakura',
-    lightSquare: Color(0xFFFCE4EC), // Pastel cherry blossom pink
-    darkSquare: Color(0xFF2E3D30),  // Deep moss-green
-    boardBorder: Color(0xFF8D5B34), // Natural warm wood
-    activeHighlight: Color(0x88FFB7C5), // Cherry blossom glow
-    whitePiecePrimary: Color(0xFFFFFDD0), // Ivory cream
-    whitePieceSecondary: Color(0xFFFFC0CB), // Blossom pink
-    blackPiecePrimary: Color(0xFF1E2721), // Rich moss-green
-    blackPieceSecondary: Color(0xFFFFD1DC), // Pastel pink
-  );
 
   static const synthwave80s = ChessTheme(
     name: 'Synthwave 80s',
@@ -193,17 +136,6 @@ class ChessThemes {
     blackPieceSecondary: Color(0xFFFFFFFF),
   );
 
-  static const holographicGlow = ChessTheme(
-    name: 'Pinkworld',
-    lightSquare: Color(0xFFE6E6FA), // Pastel shift
-    darkSquare: Color(0xFFFFB6C1),  // Pastel pink
-    boardBorder: Color(0xFF9370DB),
-    activeHighlight: Color(0x66FFFFFF),
-    whitePiecePrimary: Color(0xFF2E7D32),   // Deep green
-    whitePieceSecondary: Color(0xFFE6E6FA),
-    blackPiecePrimary: Color(0xFF9370DB),
-    blackPieceSecondary: Color(0xFFFFFFFF),
-  );
 
   static const monochromeSlate = ChessTheme(
     name: 'Monochrome Slate',
@@ -267,14 +199,8 @@ class ChessThemes {
 
   static const List<ChessTheme> all = [
     classicWood,
-    cyberpunkNeon,
     glassMorphic,
-    iceGlacier,
-    royalGoldVelvet,
-    midnightCamo,
     championshipClassic,
-    sakuraZen,
-    holographicGlow,
     egyptianSand,
     fairytaleCastle,
   ];

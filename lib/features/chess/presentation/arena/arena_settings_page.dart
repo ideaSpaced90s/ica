@@ -11,8 +11,6 @@ import '../../domain/models/ai_avatar.dart';
 import '../widgets/ambient_scaffold.dart';
 import 'dart:ui';
 import 'arena_personas_selection_page.dart';
-import '../../application/store_provider.dart';
-import '../mobile_navigation_shell.dart';
 
 
 class ArenaSettingsPage extends ConsumerStatefulWidget {
@@ -300,16 +298,8 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
                             return GestureDetector(
                               onTap: () {
                                 ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                                final isUnlocked = ref.read(storeProvider.notifier).isThemeUnlocked(theme.id);
-                                if (isUnlocked) {
-                                  notifier.setBoardTheme(theme.id);
-                                  Navigator.of(context).popUntil((route) => route.isFirst);
-                                } else {
-                                  ref.read(storeActiveTabProvider.notifier).state = 0; // 0 = Board Themes
-                                  Navigator.of(context).pop(); // Close bottom sheet
-                                  Navigator.of(context).pop(); // Close settings page
-                                  ref.read(mobileNavIndexProvider.notifier).state = 10; // Go to store
-                                }
+                                notifier.setBoardTheme(theme.id);
+                                Navigator.of(context).popUntil((route) => route.isFirst);
                               },
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,

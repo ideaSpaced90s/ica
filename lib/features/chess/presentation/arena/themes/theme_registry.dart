@@ -6,14 +6,12 @@ import 'forest_theme.dart';
 import 'ink_theme.dart';
 import 'platinum_theme.dart';
 import 'steampunk_theme.dart';
-import 'slate_theme.dart';
-import 'walnut_theme.dart';
-import 'toy_theme.dart';
 import 'shadow_theme.dart';
 import 'scholar_theme.dart';
 import 'vector_chess_theme.dart';
 import 'bnw_theme.dart';
 import 'sprite_chess_theme.dart';
+import 'arc_theme.dart';
 import '../../../application/chess_provider.dart';
 
 class ThemeRegistry {
@@ -23,9 +21,6 @@ class ThemeRegistry {
     'theme3': const InkTheme(),
     'theme4': const PlatinumTheme(),
     'theme5': const SteampunkTheme(),
-    'theme7': const SlateTheme(),
-    'theme8': const WalnutTheme(),
-    'theme9': const ToyTheme(),
     'theme10': const ShadowTheme(),
     'scholar': const ScholarTheme(),
     
@@ -35,45 +30,15 @@ class ThemeRegistry {
       name: 'Wood',
       packageTheme: assets_lib.ChessThemes.classicWood,
     ),
-    'vector_cyberpunk': const VectorChessTheme(
-      id: 'vector_cyberpunk',
-      name: 'Neon',
-      packageTheme: assets_lib.ChessThemes.cyberpunkNeon,
-    ),
     'vector_glass': const BnwChessTheme(
       id: 'vector_glass',
       name: 'bnw',
       packageTheme: assets_lib.ChessThemes.glassMorphic,
     ),
-    'vector_ice': const VectorChessTheme(
-      id: 'vector_ice',
-      name: 'Glacier',
-      packageTheme: assets_lib.ChessThemes.iceGlacier,
-    ),
-    'vector_royal': const VectorChessTheme(
-      id: 'vector_royal',
-      name: 'Gold',
-      packageTheme: assets_lib.ChessThemes.royalGoldVelvet,
-    ),
-    'vector_camo': const VectorChessTheme(
-      id: 'vector_camo',
-      name: 'Midnight',
-      packageTheme: assets_lib.ChessThemes.midnightCamo,
-    ),
     'vector_championship': const VectorChessTheme(
       id: 'vector_championship',
       name: 'Champions',
       packageTheme: assets_lib.ChessThemes.championshipClassic,
-    ),
-    'vector_sakura': const VectorChessTheme(
-      id: 'vector_sakura',
-      name: 'Sakura',
-      packageTheme: assets_lib.ChessThemes.sakuraZen,
-    ),
-    'vector_holographic': const VectorChessTheme(
-      id: 'vector_holographic',
-      name: 'Pinkworld',
-      packageTheme: assets_lib.ChessThemes.holographicGlow,
     ),
     'vector_egyptian': const VectorChessTheme(
       id: 'vector_egyptian',
@@ -214,6 +179,7 @@ class ThemeRegistry {
       darkSquare: Color(0xFF5C5346),
       frameColor: Color(0xFF3E3930),
     ),
+    'sprite_arc': const ArcChessTheme(),
   };
 
   static ChessTheme getTheme(String id) {
@@ -223,24 +189,15 @@ class ThemeRegistry {
   static List<ChessTheme> get allThemes => [
         _themes['classic']!, // 1x1
         _themes['scholar']!, // 2x1
-        _themes['vector_ice']!,
         _themes['theme4']!,
         _themes['vector_championship']!,
-        _themes['theme7']!,
         _themes['vector_wood']!,
         _themes['theme10']!,
-        _themes['vector_holographic']!,
         _themes['theme2']!,
-        _themes['vector_camo']!,
-        _themes['theme8']!,
-        _themes['vector_cyberpunk']!,
         _themes['theme3']!,
         _themes['vector_egyptian']!,
         _themes['theme5']!,
         _themes['vector_glass']!,
-        _themes['theme9']!,
-        _themes['vector_royal']!,
-        _themes['vector_sakura']!,
         _themes['vector_steel']!, // 3x7
         _themes['sprite_bubblegum']!,
         _themes['sprite_copper']!,
@@ -256,6 +213,7 @@ class ThemeRegistry {
         _themes['sprite_diamonds']!,
         _themes['sprite_royal']!,
         _themes['sprite_fairytale']!,
+        _themes['sprite_arc']!,
       ];
 
   static String resolveThemeId(ChessState state) {

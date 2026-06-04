@@ -98,6 +98,8 @@ flutter:
     - assets/pieces/energy/
     - assets/pieces/energy-webP/
     - assets/pieces/forrest/
+    - assets/pieces/arc/
+    - assets/pieces/arc-webP/
     - assets/persona/
     - assets/sfx/
     - assets/bgm/

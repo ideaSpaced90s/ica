@@ -9,14 +9,11 @@ import 'widgets/arena_system_indicators.dart';
 import '../../domain/chess_game.dart';
 import '../shared/widgets/promotion_overlay.dart';
 import 'effects/forest_effects.dart';
-import 'effects/toy_effects.dart';
 import 'effects/steampunk_effects.dart';
 import 'effects/electric_effects.dart';
 import 'package:chess/chess.dart' as chess_lib;
 import 'effects/high_contrast_piece.dart';
 import 'effects/ink_theme.dart';
-import 'effects/slate_theme.dart';
-import 'effects/liquid_theme.dart';
 import 'effects/platinum_theme.dart';
 import 'effects/grease_effects.dart';
 import '../shared/animations/signature_move_overlay.dart';
@@ -50,13 +47,10 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
   List<String> _legalTargets = const [];
   int _lastMovesCount = 0;
   final List<Offset> _leafScatters = [];
-  final List<Offset> _toyConfetti = [];
   final List<Map<String, dynamic>> _metalShatters = [];
   final List<Map<String, dynamic>> _shadowCaptures = [];
-  final List<Offset> _slateCaptures = [];
 
   final List<Offset> _electricBursts = [];
-  final List<Offset> _liquidSplashes = [];
   final List<Offset> _inkSplashes = [];
   final List<Offset> _platinumCaptures = [];
   final List<Offset> _oilSplashes = [];
@@ -79,7 +73,6 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
   late final AnimationController _gearController;
 
   late final AnimationController _electricEffectController;
-  late final AnimationController _liquidEffectController;
   late final AnimationController _hologramEffectController;
 
   @override
@@ -93,10 +86,6 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat();
-    _liquidEffectController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 5),
-    )..repeat();
     _hologramEffectController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
@@ -107,7 +96,6 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
   void dispose() {
     _gearController.dispose();
     _electricEffectController.dispose();
-    _liquidEffectController.dispose();
     _hologramEffectController.dispose();
     super.dispose();
   }
@@ -155,11 +143,11 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
                 clipBehavior: Clip.none,
                 decoration: BoxDecoration(
                   borderRadius:
-                      chessTheme.id == 'theme2' || chessTheme.id == 'theme7'
+                      chessTheme.id == 'theme2'
                       ? BorderRadius.circular(12)
                       : null,
                   boxShadow:
-                      chessTheme.id == 'theme2' || chessTheme.id == 'theme7'
+                      chessTheme.id == 'theme2'
                       ? [
                           BoxShadow(
                             color: Colors.black.withValues(alpha: 0.18),
@@ -257,9 +245,7 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
                                               : chessTheme.darkSquare),
                                       borderRadius:
                                           chessTheme.id == 'theme2' ||
-                                              chessTheme.id == 'theme4' ||
-                                              chessTheme.id == 'theme8' ||
-                                              chessTheme.id == 'theme9'
+                                              chessTheme.id == 'theme4'
                                           ? BorderRadius.circular(10)
                                           : null,
                                       border: chessTheme.getSquareBorder(
@@ -336,10 +322,6 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
                                                                 'theme5'
                                                           ? _gearController
                                                                 .value
-                                                          : chessTheme.id ==
-                                                                'theme9'
-                                                          ? _electricEffectController
-                                                                .value
                                                           : _gearController
                                                                 .value,
                                                     ),
@@ -374,19 +356,11 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
                                                 ),
                                                 tween: Tween(
                                                   begin: isLastMoveStartOrEnd
-                                                      ? (chessTheme.id == 'theme8'
-                                                          ? 0.20
-                                                          : 0.35)
-                                                      : (chessTheme.id == 'theme8'
-                                                          ? 0.08
-                                                          : 0.15),
+                                                      ? 0.35
+                                                      : 0.15,
                                                   end: isLastMoveStartOrEnd
-                                                      ? (chessTheme.id == 'theme8'
-                                                          ? 0.14
-                                                          : 0.24)
-                                                      : (chessTheme.id == 'theme8'
-                                                          ? 0.05
-                                                          : 0.09),
+                                                      ? 0.24
+                                                      : 0.09,
                                                 ),
                                                 duration: ref
                                                     .read(
@@ -633,12 +607,7 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
                             onComplete: () =>
                                 setState(() => _leafScatters.remove(pos)),
                           ),
-                        for (final pos in _toyConfetti)
-                          ToyConfettiSystem(
-                            position: pos,
-                            onComplete: () =>
-                                setState(() => _toyConfetti.remove(pos)),
-                          ),
+
                         for (final shockwave in _landingShockwaves)
                           LandingShockwave(
                             squareSize: boardSize / 8,
@@ -664,19 +633,9 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
                             onComplete: () =>
                                 setState(() => _shadowCaptures.remove(capture)),
                           ),
-                        for (final pos in _slateCaptures)
-                          SlateCaptureEffect(
-                            position: pos,
-                            onComplete: () =>
-                                setState(() => _slateCaptures.remove(pos)),
-                          ),
+
   
-                        for (final pos in _liquidSplashes)
-                          LiquidSplashEffect(
-                            position: pos,
-                            onComplete: () =>
-                                setState(() => _liquidSplashes.remove(pos)),
-                          ),
+
                         for (final pos in _electricBursts)
                           ElectricBurstEffect(
                             position: pos,
@@ -752,7 +711,6 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
           ref
               .read(chessProvider.notifier)
               .isAnimationTypeEnabled('themeEffects')) {
-        final themeId = chessState.boardThemeId;
         if (themeId == 'theme2') {
           _triggerLeafScatter(squareName);
         } else if (themeId == 'theme3') {
@@ -762,17 +720,11 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
         } else if (themeId == 'theme5') {
           _triggerOilSplash(squareName);
           _triggerMetalShatter(squareName, targetPiece.color == chess_lib.Color.WHITE);
-        } else if (themeId == 'theme8') {
-          _triggerLiquidSplash(squareName);
         } else if (themeId == 'theme10') {
           final capturedPiece = displayGame.getPiece(squareName);
           if (capturedPiece != null) {
             _triggerShadowCapture(squareName, capturedPiece);
           }
-        } else if (themeId == 'theme7') {
-          _triggerSlateCapture(squareName);
-        } else if (themeId == 'theme9') {
-          _triggerToyConfetti(squareName);
         }
       }
       // Arcade Mode: blue particle burst on any capture
@@ -784,7 +736,7 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
         final hasThemeEffect = ref
                 .read(chessProvider.notifier)
                 .isAnimationTypeEnabled('themeEffects') &&
-            ['theme2', 'theme3', 'theme4', 'theme5', 'theme7', 'theme8', 'theme9', 'theme10'].contains(themeId);
+            ['theme2', 'theme3', 'theme4', 'theme5', 'theme10'].contains(themeId);
         if (chessTheme.hasInteractionFeedback) {
           _triggerArcadeCaptureBurst(squareName, reduced: hasThemeEffect);
         }
@@ -1069,29 +1021,6 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
     });
   }
 
-  void _triggerToyConfetti(String squareName) {
-    final col = squareName.codeUnitAt(0) - 'a'.codeUnitAt(0);
-    final row = 8 - int.parse(squareName[1]);
-    final isFlipped = ref.read(arenaProvider).isBoardFlipped;
-
-    final effectiveCol = isFlipped ? 7 - col : col;
-    final effectiveRow = isFlipped ? 7 - row : row;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final box = context.findRenderObject() as RenderBox?;
-      if (box == null) return;
-
-      final boardSize = box.size.width;
-      final squareSize = boardSize / 8;
-      final x = effectiveCol * squareSize + squareSize / 2;
-      final y = effectiveRow * squareSize + squareSize / 2;
-
-      setState(() {
-        _toyConfetti.add(Offset(x, y));
-      });
-    });
-  }
 
   void _triggerPlatinumCapture(String squareName) {
     final col = squareName.codeUnitAt(0) - 'a'.codeUnitAt(0);
@@ -1117,29 +1046,6 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
     });
   }
 
-  void _triggerSlateCapture(String squareName) {
-    final col = squareName.codeUnitAt(0) - 'a'.codeUnitAt(0);
-    final row = 8 - int.parse(squareName[1]);
-    final isFlipped = ref.read(arenaProvider).isBoardFlipped;
-
-    final effectiveCol = isFlipped ? 7 - col : col;
-    final effectiveRow = isFlipped ? 7 - row : row;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final box = context.findRenderObject() as RenderBox?;
-      if (box == null) return;
-
-      final boardSize = box.size.width;
-      final squareSize = boardSize / 8;
-      final x = effectiveCol * squareSize + squareSize / 2;
-      final y = effectiveRow * squareSize + squareSize / 2;
-
-      setState(() {
-        _slateCaptures.add(Offset(x, y));
-      });
-    });
-  }
 
   void _triggerShadowCapture(String squareName, chess_lib.Piece piece) {
     final col = squareName.codeUnitAt(0) - 'a'.codeUnitAt(0);
@@ -1165,29 +1071,6 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
     });
   }
 
-  void _triggerLiquidSplash(String squareName) {
-    final col = squareName.codeUnitAt(0) - 'a'.codeUnitAt(0);
-    final row = 8 - int.parse(squareName[1]);
-    final isFlipped = ref.read(arenaProvider).isBoardFlipped;
-
-    final effectiveCol = isFlipped ? 7 - col : col;
-    final effectiveRow = isFlipped ? 7 - row : row;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final box = context.findRenderObject() as RenderBox?;
-      if (box == null) return;
-
-      final boardSize = box.size.width;
-      final squareSize = boardSize / 8;
-      final x = effectiveCol * squareSize + squareSize / 2;
-      final y = effectiveRow * squareSize + squareSize / 2;
-
-      setState(() {
-        _liquidSplashes.add(Offset(x, y));
-      });
-    });
-  }
 
   // ── Signature Animation Triggers ─────────────────────────────────────────
 

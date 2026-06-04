@@ -12,7 +12,6 @@ class StoreState {
   final DateTime joinedFreeDate;
   final DateTime? joinedPremiumDate;
   final DateTime? subscriptionTill;
-  final Map<String, DateTime> purchasedThemes; // themeId -> expiry DateTime
   final Map<String, DateTime> purchasedAvatars; // avatarId -> expiry DateTime
 
   StoreState({
@@ -21,7 +20,6 @@ class StoreState {
     required this.joinedFreeDate,
     this.joinedPremiumDate,
     this.subscriptionTill,
-    required this.purchasedThemes,
     required this.purchasedAvatars,
   });
 
@@ -31,7 +29,6 @@ class StoreState {
     DateTime? joinedFreeDate,
     DateTime? joinedPremiumDate,
     DateTime? subscriptionTill,
-    Map<String, DateTime>? purchasedThemes,
     Map<String, DateTime>? purchasedAvatars,
   }) {
     return StoreState(
@@ -40,7 +37,6 @@ class StoreState {
       joinedFreeDate: joinedFreeDate ?? this.joinedFreeDate,
       joinedPremiumDate: joinedPremiumDate ?? this.joinedPremiumDate,
       subscriptionTill: subscriptionTill ?? this.subscriptionTill,
-      purchasedThemes: purchasedThemes ?? this.purchasedThemes,
       purchasedAvatars: purchasedAvatars ?? this.purchasedAvatars,
     );
   }
@@ -51,7 +47,6 @@ class StoreState {
         'joinedFreeDate': joinedFreeDate.toIso8601String(),
         'joinedPremiumDate': joinedPremiumDate?.toIso8601String(),
         'subscriptionTill': subscriptionTill?.toIso8601String(),
-        'purchasedThemes': purchasedThemes.map((k, v) => MapEntry(k, v.toIso8601String())),
         'purchasedAvatars': purchasedAvatars.map((k, v) => MapEntry(k, v.toIso8601String())),
       };
 
@@ -64,10 +59,6 @@ class StoreState {
           : DateTime.now().subtract(const Duration(days: 15)),
       joinedPremiumDate: json['joinedPremiumDate'] != null ? DateTime.parse(json['joinedPremiumDate']) : null,
       subscriptionTill: json['subscriptionTill'] != null ? DateTime.parse(json['subscriptionTill']) : null,
-      purchasedThemes: (json['purchasedThemes'] as Map<String, dynamic>?)?.map(
-            (k, v) => MapEntry(k, DateTime.parse(v)),
-          ) ??
-          {},
       purchasedAvatars: (json['purchasedAvatars'] as Map<String, dynamic>?)?.map(
             (k, v) => MapEntry(k, DateTime.parse(v)),
           ) ??
@@ -86,7 +77,6 @@ class StoreRepository {
         goldBalance: 1000,
         isPremium: false,
         joinedFreeDate: DateTime.now().subtract(const Duration(days: 15)),
-        purchasedThemes: {},
         purchasedAvatars: {},
       );
     }
@@ -98,7 +88,6 @@ class StoreRepository {
           goldBalance: 1000,
           isPremium: false,
           joinedFreeDate: DateTime.now().subtract(const Duration(days: 15)),
-          purchasedThemes: {},
           purchasedAvatars: {},
         );
       }
@@ -110,7 +99,6 @@ class StoreRepository {
         goldBalance: 1000,
         isPremium: false,
         joinedFreeDate: DateTime.now().subtract(const Duration(days: 15)),
-        purchasedThemes: {},
         purchasedAvatars: {},
       );
     }
@@ -141,7 +129,6 @@ class StoreNotifier extends StateNotifier<StoreState> {
           goldBalance: 1000,
           isPremium: false,
           joinedFreeDate: DateTime.now().subtract(const Duration(days: 15)),
-          purchasedThemes: {},
           purchasedAvatars: {},
         )) {
     _loadStoreData();
@@ -196,28 +183,7 @@ class StoreNotifier extends StateNotifier<StoreState> {
     return false;
   }
 
-  // Buy or renew a Theme
-  bool purchaseOrRenewTheme(String themeId, int price) {
-    if (_deductGold(price)) {
-      final now = DateTime.now();
-      DateTime newExpiry;
-      
-      final currentExpiry = state.purchasedThemes[themeId];
-      if (currentExpiry != null && currentExpiry.isAfter(now)) {
-        newExpiry = currentExpiry.add(const Duration(days: 7));
-      } else {
-        newExpiry = now.add(const Duration(days: 7));
-      }
 
-      final updatedThemes = Map<String, DateTime>.from(state.purchasedThemes);
-      updatedThemes[themeId] = newExpiry;
-
-      state = state.copyWith(purchasedThemes: updatedThemes);
-      _saveStoreData();
-      return true;
-    }
-    return false;
-  }
 
   // Buy or renew an AI Opponent Avatar
   bool purchaseOrRenewAvatar(String avatarId, int price) {
@@ -242,12 +208,6 @@ class StoreNotifier extends StateNotifier<StoreState> {
     return false;
   }
 
-  // Check if a theme is unlocked
-  bool isThemeUnlocked(String themeId) {
-    // All themes are free for now
-    return true;
-  }
-
   // Check if an avatar is unlocked
   bool isAvatarUnlocked(String avatarId) {
     // Default free avatars
@@ -266,11 +226,6 @@ class StoreNotifier extends StateNotifier<StoreState> {
   void _checkExpirationsAndSync() {
     final chessState = ref.read(chessProvider);
     final chessNotifier = ref.read(chessProvider.notifier);
-
-    // Verify Theme
-    if (!isThemeUnlocked(chessState.boardThemeId)) {
-      chessNotifier.setBoardTheme('classic');
-    }
 
     // Verify Opponent Avatar
     if (!isAvatarUnlocked(chessState.engineLevel)) {

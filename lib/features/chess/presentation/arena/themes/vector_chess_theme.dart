@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:chess_assets/chess_assets.dart' as assets_lib;
 import '../../shared/themes/chess_theme.dart';
 import '../effects/walnut_piece_painter.dart';
-import '../effects/sakura_piece_painter.dart';
 import 'package:chess/chess.dart' as chess_lib;
 
 
@@ -67,40 +66,6 @@ class VectorChessTheme extends ChessTheme {
     bool isHighlighted,
     double animationValue,
   ) {
-    if (id == 'vector_sakura') {
-      chess_lib.PieceType pType;
-      switch (type.toUpperCase()) {
-        case 'K':
-          pType = chess_lib.PieceType.KING;
-          break;
-        case 'Q':
-          pType = chess_lib.PieceType.QUEEN;
-          break;
-        case 'R':
-          pType = chess_lib.PieceType.ROOK;
-          break;
-        case 'B':
-          pType = chess_lib.PieceType.BISHOP;
-          break;
-        case 'N':
-          pType = chess_lib.PieceType.KNIGHT;
-          break;
-        case 'P':
-        default:
-          pType = chess_lib.PieceType.PAWN;
-          break;
-      }
-      return AspectRatio(
-        aspectRatio: 1,
-        child: CustomPaint(
-          painter: SakuraPiecePainter(
-            type: pType,
-            isWhite: isWhite,
-            isHighlighted: isHighlighted,
-          ),
-        ),
-      );
-    }
 
     if (id == 'vector_egyptian') {
       chess_lib.PieceType pType;

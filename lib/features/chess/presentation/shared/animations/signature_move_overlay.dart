@@ -190,22 +190,9 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
       return Curves.easeOutCubic;
     }
     // Special themes keep their own curve logic (handled in build())
-    if (themeId == 'theme9') {
-      return _themeBaseCurve(themeId);
-    }
     return profile.moveCurve;
   }
 
-  Curve _themeBaseCurve(String themeId) {
-    switch (themeId) {
-      case 'theme2':
-        return Curves.easeOutBack;
-      case 'theme3':
-        return Curves.easeInOutCubic;
-      default:
-        return Curves.easeInOutSine;
-    }
-  }
 
   @override
   void dispose() {
@@ -346,7 +333,6 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
 
     // ── Theme-specific special modes (preserved from original overlay) ──
     final isElectricTheme = boardThemeId == 'theme4';
-    final isToyTheme = boardThemeId == 'theme9';
     final isSteampunkTheme = boardThemeId == 'theme5';
 
     return AnimatedBuilder(
@@ -372,14 +358,6 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
           verticalLift = 0.0;
           vibration = Offset.zero;
           midRotation = 0.0;
-        } else if (isToyTheme &&
-            ref
-                .read(chessProvider.notifier)
-                .isAnimationTypeEnabled('themeEffects')) {
-          // Toy: high arc + squash/stretch (unchanged)
-          verticalLift = -arc * 60.0;
-          pieceScale = 1.0 + (arc * 0.4);
-          if (rawProgress < 0.2 || rawProgress > 0.8) pieceScale = 0.8;
         } else if (_profile.isInfantry) {
           // ── Infantry March Signature (Pawn) ────────────────────────────
           // Keeps the pawn firmly grounded and solid.
@@ -509,7 +487,6 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
                 widget.data.rookPieceCode!,
                 _rookProfile!,
                 arc,
-                isToyTheme,
                 isSteampunkTheme,
               ),
 
@@ -535,7 +512,6 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
     String pieceCode,
     PieceMotionProfile profile,
     double arc,
-    bool isToyTheme,
     bool isSteampunkTheme,
   ) {
     double scale = 1.0;
@@ -548,13 +524,6 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
       scale = 1.0;
       lift = 0.0;
       vib = Offset.zero;
-    } else if (isToyTheme &&
-        ref
-            .read(chessProvider.notifier)
-            .isAnimationTypeEnabled('themeEffects')) {
-      lift = -arc * 60.0;
-      scale = 1.0 + (arc * 0.4);
-      if (rawProgress < 0.2 || rawProgress > 0.8) scale = 0.8;
     } else if (isSteampunkTheme &&
         ref
             .read(chessProvider.notifier)
