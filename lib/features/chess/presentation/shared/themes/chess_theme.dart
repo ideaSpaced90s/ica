@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../animations/piece_motion_profile.dart';
+import '../animations/signature_move_style.dart';
+import 'animation_group.dart';
 
 abstract class ChessTheme {
   final String id;
@@ -41,37 +43,34 @@ abstract class ChessTheme {
   Widget buildMoveHint(BuildContext context, bool isEnemy);
 
   // Selection indicator (the ring/effect around the selected square)
-  Widget buildSelectionEffect(BuildContext context, double animationValue);
+  Widget buildSelectionRing(BuildContext context);
 
   // Last move highlight
   Widget buildLastMoveHighlight(BuildContext context, double opacity);
 
   // Animation/FX Capability flags
-  bool get hasInteractionFeedback => true;
-  bool get hasSystemIndicators => true;
   bool get hasSFX => true;
-  bool get isInstantMovements => false;
+  bool get hasSystemIndicators => true;
 
-  // Standard/flat glide motion profile for non-signature themes
-  static const PieceMotionProfile standardPieceMotionProfile = PieceMotionProfile(
-    moveDuration: Duration(milliseconds: 300),
-    moveCurve: Curves.easeOutCubic,
-    verticalArcFactor: 0.0,
-    midRotationDeg: 0.0,
-    hasGhostTrail: false,
-    isTeleport: false,
-    landingCompression: 0.0,
-    hasBreathingSelection: false,
-    selectionBreathScale: 0.0,
-    breathingPeriod: Duration(milliseconds: 1000),
-    levitationHeight: 0.0,
-    isInfantry: false,
-  );
+  // Which group this theme belongs to (drives animation tier logic)
+  AnimationGroup get animationGroup => AnimationGroup.b;
+
+  // Theme-specific capture particle effect. Groups B/C/D implement this.
+  // Return null to suppress (Group A).
+  Widget? buildCaptureEffect(
+      BuildContext context, Offset position, VoidCallback onComplete) => null;
+
+  // Continuous ambient overlay drawn behind pieces. Groups C/D only.
+  // Return null for no ambient.
+  Widget? buildAmbientOverlay(BuildContext context) => null;
+
+  // Signature move style for this theme. Group C only.
+  // null = standard glide (no signature layer).
+  SignatureMoveStyle? get signatureMoveStyle => null;
 
   // Piece motion profile (affects animation styles).
-  // Standard themes return the flat glide standardPieceMotionProfile.
   PieceMotionProfile getPieceMotionProfile(String pieceCode) {
-    return standardPieceMotionProfile;
+    return PieceMotionProfile.forCode(pieceCode);
   }
 
   // Border radius for squares (if any)

@@ -79,7 +79,7 @@ class ShadowTheme extends ChessTheme {
   }
 
   @override
-  Widget buildSelectionEffect(BuildContext context, double animationValue) {
+  Widget buildSelectionRing(BuildContext context) {
     return const ShadowSelectionPulse();
   }
 

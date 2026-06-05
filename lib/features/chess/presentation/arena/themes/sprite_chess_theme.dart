@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../shared/themes/chess_theme.dart';
 import '../../shared/widgets/chess_piece_widget.dart';
+import '../effects/group_b_effects.dart';
+import '../../shared/themes/animation_group.dart';
 
 class SpriteChessTheme extends ChessTheme {
   final String? spritePath;
@@ -171,8 +173,17 @@ class SpriteChessTheme extends ChessTheme {
   }
 
   @override
-  Widget buildSelectionEffect(BuildContext context, double animationValue) {
-    return const SizedBox.shrink();
+  AnimationGroup get animationGroup => AnimationGroup.b;
+
+  @override
+  Widget buildSelectionRing(BuildContext context) {
+    return GroupBSelectionPulse(color: frameColor);
+  }
+
+  @override
+  Widget? buildCaptureEffect(
+      BuildContext context, Offset position, VoidCallback onComplete) {
+    return GroupBCaptureFlash(position: position, onComplete: onComplete);
   }
 
   @override

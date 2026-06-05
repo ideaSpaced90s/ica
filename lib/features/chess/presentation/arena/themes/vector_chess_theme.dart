@@ -3,6 +3,9 @@ import 'package:chess_assets/chess_assets.dart' as assets_lib;
 import '../../shared/themes/chess_theme.dart';
 import '../effects/walnut_piece_painter.dart';
 import 'package:chess/chess.dart' as chess_lib;
+import '../../shared/themes/animation_group.dart';
+import '../effects/group_b_effects.dart';
+import 'dart:math';
 
 
 class VectorChessTheme extends ChessTheme {
@@ -188,13 +191,35 @@ class VectorChessTheme extends ChessTheme {
   }
 
   @override
-  Widget buildSelectionEffect(BuildContext context, double animationValue) {
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: packageTheme.activeHighlight, width: 3),
-        borderRadius: BorderRadius.circular(4),
-      ),
-    );
+  AnimationGroup get animationGroup {
+    if (id == 'vector_glass' || id == 'vector_championship') {
+      return AnimationGroup.a;
+    }
+    if (id == 'vector_egyptian') {
+      return AnimationGroup.d;
+    }
+    return AnimationGroup.b; // e.g. vector_wood
+  }
+
+  @override
+  Widget buildSelectionRing(BuildContext context) {
+    if (animationGroup == AnimationGroup.a) {
+      return DefaultSelectionRing(color: packageTheme.activeHighlight);
+    } else if (id == 'vector_egyptian') {
+      return DuneSelectionRing(color: packageTheme.activeHighlight);
+    }
+    return GroupBSelectionPulse(color: packageTheme.activeHighlight);
+  }
+
+  @override
+  Widget? buildCaptureEffect(
+      BuildContext context, Offset position, VoidCallback onComplete) {
+    if (animationGroup == AnimationGroup.a) {
+      return null;
+    } else if (id == 'vector_egyptian') {
+      return SandGrainCapture(position: position, onComplete: onComplete);
+    }
+    return GroupBCaptureFlash(position: position, onComplete: onComplete);
   }
 
   @override
@@ -219,3 +244,182 @@ class VectorChessTheme extends ChessTheme {
     }
   }
 }
+
+class DuneSelectionRing extends StatefulWidget {
+  final Color color;
+  const DuneSelectionRing({super.key, required this.color});
+
+  @override
+  State<DuneSelectionRing> createState() => _DuneSelectionRingState();
+}
+
+class _DuneSelectionRingState extends State<DuneSelectionRing>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _opacityAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat();
+    
+    _scaleAnimation = Tween<double>(begin: 0.9, end: 1.05).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
+    );
+    _opacityAnimation = Tween<double>(begin: 0.8, end: 0.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeIn),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return IgnorePointer(
+          child: Transform.scale(
+            scale: _scaleAnimation.value,
+            child: Opacity(
+              opacity: _opacityAnimation.value,
+              child: Container(
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: widget.color,
+                    width: 2.5,
+                  ),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class SandGrainCapture extends StatefulWidget {
+  final Offset position;
+  final VoidCallback onComplete;
+  const SandGrainCapture({
+    super.key,
+    required this.position,
+    required this.onComplete,
+  });
+
+  @override
+  State<SandGrainCapture> createState() => _SandGrainCaptureState();
+}
+
+class _SandGrainCaptureState extends State<SandGrainCapture>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  final List<_SandGrain> _grains = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+
+    final random = Random();
+    for (int i = 0; i < 10; i++) {
+      final angle = -pi / 6 - random.nextDouble() * 2 * pi / 3;
+      final speed = 40.0 + random.nextDouble() * 50.0;
+      final size = 1.5 + random.nextDouble() * 2.0;
+      _grains.add(_SandGrain(
+        angle: angle,
+        speed: speed,
+        size: size,
+        color: random.nextBool()
+            ? const Color(0xFFD2B48C)
+            : const Color(0xFFEDC9AF),
+      ));
+    }
+
+    _controller.forward().then((_) => widget.onComplete());
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return CustomPaint(
+          painter: _SandGrainPainter(
+            center: widget.position,
+            progress: _controller.value,
+            grains: _grains,
+          ),
+          size: Size.infinite,
+        );
+      },
+    );
+  }
+}
+
+class _SandGrain {
+  final double angle;
+  final double speed;
+  final double size;
+  final Color color;
+
+  _SandGrain({
+    required this.angle,
+    required this.speed,
+    required this.size,
+    required this.color,
+  });
+}
+
+class _SandGrainPainter extends CustomPainter {
+  final Offset center;
+  final double progress;
+  final List<_SandGrain> grains;
+
+  _SandGrainPainter({
+    required this.center,
+    required this.progress,
+    required this.grains,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final opacity = 1.0 - progress;
+
+    for (final g in grains) {
+      final x = center.dx + cos(g.angle) * g.speed * progress;
+      final y = center.dy + sin(g.angle) * g.speed * progress + 120.0 * progress * progress;
+
+      final paint = Paint()
+        ..color = g.color.withValues(alpha: opacity)
+        ..style = PaintingStyle.fill;
+
+      canvas.drawCircle(Offset(x, y), g.size, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _SandGrainPainter oldDelegate) {
+    return true;
+  }
+}
+

@@ -1,20 +1,16 @@
 import 'package:flutter/material.dart';
 import '../../shared/themes/chess_theme.dart';
+import '../../shared/themes/animation_group.dart';
+import '../effects/group_b_effects.dart';
 
 class ScholarTheme extends ChessTheme {
   const ScholarTheme() : super(id: 'scholar', name: 'Scholar');
 
   @override
-  bool get hasInteractionFeedback => false;
-
-  @override
-  bool get hasSystemIndicators => false;
-
-  @override
   bool get hasSFX => false;
 
   @override
-  bool get isInstantMovements => true;
+  AnimationGroup get animationGroup => AnimationGroup.a;
 
   @override
   Color get lightSquare => const Color(0xFFFDF6E2); // Cream
@@ -119,8 +115,8 @@ class ScholarTheme extends ChessTheme {
   }
 
   @override
-  Widget buildSelectionEffect(BuildContext context, double animationValue) {
-    return const SizedBox.shrink();
+  Widget buildSelectionRing(BuildContext context) {
+    return const DefaultSelectionRing(color: Color(0xFFD4AF37));
   }
 
   @override

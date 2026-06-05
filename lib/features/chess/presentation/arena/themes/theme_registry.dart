@@ -16,6 +16,7 @@ import 'seasons_theme.dart';
 import 'lightning_theme.dart';
 import 'plasma_theme.dart';
 import 'overgrown_theme.dart';
+import 'diamonds_sprite_theme.dart';
 import 'fairytale_theme.dart';
 import '../../../application/chess_provider.dart';
 
@@ -110,15 +111,7 @@ class ThemeRegistry {
       frameColor: Color(0xFF3B1F0A),
     ),
     'sprite_lightning': const LightningChessTheme(),
-    'sprite_diamonds': const SpriteChessTheme(
-      id: 'sprite_diamonds',
-      name: 'Diamonds',
-      individualPiecesFolder: 'assets/pieces/diamonds-webP',
-      pieceExtension: 'webp',
-      lightSquare: Color(0xFFE0F7FA),
-      darkSquare: Color(0xFF006064),
-      frameColor: Color(0xFF80DEEA),
-    ),
+    'sprite_diamonds': const DiamondsSpriteTheme(),
     'sprite_royal': const SpriteChessTheme(
       id: 'sprite_royal',
       name: 'Royal',

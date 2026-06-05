@@ -63,7 +63,7 @@ class RatedBnwTheme extends BnwChessTheme {
   }
 
   @override
-  Widget buildSelectionEffect(BuildContext context, double animationValue) {
+  Widget buildSelectionRing(BuildContext context) {
     // Warm amber orbiting star for selection effect
     return OrbitingStarAnimation(color: _orbitStarAmber, isActive: true);
   }

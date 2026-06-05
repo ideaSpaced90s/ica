@@ -11,6 +11,7 @@ import '../../domain/models/ai_avatar.dart';
 import '../widgets/ambient_scaffold.dart';
 import 'dart:ui';
 import 'arena_personas_selection_page.dart';
+import 'chessboard_themes_page.dart';
 
 
 class ArenaSettingsPage extends ConsumerStatefulWidget {
@@ -115,14 +116,20 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
                           label: 'Chessboard Themes',
                           description: 'Current: ${ThemeRegistry.getTheme(state.boardThemeId).name}',
                           icon: Icons.palette_rounded,
-                          onTap: () => _showThemeSelector(context, ref),
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const ChessboardThemesPage(),
+                              ),
+                            );
+                          },
                           trailing: _ThemeMiniPreview(
                             theme: ThemeRegistry.getTheme(state.boardThemeId),
                           ),
                         ),
                         _SettingsSwitchTile(
-                          label: 'Animation State',
-                          description: 'Enable animations for the chosen theme board',
+                          label: 'Master Animations',
+                          description: 'Enables theme-specific effects and signature move animations. Global animations (piece glide, tap ripple, landing) are always active.',
                           icon: state.isAnimationsEnabled
                               ? Icons.auto_awesome_rounded
                               : Icons.auto_awesome_outlined,
@@ -227,165 +234,6 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
     );
   }
 
-  void _showThemeSelector(BuildContext context, WidgetRef ref) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) {
-        return Consumer(
-          builder: (context, ref, _) {
-            final state = ref.watch(chessProvider);
-            final notifier = ref.read(chessProvider.notifier);            return ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(32),
-              ),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                child: Container(
-                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 10),
-                  constraints: BoxConstraints(
-                    maxHeight: MediaQuery.of(context).size.height * 0.75,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.45),
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(32),
-                    ),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.6),
-                      width: 1.5,
-                    ),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Center(
-                        child: Container(
-                          width: 40,
-                          height: 4,
-                          margin: const EdgeInsets.only(bottom: 16),
-                          decoration: BoxDecoration(
-                            color: ScholarlyTheme.panelStroke,
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                      ),
-                      Text(
-                        'Choose Board Theme',
-                        style: GoogleFonts.inter(
-                          color: ScholarlyTheme.textPrimary,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Expanded(
-                        child: GridView.builder(
-                          physics: const BouncingScrollPhysics(),
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 3,
-                            crossAxisSpacing: 12,
-                            mainAxisSpacing: 16,
-                            childAspectRatio: 0.75,
-                          ),
-                          itemCount: ThemeRegistry.allThemes.length,
-                          itemBuilder: (context, index) {
-                            final theme = ThemeRegistry.allThemes[index];
-                            final isSelected = state.boardThemeId == theme.id;
-
-                            return GestureDetector(
-                              onTap: () {
-                                ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                                notifier.setBoardTheme(theme.id);
-                                Navigator.of(context).popUntil((route) => route.isFirst);
-                              },
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  AspectRatio(
-                                    aspectRatio: 1.0,
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        // Always use monochrome gradient — never the board PNG.
-                                        // PNG-board themes showed the full chessboard texture as
-                                        // the card background which clashed with the knight face.
-                                        gradient: LinearGradient(
-                                          colors: [
-                                            theme.lightSquare,
-                                            theme.darkSquare,
-                                          ],
-                                          begin: Alignment.topLeft,
-                                          end: Alignment.bottomRight,
-                                        ),
-                                        borderRadius: BorderRadius.circular(16),
-                                        border: Border.all(
-                                          color: isSelected
-                                              ? ScholarlyTheme.accentBlue
-                                              : ScholarlyTheme.panelStroke.withValues(alpha: 0.5),
-                                          width: isSelected ? 3 : 1.5,
-                                        ),
-                                        boxShadow: isSelected
-                                            ? [
-                                                BoxShadow(
-                                                  color: ScholarlyTheme.accentBlue.withValues(alpha: 0.3),
-                                                  blurRadius: 10,
-                                                  spreadRadius: 1,
-                                                ),
-                                              ]
-                                            : [
-                                                BoxShadow(
-                                                  color: Colors.black.withValues(alpha: 0.05),
-                                                  blurRadius: 4,
-                                                  offset: const Offset(0, 2),
-                                                ),
-                                              ],
-                                      ),
-                                      child: Center(
-                                        child: FractionallySizedBox(
-                                          widthFactor: 0.65,
-                                          heightFactor: 0.65,
-                                          child: theme.buildPiece(
-                                            context,
-                                            'N',
-                                            true,
-                                            false,
-                                            0.0,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    theme.name,
-                                    textAlign: TextAlign.center,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: GoogleFonts.inter(
-                                      fontSize: 11,
-                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                                      color: isSelected ? ScholarlyTheme.accentBlue : ScholarlyTheme.textPrimary,
-                                      height: 1.2,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
 
   void _showTimeControlSelector(BuildContext context, WidgetRef ref) {
     showModalBottomSheet(

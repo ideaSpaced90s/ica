@@ -195,10 +195,8 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
                                               size: Size.infinite,
                                             ),
                                           // 4. Selection Effects
-                                          if (isSelected &&
-                                              ref.read(chessProvider.notifier)
-                                                  .isAnimationTypeEnabled('indicators'))
-                                            chessTheme.buildSelectionEffect(context, 1.0),
+                                          if (isSelected)
+                                            chessTheme.buildSelectionRing(context),
                                           // 5. Move Hints
                                           if (isHint)
                                             chessTheme.buildMoveHint(

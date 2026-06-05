@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../application/chess_provider.dart';
 import '../../../domain/chess_game.dart';
-import '../../scholarly_theme.dart';
-
-import '../../utils/contrast_utility.dart';
 import '../themes/chess_theme.dart';
 import '../themes/classic_theme.dart';
 
@@ -115,63 +112,18 @@ class _ChessPieceWidgetState extends ConsumerState<ChessPieceWidget>
       _matrixDataController.value,
     );
 
-    // ── Resolve piece motion profile ─────────────────────────────────────
-    // code is guaranteed non-null here (resolved above)
-    final profile = theme.getPieceMotionProfile(code);
-
     // Note: Global piece selection enlargement and movement stretch animations have been disabled/removed.
 
-    // ── Breathing selection scale (Option B: always running, applied when highlighted) ──
-    if (theme.hasInteractionFeedback &&
-        ref.read(chessProvider.notifier).isAnimationTypeEnabled('feedback') &&
-        widget.highlighted &&
-        profile.hasBreathingSelection) {
+    // ── Breathing selection scale (always running, applied when highlighted) ──
+    if (widget.highlighted) {
       pieceWidget = AnimatedBuilder(
         animation: _breathingController,
         builder: (context, child) {
           final breathScale =
               1.0 +
-              profile.selectionBreathScale *
+              0.015 *
                   Curves.easeInOutSine.transform(_breathingController.value);
           return Transform.scale(scale: breathScale, child: child);
-        },
-        child: pieceWidget,
-      );
-    }
-
-    if (theme.hasInteractionFeedback &&
-        widget.highlighted &&
-        ref.read(chessProvider.notifier).isAnimationTypeEnabled('feedback')) {
-      final glowColor = theme.id == 'theme10'
-          ? ContrastUtility.selectionGlow
-          : ScholarlyTheme.selectedGlow;
-
-      pieceWidget = AnimatedBuilder(
-        animation: _levitationController,
-        builder: (context, child) {
-          // Profile-driven levitation height — heavier pieces float less
-          final dy =
-              -profile.levitationHeight *
-              Curves.easeInOutSine.transform(_levitationController.value);
-          final glowOpacity = 0.3 + 0.3 * _levitationController.value;
-          final blurRadius = 12.0 + 8.0 * _levitationController.value;
-
-          return Transform.translate(
-            offset: Offset(0, dy),
-            child: Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: glowColor.withValues(alpha: glowOpacity),
-                    blurRadius: blurRadius,
-                    spreadRadius: 2,
-                  ),
-                ],
-              ),
-              child: child,
-            ),
-          );
         },
         child: pieceWidget,
       );
@@ -180,8 +132,6 @@ class _ChessPieceWidgetState extends ConsumerState<ChessPieceWidget>
     // ── King check pulse: subtle scale oscillation when King is in check ──
     if (widget.pieceCode == null &&
         widget.squareName != 'none' &&
-        theme.hasInteractionFeedback &&
-        ref.read(chessProvider.notifier).isAnimationTypeEnabled('feedback') &&
         !widget.highlighted) {
       final activeGame = widget.game ?? chessState.game;
       final pieceOnSquare = activeGame.getPiece(widget.squareName);

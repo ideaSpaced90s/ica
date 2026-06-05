@@ -1,14 +1,14 @@
 import 'dart:math' as math;
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../application/chess_provider.dart';
 import '../../../application/puzzles_provider.dart';
 import '../widgets/chess_piece_widget.dart';
-import '../../trail_movement_overlay.dart' show TrailPainter;
 import 'piece_motion_profile.dart';
 import '../themes/chess_theme.dart';
+import '../themes/animation_group.dart';
+import 'signature_move_style.dart';
 
 class SignatureMoveOverlay extends ConsumerStatefulWidget {
   final MoveAnimationData data;
@@ -19,14 +19,13 @@ class SignatureMoveOverlay extends ConsumerStatefulWidget {
   final ChessTheme? theme;
 
   /// Called with move details when movement completes.
-  /// Used to trigger [LandingFeedback] and kinetic effects in chess_board.dart.
+  /// Used to trigger LandingFeedback and kinetic effects in chess_board.dart.
   final void Function(
     String from,
     String to,
     String pieceCode,
     PieceMotionProfile profile,
-  )?
-  onLand;
+  )? onLand;
 
   /// Trigger for special visual effects (e.g. 'dust_puff')
   final void Function(String action, Offset position)? onActionTrigger;
@@ -58,23 +57,12 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
 
   // Castling support
   late List<Offset>? _rookPath;
-  late PieceMotionProfile? _rookProfile;
 
   bool _isBlinkingRed = false;
 
   static const PieceMotionProfile _puzzleStandardProfile = PieceMotionProfile(
-    moveDuration: Duration(milliseconds: 300),
+    moveDuration: Duration(milliseconds: 200),
     moveCurve: Curves.easeOutCubic,
-    verticalArcFactor: 0.0,
-    midRotationDeg: 0.0,
-    hasGhostTrail: false,
-    isTeleport: false,
-    landingCompression: 0.0,
-    hasBreathingSelection: false,
-    selectionBreathScale: 0.0,
-    breathingPeriod: Duration(milliseconds: 1000),
-    levitationHeight: 0.0,
-    isInfantry: false,
   );
 
   @override
@@ -91,13 +79,8 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
 
     if (widget.data.isCastle) {
       _rookPath = _calculatePath(widget.data.rookFrom!, widget.data.rookTo!);
-      _rookProfile = isPuzzle
-          ? _puzzleStandardProfile
-          : (widget.theme?.getPieceMotionProfile(widget.data.rookPieceCode!) ??
-              PieceMotionProfile.forCode(widget.data.rookPieceCode!));
     } else {
       _rookPath = null;
-      _rookProfile = null;
     }
 
     _controller =
@@ -132,22 +115,14 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
             }
           });
 
-    // ── Curve Selection ──────────────────────────────────────────────────
-    // Profile curve refines the feel per-piece identity.
-    // Theme-specific overrides (toy-bounce, matrix-flicker) are preserved
-    // in the build() block via explicit Guards.
-    final boardThemeId = ref.read(chessProvider).boardThemeId;
-
     _curvedProgress = CurvedAnimation(
       parent: _controller,
-      curve: _profileAwareCurve(boardThemeId, _profile),
+      curve: _profile.moveCurve,
     );
 
-    final pieceMotionEnabled = ref
-        .read(chessProvider.notifier)
-        .isAnimationTypeEnabled('pieceMotion');
-    final isInstant = widget.theme?.isInstantMovements ?? false;
-    if (!pieceMotionEnabled || isInstant) {
+    // Check if provider disabled animations altogether.
+    final animationsEnabled = ref.read(chessProvider).isAnimationsEnabled;
+    if (!animationsEnabled) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           widget.onLand?.call(
@@ -165,34 +140,10 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
   }
 
   Duration get _effectiveMoveDuration {
-    final baseDuration = widget.isCheckmate
-        ? Duration(
-            milliseconds: (_profile.moveDuration.inMilliseconds * 1.7).round(),
-          )
-        : _profile.moveDuration;
-
-    if (widget.boardSize >= 520) {
-      return baseDuration;
-    }
-
-    const mobileMinimum = Duration(milliseconds: 500);
-    if (baseDuration >= mobileMinimum) {
-      return baseDuration;
-    }
-    return mobileMinimum;
+    return widget.isCheckmate
+        ? const Duration(milliseconds: 300)
+        : const Duration(milliseconds: 200);
   }
-
-  /// Returns the profile-aware curve, falling back to theme curve for
-  /// theme-specific special modes (matrix, toy).
-  Curve _profileAwareCurve(String themeId, PieceMotionProfile profile) {
-    final isPuzzle = ref.read(puzzlesProvider).isPuzzleMode;
-    if (isPuzzle) {
-      return Curves.easeOutCubic;
-    }
-    // Special themes keep their own curve logic (handled in build())
-    return profile.moveCurve;
-  }
-
 
   @override
   void dispose() {
@@ -204,7 +155,6 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
   void didUpdateWidget(covariant SignatureMoveOverlay oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    // Handle new move data if it changes while the overlay is still mounted
     if (widget.data != oldWidget.data) {
       _path = _calculatePath(widget.data.from, widget.data.to);
       
@@ -216,21 +166,14 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
 
       if (widget.data.isCastle) {
         _rookPath = _calculatePath(widget.data.rookFrom!, widget.data.rookTo!);
-        _rookProfile = isPuzzle
-            ? _puzzleStandardProfile
-            : (widget.theme?.getPieceMotionProfile(widget.data.rookPieceCode!) ??
-                PieceMotionProfile.forCode(widget.data.rookPieceCode!));
       } else {
         _rookPath = null;
-        _rookProfile = null;
       }
 
       _controller.duration = _effectiveMoveDuration;
-
-      final boardThemeId = ref.read(chessProvider).boardThemeId;
       _curvedProgress = CurvedAnimation(
         parent: _controller,
-        curve: _profileAwareCurve(boardThemeId, _profile),
+        curve: _profile.moveCurve,
       );
 
       _controller.reset();
@@ -242,8 +185,6 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
       _controller.forward(from: _controller.value);
     }
   }
-
-  // ── Path Calculation (identical to TrailMovementOverlay) ─────────────────
 
   List<Offset> _calculatePath(String from, String to) {
     final fromCol = from.codeUnitAt(0) - 'a'.codeUnitAt(0);
@@ -304,36 +245,14 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
     return Offset.lerp(path[segment], path[segment + 1], segmentT)!;
   }
 
-  Widget _buildGhostPiece(double t, double opacity) {
-    if (t <= 0 || t >= 1.0) return const SizedBox.shrink();
-    final pos = _getPositionOnPath(_path, t);
-    return Positioned(
-      left: pos.dx - _squareSize / 2,
-      top: pos.dy - _squareSize / 2,
-      child: Opacity(
-        opacity: opacity.clamp(0.0, 1.0),
-        child: SizedBox(
-          width: _squareSize,
-          height: _squareSize,
-          child: ChessPieceWidget(
-            squareName: widget.data.from,
-            pieceCode: widget.data.pieceCode,
-            isMoving: true,
-            forceVisible: true,
-            theme: widget.theme,
-          ),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final boardThemeId = ref.watch(chessProvider.select((s) => s.boardThemeId));
-
-    // ── Theme-specific special modes (preserved from original overlay) ──
-    final isElectricTheme = boardThemeId == 'theme4';
-    final isSteampunkTheme = boardThemeId == 'theme5';
+    final masterAnimationsEnabled = ref.watch(chessProvider.notifier).masterAnimationsEnabled;
+    final style = widget.theme?.signatureMoveStyle;
+    
+    // Check if piece is a Queen of a Group C theme with master animations enabled
+    final isQueen = widget.data.pieceCode.substring(1).toUpperCase() == 'Q';
+    final isGroupCQueenTeleport = isQueen && widget.theme?.animationGroup == AnimationGroup.c && masterAnimationsEnabled;
 
     return AnimatedBuilder(
       animation: _controller,
@@ -342,64 +261,8 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
         final rawProgress = _controller.value;
 
         final piecePos = _getPositionOnPath(_path, progress);
-        final arc = math.sin(rawProgress * math.pi);
 
-        // ── Motion Variables ─────────────────────────────────────────────
-
-        double pieceScale = 1.0;
-        double verticalLift = 0.0;
-        Offset vibration = Offset.zero;
-        double midRotation = 0.0; // radians
-
-        final isPuzzle = ref.read(puzzlesProvider).isPuzzleMode;
-
-        if (isPuzzle) {
-          pieceScale = 1.0;
-          verticalLift = 0.0;
-          vibration = Offset.zero;
-          midRotation = 0.0;
-        } else if (_profile.isInfantry) {
-          // ── Infantry March Signature (Pawn) ────────────────────────────
-          // Keeps the pawn firmly grounded and solid.
-          verticalLift = 0.0;
-          pieceScale = 1.0;
-
-          // Persistent forward lean/tilt during transit (~5 degrees = 0.087 radians)
-          final tiltAngle = 0.087;
-          final tiltEnvelope = math.sin(rawProgress * math.pi);
-
-          final int fromRow = 8 - int.parse(widget.data.from[1]);
-          final int toRow = 8 - int.parse(widget.data.to[1]);
-          final isMovingUp = toRow < fromRow;
-          final visualDirection = (isMovingUp ^ widget.isFlipped) ? 1.0 : -1.0;
-          midRotation = tiltAngle * visualDirection * tiltEnvelope;
-        } else if (isSteampunkTheme &&
-            ref
-                .read(chessProvider.notifier)
-                .isAnimationTypeEnabled('themeEffects')) {
-          // Steampunk: mechanical rattle (unchanged)
-          verticalLift = -arc * 10.0;
-          vibration = Offset(math.sin(rawProgress * 40) * 2.0, 0);
-        } else {
-          // ── Profile-driven motion (all other themes) ─────────────────
-          // Vertical arc from profile
-          verticalLift = -arc * _squareSize * _profile.verticalArcFactor;
-
-          // Mid-move rotation (Knight signature)
-          if (_profile.midRotationDeg != 0.0) {
-            midRotation =
-                _profile.midRotationDeg *
-                (math.pi / 180.0) *
-                math.sin(rawProgress * math.pi);
-          }
-
-          // Subtle scale swell (small rise mid-arc for non-flat pieces)
-          if (_profile.verticalArcFactor > 0.05) {
-            pieceScale = 1.0 + (arc * 0.15);
-          }
-        }
-
-        // ── Piece Widget ─────────────────────────────────────────────────
+        // ── Primary Piece ─────────────────────────────────────────────────
         Widget movingPiece = SizedBox(
           width: _squareSize,
           height: _squareSize,
@@ -412,51 +275,12 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
           ),
         );
 
-        // Apply mid-move rotation (Knight only in practice)
-        if (midRotation != 0.0) {
-          movingPiece = Transform.rotate(
-            angle: midRotation,
-            child: movingPiece,
-          );
-        }
-
         return Stack(
           clipBehavior: Clip.none,
           children: [
-            // ── Trail painter (all non-matrix, non-electric themes) ──
-            // Hidden for teleport moves to maintain clean jump feel
-            if (!_profile.isTeleport &&
-                !isElectricTheme &&
-                ref
-                    .read(chessProvider.notifier)
-                    .isAnimationTypeEnabled('themeEffects'))
-              CustomPaint(
-                size: Size(widget.boardSize, widget.boardSize),
-                painter: TrailPainter(
-                  path: _path,
-                  progress: progress,
-                  squareSize: _squareSize,
-                ),
-              ),
-
-            // ── Electric arc (theme9, unchanged) ──
-            if (isElectricTheme &&
-                ref
-                    .read(chessProvider.notifier)
-                    .isAnimationTypeEnabled('themeEffects'))
-              CustomPaint(
-                size: Size(widget.boardSize, widget.boardSize),
-                painter: _LightningArcPainter(
-                  from: _path.first,
-                  to: piecePos,
-                  progress: progress,
-                ),
-              ),
-
-            // ── Bishop ghost trail ──────────────────────────────────
-            if (_profile.hasGhostTrail)
-              for (int i = 1; i <= 4; i++)
-                _buildGhostPiece(progress - (i * 0.05), 0.35 / (i * 1.6)),
+            // ── Signature move effect layer (Group C only, gated by toggle) ──
+            if (style != null && masterAnimationsEnabled)
+              _buildSignatureLayer(style, progress, rawProgress, isGroupCQueenTeleport),
 
             // ── Wrong Move Red Blink Overlay ────────────────────────
             if (_isBlinkingRed)
@@ -485,20 +309,14 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
                 rawProgress,
                 _getPositionOnPath(_rookPath!, progress),
                 widget.data.rookPieceCode!,
-                _rookProfile!,
-                arc,
-                isSteampunkTheme,
               ),
 
-            // King (primary piece)
-            _buildMovingPiece(
+            // King or Queen or other primary piece
+            _buildPrimaryPiece(
               rawProgress,
               piecePos,
-              pieceScale,
-              verticalLift,
-              vibration,
-              midRotation,
               movingPiece,
+              isGroupCQueenTeleport,
             ),
           ],
         );
@@ -510,161 +328,171 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
     double rawProgress,
     Offset pos,
     String pieceCode,
-    PieceMotionProfile profile,
-    double arc,
-    bool isSteampunkTheme,
   ) {
-    double scale = 1.0;
-    double lift = 0.0;
-    Offset vib = Offset.zero;
-
-    final isPuzzle = ref.read(puzzlesProvider).isPuzzleMode;
-
-    if (isPuzzle) {
-      scale = 1.0;
-      lift = 0.0;
-      vib = Offset.zero;
-    } else if (isSteampunkTheme &&
-        ref
-            .read(chessProvider.notifier)
-            .isAnimationTypeEnabled('themeEffects')) {
-      lift = -arc * 10.0;
-      vib = Offset(math.sin(rawProgress * 40) * 2.0, 0);
-    } else {
-      lift = -arc * _squareSize * profile.verticalArcFactor;
-      if (profile.verticalArcFactor > 0.05) {
-        scale = 1.0 + (arc * 0.15);
-      }
-    }
-
     return Positioned(
-      left: pos.dx - _squareSize / 2 + vib.dx,
-      top: pos.dy - _squareSize / 2 + lift + vib.dy,
-      child: Transform.scale(
-        scale: scale,
-        child: SizedBox(
-          width: _squareSize,
-          height: _squareSize,
-          child: ChessPieceWidget(
-            squareName: widget.data.from, // Not strictly used for display
-            pieceCode: pieceCode,
-            isMoving: true,
-            forceVisible: true,
-            theme: widget.theme,
-          ),
+      left: pos.dx - _squareSize / 2,
+      top: pos.dy - _squareSize / 2,
+      child: SizedBox(
+        width: _squareSize,
+        height: _squareSize,
+        child: ChessPieceWidget(
+          squareName: widget.data.from,
+          pieceCode: pieceCode,
+          isMoving: true,
+          forceVisible: true,
+          theme: widget.theme,
         ),
       ),
     );
   }
 
-  Widget _buildMovingPiece(
+  Widget _buildPrimaryPiece(
     double rawProgress,
     Offset piecePos,
-    double pieceScale,
-    double verticalLift,
-    Offset vibration,
-    double midRotation,
     Widget movingPiece,
+    bool isGroupCQueenTeleport,
   ) {
-    if (!_profile.isTeleport) {
-      // ── Arcade Mode: motion blur while sliding ──────────────────────────
-      final arcadeMode = ref
-          .read(chessProvider.notifier)
-          .isAnimationTypeEnabled('arcadeMode');
-      final moveDistanceSq = (_path.length > 1)
-          ? (_path.last - _path.first).distanceSquared
-          : 0.0;
-      final isLongMove = moveDistanceSq > (_squareSize * _squareSize * 1.5);
-
-      Widget finalPiece = Transform.scale(scale: pieceScale, child: movingPiece);
-
-      if (arcadeMode && isLongMove && rawProgress < 0.88) {
-        // Blur peaks at mid-move (rawProgress ≈ 0.5), fades to 0 near arrival
-        final blurSigma = 2.5 * math.sin(rawProgress * math.pi).clamp(0.0, 1.0);
-        if (blurSigma > 0.1) {
-          finalPiece = ImageFiltered(
-            imageFilter: ui.ImageFilter.blur(
-              sigmaX: blurSigma,
-              sigmaY: blurSigma * 0.4, // mostly horizontal blur
-              tileMode: TileMode.decal,
-            ),
-            child: finalPiece,
-          );
-        }
+    if (isGroupCQueenTeleport) {
+      final origin = _path.first;
+      final dest = _path.last;
+      
+      final Offset teleportPos;
+      final double teleportOpacity;
+      if (rawProgress < 0.4) {
+        teleportPos = origin;
+        teleportOpacity = (1.0 - (rawProgress / 0.4)).clamp(0.0, 1.0);
+      } else if (rawProgress < 0.6) {
+        teleportPos = dest;
+        teleportOpacity = 0.0;
+      } else {
+        teleportPos = dest;
+        teleportOpacity = ((rawProgress - 0.6) / 0.4).clamp(0.0, 1.0);
       }
 
       return Positioned(
-        left: piecePos.dx - _squareSize / 2 + vibration.dx,
-        top: piecePos.dy - _squareSize / 2 + verticalLift + vibration.dy,
-        child: finalPiece,
+        left: teleportPos.dx - _squareSize / 2,
+        top: teleportPos.dy - _squareSize / 2,
+        child: Opacity(
+          opacity: teleportOpacity,
+          child: movingPiece,
+        ),
       );
     }
 
-    // ── Queen Teleport (Blink) Logic ─────────────────────────────────────
-
-    // 1. Handle Capture Delay (wait for dust/vanish)
-    double adjustedProgress = rawProgress;
-    const captureDelay = 0.25; // 25% of duration spent waiting
-
-    if (widget.data.isCapture) {
-      if (rawProgress < captureDelay) {
-        return const SizedBox.shrink(); // Hidden while waiting for capture effect
-      }
-      adjustedProgress = (rawProgress - captureDelay) / (1.0 - captureDelay);
-    }
-
-    // 2. Teleport Phases (To-and-Fro Airy Flickering)
-    // We alternate between A and B to create a "phase-shifting" look.
-    // 4 hops of 400ms each = 1.6s total (adjustedProgress).
-
-    Offset teleportPos;
-    double blinkOpacity = 1.0;
-
-    // Use a fast sine wave to drive the "airy" flickering across the whole duration
-    // 4 cycles total (A -> B -> A -> B)
-    final double cycleProgress = (adjustedProgress * 4) % 1.0;
-    final int cycleIndex = (adjustedProgress * 4).floor().clamp(0, 3);
-
-    // Cycle 0: Point A
-    // Cycle 1: Point B
-    // Cycle 2: Point A
-    // Cycle 3: Point B
-    if (cycleIndex % 2 == 0) {
-      teleportPos = _path.first;
-    } else {
-      teleportPos = _path.last;
-    }
-
-    // "Airy" fade: pulses 1.0 -> 0.3 -> 1.0 during each 400ms hop
-    blinkOpacity =
-        0.65 + 0.35 * math.sin(cycleProgress * math.pi * 2 + math.pi / 2);
-
-    // Final stabilization: in the last 10% of the final hop, stay at B and solid
-    if (adjustedProgress > 0.95) {
-      teleportPos = _path.last;
-      blinkOpacity = 1.0;
-    }
-
     return Positioned(
-      key: ValueKey('queen_teleport_${teleportPos}_$cycleIndex'),
-      left: teleportPos.dx - _squareSize / 2,
-      top: teleportPos.dy - _squareSize / 2,
-      child: Opacity(
-        opacity: blinkOpacity.clamp(0.0, 1.0),
-        child: Transform.scale(scale: 1.0, child: movingPiece),
-      ),
+      left: piecePos.dx - _squareSize / 2,
+      top: piecePos.dy - _squareSize / 2,
+      child: movingPiece,
     );
+  }
+
+  Widget _buildSignatureLayer(
+    SignatureMoveStyle style,
+    double progress,
+    double raw,
+    bool isTeleport,
+  ) {
+    return switch (style) {
+      QuantumDissolveTrail() => CustomPaint(
+          size: Size(widget.boardSize, widget.boardSize),
+          painter: _QuantumDissolvePainter(path: _path, progress: progress, isTeleport: isTeleport),
+        ),
+      PlasmaArcFlash() => CustomPaint(
+          size: Size(widget.boardSize, widget.boardSize),
+          painter: _PlasmaArcFlashPainter(from: _path.first, to: isTeleport ? _path.last : _getPositionOnPath(_path, progress), progress: raw),
+        ),
+      CrystalTrail() => CustomPaint(
+          size: Size(widget.boardSize, widget.boardSize),
+          painter: _CrystalTrailPainter(path: _path, progress: progress, isTeleport: isTeleport),
+        ),
+      OrbitalPulseTrail() => CustomPaint(
+          size: Size(widget.boardSize, widget.boardSize),
+          painter: _OrbitalPulseTrailPainter(path: _path, progress: progress, squareSize: _squareSize, isTeleport: isTeleport),
+        ),
+      FairyDustTrail() => CustomPaint(
+          size: Size(widget.boardSize, widget.boardSize),
+          painter: _FairyDustTrailPainter(path: _path, progress: progress, isTeleport: isTeleport),
+        ),
+    };
   }
 }
 
-// ── Lightning Arc (preserved from original TrailMovementOverlay) ─────────────
+// ── Plasma: "Quantum Dissolve" Painter ──────────────────────────────────────
 
-class _LightningArcPainter extends CustomPainter {
+class _QuantumDissolvePainter extends CustomPainter {
+  final List<Offset> path;
+  final double progress;
+  final bool isTeleport;
+
+  _QuantumDissolvePainter({
+    required this.path,
+    required this.progress,
+    required this.isTeleport,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final random = math.Random(42);
+    final squareSize = size.width / 8;
+    final origin = path.first;
+    final dest = path.last;
+
+    for (int i = 0; i < 12; i++) {
+      final color = i % 2 == 0 ? const Color(0xFF9C3FE4) : const Color(0xFF00BFFF);
+      final paint = Paint()
+        ..color = color.withValues(alpha: (1.0 - progress).clamp(0.0, 1.0))
+        ..style = PaintingStyle.fill;
+
+      final fSize = 4.0 + random.nextDouble() * 4.0;
+      final dx = (random.nextDouble() - 0.5) * squareSize;
+      final dy = (random.nextDouble() - 0.5) * squareSize;
+
+      final Offset pos;
+      if (isTeleport) {
+        if (progress < 0.5) {
+          final p = progress / 0.5;
+          pos = Offset(
+            origin.dx + dx * p * 1.5,
+            origin.dy + dy * p * 1.5 - p * 20.0,
+          );
+        } else {
+          final p = (progress - 0.5) / 0.5;
+          pos = Offset(
+            dest.dx + dx * (1.0 - p) * 1.5,
+            dest.dy + dy * (1.0 - p) * 1.5 - (1.0 - p) * 20.0,
+          );
+        }
+      } else {
+        if (progress >= 0.3 && progress <= 0.7) {
+          final t = (progress - 0.3) / 0.4;
+          final currentPos = Offset.lerp(origin, dest, progress)!;
+          final spread = math.sin(t * math.pi);
+          pos = Offset(
+            currentPos.dx + dx * spread,
+            currentPos.dy + dy * spread,
+          );
+        } else {
+          continue;
+        }
+      }
+
+      canvas.drawRect(Rect.fromCenter(center: pos, width: fSize, height: fSize), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _QuantumDissolvePainter oldDelegate) =>
+      oldDelegate.progress != progress;
+}
+
+// ── Lightning: "Plasma Arc Flash" Painter ───────────────────────────────────
+
+class _PlasmaArcFlashPainter extends CustomPainter {
   final Offset from;
   final Offset to;
   final double progress;
 
-  _LightningArcPainter({
+  _PlasmaArcFlashPainter({
     required this.from,
     required this.to,
     required this.progress,
@@ -672,31 +500,36 @@ class _LightningArcPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (progress <= 0 || progress >= 1.0) return;
+    if (progress >= 0.75) return;
+
+    final opacity = (progress < 0.15)
+        ? (progress / 0.15)
+        : (1.0 - (progress - 0.15) / 0.60).clamp(0.0, 1.0);
 
     final paint = Paint()
-      ..color = const Color(0xFF00BFFF)
+      ..color = const Color(0xFF00BFFF).withValues(alpha: opacity)
       ..strokeWidth = 2.0
       ..style = PaintingStyle.stroke;
 
     final glowPaint = Paint()
-      ..color = const Color(0xFF00BFFF).withValues(alpha: 0.3)
+      ..color = const Color(0xFF00BFFF).withValues(alpha: opacity * 0.3)
       ..strokeWidth = 6.0
       ..style = PaintingStyle.stroke
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
 
-    final random = math.Random();
+    final random = math.Random(42);
     final path = Path()..moveTo(from.dx, from.dy);
 
     final dist = (to - from).distance;
-    final segments = (dist / 10).clamp(5, 20).toInt();
+    if (dist < 1.0) return;
+    final segments = (dist / 12).clamp(5, 20).toInt();
 
     for (int i = 1; i <= segments; i++) {
       final t = i / segments;
       final lerped = Offset.lerp(from, to, t)!;
       final jitter = Offset(
-        (random.nextDouble() - 0.5) * 20,
-        (random.nextDouble() - 0.5) * 20,
+        (random.nextDouble() - 0.5) * 25 * math.sin(t * math.pi),
+        (random.nextDouble() - 0.5) * 25 * math.sin(t * math.pi),
       );
       path.lineTo(lerped.dx + jitter.dx, lerped.dy + jitter.dy);
     }
@@ -706,5 +539,205 @@ class _LightningArcPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_LightningArcPainter oldDelegate) => true;
+  bool shouldRepaint(_PlasmaArcFlashPainter oldDelegate) => true;
+}
+
+// ── Diamonds: "Crystal Trail" Painter ───────────────────────────────────────
+
+class _CrystalTrailPainter extends CustomPainter {
+  final List<Offset> path;
+  final double progress;
+  final bool isTeleport;
+
+  _CrystalTrailPainter({
+    required this.path,
+    required this.progress,
+    required this.isTeleport,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final random = math.Random(1337);
+    final origin = path.first;
+    final dest = path.last;
+
+    final spawnTimes = [0.15, 0.35, 0.55, 0.75];
+    for (int i = 0; i < spawnTimes.length; i++) {
+      final tSpawn = spawnTimes[i];
+      if (progress < tSpawn) continue;
+
+      final age = progress - tSpawn;
+      final duration = 0.35;
+      if (age > duration) continue;
+
+      final pAge = age / duration;
+      final opacity = (1.0 - pAge).clamp(0.0, 1.0);
+
+      final paint = Paint()
+        ..color = const Color(0xFFB2EBF2).withValues(alpha: opacity)
+        ..style = PaintingStyle.fill;
+
+      final glowPaint = Paint()
+        ..color = Colors.white.withValues(alpha: opacity * 0.6)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.0;
+
+      final Offset pos;
+      if (isTeleport) {
+        pos = tSpawn < 0.5
+            ? Offset(origin.dx + (random.nextDouble() - 0.5) * 30, origin.dy + (random.nextDouble() - 0.5) * 30)
+            : Offset(dest.dx + (random.nextDouble() - 0.5) * 30, dest.dy + (random.nextDouble() - 0.5) * 30);
+      } else {
+        pos = Offset.lerp(origin, dest, tSpawn)!;
+      }
+
+      final dSize = 6.0 + random.nextDouble() * 4.0;
+      final rotation = pAge * 45 * (math.pi / 180);
+
+      canvas.save();
+      canvas.translate(pos.dx, pos.dy);
+      canvas.rotate(rotation);
+      
+      final rect = Rect.fromCenter(center: Offset.zero, width: dSize, height: dSize);
+      canvas.drawRect(rect, paint);
+      canvas.drawRect(rect, glowPaint);
+      canvas.restore();
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _CrystalTrailPainter oldDelegate) => true;
+}
+
+// ── Arc: "Orbital Pulse Trail" Painter ──────────────────────────────────────
+
+class _OrbitalPulseTrailPainter extends CustomPainter {
+  final List<Offset> path;
+  final double progress;
+  final double squareSize;
+  final bool isTeleport;
+
+  _OrbitalPulseTrailPainter({
+    required this.path,
+    required this.progress,
+    required this.squareSize,
+    required this.isTeleport,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final origin = path.first;
+    final dest = path.last;
+    final spawnTimes = [0.0, 0.25, 0.5, 0.75];
+    final duration = 0.45;
+
+    for (int i = 0; i < spawnTimes.length; i++) {
+      final tSpawn = spawnTimes[i];
+      if (progress < tSpawn) continue;
+
+      final age = progress - tSpawn;
+      if (age > duration) continue;
+
+      final pAge = age / duration;
+      final opacity = (0.28 * (1.0 - pAge)).clamp(0.0, 1.0);
+      final scale = 0.8 + 0.6 * pAge;
+
+      final paint = Paint()
+        ..color = const Color(0xFFC3A555).withValues(alpha: opacity)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.0;
+
+      final Offset pos;
+      if (isTeleport) {
+        pos = tSpawn < 0.5 ? origin : dest;
+      } else {
+        pos = Offset.lerp(origin, dest, tSpawn)!;
+      }
+
+      canvas.drawCircle(pos, (squareSize * 0.4) * scale, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _OrbitalPulseTrailPainter oldDelegate) => true;
+}
+
+// ── Fairytale: "Fairy Dust Trail" Painter ───────────────────────────────────
+
+class _FairyDustTrailPainter extends CustomPainter {
+  final List<Offset> path;
+  final double progress;
+  final bool isTeleport;
+
+  _FairyDustTrailPainter({
+    required this.path,
+    required this.progress,
+    required this.isTeleport,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final random = math.Random(2026);
+    final origin = path.first;
+    final dest = path.last;
+    final spawnTimes = [0.1, 0.25, 0.4, 0.55, 0.7];
+    final colors = [
+      const Color(0xFFFFD700), // Gold
+      const Color(0xFFFF69B4), // Pink
+      const Color(0xFFFFFFFF), // White
+    ];
+
+    final duration = 0.60;
+
+    for (int i = 0; i < spawnTimes.length; i++) {
+      final tSpawn = spawnTimes[i];
+      if (progress < tSpawn) continue;
+
+      final age = progress - tSpawn;
+      if (age > duration) continue;
+
+      final pAge = age / duration;
+      final opacity = (1.0 - pAge).clamp(0.0, 1.0);
+
+      final color = colors[i % colors.length];
+      final paint = Paint()
+        ..color = color.withValues(alpha: opacity)
+        ..style = PaintingStyle.fill;
+
+      final Offset spawnPos;
+      if (isTeleport) {
+        spawnPos = tSpawn < 0.5 ? origin : dest;
+      } else {
+        spawnPos = Offset.lerp(origin, dest, tSpawn)!;
+      }
+
+      final driftY = pAge * (10.0 + random.nextDouble() * 8.0);
+      final driftX = (random.nextDouble() - 0.5) * 8.0;
+      final pos = Offset(spawnPos.dx + driftX, spawnPos.dy + driftY);
+
+      final starSize = 5.0 + random.nextDouble() * 3.0;
+      final rotation = pAge * (90 + random.nextDouble() * 90) * (math.pi / 180);
+
+      canvas.save();
+      canvas.translate(pos.dx, pos.dy);
+      canvas.rotate(rotation);
+
+      final starPath = Path()
+        ..moveTo(0, -starSize)
+        ..lineTo(starSize * 0.3, -starSize * 0.3)
+        ..lineTo(starSize, 0)
+        ..lineTo(starSize * 0.3, starSize * 0.3)
+        ..lineTo(0, starSize)
+        ..lineTo(-starSize * 0.3, starSize * 0.3)
+        ..lineTo(-starSize, 0)
+        ..lineTo(-starSize * 0.3, -starSize * 0.3)
+        ..close();
+
+      canvas.drawPath(starPath, paint);
+      canvas.restore();
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _FairyDustTrailPainter oldDelegate) => true;
 }

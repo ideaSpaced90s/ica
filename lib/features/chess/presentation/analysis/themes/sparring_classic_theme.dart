@@ -107,9 +107,8 @@ class SparringClassicTheme extends ChessTheme {
   }
 
   @override
-  Widget buildSelectionEffect(BuildContext context, double animationValue) {
-    // Standard gold star animation or similar
-    return const SizedBox.shrink(); // Will be handled by the default OrbitingStar
+  Widget buildSelectionRing(BuildContext context) {
+    return const SizedBox.shrink();
   }
 
   @override

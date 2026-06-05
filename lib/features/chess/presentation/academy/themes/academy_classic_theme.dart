@@ -107,7 +107,7 @@ class AcademyClassicTheme extends ChessTheme {
   }
 
   @override
-  Widget buildSelectionEffect(BuildContext context, double animationValue) {
+  Widget buildSelectionRing(BuildContext context) {
     return const SizedBox.shrink();
   }
 

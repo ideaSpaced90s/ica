@@ -51,15 +51,6 @@ class _LandingFeedbackState extends State<LandingFeedback>
   void initState() {
     super.initState();
 
-    // Pieces with zero compression skip immediately unless this is a mate beat.
-    if (widget.profile.landingCompression == 0.0 && !widget.isCritical) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => widget.onComplete());
-      _controller = AnimationController(vsync: this, duration: Duration.zero);
-      _scaleAnim = const AlwaysStoppedAnimation(1.0);
-      _opacityAnim = const AlwaysStoppedAnimation(0.0);
-      return;
-    }
-
     _controller =
         AnimationController(
           vsync: this,
@@ -114,9 +105,9 @@ class _LandingFeedbackState extends State<LandingFeedback>
 
   double get _compression {
     if (widget.isCritical) {
-      return widget.profile.landingCompression.clamp(0.018, 0.032).toDouble();
+      return 0.025;
     }
-    return widget.profile.landingCompression;
+    return 0.015;
   }
 
   @override
@@ -127,9 +118,6 @@ class _LandingFeedbackState extends State<LandingFeedback>
 
   @override
   Widget build(BuildContext context) {
-    if (widget.profile.landingCompression == 0.0 && !widget.isCritical) {
-      return const SizedBox.shrink();
-    }
 
     // Position centered on the landing square
     final col = widget.isFlipped ? 7 - widget.squareCol : widget.squareCol;

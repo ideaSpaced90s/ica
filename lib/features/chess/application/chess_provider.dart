@@ -850,19 +850,21 @@ class ChessNotifier extends StateNotifier<ChessState> {
     _saveSettings();
   }
 
+  bool get masterAnimationsEnabled {
+    if (state.isAcademyActive) return false;
+    return state.isAnimationsEnabled;
+  }
+
   bool isAnimationTypeEnabled(String key, {bool isRated = false}) {
     if (isRated || state.isAcademyActive) {
       return key == 'pieceMotion';
     }
-    if (!state.isAnimationsEnabled) {
-      return false;
+    if (key == 'pieceMotion' || key == 'feedback' || key == 'indicators') {
+      return true;
     }
-    final themeId = state.boardThemeId;
-    if (themeId == 'classic' || themeId == 'scholar' || themeId == 'vector_glass') {
-      return false;
-    }
-    return true;
+    return masterAnimationsEnabled;
   }
+
 
   void toggleAcademyHouseAnimations() {
     state = state.copyWith(academyHouseAnimations: !state.academyHouseAnimations);
