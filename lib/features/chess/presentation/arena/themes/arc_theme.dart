@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../shared/widgets/chess_piece_widget.dart';
 import '../../shared/themes/animation_group.dart';
 import '../../shared/animations/signature_move_style.dart';
+import '../../shared/animations/piece_motion_profile.dart';
 import 'sprite_chess_theme.dart';
 
 class ArcChessTheme extends SpriteChessTheme {
@@ -21,7 +22,7 @@ class ArcChessTheme extends SpriteChessTheme {
   AnimationGroup get animationGroup => AnimationGroup.c;
 
   @override
-  SignatureMoveStyle? get signatureMoveStyle => const OrbitalPulseTrail();
+  SignatureMoveStyle? get signatureMoveStyle => const ArcModernSignature();
 
   @override
   Widget buildBackground(BuildContext context, bool animationsEnabled) {
@@ -132,6 +133,46 @@ class ArcChessTheme extends SpriteChessTheme {
         filterQuality: FilterQuality.high,
       ),
     );
+  }
+
+  @override
+  PieceMotionProfile getPieceMotionProfile(String pieceCode) {
+    final type = pieceCode.length > 1
+        ? pieceCode.substring(1).toUpperCase()
+        : pieceCode.toUpperCase();
+    switch (type) {
+      case 'Q':
+        return const PieceMotionProfile(
+          moveDuration: Duration(milliseconds: 550),
+          moveCurve: Curves.easeInOutCubic,
+        );
+      case 'N':
+        return const PieceMotionProfile(
+          moveDuration: Duration(milliseconds: 500),
+          moveCurve: Curves.easeInOutQuad,
+        );
+      case 'R':
+        return const PieceMotionProfile(
+          moveDuration: Duration(milliseconds: 450),
+          moveCurve: Curves.easeOutCubic,
+        );
+      case 'B':
+        return const PieceMotionProfile(
+          moveDuration: Duration(milliseconds: 400),
+          moveCurve: Curves.easeOutCubic,
+        );
+      case 'K':
+        return const PieceMotionProfile(
+          moveDuration: Duration(milliseconds: 480),
+          moveCurve: Curves.easeInOutQuad,
+        );
+      case 'P':
+      default:
+        return const PieceMotionProfile(
+          moveDuration: Duration(milliseconds: 320),
+          moveCurve: Curves.easeOutCubic,
+        );
+    }
   }
 }
 

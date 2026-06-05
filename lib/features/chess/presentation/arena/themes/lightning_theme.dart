@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../shared/themes/animation_group.dart';
 import '../../shared/animations/signature_move_style.dart';
+import '../../shared/animations/piece_motion_profile.dart';
 import 'sprite_chess_theme.dart';
 
 class LightningChessTheme extends SpriteChessTheme {
@@ -20,7 +21,7 @@ class LightningChessTheme extends SpriteChessTheme {
   AnimationGroup get animationGroup => AnimationGroup.c;
 
   @override
-  SignatureMoveStyle? get signatureMoveStyle => const PlasmaArcFlash();
+  SignatureMoveStyle? get signatureMoveStyle => const LightningModernSignature();
 
   @override
   Widget buildBackground(BuildContext context, bool animationsEnabled) {
@@ -48,18 +49,75 @@ class LightningChessTheme extends SpriteChessTheme {
   Widget? buildAmbientOverlay(BuildContext context) {
     return const StaticDischargeAmbient();
   }
+
+  @override
+  PieceMotionProfile getPieceMotionProfile(String pieceCode) {
+    final type = pieceCode.length > 1
+        ? pieceCode.substring(1).toUpperCase()
+        : pieceCode.toUpperCase();
+    switch (type) {
+      case 'Q':
+        return const PieceMotionProfile(
+          moveDuration: Duration(milliseconds: 420),
+          moveCurve: Curves.easeInOutCubic,
+        );
+      case 'N':
+        return const PieceMotionProfile(
+          moveDuration: Duration(milliseconds: 420),
+          moveCurve: Curves.easeInOutQuad,
+        );
+      case 'R':
+        return const PieceMotionProfile(
+          moveDuration: Duration(milliseconds: 360),
+          moveCurve: Curves.easeOutCubic,
+        );
+      case 'B':
+        return const PieceMotionProfile(
+          moveDuration: Duration(milliseconds: 380),
+          moveCurve: Curves.easeOutCubic,
+        );
+      case 'K':
+        return const PieceMotionProfile(
+          moveDuration: Duration(milliseconds: 400),
+          moveCurve: Curves.easeInOutQuad,
+        );
+      case 'P':
+      default:
+        return const PieceMotionProfile(
+          moveDuration: Duration(milliseconds: 280),
+          moveCurve: Curves.easeOutCubic,
+        );
+    }
+  }
 }
 
 class LightningBackgroundPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
+    final random = Random(1337);
+
+    // Draw stormy cloud layers
+    for (int i = 0; i < 5; i++) {
+      final x = random.nextDouble() * size.width;
+      final y = random.nextDouble() * size.height;
+      final radius = size.width * 0.4 + random.nextDouble() * size.width * 0.2;
+      
+      final cloudPaint = Paint()
+        ..shader = RadialGradient(
+          colors: [
+            const Color(0xFF0F172A).withValues(alpha: 0.15),
+            const Color(0xFF020617).withValues(alpha: 0.0),
+          ],
+        ).createShader(Rect.fromCircle(center: Offset(x, y), radius: radius));
+        
+      canvas.drawCircle(Offset(x, y), radius, cloudPaint);
+    }
+
     final paint = Paint()
       ..style = PaintingStyle.stroke
       ..color = const Color(0xFF00E5FF).withValues(alpha: 0.08)
       ..strokeCap = StrokeCap.round
       ..strokeWidth = 1.5;
-
-    final random = Random(1337);
 
     for (int i = 0; i < 4; i++) {
       final side = random.nextInt(4);

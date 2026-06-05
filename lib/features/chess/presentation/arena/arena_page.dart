@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 import 'dart:ui';
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
@@ -25,6 +24,7 @@ import 'arena_settings_page.dart';
 import '../../application/onboarding_provider.dart';
 import '../../application/tutorial_provider.dart';
 import '../widgets/gm_chanakya_intro_overlay.dart';
+import '../widgets/neural_connectivity_mesh.dart';
 
 class ArenaPage extends ConsumerStatefulWidget {
   const ArenaPage({super.key});
@@ -1567,66 +1567,12 @@ class _SpringEntranceState extends State<_SpringEntrance>
   }
 }
 
-class ThinkingDotsAnimation extends StatefulWidget {
+class ThinkingDotsAnimation extends StatelessWidget {
   const ThinkingDotsAnimation({super.key});
 
   @override
-  State<ThinkingDotsAnimation> createState() => _ThinkingDotsAnimationState();
-}
-
-class _ThinkingDotsAnimationState extends State<ThinkingDotsAnimation>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 20,
-      height: 20,
-      child: GridView.builder(
-        physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 3,
-          mainAxisSpacing: 3,
-          crossAxisSpacing: 3,
-        ),
-        itemCount: 9,
-        itemBuilder: (context, index) {
-          final row = index ~/ 3;
-          final col = index % 3;
-          final delay = (row + col) * 0.15;
-
-          return AnimatedBuilder(
-            animation: _controller,
-            builder: (context, child) {
-              final progress = (_controller.value - delay) % 1.0;
-              final double opacity = (math.sin(progress * 2 * math.pi) + 1.0) / 2.0;
-              return Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: ScholarlyTheme.textPrimary.withValues(alpha: 0.15 + 0.85 * opacity),
-                ),
-              );
-            },
-          );
-        },
-      ),
-    );
+    return const NeuralConnectivityMesh();
   }
 }
 

@@ -10,6 +10,7 @@ import '../../../application/practice_lab_provider.dart';
 import '../../scholarly_theme.dart';
 import '../analysis_board.dart';
 import 'practice_lab_board.dart';
+import '../../widgets/neural_connectivity_mesh.dart';
 
 class PracticeModePanel extends ConsumerStatefulWidget {
   const PracticeModePanel({super.key});
@@ -595,66 +596,12 @@ class _PracticeModePanelState extends ConsumerState<PracticeModePanel> {
   }
 }
 
-class ThinkingDotsAnimation extends StatefulWidget {
+class ThinkingDotsAnimation extends StatelessWidget {
   const ThinkingDotsAnimation({super.key});
 
   @override
-  State<ThinkingDotsAnimation> createState() => _ThinkingDotsAnimationState();
-}
-
-class _ThinkingDotsAnimationState extends State<ThinkingDotsAnimation>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 20,
-      height: 20,
-      child: GridView.builder(
-        physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 3,
-          mainAxisSpacing: 3,
-          crossAxisSpacing: 3,
-        ),
-        itemCount: 9,
-        itemBuilder: (context, index) {
-          final row = index ~/ 3;
-          final col = index % 3;
-          final delay = (row + col) * 0.15;
-
-          return AnimatedBuilder(
-            animation: _controller,
-            builder: (context, child) {
-              final progress = (_controller.value - delay) % 1.0;
-              final double opacity = (math.sin(progress * 2 * math.pi) + 1.0) / 2.0;
-              return Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: ScholarlyTheme.textPrimary.withValues(alpha: 0.15 + 0.85 * opacity),
-                ),
-              );
-            },
-          );
-        },
-      ),
-    );
+    return const NeuralConnectivityMesh();
   }
 }
 

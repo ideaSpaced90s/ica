@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../shared/themes/animation_group.dart';
 import '../../shared/animations/signature_move_style.dart';
+import '../../shared/animations/piece_motion_profile.dart';
 import 'sprite_chess_theme.dart';
 
 class PlasmaChessTheme extends SpriteChessTheme {
@@ -20,7 +21,7 @@ class PlasmaChessTheme extends SpriteChessTheme {
   AnimationGroup get animationGroup => AnimationGroup.c;
 
   @override
-  SignatureMoveStyle? get signatureMoveStyle => const QuantumDissolveTrail();
+  SignatureMoveStyle? get signatureMoveStyle => const PlasmaModernSignature();
 
   @override
   Widget buildBackground(BuildContext context, bool animationsEnabled) {
@@ -45,6 +46,46 @@ class PlasmaChessTheme extends SpriteChessTheme {
   Widget? buildCaptureEffect(
       BuildContext context, Offset position, VoidCallback onComplete) {
     return PlasmaDissolveCapture(position: position, onComplete: onComplete);
+  }
+
+  @override
+  PieceMotionProfile getPieceMotionProfile(String pieceCode) {
+    final type = pieceCode.length > 1
+        ? pieceCode.substring(1).toUpperCase()
+        : pieceCode.toUpperCase();
+    switch (type) {
+      case 'Q':
+        return const PieceMotionProfile(
+          moveDuration: Duration(milliseconds: 480),
+          moveCurve: Curves.easeInOutCubic,
+        );
+      case 'N':
+        return const PieceMotionProfile(
+          moveDuration: Duration(milliseconds: 440),
+          moveCurve: Curves.easeInOutQuad,
+        );
+      case 'R':
+        return const PieceMotionProfile(
+          moveDuration: Duration(milliseconds: 380),
+          moveCurve: Curves.easeOutCubic,
+        );
+      case 'B':
+        return const PieceMotionProfile(
+          moveDuration: Duration(milliseconds: 380),
+          moveCurve: Curves.easeOutCubic,
+        );
+      case 'K':
+        return const PieceMotionProfile(
+          moveDuration: Duration(milliseconds: 420),
+          moveCurve: Curves.easeInOutQuad,
+        );
+      case 'P':
+      default:
+        return const PieceMotionProfile(
+          moveDuration: Duration(milliseconds: 300),
+          moveCurve: Curves.easeOutCubic,
+        );
+    }
   }
 }
 
@@ -115,6 +156,19 @@ class _PlasmaFlowBackgroundState extends State<PlasmaFlowBackground>
 class PlasmaBackgroundPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
+    // Draw cybernetic grid
+    final gridPaint = Paint()
+      ..color = const Color(0xFF00BFFF).withValues(alpha: 0.035)
+      ..strokeWidth = 1.0;
+    
+    final int gridCount = 10;
+    for (int i = 0; i <= gridCount; i++) {
+      final x = size.width * (i / gridCount);
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
+      final y = size.height * (i / gridCount);
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
+    }
+
     final paint = Paint()
       ..style = PaintingStyle.fill
       ..color = const Color(0xFF00BFFF).withValues(alpha: 0.05);

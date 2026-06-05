@@ -21,3 +21,25 @@ class OrbitalPulseTrail extends SignatureMoveStyle {
 class FairyDustTrail extends SignatureMoveStyle {
   const FairyDustTrail();
 }
+
+class ArcModernSignature extends SignatureMoveStyle {
+  const ArcModernSignature();
+}
+
+class FairytaleModernSignature extends SignatureMoveStyle {
+  const FairytaleModernSignature();
+}
+
+class PlasmaModernSignature extends SignatureMoveStyle {
+  const PlasmaModernSignature();
+}
+
+class LightningModernSignature extends SignatureMoveStyle {
+  const LightningModernSignature();
+}
+
+class DiamondsModernSignature extends SignatureMoveStyle {
+  const DiamondsModernSignature();
+}
+
+

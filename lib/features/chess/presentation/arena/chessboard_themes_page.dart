@@ -76,44 +76,40 @@ class ChessboardThemesPage extends ConsumerWidget {
           ..._buildGroupSlivers(
             context: context,
             ref: ref,
-            title: 'CLASSIC GALLERY (A)',
-            subtitle: 'Themes featuring global animations only',
             themes: themesA,
             selectedThemeId: state.boardThemeId,
             notifier: notifier,
+            showDivider: false,
           ),
 
           // Group B
           ..._buildGroupSlivers(
             context: context,
             ref: ref,
-            title: 'STANDARD GALLERY (B)',
-            subtitle: 'Cohesive traditional and modern standard board sets',
             themes: themesB,
             selectedThemeId: state.boardThemeId,
             notifier: notifier,
-          ),
-
-          // Group C
-          ..._buildGroupSlivers(
-            context: context,
-            ref: ref,
-            title: 'ANIMATION HEAVY (C)',
-            subtitle: 'Stunning themes packed with custom animations and dynamic effects',
-            themes: themesC,
-            selectedThemeId: state.boardThemeId,
-            notifier: notifier,
+            showDivider: true,
           ),
 
           // Group D
           ..._buildGroupSlivers(
             context: context,
             ref: ref,
-            title: 'CUSTOM ART SETS (D)',
-            subtitle: 'Odd-looking non-standard piece sets and stylized artwork',
             themes: themesD,
             selectedThemeId: state.boardThemeId,
             notifier: notifier,
+            showDivider: true,
+          ),
+
+          // Group C
+          ..._buildGroupSlivers(
+            context: context,
+            ref: ref,
+            themes: themesC,
+            selectedThemeId: state.boardThemeId,
+            notifier: notifier,
+            showDivider: true,
           ),
 
           // Bottom spacing
@@ -128,48 +124,28 @@ class ChessboardThemesPage extends ConsumerWidget {
   List<Widget> _buildGroupSlivers({
     required BuildContext context,
     required WidgetRef ref,
-    required String title,
-    required String subtitle,
     required List<ChessTheme> themes,
     required String selectedThemeId,
     required dynamic notifier,
+    required bool showDivider,
   }) {
     if (themes.isEmpty) return const [];
 
     return [
-      // Section Header with Title & Description
-      SliverToBoxAdapter(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: GoogleFonts.outfit(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1.5,
-                  color: ScholarlyTheme.accentBlue,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                subtitle,
-                style: GoogleFonts.inter(
-                  fontSize: 11,
-                  color: ScholarlyTheme.textMuted,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
+      if (showDivider)
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            child: Divider(
+              color: ScholarlyTheme.panelStroke.withValues(alpha: 0.6),
+              thickness: 1.0,
+            ),
           ),
         ),
-      ),
 
       // Sliver Grid displaying themes in a gallery
       SliverPadding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         sliver: SliverGrid(
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 3,
@@ -202,6 +178,7 @@ class ChessboardThemesPage extends ConsumerWidget {
       onTap: () {
         ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
         notifier.setBoardTheme(theme.id);
+        Navigator.of(context).popUntil((route) => route.isFirst);
       },
       child: Column(
         mainAxisSize: MainAxisSize.min,

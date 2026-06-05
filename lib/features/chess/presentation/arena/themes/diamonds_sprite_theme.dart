@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../shared/themes/animation_group.dart';
 import '../../shared/animations/signature_move_style.dart';
+import '../../shared/animations/piece_motion_profile.dart';
 import 'sprite_chess_theme.dart';
 
 class DiamondsSpriteTheme extends SpriteChessTheme {
@@ -21,7 +22,18 @@ class DiamondsSpriteTheme extends SpriteChessTheme {
   AnimationGroup get animationGroup => AnimationGroup.c;
 
   @override
-  SignatureMoveStyle? get signatureMoveStyle => const CrystalTrail();
+  SignatureMoveStyle? get signatureMoveStyle => const DiamondsModernSignature();
+
+  @override
+  Widget buildBackground(BuildContext context, bool animationsEnabled) {
+    return Container(
+      color: const Color(0xFF003033),
+      child: CustomPaint(
+        painter: DiamondsBackgroundPainter(),
+        size: Size.infinite,
+      ),
+    );
+  }
 
   @override
   Widget buildSelectionRing(BuildContext context) {
@@ -37,6 +49,46 @@ class DiamondsSpriteTheme extends SpriteChessTheme {
   @override
   Widget? buildAmbientOverlay(BuildContext context) {
     return const CrystalShimmerAmbient();
+  }
+
+  @override
+  PieceMotionProfile getPieceMotionProfile(String pieceCode) {
+    final type = pieceCode.length > 1
+        ? pieceCode.substring(1).toUpperCase()
+        : pieceCode.toUpperCase();
+    switch (type) {
+      case 'Q':
+        return const PieceMotionProfile(
+          moveDuration: Duration(milliseconds: 450),
+          moveCurve: Curves.easeInOutCubic,
+        );
+      case 'N':
+        return const PieceMotionProfile(
+          moveDuration: Duration(milliseconds: 440),
+          moveCurve: Curves.easeInOutQuad,
+        );
+      case 'R':
+        return const PieceMotionProfile(
+          moveDuration: Duration(milliseconds: 380),
+          moveCurve: Curves.easeOutCubic,
+        );
+      case 'B':
+        return const PieceMotionProfile(
+          moveDuration: Duration(milliseconds: 380),
+          moveCurve: Curves.easeOutCubic,
+        );
+      case 'K':
+        return const PieceMotionProfile(
+          moveDuration: Duration(milliseconds: 420),
+          moveCurve: Curves.easeInOutQuad,
+        );
+      case 'P':
+      default:
+        return const PieceMotionProfile(
+          moveDuration: Duration(milliseconds: 300),
+          moveCurve: Curves.easeOutCubic,
+        );
+    }
   }
 }
 
@@ -398,3 +450,46 @@ class _RefractionSelectionPainter extends CustomPainter {
     return oldDelegate.progress != progress;
   }
 }
+
+class DiamondsBackgroundPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..color = const Color(0xFF80DEEA).withValues(alpha: 0.045)
+      ..strokeWidth = 1.0;
+
+    final random = Random(4242);
+    final nodes = <Offset>[];
+    
+    // Generate some random node offsets
+    for (int i = 0; i < 15; i++) {
+      nodes.add(Offset(
+        random.nextDouble() * size.width,
+        random.nextDouble() * size.height,
+      ));
+    }
+
+    // Connect close nodes to form a lattice
+    for (int i = 0; i < nodes.length; i++) {
+      for (int j = i + 1; j < nodes.length; j++) {
+        final dist = (nodes[i] - nodes[j]).distance;
+        if (dist < size.width * 0.35) {
+          canvas.drawLine(nodes[i], nodes[j], paint);
+        }
+      }
+    }
+
+    // Draw little crystal stars on node intersections
+    final starPaint = Paint()
+      ..style = PaintingStyle.fill
+      ..color = Colors.white.withValues(alpha: 0.08);
+    for (final node in nodes) {
+      canvas.drawCircle(node, 2.0, starPaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant DiamondsBackgroundPainter oldDelegate) => false;
+}
+

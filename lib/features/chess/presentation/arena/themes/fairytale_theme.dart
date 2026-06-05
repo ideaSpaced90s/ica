@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../shared/themes/animation_group.dart';
 import '../../shared/animations/signature_move_style.dart';
+import '../../shared/animations/piece_motion_profile.dart';
 import 'sprite_chess_theme.dart';
 
 class FairytaleChessTheme extends SpriteChessTheme {
@@ -20,7 +21,7 @@ class FairytaleChessTheme extends SpriteChessTheme {
   AnimationGroup get animationGroup => AnimationGroup.c;
 
   @override
-  SignatureMoveStyle? get signatureMoveStyle => const FairyDustTrail();
+  SignatureMoveStyle? get signatureMoveStyle => const FairytaleModernSignature();
 
   @override
   Widget buildBackground(BuildContext context, bool animationsEnabled) {
@@ -47,6 +48,46 @@ class FairytaleChessTheme extends SpriteChessTheme {
   @override
   Widget? buildAmbientOverlay(BuildContext context) {
     return const SparkleAmbient();
+  }
+
+  @override
+  PieceMotionProfile getPieceMotionProfile(String pieceCode) {
+    final type = pieceCode.length > 1
+        ? pieceCode.substring(1).toUpperCase()
+        : pieceCode.toUpperCase();
+    switch (type) {
+      case 'Q':
+        return const PieceMotionProfile(
+          moveDuration: Duration(milliseconds: 480),
+          moveCurve: Curves.easeInOutCubic,
+        );
+      case 'N':
+        return const PieceMotionProfile(
+          moveDuration: Duration(milliseconds: 440),
+          moveCurve: Curves.easeInOutQuad,
+        );
+      case 'R':
+        return const PieceMotionProfile(
+          moveDuration: Duration(milliseconds: 400),
+          moveCurve: Curves.easeOutCubic,
+        );
+      case 'B':
+        return const PieceMotionProfile(
+          moveDuration: Duration(milliseconds: 380),
+          moveCurve: Curves.easeOutCubic,
+        );
+      case 'K':
+        return const PieceMotionProfile(
+          moveDuration: Duration(milliseconds: 420),
+          moveCurve: Curves.easeInOutQuad,
+        );
+      case 'P':
+      default:
+        return const PieceMotionProfile(
+          moveDuration: Duration(milliseconds: 300),
+          moveCurve: Curves.easeOutCubic,
+        );
+    }
   }
 }
 
