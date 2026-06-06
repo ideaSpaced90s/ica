@@ -29,6 +29,88 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
     Future.microtask(() => ref.read(chessProvider.notifier).loadSavedGames());
   }
 
+  Widget _buildLandscapeLayout(
+    BuildContext context,
+    StudyLabState state,
+    StudyLabNotifier notifier,
+    BoxConstraints constraints,
+  ) {
+    final double paddingHorizontal = 16.0;
+    // Increased board size headroom since action bar is moved to the sidebar
+    final double boardSize = math.min(
+      (constraints.maxWidth * 0.55) - 36,
+      constraints.maxHeight - 140,
+    );
+
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: paddingHorizontal, vertical: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            flex: 11,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildBoardWithEval(context, state, notifier, boardSize),
+                const SizedBox(height: 8),
+                _buildUnifiedControlPanel(context, state, notifier, boardSize),
+              ],
+            ),
+          ),
+          Container(
+            width: 1.5,
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            color: ScholarlyTheme.panelStroke.withValues(alpha: 0.5),
+          ),
+          Expanded(
+            flex: 9,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (state.isGuessingMode) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                    margin: const EdgeInsets.only(bottom: 8),
+                    decoration: BoxDecoration(
+                      color: ScholarlyTheme.accentBlue.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'GUESS THE MOVE TRAINING',
+                          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 11, color: ScholarlyTheme.accentBlue),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(color: ScholarlyTheme.accentBlue, borderRadius: BorderRadius.circular(4)),
+                          child: Text(
+                            '${state.guessedNodes.length} CORRECT',
+                            style: GoogleFonts.inter(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                _buildEnginePanel(context),
+                if (ref.watch(analysisEngineControllerProvider).isEngineOn)
+                  const SizedBox(height: 8),
+                Expanded(
+                  child: _buildNotationPane(context, state, notifier, isScrollable: true),
+                ),
+                const SizedBox(height: 12),
+                _buildActionBar(context, state, notifier),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(studyLabProvider);
@@ -53,6 +135,11 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
         body: SafeArea(
           child: LayoutBuilder(
             builder: (context, constraints) {
+              final isLandscape = constraints.maxWidth > constraints.maxHeight;
+              if (isLandscape) {
+                return _buildLandscapeLayout(context, state, notifier, constraints);
+              }
+
               final bool isWide = constraints.maxWidth > 800;
               final double paddingHorizontal = isWide ? 16.0 : 12.0;
               final double boardSize = math.min(
@@ -642,8 +729,9 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
   Widget _buildNotationPane(
     BuildContext context,
     StudyLabState state,
-    StudyLabNotifier notifier,
-  ) {
+    StudyLabNotifier notifier, {
+    bool isScrollable = false,
+  }) {
     final List<Widget> moveChips = [];
     _buildMoveTreeChips(state, notifier, null, moveChips, 0);
 
@@ -652,7 +740,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
       borderRadius: 16,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
+        mainAxisSize: isScrollable ? MainAxisSize.max : MainAxisSize.min,
         children: [
           Row(
             children: [
@@ -688,25 +776,51 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
             ],
           ),
           const SizedBox(height: 8),
-          moveChips.isEmpty
-              ? Container(
-                  padding: const EdgeInsets.all(16),
-                  alignment: Alignment.center,
-                  child: Text(
-                    'No moves played yet. Play some moves on the board!',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      color: ScholarlyTheme.textMuted,
+          if (isScrollable)
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: moveChips.isEmpty
+                    ? Container(
+                        padding: const EdgeInsets.all(16),
+                        alignment: Alignment.center,
+                        child: Text(
+                          'No moves played yet. Play some moves on the board!',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            color: ScholarlyTheme.textMuted,
+                          ),
+                        ),
+                      )
+                    : Wrap(
+                        spacing: 6.0,
+                        runSpacing: 8.0,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: moveChips,
+                      ),
+              ),
+            )
+          else
+            moveChips.isEmpty
+                ? Container(
+                    padding: const EdgeInsets.all(16),
+                    alignment: Alignment.center,
+                    child: Text(
+                      'No moves played yet. Play some moves on the board!',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: ScholarlyTheme.textMuted,
+                      ),
                     ),
+                  )
+                : Wrap(
+                    spacing: 6.0,
+                    runSpacing: 8.0,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: moveChips,
                   ),
-                )
-              : Wrap(
-                  spacing: 6.0,
-                  runSpacing: 8.0,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: moveChips,
-                ),
         ],
       ),
     );

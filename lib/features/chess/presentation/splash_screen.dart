@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -34,10 +36,13 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   @override
   void initState() {
     super.initState();
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
-    ]);
+    final isMobile = !kIsWeb && (Platform.isAndroid || Platform.isIOS);
+    if (isMobile) {
+      SystemChrome.setPreferredOrientations([
+        DeviceOrientation.portraitUp,
+        DeviceOrientation.portraitDown,
+      ]);
+    }
 
     _progressController = AnimationController(
       vsync: this,
@@ -77,11 +82,14 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   }
 
   void _initVideo() {
-    _videoController = VideoPlayerController.asset(
-      'assets/splash/splash_video.mp4',
-    );
+    final useWinVideo = !kIsWeb && Platform.isWindows;
+    final path = useWinVideo ? 'assets/splash/splash_video-win.mp4' : 'assets/splash/splash_video.mp4';
+    debugPrint('Splash video: Initializing controller for asset path: $path');
+    
+    _videoController = VideoPlayerController.asset(path);
 
     _videoController!.initialize().then((_) {
+      debugPrint('Splash video: Initialization completed successfully!');
       if (mounted) {
         setState(() {
           _isVideoInitialized = true;
@@ -89,6 +97,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
         
         // Calculate progress duration: video duration minus 500ms
         final videoDuration = _videoController!.value.duration;
+        final videoSize = _videoController!.value.size;
+        debugPrint('Splash video: Video duration is $videoDuration, size is $videoSize');
+        
         final targetDuration = videoDuration - const Duration(milliseconds: 500);
         
         // Ensure duration is positive and reasonable (fallback to 1s if video is extremely short)
@@ -96,11 +107,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
             ? targetDuration
             : const Duration(milliseconds: 1000);
 
+        debugPrint('Splash video: Playing video and starting progress with duration ${_progressController.duration}');
         _videoController!.play();
         _progressController.forward();
       }
     }).catchError((error) {
-      debugPrint('Splash video initialization error: $error');
+      debugPrint('Splash video: Initialization error caught: $error');
       if (mounted) {
         setState(() {
           _isVideoFinished = true;
@@ -112,10 +124,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
     _videoController!.addListener(_videoListener);
 
-    // Safety fallback: transition to loading screen if video player hangs (10s timeout)
-    _fallbackTimer = Timer(const Duration(seconds: 10), () {
+    // Safety fallback: transition to loading screen if video player hangs (15s timeout)
+    _fallbackTimer = Timer(const Duration(seconds: 15), () {
       if (mounted && !_hasTransitioned) {
-        debugPrint('Splash video fallback triggered due to timeout.');
+        debugPrint('Splash video: Fallback triggered due to timeout. controller initialized: $_isVideoInitialized, error: ${_videoController?.value.hasError}, size: ${_videoController?.value.size}');
         setState(() {
           _isVideoFinished = true;
         });
@@ -159,10 +171,13 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     }
 
     if (mounted) {
-      await SystemChrome.setPreferredOrientations([
-        DeviceOrientation.portraitUp,
-        DeviceOrientation.portraitDown,
-      ]);
+      final isMobile = !kIsWeb && (Platform.isAndroid || Platform.isIOS);
+      if (isMobile) {
+        await SystemChrome.setPreferredOrientations([
+          DeviceOrientation.portraitUp,
+          DeviceOrientation.portraitDown,
+        ]);
+      }
 
       if (!mounted) return;
 
@@ -210,10 +225,17 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
             SizedBox.expand(
               child: FittedBox(
                 fit: BoxFit.cover,
-                child: SizedBox(
-                  width: _videoController!.value.size.width,
-                  height: _videoController!.value.size.height,
-                  child: VideoPlayer(_videoController!),
+                child: Builder(
+                  builder: (context) {
+                    final size = _videoController!.value.size;
+                    final width = size.width > 0 ? size.width : 1920.0;
+                    final height = size.height > 0 ? size.height : 1080.0;
+                    return SizedBox(
+                      width: width,
+                      height: height,
+                      child: VideoPlayer(_videoController!),
+                    );
+                  },
                 ),
               ),
             )

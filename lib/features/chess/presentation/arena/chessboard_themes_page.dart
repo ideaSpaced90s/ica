@@ -147,8 +147,8 @@ class ChessboardThemesPage extends ConsumerWidget {
       SliverPadding(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         sliver: SliverGrid(
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: (MediaQuery.of(context).size.width / 130).floor().clamp(3, 10),
             crossAxisSpacing: 16,
             mainAxisSpacing: 16,
             childAspectRatio: 0.72,

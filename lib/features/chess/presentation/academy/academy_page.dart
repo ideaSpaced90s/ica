@@ -408,6 +408,130 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
     );
   }
 
+  Widget _buildLandscapeLayout(
+    BuildContext context,
+    ChessState state,
+    ChessNotifier notifier,
+    BoxConstraints constraints,
+  ) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Left Column (Board and Controls)
+        Expanded(
+          flex: 11,
+          child: Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back_ios_new_rounded, color: ScholarlyTheme.textPrimary),
+                      onPressed: _requestExitAcademy,
+                    ),
+                    Row(
+                      children: [
+                        const CircleAvatar(
+                          radius: 14,
+                          backgroundImage: AssetImage('assets/persona/gm_chanakya.png'),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'ACADEMY STUDY',
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: ScholarlyTheme.accentGold,
+                            letterSpacing: 1.0,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(width: 48), // spacer balance
+                  ],
+                ),
+                const SizedBox(height: 8),
+                const Expanded(
+                  child: Center(
+                    child: AspectRatio(
+                      aspectRatio: 1.0,
+                      child: AcademyBoard(alignment: Alignment.center),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _buildBottomActionBar(context, state, notifier),
+              ],
+            ),
+          ),
+        ),
+
+        // Vertical separator line
+        Container(
+          width: 1.5,
+          color: ScholarlyTheme.panelStroke.withValues(alpha: 0.5),
+        ),
+
+        // Right Column (Commentary & Log)
+        Expanded(
+          flex: 9,
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: JuicyGlassCard(
+              borderRadius: 20,
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        state.showLog ? Icons.history_edu_rounded : Icons.chat_bubble_outline_rounded,
+                        size: 18,
+                        color: ScholarlyTheme.accentBlue,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        state.showLog ? 'MOVE LOG' : 'CHANAKYA\'S COACHING',
+                        style: GoogleFonts.outfit(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: ScholarlyTheme.textPrimary,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  if (state.game.capturedByWhite.isNotEmpty || state.game.capturedByBlack.isNotEmpty) ...[
+                    _CompactCapturedPiecesHeader(state: state),
+                    const SizedBox(height: 12),
+                  ],
+                  Expanded(
+                    child: state.showLog
+                        ? _buildMoveLog(
+                            context,
+                            state,
+                            const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                          )
+                        : CommentaryHistory(
+                            state: state,
+                            physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                            controller: _chatScrollController,
+                          ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildSlidingCommentaryPanel(
     BuildContext context,
     ChessState state,
@@ -524,6 +648,11 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
             padding: const EdgeInsets.fromLTRB(0, 0, 0, 8),
             child: LayoutBuilder(
               builder: (context, constraints) {
+                final isLandscape = constraints.maxWidth > constraints.maxHeight;
+                if (isLandscape) {
+                  return _buildLandscapeLayout(context, state, notifier, constraints);
+                }
+
                 final totalWidth = constraints.maxWidth;
                 final totalHeight = constraints.maxHeight;
                 final boardHeight = totalWidth;

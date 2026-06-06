@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -31,15 +33,67 @@ class _TutorialPageState extends ConsumerState<TutorialPage> {
   @override
   void initState() {
     super.initState();
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
-    ]);
+    final isMobile = !kIsWeb && (Platform.isAndroid || Platform.isIOS);
+    if (isMobile) {
+      SystemChrome.setPreferredOrientations([
+        DeviceOrientation.portraitUp,
+        DeviceOrientation.portraitDown,
+      ]);
+    }
   }
 
   void _handleChapterSelected(int chapterId) {
     ref.read(tutorialProvider.notifier).loadChapter(chapterId);
     ref.read(showChapterSelectionProvider.notifier).state = false;
+  }
+
+  Widget _buildLandscapeLayout(BuildContext context, TutorialState state) {
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Left column: Chess board (taking square aspect ratio)
+            const Expanded(
+              flex: 11,
+              child: Center(
+                child: AspectRatio(
+                  aspectRatio: 1.0,
+                  child: TutorialIllegalMoveFeedback(
+                    child: TutorialBoardStage(),
+                  ),
+                ),
+              ),
+            ),
+
+            // Separator
+            Container(
+              width: 1.5,
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              color: ScholarlyTheme.panelStroke.withValues(alpha: 0.5),
+            ),
+
+            // Right column: Mentor panel and progress footer
+            Expanded(
+              flex: 9,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: 12),
+                  const Expanded(
+                    child: TutorialMentorPanel(),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildProgressFooter(state),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -75,36 +129,40 @@ class _TutorialPageState extends ConsumerState<TutorialPage> {
     }
     // 3. Main Active Lesson Runtime Surface
     else {
+      final isLandscape = MediaQuery.of(context).size.width > MediaQuery.of(context).size.height;
+      
       content = AmbientScaffold(
         scaffoldKey: _scaffoldKey,
         blob1Color: const Color(0xFFFEF9C3), // Soft Gold
         blob2Color: const Color(0xFFDBEAFE), // Soft Blue
         blob3Color: const Color(0xFFF3E8FF), // Soft Purple
-        body: SafeArea(
-          top: false,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // 1. Top side chessboard taking exact square space, extending edge-to-edge
-              const AspectRatio(
-                aspectRatio: 1.0,
-                child: TutorialIllegalMoveFeedback(
-                  child: TutorialBoardStage(),
+        body: isLandscape
+            ? _buildLandscapeLayout(context, state)
+            : SafeArea(
+                top: false,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // 1. Top side chessboard taking exact square space, extending edge-to-edge
+                    const AspectRatio(
+                      aspectRatio: 1.0,
+                      child: TutorialIllegalMoveFeedback(
+                        child: TutorialBoardStage(),
+                      ),
+                    ),
+
+                    // 2. Base adaptive advisor panel claiming remaining space
+                    const Expanded(
+                      child: Padding(
+                        padding: EdgeInsets.fromLTRB(16, 12, 16, 4),
+                        child: TutorialMentorPanel(),
+                      ),
+                    ),
+
+                    _buildProgressFooter(state),
+                  ],
                 ),
               ),
-
-              // 2. Base adaptive advisor panel claiming remaining space
-              const Expanded(
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(16, 12, 16, 4),
-                  child: TutorialMentorPanel(),
-                ),
-              ),
-
-              _buildProgressFooter(state),
-            ],
-          ),
-        ),
       );
     }
 

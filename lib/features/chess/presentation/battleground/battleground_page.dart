@@ -275,39 +275,42 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            ArenaTurnIndicator(isActive: isTurn, isWhite: state.isPlayerWhite),
-                            const SizedBox(width: 8),
-                            EvaluationBar(fillFraction: _getEvalFraction(state, true)),
-                          ],
-                        ),
-                        const Spacer(),
-                        ArenaTimeDisplay(
-                          isWhite: state.isPlayerWhite,
-                          isActive: isTurn,
-                          timeLeft: state.isPlayerWhite ? state.whiteTimeLeft : state.blackTimeLeft,
-                        ),
-                        const SizedBox(width: 12),
-                        ArenaTimeDisplay(
-                          isWhite: !state.isPlayerWhite,
-                          isActive: !isTurn,
-                          timeLeft: state.isPlayerWhite ? state.blackTimeLeft : state.whiteTimeLeft,
-                        ),
-                        const Spacer(),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            EvaluationBar(fillFraction: _getEvalFraction(state, false)),
-                            const SizedBox(width: 8),
-                            ArenaTurnIndicator(isActive: !isTurn, isWhite: !state.isPlayerWhite),
-                          ],
-                        ),
-                      ],
+                    child: SizedBox(
+                      width: 400,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              ArenaTurnIndicator(isActive: isTurn, isWhite: state.isPlayerWhite),
+                              const SizedBox(width: 8),
+                              EvaluationBar(fillFraction: _getEvalFraction(state, true)),
+                            ],
+                          ),
+                          const Spacer(),
+                          ArenaTimeDisplay(
+                            isWhite: state.isPlayerWhite,
+                            isActive: isTurn,
+                            timeLeft: state.isPlayerWhite ? state.whiteTimeLeft : state.blackTimeLeft,
+                          ),
+                          const SizedBox(width: 12),
+                          ArenaTimeDisplay(
+                            isWhite: !state.isPlayerWhite,
+                            isActive: !isTurn,
+                            timeLeft: state.isPlayerWhite ? state.blackTimeLeft : state.whiteTimeLeft,
+                          ),
+                          const Spacer(),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              EvaluationBar(fillFraction: _getEvalFraction(state, false)),
+                              const SizedBox(width: 8),
+                              ArenaTurnIndicator(isActive: !isTurn, isWhite: !state.isPlayerWhite),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
