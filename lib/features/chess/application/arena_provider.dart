@@ -432,8 +432,8 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
       await _stockfishEngine.init();
 
       final avatar = AiAvatar.getAvatar(state.engineLevel);
-      await _stockfishEngine.setSkillLevel(avatar.skillLevel, multiPV: avatar.name == 'Kingslayer' ? 1 : 4);
-      _stockfishEngine.sendCommand('setoption name MultiPV value ${avatar.name == 'Kingslayer' ? 1 : 4}');
+      await _stockfishEngine.setSkillLevel(avatar.skillLevel, multiPV: (avatar.name == 'King' || avatar.name == 'Kingslayer') ? 1 : 4);
+      _stockfishEngine.sendCommand('setoption name MultiPV value ${(avatar.name == 'King' || avatar.name == 'Kingslayer') ? 1 : 4}');
 
       state = state.copyWith(
         servicesStarted: true,
@@ -471,8 +471,8 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
     await _engine.setChess960Mode(is960);
 
     final avatar = AiAvatar.getAvatar(_activeAvatarId);
-    await _engine.setSkillLevel(avatar.skillLevel, multiPV: avatar.name == 'Kingslayer' ? 1 : 4);
-    _engine.sendCommand('setoption name MultiPV value ${avatar.name == 'Kingslayer' ? 1 : 4}');
+    await _engine.setSkillLevel(avatar.skillLevel, multiPV: (avatar.name == 'King' || avatar.name == 'Kingslayer') ? 1 : 4);
+    _engine.sendCommand('setoption name MultiPV value ${(avatar.name == 'King' || avatar.name == 'Kingslayer') ? 1 : 4}');
 
     _searchFen = state.game.fen;
     final targetDepth = depth ?? avatar.depth;
@@ -564,7 +564,7 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
 
       if (rawBestMove != null && _currentCandidates.isNotEmpty) {
         final currentAvatar = AiAvatar.getAvatar(_activeAvatarId);
-        if (currentAvatar.name != 'Kingslayer') {
+        if (currentAvatar.name != 'King' && currentAvatar.name != 'Kingslayer') {
           bestMoveToPlay = ChessPersonaEvaluator.selectBestMove(
             List.from(_currentCandidates),
             currentAvatar,

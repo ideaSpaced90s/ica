@@ -13,6 +13,7 @@ class StoreState {
   final DateTime? joinedPremiumDate;
   final DateTime? subscriptionTill;
   final Map<String, DateTime> purchasedAvatars; // avatarId -> expiry DateTime
+  final String? subscriptionPlan; // 'monthly', 'quarterly', 'yearly', or null
 
   StoreState({
     required this.goldBalance,
@@ -21,6 +22,7 @@ class StoreState {
     this.joinedPremiumDate,
     this.subscriptionTill,
     required this.purchasedAvatars,
+    this.subscriptionPlan,
   });
 
   StoreState copyWith({
@@ -30,6 +32,7 @@ class StoreState {
     DateTime? joinedPremiumDate,
     DateTime? subscriptionTill,
     Map<String, DateTime>? purchasedAvatars,
+    String? subscriptionPlan,
   }) {
     return StoreState(
       goldBalance: goldBalance ?? this.goldBalance,
@@ -38,6 +41,7 @@ class StoreState {
       joinedPremiumDate: joinedPremiumDate ?? this.joinedPremiumDate,
       subscriptionTill: subscriptionTill ?? this.subscriptionTill,
       purchasedAvatars: purchasedAvatars ?? this.purchasedAvatars,
+      subscriptionPlan: subscriptionPlan ?? this.subscriptionPlan,
     );
   }
 
@@ -48,6 +52,7 @@ class StoreState {
         'joinedPremiumDate': joinedPremiumDate?.toIso8601String(),
         'subscriptionTill': subscriptionTill?.toIso8601String(),
         'purchasedAvatars': purchasedAvatars.map((k, v) => MapEntry(k, v.toIso8601String())),
+        'subscriptionPlan': subscriptionPlan,
       };
 
   factory StoreState.fromJson(Map<String, dynamic> json) {
@@ -63,6 +68,7 @@ class StoreState {
             (k, v) => MapEntry(k, DateTime.parse(v)),
           ) ??
           {},
+      subscriptionPlan: json['subscriptionPlan'],
     );
   }
 }
@@ -160,27 +166,40 @@ class StoreNotifier extends StateNotifier<StoreState> {
     return false;
   }
 
-  // Go/Extend Premium
-  bool buyOrRenewPremium() {
-    const cost = 500;
-    if (_deductGold(cost)) {
-      final now = DateTime.now();
-      DateTime newExpiry;
-      if (state.isPremium && state.subscriptionTill != null && state.subscriptionTill!.isAfter(now)) {
-        newExpiry = state.subscriptionTill!.add(const Duration(days: 30));
-      } else {
-        newExpiry = now.add(const Duration(days: 30));
-      }
-
-      state = state.copyWith(
-        isPremium: true,
-        joinedPremiumDate: state.joinedPremiumDate ?? now,
-        subscriptionTill: newExpiry,
-      );
-      _saveStoreData();
-      return true;
+  // Buy or renew subscription via simulation (USD-based)
+  void simulateUSDSubscription(String plan) {
+    final now = DateTime.now();
+    DateTime newExpiry;
+    int days = 30;
+    if (plan == 'quarterly') {
+      days = 90;
+    } else if (plan == 'yearly') {
+      days = 365;
     }
-    return false;
+
+    if (state.isPremium && state.subscriptionTill != null && state.subscriptionTill!.isAfter(now)) {
+      newExpiry = state.subscriptionTill!.add(Duration(days: days));
+    } else {
+      newExpiry = now.add(Duration(days: days));
+    }
+
+    state = state.copyWith(
+      isPremium: true,
+      joinedPremiumDate: state.joinedPremiumDate ?? now,
+      subscriptionTill: newExpiry,
+      subscriptionPlan: plan,
+    );
+    _saveStoreData();
+  }
+
+  // Cancel subscription simulation
+  void cancelSubscription() {
+    state = state.copyWith(
+      isPremium: false,
+      subscriptionTill: null,
+      subscriptionPlan: null,
+    );
+    _saveStoreData();
   }
 
 
@@ -210,16 +229,8 @@ class StoreNotifier extends StateNotifier<StoreState> {
 
   // Check if an avatar is unlocked
   bool isAvatarUnlocked(String avatarId) {
-    // Default free avatars
-    if (avatarId == 'avatar_0' || avatarId == 'avatar_6') {
-      return true;
-    }
-    // Check purchase validity
-    final expiry = state.purchasedAvatars[avatarId];
-    if (expiry != null && expiry.isAfter(DateTime.now())) {
-      return true;
-    }
-    return false;
+    // All avatars are unlocked for now (store bypassed)
+    return true;
   }
 
   // Dynamic clean-up logic: if active theme or avatar is expired, fall back to default
@@ -249,5 +260,3 @@ class StoreNotifier extends StateNotifier<StoreState> {
     _checkExpirationsAndSync();
   }
 }
-
-final storeActiveTabProvider = StateProvider<int>((ref) => 0);

@@ -133,7 +133,7 @@ class _OpponentAvatarIndicatorState extends State<OpponentAvatarIndicator> {
                                     const SizedBox(width: 4),
                                     Icon(
                                       Icons.verified_rounded,
-                                      color: widget.avatar.id == 'avatar_10' 
+                                      color: (widget.avatar.id == 'avatar_19' || widget.avatar.name == 'Kingslayer') 
                                           ? ScholarlyTheme.accentBlue 
                                           : ScholarlyTheme.textMuted.withValues(alpha: 0.4),
                                       size: 12,

@@ -11,7 +11,7 @@ class ChessPersonaEvaluator {
     String defaultBestMove,
   ) {
     if (candidates.isEmpty) return defaultBestMove;
-    if (avatar.name == 'Kingslayer') return defaultBestMove;
+    if (avatar.name == 'King' || avatar.name == 'Kingslayer') return defaultBestMove;
 
     try {
       final rustCandidates = candidates.map((c) {

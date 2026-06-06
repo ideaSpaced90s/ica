@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../domain/models/ai_avatar.dart';
 import 'scholarly_theme.dart';
 import 'widgets/ambient_scaffold.dart';
 import 'dashboard_page.dart';
@@ -701,8 +702,8 @@ class _AboutUsPageState extends ConsumerState<AboutUsPage> {
 
 
   Widget _buildPersonaTable() {
-    final items = const [
-      _PersonaMatrixItem(
+    final items = [
+      const _PersonaMatrixItem(
         name: 'GM Chanakya',
         depth: '-',
         eloRange: 'Mentor',
@@ -710,94 +711,14 @@ class _AboutUsPageState extends ConsumerState<AboutUsPage> {
         imagePath: 'assets/persona/gm_chanakya.png',
         color: ScholarlyTheme.accentBlue,
       ),
-      _PersonaMatrixItem(
-        name: 'Kingslayer',
-        depth: 'Depth 22',
-        eloRange: '2850 - 3200+',
-        style: 'A near-perfect computational killing machine. Banned from tournaments for not being organic. No story of defeat exists.',
-        imagePath: 'assets/persona/gm_kingslayer.png',
-        color: Color(0xFFE0E0E0),
-      ),
-      _PersonaMatrixItem(
-        name: 'Titan',
-        depth: 'Depth 18',
-        eloRange: '2500 - 2700',
-        style: 'First bot to overthrow a human grandmaster. Grandmaster-level precision with constant tactical/positional pressure.',
-        imagePath: 'assets/persona/gm_titan.png',
-        color: Color(0xFFFFD54F),
-      ),
-      _PersonaMatrixItem(
-        name: 'Murphy',
-        depth: 'Depth 15',
-        eloRange: '2200 - 2400',
-        style: 'Sea-storm strategist. Opens lines early to welcome opponent pieces, then unleashes rapid coordinated sea-storm attacks.',
-        imagePath: 'assets/persona/im_murphy.png',
-        color: Color(0xFFE57373),
-      ),
-      _PersonaMatrixItem(
-        name: 'Sentinel',
-        depth: 'Depth 12',
-        eloRange: '1900 - 2100',
-        style: 'Positional trap specialist. Plays human-like moves to lull opponents, then springs subtle positional traps.',
-        imagePath: 'assets/persona/sentinel.png',
-        color: Color(0xFF7986CB),
-      ),
-      _PersonaMatrixItem(
-        name: 'Vala',
-        depth: 'Depth 10',
-        eloRange: '1700 - 1850',
-        style: 'Sharp tactical vision with forward-facing energy. Punishes uncoordinated opponent pieces immediately.',
-        imagePath: 'assets/persona/vala.png',
-        color: Color(0xFF4DB6AC),
-      ),
-      _PersonaMatrixItem(
-        name: 'Gambit',
-        depth: 'Depth 7',
-        eloRange: '1500 - 1650',
-        style: 'Chaos lover known more for looks than chess. Makes wild material sacrifices to create unpredictable imbalances.',
-        imagePath: 'assets/persona/gambit.png',
-        color: Color(0xFFBA68C8),
-      ),
-      _PersonaMatrixItem(
-        name: 'Blaire',
-        depth: 'Depth 5',
-        eloRange: '1300 - 1450',
-        style: 'Highly tactical rapid attacker targeting the king, but leaves loose, exploitable positions.',
-        imagePath: 'assets/persona/blaire.png',
-        color: Color(0xFFFFB74D),
-      ),
-      _PersonaMatrixItem(
-        name: 'Molly',
-        depth: 'Depth 4',
-        eloRange: '1100 - 1250',
-        style: 'Ultra-conservative and introverted bot. Locks opponents behind iron pawn walls, plays closed files only, and rarely speaks.',
-        imagePath: 'assets/persona/molly.png',
-        color: Color(0xFF90A4AE),
-      ),
-      _PersonaMatrixItem(
-        name: 'Rook-ie',
-        depth: 'Depth 3',
-        eloRange: '950 - 1050',
-        style: 'High-school level bully who captures undefended pieces immediately with zero recapture risk assessment.',
-        imagePath: 'assets/persona/rook-ie.png',
-        color: Color(0xFF64B5F6),
-      ),
-      _PersonaMatrixItem(
-        name: 'Pawnzy',
-        depth: 'Depth 2',
-        eloRange: '800 - 950',
-        style: 'Erratic novice obsessed with pawn promotions. Nerdy in all the wrong ways — plays only pawns hoping one will queen.',
-        imagePath: 'assets/persona/pawnzy.png',
-        color: Color(0xFF81C784),
-      ),
-      _PersonaMatrixItem(
-        name: 'Sparky',
-        depth: 'Depth 1',
-        eloRange: '400 - 500',
-        style: 'Absolute beginner who randomly pushes pieces and blunders frequently — has no idea what\'s happening on the board.',
-        imagePath: 'assets/persona/sparky.png',
-        color: Color(0xFFA1887F),
-      ),
+      ...AiAvatar.avatars.reversed.map((a) => _PersonaMatrixItem(
+            name: a.name,
+            depth: 'Depth ${a.depth}',
+            eloRange: a.fideRatingRange,
+            style: a.playingStyle,
+            imagePath: a.imagePath,
+            color: a.color,
+          )),
     ];
 
     return Column(

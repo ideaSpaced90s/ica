@@ -28,6 +28,7 @@ import '../data/settings_repository.dart';
 import '../services/chess_haptics_service.dart';
 import '../domain/models/ai_avatar.dart';
 import '../domain/models/candidate_move.dart';
+import '../domain/chess_persona_evaluator.dart';
 import 'battleground_provider.dart';
 
 
@@ -625,7 +626,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
       final avatar = AiAvatar.getAvatar(s.engineLevel);
       await _engine.setSkillLevel(
         avatar.skillLevel,
-        multiPV: avatar.name == 'Kingslayer' ? 1 : 4,
+        multiPV: (avatar.name == 'King' || avatar.name == 'Kingslayer') ? 1 : 4,
       );
       _soundService.updateSettings(
         sfxEnabled: s.isSoundEnabled,
@@ -1116,7 +1117,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
       await _stockfishEngine.init();
 
       final avatar = AiAvatar.getAvatar(state.engineLevel);
-      final multiPV = state.isAcademyActive ? 3 : (avatar.name == 'Kingslayer' ? 1 : 4);
+      final multiPV = state.isAcademyActive ? 3 : ((avatar.name == 'King' || avatar.name == 'Kingslayer') ? 1 : 4);
       
       await _stockfishEngine.setSkillLevel(
         avatar.skillLevel,
@@ -1216,8 +1217,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
             ? state.bottomAvatarId
             : state.engineLevel;
         final currentAvatar = AiAvatar.getAvatar(activeAvatarId);
-
-        if (currentAvatar.name != 'Kingslayer') {
+        if (currentAvatar.name != 'King' && currentAvatar.name != 'Kingslayer') {
           bestMoveToPlay = _applyPersonaHeuristics(
             List.from(_currentCandidates),
             currentAvatar,
@@ -1393,31 +1393,13 @@ class ChessNotifier extends StateNotifier<ChessState> {
       return engineBestMove;
     }
 
-    // ── Non-Academy Mode: existing Dart persona heuristics ────────────────
-    String bestCandidateMove = candidates.first.uciMove;
-    double highestAdjustedScore = -999.0;
-
-    debugPrint('--- Persona Candidate Interception [${avatar.name}] ---');
-
-    for (final candidate in candidates) {
-      if (candidate.uciMove.length < 4) continue;
-
-      final adjustedScore = candidate.evaluation;
-
-      debugPrint(
-        '  Candidate ${candidate.multipvIndex}: ${candidate.uciMove} | '
-        'Base Eval: ${candidate.evaluation.toStringAsFixed(2)} | '
-        'Adjusted: ${adjustedScore.toStringAsFixed(2)}',
-      );
-
-      if (adjustedScore > highestAdjustedScore) {
-        highestAdjustedScore = adjustedScore;
-        bestCandidateMove = candidate.uciMove;
-      }
-    }
-
-    debugPrint('  Selected Persona Move [${avatar.name}]: $bestCandidateMove');
-    return bestCandidateMove;
+    // ── Non-Academy Mode: Route through Rust persona heuristics ────────────────
+    return ChessPersonaEvaluator.selectBestMove(
+      candidates,
+      avatar,
+      game,
+      engineBestMove,
+    );
   }
 
 
@@ -2194,7 +2176,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
     _currentCandidates.clear();
     _engine.setSkillLevel(
       avatar.skillLevel,
-      multiPV: state.isAcademyActive ? 3 : (avatar.name == 'Kingslayer' ? 1 : 4),
+      multiPV: state.isAcademyActive ? 3 : ((avatar.name == 'King' || avatar.name == 'Kingslayer') ? 1 : 4),
     );
 
     // Record start time for the 2s minimum delay logic
@@ -2303,7 +2285,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
     await _engine.setSkillLevel(
       avatar.skillLevel,
-      multiPV: avatar.name == 'Kingslayer' ? 1 : 4,
+      multiPV: (avatar.name == 'King' || avatar.name == 'Kingslayer') ? 1 : 4,
     );
     _saveSettings();
     if (state.servicesStarted && _isAiTurn()) {
@@ -2329,7 +2311,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
       if (isBottomTurn) {
         await _engine.setSkillLevel(
           avatar.skillLevel,
-          multiPV: avatar.name == 'Kingslayer' ? 1 : 4,
+          multiPV: (avatar.name == 'King' || avatar.name == 'Kingslayer') ? 1 : 4,
         );
         _currentCandidates.clear();
         _engine.analyzePosition(state.game.fen, depth: avatar.depth);
@@ -3238,7 +3220,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
   Future<void> initializeAcademySession({String? customFen}) async {
     // Transitioning into Academy Mode. Ensure any old engine output stream is canceled,
-    // and servicesStarted is set to false so the Crafty engine can be clean-started.
+    // and servicesStarted is set to false so the Stockfish engine can be clean-started.
     await _cancelEngineSubscriptions();
 
     _undoStack.clear();

@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -8,7 +7,6 @@ import '../../application/chess_provider.dart';
 import '../../application/store_provider.dart';
 import '../../services/chess_sound_service.dart';
 import '../scholarly_theme.dart';
-import '../../domain/models/ai_avatar.dart';
 import '../widgets/ambient_scaffold.dart';
 
 class StorePage extends ConsumerStatefulWidget {
@@ -29,16 +27,14 @@ class _StorePageState extends ConsumerState<StorePage> {
       storeNotifier.verifyActiveSelections();
     });
 
-    final numberFormat = NumberFormat.decimalPattern();
-
     return AmbientScaffold(
-      blob1Color: const Color(0xFFFEF3C7), // Warm golden
-      blob2Color: const Color(0xFFDBEAFE), // Soft blue
-      blob3Color: const Color(0xFFF3E8FF), // Soft purple
+      blob1Color: const Color(0xFFE0F2FE), // Soft cyan/blue
+      blob2Color: const Color(0xFFF3E8FF), // Soft purple
+      blob3Color: const Color(0xFFFEF08A), // Warm yellow/gold
       body: SafeArea(
         child: Column(
           children: [
-            // Top Wallet & Refill Bar
+            // Top App Bar/Header
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               child: Row(
@@ -49,30 +45,28 @@ class _StorePageState extends ConsumerState<StorePage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'KINGSLAYER STORE',
+                          'KINGSLAYER PREMIUM',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.outfit(
-                            fontSize: 20,
+                            fontSize: 22,
                             fontWeight: FontWeight.bold,
                             letterSpacing: 1.0,
                             color: ScholarlyTheme.textPrimary,
                           ),
                         ),
                         Text(
-                          'Unlock premium personas',
+                          'Supercharge your learning with Cloud AI',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.inter(
-                            fontSize: 11,
+                            fontSize: 12,
                             color: ScholarlyTheme.textMuted,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  _buildWallet(context, storeState, storeNotifier, numberFormat),
                 ],
               ),
             ),
@@ -82,80 +76,36 @@ class _StorePageState extends ConsumerState<StorePage> {
             // Subscription Status Card
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: _buildSubscriptionCard(context, storeState, storeNotifier, numberFormat),
+              child: _buildSubscriptionCard(context, storeState, storeNotifier),
             ),
 
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
 
-            // Tabs Content
+            // Plans Header
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'CHOOSE YOUR PLAN',
+                  style: GoogleFonts.outfit(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.5,
+                    color: ScholarlyTheme.textMuted,
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            // Plans List / Scroll
             Expanded(
-              child: _buildAvatarsTab(context, storeState, storeNotifier),
+              child: _buildPlansList(context, storeState, storeNotifier),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  // Wallet indicator with simulated free refill
-  Widget _buildWallet(
-    BuildContext context,
-    StoreState storeState,
-    StoreNotifier storeNotifier,
-    NumberFormat format,
-  ) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.amber.withValues(alpha: 0.4), width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.amber.withValues(alpha: 0.08),
-            blurRadius: 6,
-            spreadRadius: 1,
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.monetization_on_rounded, color: Colors.amber, size: 20),
-          const SizedBox(width: 6),
-          Text(
-            format.format(storeState.goldBalance),
-            style: GoogleFonts.jetBrainsMono(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: const Color(0xFFB45309), // Amber 700
-            ),
-          ),
-          const SizedBox(width: 8),
-          GestureDetector(
-            onTap: () {
-              ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-              storeNotifier.addGold(500);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text('💰 Refilled 500 simulated Gold coins!'),
-                  behavior: SnackBarBehavior.floating,
-                  backgroundColor: ScholarlyTheme.accentBlue,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  duration: const Duration(seconds: 1),
-                ),
-              );
-            },
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: const BoxDecoration(
-                color: ScholarlyTheme.accentBlue,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.add_rounded, color: Colors.white, size: 12),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -165,13 +115,14 @@ class _StorePageState extends ConsumerState<StorePage> {
     BuildContext context,
     StoreState storeState,
     StoreNotifier storeNotifier,
-    NumberFormat format,
   ) {
     final dateFormat = DateFormat('MMM d, yyyy');
-    
+
     if (storeState.isPremium && storeState.subscriptionTill != null) {
+      final planName = (storeState.subscriptionPlan ?? 'Premium').toUpperCase();
+      final expiryStr = dateFormat.format(storeState.subscriptionTill!);
       final daysLeft = storeState.subscriptionTill!.difference(DateTime.now()).inDays;
-      
+
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.all(16),
@@ -181,7 +132,7 @@ class _StorePageState extends ConsumerState<StorePage> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(24),
           border: Border.all(color: Colors.cyan.withValues(alpha: 0.3), width: 1.5),
           boxShadow: [
             BoxShadow(
@@ -212,9 +163,9 @@ class _StorePageState extends ConsumerState<StorePage> {
                     runSpacing: 4,
                     children: [
                       Text(
-                        'PREMIUM MEMBER',
+                        '$planName SUBSCRIBER',
                         style: GoogleFonts.outfit(
-                          fontSize: 16,
+                          fontSize: 15,
                           fontWeight: FontWeight.w900,
                           color: Colors.cyan,
                           letterSpacing: 1.0,
@@ -239,35 +190,33 @@ class _StorePageState extends ConsumerState<StorePage> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Free since: ${dateFormat.format(storeState.joinedFreeDate)}',
-                    style: GoogleFonts.inter(fontSize: 11, color: Colors.white60),
-                  ),
-                  Text(
-                    'Renews till: ${dateFormat.format(storeState.subscriptionTill!)} ($daysLeft days left)',
+                    'Renews till: $expiryStr ($daysLeft days left)',
                     style: GoogleFonts.inter(
                       fontSize: 11,
                       color: Colors.cyanAccent.withValues(alpha: 0.8),
                       fontWeight: FontWeight.bold,
                     ),
                   ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '✓ 50 Cloud AI prompts/day unlocked',
+                    style: GoogleFonts.inter(fontSize: 10, color: Colors.white70),
+                  ),
                 ],
               ),
             ),
-            ElevatedButton(
-              onPressed: () => _purchaseSubscription(context, storeState, storeNotifier),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white.withValues(alpha: 0.1),
-                foregroundColor: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: const BorderSide(color: Colors.white30),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              ),
+            TextButton(
+              onPressed: () {
+                ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                _showCancelDialog(context, storeNotifier);
+              },
               child: Text(
-                'EXTEND',
-                style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold),
+                'CANCEL',
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.redAccent,
+                ),
               ),
             ),
           ],
@@ -281,7 +230,7 @@ class _StorePageState extends ConsumerState<StorePage> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.45),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(color: Colors.white.withValues(alpha: 0.6), width: 1.5),
         boxShadow: [
           BoxShadow(
@@ -316,36 +265,16 @@ class _StorePageState extends ConsumerState<StorePage> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Member since: ${dateFormat.format(storeState.joinedFreeDate)}',
+                  'All 20 AI opponents are fully unlocked & free.',
                   style: GoogleFonts.inter(fontSize: 11, color: ScholarlyTheme.textMuted),
                 ),
                 Text(
-                  'Unlock unlimited access to all AI opponents',
-                  style: GoogleFonts.inter(fontSize: 10, color: ScholarlyTheme.accentBlue, fontWeight: FontWeight.w500),
-                ),
-              ],
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () => _purchaseSubscription(context, storeState, storeNotifier),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: ScholarlyTheme.accentBlue,
-              foregroundColor: Colors.white,
-              elevation: 4,
-              shadowColor: ScholarlyTheme.accentBlue.withValues(alpha: 0.3),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.flash_on_rounded, color: Colors.amber, size: 12),
-                const SizedBox(width: 4),
-                Text(
-                  'GO PRO',
-                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold),
+                  'Upgrade to access Cloud AI coaching prompts.',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: ScholarlyTheme.accentBlue,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ],
             ),
@@ -355,16 +284,365 @@ class _StorePageState extends ConsumerState<StorePage> {
     );
   }
 
-  void _purchaseSubscription(
+  // Plans List Layout
+  Widget _buildPlansList(
     BuildContext context,
     StoreState storeState,
     StoreNotifier storeNotifier,
   ) {
-    if (storeState.goldBalance < 500) {
-      _showInsufficientFundsDialog(context);
-      return;
-    }
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+      physics: const BouncingScrollPhysics(),
+      itemCount: plans.length,
+      itemBuilder: (context, index) {
+        final plan = plans[index];
+        final isActive = storeState.isPremium && storeState.subscriptionPlan == plan.id;
 
+        return Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: isActive ? 0.85 : 0.6),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: isActive ? plan.color : Colors.white.withValues(alpha: 0.8),
+              width: isActive ? 2.5 : 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isActive ? 0.06 : 0.02),
+                blurRadius: isActive ? 16 : 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Stack(
+            children: [
+              if (plan.isPopular)
+                Positioned(
+                  top: 0,
+                  right: 24,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: plan.color,
+                      borderRadius: const BorderRadius.only(
+                        bottomLeft: Radius.circular(10),
+                        bottomRight: Radius.circular(10),
+                      ),
+                    ),
+                    child: Text(
+                      'POPULAR',
+                      style: GoogleFonts.outfit(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.0,
+                      ),
+                    ),
+                  ),
+                ),
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          plan.title,
+                          style: GoogleFonts.outfit(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: ScholarlyTheme.textPrimary,
+                          ),
+                        ),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.baseline,
+                          textBaseline: TextBaseline.alphabetic,
+                          children: [
+                            Text(
+                              '\$${plan.price.toStringAsFixed(2)}',
+                              style: GoogleFonts.jetBrainsMono(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: plan.color,
+                              ),
+                            ),
+                            Text(
+                              ' / ${plan.period}',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                color: ScholarlyTheme.textMuted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      plan.description,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: ScholarlyTheme.textMuted,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const Divider(height: 1),
+                    const SizedBox(height: 12),
+
+                    // Features list
+                    ...plan.features.map((feature) => Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4.0),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.check_circle_rounded,
+                                color: plan.color,
+                                size: 16,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  feature,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    color: ScholarlyTheme.textPrimary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )),
+                    
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: isActive
+                            ? null
+                            : () {
+                                ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                                _showSimulationCheckout(context, plan, storeNotifier);
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: isActive ? Colors.grey : plan.color,
+                          foregroundColor: Colors.white,
+                          disabledBackgroundColor: Colors.grey.withValues(alpha: 0.1),
+                          disabledForegroundColor: ScholarlyTheme.textMuted,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          elevation: isActive ? 0 : 2,
+                        ),
+                        child: Text(
+                          isActive ? 'CURRENT PLAN' : 'SUBSCRIBE',
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // Simulation Checkout Bottom Sheet
+  void _showSimulationCheckout(
+    BuildContext context,
+    SubscriptionPlan plan,
+    StoreNotifier storeNotifier,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(28),
+          topRight: Radius.circular(28),
+        ),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+            top: 24,
+            left: 24,
+            right: 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Secure Simulation Pay',
+                    style: GoogleFonts.outfit(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: ScholarlyTheme.textPrimary,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: plan.color.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: plan.color.withValues(alpha: 0.2)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          plan.title,
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                            color: ScholarlyTheme.textPrimary,
+                          ),
+                        ),
+                        Text(
+                          'Includes 50 Cloud AI prompts/day',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            color: ScholarlyTheme.textMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      '\$${plan.price.toStringAsFixed(2)}',
+                      style: GoogleFonts.jetBrainsMono(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: plan.color,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Mock Card Details
+              Text(
+                'CREDIT CARD DETAILS (SIMULATED)',
+                style: GoogleFonts.outfit(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.0,
+                  color: ScholarlyTheme.textMuted,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.credit_card_rounded, color: ScholarlyTheme.textMuted, size: 20),
+                        const SizedBox(width: 12),
+                        Text(
+                          '••••  ••••  ••••  4242',
+                          style: GoogleFonts.jetBrainsMono(
+                            fontSize: 14,
+                            color: ScholarlyTheme.textPrimary,
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          '12/29',
+                          style: GoogleFonts.jetBrainsMono(
+                            fontSize: 14,
+                            color: ScholarlyTheme.textPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              
+              const SizedBox(height: 12),
+              Text(
+                '💡 This is a simulated store page. Clicking "Pay" will charge \$0.00 and immediately grant full Kingslayer Premium status for the selected duration.',
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  color: Colors.amber[800],
+                  height: 1.4,
+                ),
+              ),
+
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () {
+                  storeNotifier.simulateUSDSubscription(plan.id);
+                  Navigator.pop(context);
+                  
+                  ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('⚡ Subscribed to ${plan.title} successfully!'),
+                      behavior: SnackBarBehavior.floating,
+                      backgroundColor: Colors.green,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: plan.color,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                child: Text(
+                  'PAY \$${plan.price.toStringAsFixed(2)}',
+                  style: GoogleFonts.outfit(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // Cancel Dialog
+  void _showCancelDialog(BuildContext context, StoreNotifier storeNotifier) {
     showDialog(
       context: context,
       builder: (context) {
@@ -373,575 +651,113 @@ class _StorePageState extends ConsumerState<StorePage> {
           surfaceTintColor: Colors.transparent,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
           title: Text(
-            'Go Premium',
+            'Cancel Subscription',
             style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary),
           ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Unlock ultimate access to Kingslayer Chess Premium:',
-                style: GoogleFonts.inter(fontSize: 13, color: ScholarlyTheme.textPrimary),
-              ),
-              const SizedBox(height: 12),
-              _buildBulletPoint('Full 30-day Premium membership access'),
-              _buildBulletPoint('Unlock vector theme customizations'),
-              _buildBulletPoint('Extended depth limits on AI engines'),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Price:', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13)),
-                  Row(
-                    children: [
-                      const Icon(Icons.monetization_on_rounded, color: Colors.amber, size: 16),
-                      const SizedBox(width: 4),
-                      Text('500 Gold', style: GoogleFonts.jetBrainsMono(fontWeight: FontWeight.bold, color: const Color(0xFFB45309))),
-                    ],
-                  ),
-                ],
-              ),
-            ],
+          content: Text(
+            'Are you sure you want to cancel your simulated subscription? You will lose access to premium AI coaching limits immediately.',
+            style: GoogleFonts.inter(fontSize: 13, color: ScholarlyTheme.textPrimary, height: 1.4),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text('Cancel', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted)),
+              child: Text('Keep Subscription', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted)),
             ),
             ElevatedButton(
               onPressed: () {
-                final success = storeNotifier.buyOrRenewPremium();
+                storeNotifier.cancelSubscription();
                 Navigator.pop(context);
-                if (success) {
-                  ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Text('⚡ Account upgraded to Premium successfully!'),
-                      behavior: SnackBarBehavior.floating,
-                      backgroundColor: Colors.green,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                  );
-                }
+                ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text('Subscription cancelled successfully.'),
+                    behavior: SnackBarBehavior.floating,
+                    backgroundColor: Colors.redAccent,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                );
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: ScholarlyTheme.accentBlue,
+                backgroundColor: Colors.redAccent,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              child: Text('Buy Now', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+              child: Text('Yes, Cancel', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
             ),
           ],
         );
       },
     );
   }
-
-  Widget _buildBulletPoint(String text) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2.0),
-      child: Row(
-        children: [
-          const Icon(Icons.check_circle_rounded, color: Colors.green, size: 14),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              text,
-              style: GoogleFonts.inter(fontSize: 12, color: ScholarlyTheme.textMuted),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showInsufficientFundsDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: Text(
-          'Insufficient Gold',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.redAccent),
-        ),
-        content: Text(
-          'You need more Gold to purchase this item. Tap the "+" button next to your wallet to refill simulated Gold for testing!',
-          style: GoogleFonts.inter(fontSize: 13, color: ScholarlyTheme.textPrimary),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Close', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted)),
-          ),
-        ],
-      ),
-    );
-  }
-
-
-
-  // --- AVATARS TAB ---
-  Widget _buildAvatarsTab(
-    BuildContext context,
-    StoreState storeState,
-    StoreNotifier storeNotifier,
-  ) {
-    final avatars = AiAvatar.avatars;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: GridView.builder(
-        physics: const BouncingScrollPhysics(),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          childAspectRatio: 0.65, // Taller cards to fit avatar details
-        ),
-        itemCount: avatars.length,
-        itemBuilder: (context, index) {
-          final avatar = avatars[index];
-          final isFree = avatar.id == 'avatar_0' || avatar.id == 'avatar_6';
-          final isUnlocked = storeNotifier.isAvatarUnlocked(avatar.id);
-          final expiry = storeState.purchasedAvatars[avatar.id];
-
-          return StoreAvatarCard(
-            avatar: avatar,
-            isFree: isFree,
-            isUnlocked: isUnlocked,
-            expiry: expiry,
-            onBuyOrRenew: () {
-              if (storeState.goldBalance < 150) {
-                _showInsufficientFundsDialog(context);
-                return;
-              }
-              final success = storeNotifier.purchaseOrRenewAvatar(avatar.id, 150);
-              if (success) {
-                ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('🤖 Avatar ${avatar.name} unlocked for selection!'),
-                    behavior: SnackBarBehavior.floating,
-                    backgroundColor: Colors.green,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                );
-              }
-            },
-          );
-        },
-      ),
-    );
-  }
 }
 
+class SubscriptionPlan {
+  final String id;
+  final String title;
+  final String description;
+  final double price;
+  final String period;
+  final List<String> features;
+  final bool isPopular;
+  final Color color;
 
-
-// Flippable Card Widget adapted for Store AI opponent avatars
-class StoreAvatarCard extends StatefulWidget {
-  final AiAvatar avatar;
-  final bool isFree;
-  final bool isUnlocked;
-  final DateTime? expiry;
-  final VoidCallback onBuyOrRenew;
-
-  const StoreAvatarCard({
-    super.key,
-    required this.avatar,
-    required this.isFree,
-    required this.isUnlocked,
-    this.expiry,
-    required this.onBuyOrRenew,
+  const SubscriptionPlan({
+    required this.id,
+    required this.title,
+    required this.description,
+    required this.price,
+    required this.period,
+    required this.features,
+    this.isPopular = false,
+    required this.color,
   });
-
-  @override
-  State<StoreAvatarCard> createState() => _StoreAvatarCardState();
 }
 
-class _StoreAvatarCardState extends State<StoreAvatarCard> with SingleTickerProviderStateMixin {
-  late AnimationController _flipController;
-  bool _isFront = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _flipController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 400),
-    );
-  }
-
-  @override
-  void dispose() {
-    _flipController.dispose();
-    super.dispose();
-  }
-
-  void _toggleFlip() {
-    final container = ProviderScope.containerOf(context, listen: false);
-    container.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-    
-    if (_isFront) {
-      _flipController.forward();
-    } else {
-      _flipController.reverse();
-    }
-    setState(() {
-      _isFront = !_isFront;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: _toggleFlip,
-      child: AnimatedBuilder(
-        animation: _flipController,
-        builder: (context, child) {
-          final angle = _flipController.value * math.pi;
-          final isFront = angle < math.pi / 2;
-
-          Widget cardContent = isFront
-              ? _buildFront()
-              : Transform(
-                  transform: Matrix4.identity()..rotateY(math.pi),
-                  alignment: Alignment.center,
-                  child: _buildBack(),
-                );
-
-          return Transform(
-            transform: Matrix4.identity()
-              ..setEntry(3, 2, 0.001) // perspective
-              ..rotateY(angle),
-            alignment: Alignment.center,
-            child: cardContent,
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildFront() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: widget.isUnlocked ? widget.avatar.color : Colors.white.withValues(alpha: 0.6),
-          width: widget.isUnlocked ? 2.5 : 1.0,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: widget.avatar.color.withValues(alpha: 0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(18),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            // Portrait
-            Image.asset(
-              widget.avatar.imagePath,
-              fit: BoxFit.cover,
-            ),
-
-            // Locked Translucent Overlay
-            if (!widget.isUnlocked)
-              Container(
-                color: Colors.black.withValues(alpha: 0.25),
-                child: Align(
-                  alignment: const Alignment(0, -0.2),
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.65),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white30),
-                    ),
-                    child: const Icon(Icons.lock_rounded, color: Colors.white, size: 24),
-                  ),
-                ),
-              ),
-
-            // Top Status Badge Overlay
-            Positioned(
-              top: 8,
-              left: 8,
-              right: 8,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Flexible(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.7),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        widget.avatar.fideRatingRange,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.jetBrainsMono(
-                          color: Colors.white,
-                          fontSize: 7.5,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Flexible(
-                    child: _buildStatusBadge(),
-                  ),
-                ],
-              ),
-            ),
-
-            // Bottom Name / Buy Action Banner
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.transparent, Colors.black.withValues(alpha: 0.85)],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
-                ),
-                padding: const EdgeInsets.all(10),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            widget.avatar.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.outfit(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Icon(widget.avatar.icon, color: widget.avatar.color, size: 14),
-                      ],
-                    ),
-                    Text(
-                      widget.avatar.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.inter(fontSize: 10, color: Colors.white70),
-                    ),
-                    const SizedBox(height: 6),
-                    _buildActionButton(),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatusBadge() {
-    String text = 'LOCKED';
-    Color color = Colors.redAccent;
-    
-    if (widget.isFree) {
-      text = 'FREE';
-      color = Colors.green;
-    } else if (widget.isUnlocked) {
-      if (widget.expiry != null) {
-        final diff = widget.expiry!.difference(DateTime.now());
-        text = '${diff.inDays}d LEFT';
-      } else {
-        text = 'UNLOCKED';
-      }
-      color = ScholarlyTheme.accentBlue;
-    } else if (widget.expiry != null && widget.expiry!.isBefore(DateTime.now())) {
-      text = 'EXPIRED';
-      color = Colors.red;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.85),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        text,
-        style: GoogleFonts.inter(
-          color: Colors.white,
-          fontSize: 7.5,
-          fontWeight: FontWeight.w900,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildActionButton() {
-    if (widget.isFree) {
-      return Text(
-        'Tap to see details',
-        textAlign: TextAlign.center,
-        style: GoogleFonts.inter(fontSize: 8, color: Colors.white38, fontStyle: FontStyle.italic),
-      );
-    }
-
-    final String label = widget.isUnlocked ? 'RENEW (150 G)' : 'BUY FOR 150 GOLD';
-    final Color buttonColor = widget.isUnlocked ? Colors.green : ScholarlyTheme.accentBlue;
-
-    return ElevatedButton(
-      onPressed: () {
-        // Prevent click from flipping card
-        widget.onBuyOrRenew();
-      },
-      style: ElevatedButton.styleFrom(
-        backgroundColor: buttonColor,
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        minimumSize: Size.zero,
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      ),
-      child: Text(
-        label,
-        style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.bold),
-      ),
-    );
-  }
-
-  Widget _buildBack() {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: widget.avatar.color,
-          width: widget.isUnlocked ? 2.5 : 1.0,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Header info
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 12,
-                backgroundImage: AssetImage(widget.avatar.imagePath),
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  widget.avatar.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.outfit(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: ScholarlyTheme.textPrimary,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          const Divider(height: 1),
-          const SizedBox(height: 6),
-
-          Text(
-            'SPECIFICATIONS',
-            style: GoogleFonts.outfit(
-              fontSize: 9,
-              fontWeight: FontWeight.w900,
-              color: widget.avatar.color,
-            ),
-          ),
-          const SizedBox(height: 4),
-
-          _buildSpecLine('FIDE Rating', widget.avatar.fideRatingRange),
-          _buildSpecLine('Skill Lvl', '${widget.avatar.skillLevel}/20'),
-          _buildSpecLine('Search Depth', '${widget.avatar.depth} moves'),
-
-          const SizedBox(height: 8),
-          Text(
-            'PLAYING STYLE',
-            style: GoogleFonts.outfit(
-              fontSize: 9,
-              fontWeight: FontWeight.w900,
-              color: widget.avatar.color,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Expanded(
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: Text(
-                widget.avatar.playingStyle,
-                style: GoogleFonts.inter(
-                  fontSize: 10,
-                  height: 1.3,
-                  color: ScholarlyTheme.textPrimary,
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Center(
-            child: Text(
-              'Tap to flip',
-              style: GoogleFonts.inter(fontSize: 8, color: ScholarlyTheme.textMuted),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSpecLine(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 1.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: GoogleFonts.inter(fontSize: 9, color: ScholarlyTheme.textMuted),
-          ),
-          Text(
-            value,
-            style: GoogleFonts.jetBrainsMono(fontSize: 9, fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary),
-          ),
-        ],
-      ),
-    );
-  }
-}
+const List<SubscriptionPlan> plans = [
+  SubscriptionPlan(
+    id: 'monthly',
+    title: 'Monthly Plan',
+    description: 'Perfect for casual learners.',
+    price: 4.99,
+    period: 'month',
+    color: ScholarlyTheme.accentBlue,
+    features: [
+      '50 Cloud AI prompts/day in Academy',
+      'All 20 AI opponents unlocked',
+      'Vector theme customizations',
+      'Extended search depth limit',
+    ],
+  ),
+  SubscriptionPlan(
+    id: 'quarterly',
+    title: 'Quarterly Plan',
+    description: 'Our most popular choice.',
+    price: 12.99,
+    period: '3 months',
+    isPopular: true,
+    color: Colors.purple,
+    features: [
+      '50 Cloud AI prompts/day in Academy',
+      'All 20 AI opponents unlocked',
+      'Vector theme customizations',
+      'Extended search depth limit',
+      'Save 13% vs Monthly rate',
+    ],
+  ),
+  SubscriptionPlan(
+    id: 'yearly',
+    title: 'Yearly Plan',
+    description: 'Best value for serious scholars.',
+    price: 39.99,
+    period: 'year',
+    color: Color(0xFFB45309), // Amber 700
+    features: [
+      '50 Cloud AI prompts/day in Academy',
+      'All 20 AI opponents unlocked',
+      'Vector theme customizations',
+      'Extended search depth limit',
+      'Save 33% vs Monthly rate',
+      'Exclusive premium profile badge',
+    ],
+  ),
+];

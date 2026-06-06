@@ -166,7 +166,7 @@ void showAvatarSelectionSheet(BuildContext context, WidgetRef ref, {bool isBotto
                                           ),
                                         ),
                                         const SizedBox(width: 4),
-                                        if (avatar.id == 'avatar_10')
+                                        if (avatar.id == 'avatar_19' || avatar.name == 'Kingslayer')
                                           const Icon(
                                             Icons.verified_rounded,
                                             color: ScholarlyTheme.accentBlue,

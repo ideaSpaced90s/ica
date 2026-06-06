@@ -1,6 +1,6 @@
 import 'dart:async';
 
-/// A unified interface for a Chess Engine Service (e.g. Stockfish or Crafty).
+/// A unified interface for a Chess Engine Service (e.g. Stockfish).
 abstract class ChessEngineService {
   Future<void> init();
   bool get isReady;

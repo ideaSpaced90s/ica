@@ -452,8 +452,8 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
       await _stockfishEngine.init();
 
       final opponent = state.activeOpponent ?? AiAvatar.getBestMatch(state.consolidatedRating);
-      await _stockfishEngine.setSkillLevel(opponent.skillLevel, multiPV: opponent.name == 'Kingslayer' ? 1 : 4);
-      _stockfishEngine.sendCommand('setoption name MultiPV value ${opponent.name == 'Kingslayer' ? 1 : 4}');
+      await _stockfishEngine.setSkillLevel(opponent.skillLevel, multiPV: (opponent.name == 'King' || opponent.name == 'Kingslayer') ? 1 : 4);
+      _stockfishEngine.sendCommand('setoption name MultiPV value ${(opponent.name == 'King' || opponent.name == 'Kingslayer') ? 1 : 4}');
 
       state = state.copyWith(
         servicesStarted: true,
@@ -484,8 +484,8 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
     await _stockfishEngine.setChess960Mode(is960);
 
     final opponent = state.activeOpponent ?? AiAvatar.getBestMatch(state.consolidatedRating);
-    await _stockfishEngine.setSkillLevel(opponent.skillLevel, multiPV: opponent.name == 'Kingslayer' ? 1 : 4);
-    _stockfishEngine.sendCommand('setoption name MultiPV value ${opponent.name == 'Kingslayer' ? 1 : 4}');
+    await _stockfishEngine.setSkillLevel(opponent.skillLevel, multiPV: (opponent.name == 'King' || opponent.name == 'Kingslayer') ? 1 : 4);
+    _stockfishEngine.sendCommand('setoption name MultiPV value ${(opponent.name == 'King' || opponent.name == 'Kingslayer') ? 1 : 4}');
 
     _searchFen = state.game.fen;
     final targetDepth = depth ?? opponent.depth;
@@ -570,7 +570,7 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
 
       if (bestMoveToPlay != null && aiTurn && isMoveValidForCurrentTurn) {
         final opponent = state.activeOpponent ?? AiAvatar.getBestMatch(state.consolidatedRating);
-        if (opponent.name != 'Kingslayer' && _currentCandidates.isNotEmpty) {
+        if (opponent.name != 'King' && opponent.name != 'Kingslayer' && _currentCandidates.isNotEmpty) {
           bestMoveToPlay = ChessPersonaEvaluator.selectBestMove(
             List.from(_currentCandidates),
             opponent,
