@@ -42,6 +42,10 @@ class FakeBattlegroundState extends Fake implements BattlegroundState {
 class FakeBattlegroundNotifier extends StateNotifier<BattlegroundState> implements BattlegroundNotifier {
   FakeBattlegroundNotifier(super.state);
 
+  void updateState(BattlegroundState newState) {
+    state = newState;
+  }
+
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
@@ -271,6 +275,65 @@ void main() {
       expect(tutorialTask.title, "Basic Revision");
       expect(tutorialTask.description, contains("GM Chanakya demands you revise Chapter"));
       expect(state.wisdomMessage, contains("I have revised your syllabus to focus on basic moves revision"));
+    });
+
+    test('Triggers calibration when totalRatedGamesCount reaches 10 via listener', () async {
+      final container = ProviderContainer(
+        overrides: [
+          assignmentRepositoryProvider.overrideWithValue(fakeRepository),
+          battlegroundProvider.overrideWith((ref) => fakeBattleground),
+          puzzlesProvider.overrideWith((ref) => fakePuzzles),
+          tutorialProvider.overrideWith((ref) => fakeTutorial),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      // Trigger initialization
+      container.read(assignmentProvider);
+      await Future.delayed(const Duration(milliseconds: 20));
+
+      expect(container.read(assignmentProvider).isCalibrated, isFalse);
+
+      // Simulate reaching 10 games
+      fakeBattleground.updateState(FakeBattlegroundState(
+        consolidatedRating: 1350,
+        totalRatedGamesCount: 10,
+      ));
+
+      // Wait for listener to process
+      await Future.delayed(const Duration(milliseconds: 10));
+
+      final state = container.read(assignmentProvider);
+      expect(state.isCalibrated, isTrue);
+      expect(state.startElo, 1350);
+      expect(state.goalElo, 1500); // 1350 + 150
+    });
+
+    test('Initializes as calibrated if totalRatedGamesCount is already >= 10 on start', () async {
+      // Set initial state of battleground to 10 games
+      fakeBattleground = FakeBattlegroundNotifier(FakeBattlegroundState(
+        consolidatedRating: 1400,
+        totalRatedGamesCount: 10,
+      ));
+
+      final container = ProviderContainer(
+        overrides: [
+          assignmentRepositoryProvider.overrideWithValue(fakeRepository),
+          battlegroundProvider.overrideWith((ref) => fakeBattleground),
+          puzzlesProvider.overrideWith((ref) => fakePuzzles),
+          tutorialProvider.overrideWith((ref) => fakeTutorial),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      // Trigger initialization
+      container.read(assignmentProvider);
+      await Future.delayed(const Duration(milliseconds: 20));
+
+      final state = container.read(assignmentProvider);
+      expect(state.isCalibrated, isTrue);
+      expect(state.startElo, 1400);
+      expect(state.goalElo, 1550);
     });
   });
 }

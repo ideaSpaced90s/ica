@@ -1,104 +1,55 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart' show rootBundle;
-import 'package:path_provider/path_provider.dart';
-import 'package:llama_cpp_dart/llama_cpp_dart.dart';
 import 'package:kingslayer_chess/src/rust/api/puzzles.dart' as rust_puzzles;
+import 'package:kingslayer_chess/src/rust/api/commentary.dart' as rust_commentary;
 import '../data/puzzle_repository.dart';
+import '../domain/models/position_context.dart';
 
 class CommentaryEngine {
-  bool isInitialized = false;
+  bool isInitialized = true;
   bool isInitializing = false;
   bool isGenerating = false;
   String? lastError;
   String? systemInstruction;
-  LlamaEngine? _llamaEngine;
-  EngineSession? _llamaSession;
   void Function(rust_puzzles.Puzzle puzzle)? onPuzzleLoaded;
 
-  Future<void> _loadPersonaIfNeeded() async {
-    if (systemInstruction != null && systemInstruction!.isNotEmpty) return;
-    try {
-      final personaText = await rootBundle.loadString('assets/persona/gmchanakya.md');
-      if (personaText.isNotEmpty) {
-        systemInstruction = personaText;
-      }
-    } catch (e) {
-      debugPrint('CommentaryEngine: Failed to load gmchanakya.md: $e');
-    }
-  }
-
   Future<void> initialize() async {
-    if (isInitialized || isInitializing) return;
-
-    isInitializing = true;
+    isInitialized = true;
+    isInitializing = false;
     lastError = null;
-
-    try {
-      debugPrint('CommentaryEngine: Initializing local AI...');
-      
-      // 1. Copy GGUF model file from assets to local application directory if it doesn't exist
-      final appDir = await getApplicationDocumentsDirectory();
-      final localModelFile = File('${appDir.path}/gemma-3-270m-it-Q8_0.gguf');
-
-      if (!await localModelFile.exists()) {
-        debugPrint('CommentaryEngine: Copying gemma-3-270m-it-Q8_0.gguf model asset to local storage (first-run)...');
-        final byteData = await rootBundle.load('assets/llm/gemma/gemma-3-270m-it-Q8_0.gguf');
-        await localModelFile.create(recursive: true);
-        await localModelFile.writeAsBytes(
-          byteData.buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes),
-          flush: true,
-        );
-        debugPrint('CommentaryEngine: Model asset copied successfully.');
-      } else {
-        debugPrint('CommentaryEngine: Model file already exists locally.');
-      }
-
-      // 2. Setup LLM parameters for local inference using LlamaEngine
-      String libraryPath = 'libllama.so';
-      if (Platform.isWindows) {
-        libraryPath = 'llama.dll';
-      } else if (Platform.isMacOS) {
-        libraryPath = 'libllama.dylib';
-      }
-
-      _llamaEngine = await LlamaEngine.spawn(
-        libraryPath: libraryPath,
-        modelParams: ModelParams(
-          path: localModelFile.path,
-          gpuLayers: 0,
-        ),
-        contextParams: const ContextParams(
-          nCtx: 2048,
-        ),
-      );
-
-      _llamaSession = await _llamaEngine!.createSession();
-
-      // 3. Load dynamic persona once
-      await _loadPersonaIfNeeded();
-
-      isInitialized = true;
-      debugPrint('CommentaryEngine: Local LLM initialized successfully.');
-    } catch (error) {
-      lastError = 'IdeaSpace Chess Academy Local AI Initialization failed: $error';
-      debugPrint('CommentaryEngine: Failed to initialize local LLM: $error');
-      isInitialized = false;
-    } finally {
-      isInitializing = false;
-    }
+    debugPrint('CommentaryEngine: Deterministic Engine initialized.');
   }
 
-  /// Generates commentary using the primary local Gemma 3 270M Instruct model
+  /// Extracts the piece name from the moveDescription
+  String _extractPiece(String moveDesc) {
+    if (moveDesc.contains('castles')) return 'King';
+    if (moveDesc.contains('en passant')) return 'Pawn';
+    
+    // Check if it's "moves {Piece} to"
+    final movesMatch = RegExp(r'moves\s+(\w+)\s+to').firstMatch(moveDesc);
+    if (movesMatch != null) return movesMatch.group(1)!;
+    
+    // Check if it's "'s {Piece} captures"
+    final capturesMatch = RegExp(r"'s\s+(\w+)\s+captures").firstMatch(moveDesc);
+    if (capturesMatch != null) return capturesMatch.group(1)!;
+    
+    // Check if it's "places a {Piece} on"
+    final placesMatch = RegExp(r'places\s+a\s+(\w+)\s+on').firstMatch(moveDesc);
+    if (placesMatch != null) return placesMatch.group(1)!;
+    
+    return 'piece';
+  }
+
+  /// Generates commentary using the deterministic Rust Engine and Dart parameter replacement
   Stream<String> generateCommentaryStream({
     String? player,
     String? move,
     String? evalScore,
-    String? structuredPrompt,
+    PositionContext? context,
+    String? previousQuality,
     String? userQuery,
+    String? structuredPrompt,
   }) async* {
-    // 1. Intercept puzzle search queries deterministically to bypass LLM tool-calling
     final query = userQuery?.toLowerCase() ?? '';
     final isPuzzleRequest = query.contains('puzzle') || query.contains('train') || query.contains('exercise');
     if (isPuzzleRequest) {
@@ -157,17 +108,119 @@ class CommentaryEngine {
       return;
     }
 
-    // Load GM Chanakya persona
-    await _loadPersonaIfNeeded();
-
-    // Commentary generation via Local LLM
-    if (!isInitialized) {
-      await initialize();
+    if (context == null) {
+      yield 'GM Chanakya is contemplating the board state...';
+      return;
     }
 
-    if (!isInitialized || _llamaSession == null) {
-      debugPrint('CommentaryEngine: GM Chanakya is Offline.');
-      yield 'GM Chanakya is preparing training materials. Please try again in a moment.';
+    if (context.move == 'Opening') {
+      final query = userQuery?.trim().toLowerCase() ?? '';
+      String response = '';
+      if (query.contains('why')) {
+        response = 'No moves have been made yet, Apprentice. The board is silent. Make your first move, and I shall explain the strategic ideas behind it.';
+      } else if (query.contains('candidates')) {
+        response = 'At the very beginning of the game, the classic candidates are 1.e4 or 1.d4 to seize control of the center, or 1.Nf3 or 1.c4 for a more hypermodern approach. The choice of battleground is yours.';
+      } else if (query.contains('tactics')) {
+        response = 'There are no tactical complications on a fresh board, Apprentice. Tactics arise from positional tension and structural imbalances. Let us first develop our pieces.';
+      } else if (query.contains('plan')) {
+        response = 'In the starting position, your plan should be fundamental: stake a claim in the center, develop your minor pieces toward active squares, castle your king to safety, and connect your rooks.';
+      } else if (query.contains('defend')) {
+        response = 'There is nothing to defend against yet, Apprentice. The threat is non-existent. Use this peace to seize the initiative.';
+      } else {
+        // Default to Analyze
+        response = 'Apprentice, the board is in its pristine, starting state. Both armies stand ready. Establish your presence in the center, develop your forces, and prepare for the struggle ahead.';
+      }
+
+      yield response;
+      return;
+    }
+
+    // Handle user queries for active games (non-opening positions)
+    final cleanQuery = userQuery?.trim().toLowerCase() ?? '';
+    if (cleanQuery.isNotEmpty) {
+      String response = '';
+      
+      String cleanMoveName(String m) {
+        return m.replaceAll(RegExp(r'^(White|Black) moves '), '')
+                .replaceAll(RegExp(r'^(White|Black)\s+'), '')
+                .replaceAll(RegExp(r'\.$'), '');
+      }
+
+      String describeEvaluation(double eval) {
+        if (eval > 1.5) {
+          return 'strongly in our favor';
+        } else if (eval > 0.5) {
+          return 'slightly in our favor';
+        } else if (eval < -1.5) {
+          return 'strongly in the opponent\'s favor';
+        } else if (eval < -0.5) {
+          return 'slightly in the opponent\'s favor';
+        } else {
+          return 'dynamically balanced';
+        }
+      }
+
+      final descEval = describeEvaluation(context.evaluation);
+
+      if (cleanQuery.contains('candidate') || cleanQuery.contains('move') || cleanQuery.contains('what to play') || cleanQuery.contains('what should i play') || cleanQuery.contains('suggest')) {
+        if (context.candidates.isNotEmpty) {
+          final buffer = StringBuffer();
+          buffer.write('Apprentice, the engine candidates for this position are:\n\n');
+          for (var i = 0; i < context.candidates.length; i++) {
+            final c = context.candidates[i];
+            final cleanedMove = cleanMoveName(c.uciMove);
+            buffer.write('${i + 1}. $cleanedMove\n');
+            if (c.fullPv.isNotEmpty) {
+              final cleanedPv = c.fullPv.take(3).map(cleanMoveName).join(' → ');
+              buffer.write('   Continuation: $cleanedPv\n');
+            }
+          }
+          buffer.write('\nFocus on maintaining structural harmony while executing these paths.');
+          response = buffer.toString();
+        } else if (context.bestMove != null) {
+          final cleanedBest = cleanMoveName(context.bestMove!);
+          response = 'Apprentice, my recommended candidate in this position is $cleanedBest. The engine evaluates the balance as $descEval. Maintain your coordination and seek activity.';
+        } else {
+          response = 'Apprentice, the board state is complex, and the engine calculation is still maturing. I suggest developing your least active piece or securing your king\'s safety.';
+        }
+      } else if (cleanQuery.contains('plan') || cleanQuery.contains('continuation') || cleanQuery.contains('idea') || cleanQuery.contains('strategy')) {
+        if (context.pvLine.isNotEmpty) {
+          final cleanedPv = context.pvLine.take(4).map(cleanMoveName).join(' → ');
+          response = 'Apprentice, a sound plan from this position would be to follow this line: $cleanedPv. This sequence maintains piece activity and coordinates our forces toward key squares.';
+        } else {
+          response = 'Apprentice, the plan here is positional. Secure control of open files, establish outposts for your knights, and ensure your pawn structure remains resilient against enemy pressure.';
+        }
+      } else if (cleanQuery.contains('why') || cleanQuery.contains('explain') || cleanQuery.contains('reason')) {
+        final lastMoveClean = cleanMoveName(context.moveDescription);
+        response = 'Let us analyze, Apprentice. The last move played was $lastMoveClean, which is evaluated as a ${context.quality.toLowerCase()} move.\n\n'
+            'The position stands $descEval. This aligns with a ${context.positionStyle.toLowerCase()} style, and the tactical threat level is ${context.threatLevel.toLowerCase()}.\n\n';
+        if (context.tacticalThreats.isNotEmpty) {
+          response += 'Be mindful of the following tactical details: ${context.tacticalThreats.join(", ")}.';
+        }
+      } else if (cleanQuery.contains('tactics') || cleanQuery.contains('threat') || cleanQuery.contains('danger') || cleanQuery.contains('defend')) {
+        if (context.tacticalThreats.isNotEmpty) {
+          final threatsStr = context.tacticalThreats.join(', ');
+          response = 'Apprentice, remain vigilant. The board presents these tactical threats: $threatsStr. Calculate carefully before making your choice; the machines do not overlook slip-ups.';
+        } else {
+          response = 'I detect no immediate tactical threats or hanging material in the current position, Apprentice. Use this stability to improve your piece placements and advance your strategic goals.';
+        }
+      } else {
+        // Fallback for general queries
+        final buffer = StringBuffer();
+        buffer.write('I am listening, Apprentice. The position stands $descEval.\n\n');
+        if (context.bestMove != null) {
+          final cleanedBest = cleanMoveName(context.bestMove!);
+          buffer.write('The strongest candidate to consider is $cleanedBest. ');
+        }
+        if (context.tacticalThreats.isNotEmpty) {
+          buffer.write('Keep in mind these active threats: ${context.tacticalThreats.join(', ')}.');
+        } else {
+          buffer.write('The camp is tactically secure for now.');
+        }
+        response = buffer.toString();
+      }
+
+      yield response;
       return;
     }
 
@@ -175,98 +228,59 @@ class CommentaryEngine {
     lastError = null;
 
     try {
-      // Clear KV cache for a fresh generation
-      await _llamaSession!.clear();
+      final hasFork = context.tacticalThreats.any((t) => t.toLowerCase().contains('fork'));
+      final hasPin = context.tacticalThreats.any((t) => t.toLowerCase().contains('pin'));
+      final hasHanging = context.tacticalThreats.any((t) => t.toLowerCase().contains('hanging') || t.toLowerCase().contains('undefended'));
 
-      final controller = StreamController<String>();
+      final template = rust_commentary.selectCommentaryTemplateRust(
+        quality: context.quality,
+        previousQuality: previousQuality ?? '',
+        gamePhase: context.gamePhase,
+        evalDiff: context.evalDiff,
+        hasFork: hasFork,
+        hasPin: hasPin,
+        hasHanging: hasHanging,
+      );
 
-      final genSub = _llamaSession!.generate(
-        prompt: structuredPrompt ?? userQuery ?? '',
-        addSpecial: true,
-        sampler: const SamplerParams(
-          temperature: 0.5,
-          topK: 40,
-          topP: 0.9,
-        ),
-      ).listen((event) {
-        if (event is TokenEvent) {
-          controller.add(event.text);
-        } else if (event is DoneEvent) {
-          if (event.trailingText.isNotEmpty) {
-            controller.add(event.trailingText);
-          }
-          controller.close();
-        }
-      }, onError: (e) {
-        controller.addError(e);
-        controller.close();
-      });
+      final cleanMove = (move ?? 'board').replaceAll('-', '');
+      final destinationSquare = cleanMove.length >= 4 ? cleanMove.substring(cleanMove.length - 2) : 'board';
+      final pieceName = _extractPiece(context.moveDescription);
 
-      String accumulatedResponse = '';
-      await for (final token in controller.stream) {
-        accumulatedResponse += token;
-        yield _cleanResponse(accumulatedResponse);
-      }
+      var finalizedText = template
+          .replaceAll('[Player]', player ?? 'Apprentice')
+          .replaceAll('[Move]', move ?? '')
+          .replaceAll('[Square]', destinationSquare)
+          .replaceAll('[Piece]', pieceName);
 
-      await genSub.cancel();
-      await controller.close();
-
-      final cleaned = _cleanResponse(accumulatedResponse);
-      if (cleaned.isEmpty) {
-        yield 'GM Chanakya is contemplating the board state...';
-      }
-    } catch (error) {
-      lastError = 'Local AI Request failed: $error';
-      debugPrint('CommentaryEngine: Request failed: $error');
-      yield 'GM Chanakya is out of reach. Please try again later.';
+      yield finalizedText;
+    } catch (e) {
+      debugPrint('Deterministic commentary error: $e');
+      yield 'GM Chanakya is contemplating the board state...';
     } finally {
       isGenerating = false;
     }
   }
-
-
 
   /// Generates a single block of commentary
   Future<String> generateCommentary({
     required String player,
     required String move,
     required String evalScore,
-    String? structuredPrompt,
+    PositionContext? context,
   }) async {
     String lastChunk = '';
     await for (final chunk in generateCommentaryStream(
       player: player,
       move: move,
       evalScore: evalScore,
-      structuredPrompt: structuredPrompt,
+      context: context,
     )) {
       lastChunk = chunk;
     }
     return lastChunk;
   }
 
-  /// Clean ChatML/Gemma tags or prompt markers leaking into output
-  String _cleanResponse(String text) {
-    return text
-        .replaceAll('<|im_end|>', '')
-        .replaceAll('<|im_start|>', '')
-        .replaceAll('<|endoftext|>', '')
-        .replaceAll('<start_of_turn>', '')
-        .replaceAll('<end_of_turn>', '')
-        .replaceAll('<eos>', '')
-        .replaceAll('<bos>', '')
-        .replaceAll('model\n', '')
-        .replaceAll('model', '')
-        .replaceAll('assistant\n', '')
-        .replaceAll('assistant', '')
-        .trim();
-  }
-
   Future<void> dispose() async {
     isInitialized = false;
-    await _llamaSession?.dispose();
-    _llamaSession = null;
-    await _llamaEngine?.dispose();
-    _llamaEngine = null;
   }
 }

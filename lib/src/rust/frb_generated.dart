@@ -6,6 +6,7 @@
 import 'api/assignment.dart';
 import 'api/chanakya.dart';
 import 'api/cognitive.dart';
+import 'api/commentary.dart';
 import 'api/context.dart';
 import 'api/history.dart';
 import 'api/humanizer.dart';
@@ -79,7 +80,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.12.0';
 
   @override
-  int get rustContentHash => -1576935057;
+  int get rustContentHash => -1924652746;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -162,6 +163,8 @@ abstract class RustLibApi extends BaseApi {
     required List<int> completedTutorials,
   });
 
+  void crateApiCommentaryResetCommentaryHistoryRust();
+
   bool crateApiPgnDbSaveStudyToDb({
     required String dbPath,
     required PgnGameRecord game,
@@ -183,6 +186,16 @@ abstract class RustLibApi extends BaseApi {
     required int halfMoveCount,
     required double evalAbs,
     required bool isChess960,
+  });
+
+  String crateApiCommentarySelectCommentaryTemplateRust({
+    required String quality,
+    required String previousQuality,
+    required String gamePhase,
+    required double evalDiff,
+    required bool hasFork,
+    required bool hasPin,
+    required bool hasHanging,
   });
 
   String crateApiPersonaSelectPersonaMoveRust({
@@ -724,6 +737,31 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  void crateApiCommentaryResetCommentaryHistoryRust() {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 19)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiCommentaryResetCommentaryHistoryRustConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiCommentaryResetCommentaryHistoryRustConstMeta =>
+      const TaskConstMeta(
+        debugName: "reset_commentary_history_rust",
+        argNames: [],
+      );
+
+  @override
   bool crateApiPgnDbSaveStudyToDb({
     required String dbPath,
     required PgnGameRecord game,
@@ -734,7 +772,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(dbPath, serializer);
           sse_encode_box_autoadd_pgn_game_record(game, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 19)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 20)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_bool,
@@ -772,7 +810,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 20,
+            funcId: 21,
             port: port_,
           );
         },
@@ -814,7 +852,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_i_32(halfMoveCount, serializer);
           sse_encode_f_64(evalAbs, serializer);
           sse_encode_bool(isChess960, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 21)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 22)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -850,6 +888,62 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  String crateApiCommentarySelectCommentaryTemplateRust({
+    required String quality,
+    required String previousQuality,
+    required String gamePhase,
+    required double evalDiff,
+    required bool hasFork,
+    required bool hasPin,
+    required bool hasHanging,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(quality, serializer);
+          sse_encode_String(previousQuality, serializer);
+          sse_encode_String(gamePhase, serializer);
+          sse_encode_f_64(evalDiff, serializer);
+          sse_encode_bool(hasFork, serializer);
+          sse_encode_bool(hasPin, serializer);
+          sse_encode_bool(hasHanging, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 23)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiCommentarySelectCommentaryTemplateRustConstMeta,
+        argValues: [
+          quality,
+          previousQuality,
+          gamePhase,
+          evalDiff,
+          hasFork,
+          hasPin,
+          hasHanging,
+        ],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiCommentarySelectCommentaryTemplateRustConstMeta =>
+      const TaskConstMeta(
+        debugName: "select_commentary_template_rust",
+        argNames: [
+          "quality",
+          "previousQuality",
+          "gamePhase",
+          "evalDiff",
+          "hasFork",
+          "hasPin",
+          "hasHanging",
+        ],
+      );
+
+  @override
   String crateApiPersonaSelectPersonaMoveRust({
     required String fen,
     required List<PersonaCandidate> candidates,
@@ -866,7 +960,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_String(avatarName, serializer);
           sse_encode_bool(isChess960, serializer);
           sse_encode_i_32(moveCount, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 22)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 24)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -908,7 +1002,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_String(toStr, serializer);
           sse_encode_String(promotionStr, serializer);
           sse_encode_bool(isChess960, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 23)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 25)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_opt_String,

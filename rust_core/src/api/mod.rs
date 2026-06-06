@@ -12,6 +12,7 @@ pub mod persona;
 pub mod chanakya;
 pub mod pgn_db;
 pub mod assignment;
+pub mod commentary;
 
 
 

@@ -8,7 +8,6 @@ import '../scholarly_theme.dart';
 import '../widgets/commentary_history.dart';
 import 'academy_board.dart';
 import 'themes/academy_scholar_theme.dart';
-import 'academy_settings_page.dart';
 import '../widgets/ambient_scaffold.dart';
 import '../dashboard_page.dart';
 import 'dart:ui';
@@ -206,16 +205,101 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
 
   Widget _buildMoveLog(BuildContext context, ChessState state, ScrollPhysics? physics) {
     final moves = state.recentMoves;
-    if (moves.isEmpty) {
-      return const Center(
-        child: Text(
-          'Log is empty.',
-          style: TextStyle(
-            color: ScholarlyTheme.textMuted,
-            fontSize: 13,
-            fontStyle: FontStyle.italic,
-          ),
+    
+    final userCapturedList = state.isPlayerWhite ? state.game.capturedByWhite : state.game.capturedByBlack;
+    final userLostList = state.isPlayerWhite ? state.game.capturedByBlack : state.game.capturedByWhite;
+
+    int getPieceValue(chess_lib.PieceType type) {
+      if (type == chess_lib.PieceType.PAWN) return 1;
+      if (type == chess_lib.PieceType.KNIGHT) return 3;
+      if (type == chess_lib.PieceType.BISHOP) return 3;
+      if (type == chess_lib.PieceType.ROOK) return 5;
+      if (type == chess_lib.PieceType.QUEEN) return 9;
+      return 0;
+    }
+
+    final capturedPoints = userCapturedList.fold<int>(0, (sum, p) => sum + getPieceValue(p.type));
+    final lostPoints = userLostList.fold<int>(0, (sum, p) => sum + getPieceValue(p.type));
+    final netBalance = capturedPoints - lostPoints;
+    final balanceSign = netBalance > 0 ? '+' : '';
+
+    final pointsTracker = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: ScholarlyTheme.accentBlueSoft.withValues(alpha: 0.25),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: ScholarlyTheme.accentBlue.withValues(alpha: 0.15),
+          width: 1,
         ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.auto_awesome_rounded,
+                size: 13,
+                color: ScholarlyTheme.accentBlue,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'Captured: +$capturedPoints pts  |  Lost: -$lostPoints pts',
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: ScholarlyTheme.textPrimary,
+                ),
+              ),
+            ],
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: netBalance >= 0 
+                  ? Colors.green.withValues(alpha: 0.1) 
+                  : Colors.redAccent.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(
+                color: netBalance >= 0 
+                    ? Colors.green.withValues(alpha: 0.25) 
+                    : Colors.redAccent.withValues(alpha: 0.25),
+                width: 1,
+              ),
+            ),
+            child: Text(
+              'NET: $balanceSign$netBalance',
+              style: GoogleFonts.jetBrainsMono(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: netBalance >= 0 ? Colors.green.shade700 : Colors.redAccent.shade700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (moves.isEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          pointsTracker,
+          const Expanded(
+            child: Center(
+              child: Text(
+                'Log is empty.',
+                style: TextStyle(
+                  color: ScholarlyTheme.textMuted,
+                  fontSize: 13,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
+          ),
+        ],
       );
     }
 
@@ -224,52 +308,60 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
       pairs.add([moves[i], if (i + 1 < moves.length) moves[i + 1]]);
     }
 
-    return ListView.builder(
-      physics: physics,
-      padding: EdgeInsets.zero,
-      itemCount: pairs.length,
-      itemBuilder: (context, index) {
-        final pair = pairs[index];
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Row(
-            children: [
-              SizedBox(
-                width: 24,
-                child: Text(
-                  '${index + 1}.',
-                  style: GoogleFonts.jetBrainsMono(
-                    color: ScholarlyTheme.accentBlue,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              Expanded(
-                child: Text(
-                  pair[0],
-                  style: GoogleFonts.inter(
-                    color: ScholarlyTheme.textPrimary,
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-              if (pair.length > 1)
-                Expanded(
-                  child: Text(
-                    pair[1],
-                    style: GoogleFonts.inter(
-                      color: ScholarlyTheme.textPrimary,
-                      fontSize: 12,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        pointsTracker,
+        Expanded(
+          child: ListView.builder(
+            physics: physics,
+            padding: EdgeInsets.zero,
+            itemCount: pairs.length,
+            itemBuilder: (context, index) {
+              final pair = pairs[index];
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 24,
+                      child: Text(
+                        '${index + 1}.',
+                        style: GoogleFonts.jetBrainsMono(
+                          color: ScholarlyTheme.accentBlue,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
-                  ),
-                )
-              else
-                const Expanded(child: SizedBox()),
-            ],
+                    Expanded(
+                      child: Text(
+                        pair[0],
+                        style: GoogleFonts.inter(
+                          color: ScholarlyTheme.textPrimary,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                    if (pair.length > 1)
+                      Expanded(
+                        child: Text(
+                          pair[1],
+                          style: GoogleFonts.inter(
+                            color: ScholarlyTheme.textPrimary,
+                            fontSize: 12,
+                          ),
+                        ),
+                      )
+                    else
+                      const Expanded(child: SizedBox()),
+                  ],
+                ),
+              );
+            },
           ),
-        );
-      },
+        ),
+      ],
     );
   }
 
@@ -294,36 +386,11 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
               ),
               const SizedBox(width: 8),
               _CompactActionIcon(
-                icon: Icons.tune_rounded,
-                tooltip: 'Settings',
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => const AcademySettingsPage(),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(width: 8),
-              _CompactActionIcon(
                 icon: Icons.undo_rounded,
                 tooltip: 'Undo',
                 isEnabled: state.canUndo,
                 isBlinking: state.isAcademyBlunderActive,
                 onTap: state.canUndo ? () => notifier.undo() : null,
-              ),
-  
-              const SizedBox(width: 8),
-              _CompactActionIcon(
-                icon: state.isBulbGlowing
-                    ? Icons.lightbulb_rounded
-                    : Icons.lightbulb_outline_rounded,
-                tooltip: 'Hint',
-                isEnabled: !state.isHintLoading,
-                isActive: state.isBulbGlowing,
-                activeColor: ScholarlyTheme.accentYellowSoft,
-                activeIconColor: ScholarlyTheme.accentYellow,
-                onTap: () => notifier.requestHint(),
               ),
               const SizedBox(width: 8),
               _CompactActionIcon(
@@ -555,8 +622,6 @@ class _CompactActionIcon extends StatefulWidget {
     this.isEnabled = true,
     this.isActive = false,
     this.isBlinking = false,
-    this.activeColor,
-    this.activeIconColor,
   });
 
   final IconData icon;
@@ -565,8 +630,6 @@ class _CompactActionIcon extends StatefulWidget {
   final bool isEnabled;
   final bool isActive;
   final bool isBlinking;
-  final Color? activeColor;
-  final Color? activeIconColor;
 
   @override
   State<_CompactActionIcon> createState() => _CompactActionIconState();
@@ -628,21 +691,20 @@ class _CompactActionIconState extends State<_CompactActionIcon>
           final Color bgColor = widget.isBlinking
               ? Colors.redAccent.withValues(alpha: 0.25 * opacity)
               : ((widget.isActive || _isPressed)
-                  ? (widget.activeColor?.withValues(alpha: 0.3) ??
-                      ScholarlyTheme.accentBlue.withValues(alpha: 0.25))
+                  ? ScholarlyTheme.accentBlue.withValues(alpha: 0.25)
                   : Colors.white.withValues(alpha: 0.2));
 
           final Color borderColor = widget.isBlinking
               ? Colors.redAccent.withValues(alpha: 0.6 * opacity)
               : ((widget.isActive || _isPressed)
-                  ? (widget.activeIconColor ?? ScholarlyTheme.accentBlue).withValues(alpha: 0.5)
+                  ? ScholarlyTheme.accentBlue.withValues(alpha: 0.5)
                   : Colors.white.withValues(alpha: 0.45));
 
           final Color iconColor = widget.isBlinking
               ? Colors.redAccent.withValues(alpha: 0.3 + 0.7 * opacity)
               : (widget.isEnabled
                   ? (widget.isActive
-                      ? (widget.activeIconColor ?? ScholarlyTheme.accentBlue)
+                      ? ScholarlyTheme.accentBlue
                       : ScholarlyTheme.textPrimary)
                   : ScholarlyTheme.textSubtle);
 

@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kingslayer_chess/features/chess/domain/chess_game.dart';
 import 'package:kingslayer_chess/features/chess/services/position_context_builder.dart';
-import 'package:kingslayer_chess/features/chess/services/prompt_builder.dart';
 
 void main() {
   group('PositionContextBuilder Tests', () {
@@ -44,26 +43,5 @@ void main() {
       expect(contextOpening.gamePhase, 'Opening');
     });
 
-    test('PromptBuilder Gemma 3 construction', () async {
-      final game = ChessGame();
-      final context = await PositionContextBuilder.build(
-        move: 'e2e4',
-        currentEval: 0.4,
-        previousEval: 0.2,
-        game: game,
-      );
-
-      final prompt = context.toPromptString();
-      expect(prompt, contains('Board State:'));
-      expect(prompt, contains('Last Move Played:'));
-      expect(prompt, contains('Analysis:'));
-
-      // Let's test PromptBuilder itself
-      final gemmaPrompt = PromptBuilder.buildCommentaryPrompt(context: context);
-      expect(gemmaPrompt, contains('<start_of_turn>system'));
-      expect(gemmaPrompt, contains('Identity: You are GM Chanakya'));
-      expect(gemmaPrompt, contains('<start_of_turn>user'));
-      expect(gemmaPrompt, contains('<start_of_turn>model'));
-    });
   });
 }

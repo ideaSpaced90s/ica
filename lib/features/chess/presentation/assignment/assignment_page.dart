@@ -133,8 +133,10 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // GM Chanakya Lore Greeting Card
-          _buildChanakyaGreeting(state),
-          const SizedBox(height: 20),
+          if (state.isCalibrated) ...[
+            _buildChanakyaGreeting(state),
+            const SizedBox(height: 20),
+          ],
 
           if (state.isCalibrated &&
               state.goalDeadline != null &&
@@ -353,7 +355,7 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
               const Icon(Icons.query_stats_rounded, color: ScholarlyTheme.realGold, size: 28),
               const SizedBox(width: 12),
               Text(
-                "CALIBRATING VISION",
+                "CALIBRATION",
                 style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary),
               ),
             ],
@@ -385,22 +387,6 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
               minHeight: 8,
               backgroundColor: ScholarlyTheme.panelStroke,
               color: ScholarlyTheme.accentBlue,
-            ),
-          ),
-          const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              style: FilledButton.styleFrom(
-                backgroundColor: ScholarlyTheme.accentBlue,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              icon: const Icon(Icons.play_circle_filled_rounded),
-              label: Text("Enter Battleground", style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-              onPressed: () {
-                ref.read(mobileNavIndexProvider.notifier).state = 2; // Switch to Battleground
-              },
             ),
           ),
         ],

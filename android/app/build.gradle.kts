@@ -70,6 +70,4 @@ flutter {
     source = "../.."
 }
 
-dependencies {
-    implementation(files("libs/llama-cpp-dart.aar"))
-}
+// No dependencies needed here anymore

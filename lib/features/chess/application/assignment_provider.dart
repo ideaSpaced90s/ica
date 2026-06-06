@@ -5,7 +5,6 @@ import '../data/assignment_repository.dart';
 import 'battleground_provider.dart';
 import 'puzzles_provider.dart';
 import 'tutorial_provider.dart';
-import 'chess_provider.dart' show commentaryEngineProvider;
 import 'package:kingslayer_chess/src/rust/api/assignment.dart' as rust_assignment;
 import 'package:kingslayer_chess/src/rust/api/cognitive.dart' as rust_cognitive;
 
@@ -27,22 +26,36 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
     
     // Set up listeners for other providers to auto-complete tasks
     _setupListeners();
+
+    // Check if already calibrated on load (e.g. if provider loads after battleground has loaded)
+    _checkInitialCalibration();
+  }
+
+  void _checkInitialCalibration() {
+    if (!state.isCalibrated) {
+      final bgState = ref.read(battlegroundProvider);
+      if (bgState.totalRatedGamesCount >= 10) {
+        _unlockCalibration(bgState.consolidatedRating);
+        _saveState();
+      }
+    }
   }
 
   void _setupListeners() {
     // Listen to battleground provider
     ref.listen(battlegroundProvider, (previous, next) {
-      if (next.game.gameOver && !(previous?.game.gameOver ?? false)) {
-        // Rated match calibration progress
-        if (!state.isCalibrated) {
-          final currentPlayed = next.totalRatedGamesCount;
+      if (!state.isCalibrated) {
+        final currentPlayed = next.totalRatedGamesCount;
+        if (currentPlayed != previous?.totalRatedGamesCount) {
           state = state.copyWith(calibrationGamesPlayed: currentPlayed);
           if (currentPlayed >= 10) {
             // Unlocked calibration!
             _unlockCalibration(next.consolidatedRating);
           }
           _saveState();
-        } else {
+        }
+      } else {
+        if (next.game.gameOver && !(previous?.game.gameOver ?? false)) {
           // Check if today's arena task is completed
           final arenaTaskIndex = state.dailyTasks.indexWhere((t) => t.taskType == DailyTaskType.arena);
           if (arenaTaskIndex != -1) {
@@ -388,29 +401,11 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
         scotoma: scotomaInput,
       );
 
-      final commentaryEngine = ref.read(commentaryEngineProvider);
-      
-      // Check if Local LLM is online
-      if (commentaryEngine.isInitialized) {
-        // Stream report from Llama local model
-        final stream = commentaryEngine.generateCommentaryStream(
-          structuredPrompt: summary.commentaryPrompt,
-        );
-
-        String accumulatedReport = '';
-        await for (final token in stream) {
-          accumulatedReport += token;
-          state = state.copyWith(weeklyReport: accumulatedReport);
-        }
-        await _saveState();
-      } else {
-        // Fallback to offline detailed report compiled in Rust
-        state = state.copyWith(weeklyReport: summary.fallbackReport);
-        await _saveState();
-      }
+      state = state.copyWith(weeklyReport: summary.fallbackReport);
+      await _saveState();
     } catch (e) {
       state = state.copyWith(
-        weeklyReport: "Failed to generate review: $e\n\nPlease ensure the LLM engine is initialized.",
+        weeklyReport: "Failed to generate review: $e",
       );
       await _saveState();
     }

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/scheduler.dart';
@@ -109,6 +110,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
   Widget _buildInput(BuildContext context) {
     final state = widget.state;
     final bool isBusy = state.isCommentaryLoading || state.isCommentaryStreaming || state.isWaitingForSideChoice || state.isAcademyBlunderActive;
+    final bool hasHistory = state.game.history.isNotEmpty;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
@@ -126,7 +128,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
             children: [
               Expanded(child: _buildPromptButton('Analyze', Icons.analytics_rounded, isBusy)),
               const SizedBox(width: 4),
-              Expanded(child: _buildPromptButton('Why', Icons.psychology_rounded, isBusy)),
+              Expanded(child: _buildPromptButton('Why', Icons.psychology_rounded, isBusy || !hasHistory)),
               const SizedBox(width: 4),
               Expanded(child: _buildPromptButton('Candidates', Icons.alt_route_rounded, isBusy)),
             ],
@@ -134,11 +136,11 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
           const SizedBox(height: 4),
           Row(
             children: [
-              Expanded(child: _buildPromptButton('Tactics', Icons.flash_on_rounded, isBusy)),
+              Expanded(child: _buildPromptButton('Tactics', Icons.flash_on_rounded, isBusy || !hasHistory)),
               const SizedBox(width: 4),
               Expanded(child: _buildPromptButton('Plan', Icons.explore_rounded, isBusy)),
               const SizedBox(width: 4),
-              Expanded(child: _buildPromptButton('Defend', Icons.shield_rounded, isBusy)),
+              Expanded(child: _buildPromptButton('Defend', Icons.shield_rounded, isBusy || !hasHistory)),
             ],
           ),
         ],
@@ -208,9 +210,19 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
     'Defend':     'When under pressure, the wise first consolidate, Apprentice. ',
   };
 
+  static const Map<String, String> _fullQuestions = {
+    'Analyze':    'Chanakya, can you analyze the current board state and summarize the position?',
+    'Why':        'Why did my opponent play their last move? What are their intentions?',
+    'Candidates': 'What candidate moves do you suggest I consider from here?',
+    'Tactics':    'Are there any active tactics or tactical combinations in this position?',
+    'Plan':       'What plan or structural goals should I focus on next?',
+    'Defend':     'How should I defend my position and counter my opponent\'s active ideas?',
+  };
+
   void _handlePromptTap(String label) {
+    final fullQuestion = _fullQuestions[label] ?? label;
     final preset = _chipPresets[label];
-    ref.read(chessProvider.notifier).sendUserQuery(label, titlePrefix: preset);
+    ref.read(chessProvider.notifier).sendUserQuery(fullQuestion, titlePrefix: preset);
     FocusScope.of(context).unfocus();
   }
 
@@ -277,41 +289,84 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
   }
 
   Widget _buildUserBubble(CommentaryEntry entry) {
+    final avatarPath = widget.state.userAvatarPath;
+    final userName = widget.state.userName.toUpperCase();
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          Text(
-            'YOU • ${_formatTime(entry.timestamp)}',
-            style: GoogleFonts.inter(
-              fontSize: 10,
-              color: ScholarlyTheme.textSubtle,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.5,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  '$userName • ${_formatTime(entry.timestamp)}',
+                  style: GoogleFonts.inter(
+                    fontSize: 9,
+                    color: ScholarlyTheme.textSubtle,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: ScholarlyTheme.accentBlueSoft.withValues(alpha: 0.35),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(16),
+                      bottomLeft: Radius.circular(16),
+                      bottomRight: Radius.circular(16),
+                    ),
+                    border: Border.all(
+                      color: ScholarlyTheme.accentBlue.withValues(alpha: 0.25),
+                      width: 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.02),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    entry.text,
+                    style: GoogleFonts.inter(
+                      color: ScholarlyTheme.textPrimary,
+                      fontSize: 13,
+                      height: 1.45,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(width: 12),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: ScholarlyTheme.accentBlueSoft.withValues(alpha: 0.3),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(12),
-                bottomLeft: Radius.circular(12),
-                bottomRight: Radius.circular(12),
-              ),
+              shape: BoxShape.circle,
               border: Border.all(
-                color: ScholarlyTheme.accentBlue.withValues(alpha: 0.2),
+                color: ScholarlyTheme.accentBlue.withValues(alpha: 0.4),
+                width: 1.5,
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: ScholarlyTheme.accentBlue.withValues(alpha: 0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
-            child: Text(
-              entry.text,
-              style: GoogleFonts.inter(
-                color: ScholarlyTheme.textPrimary,
-                fontSize: 13,
-                height: 1.4,
-              ),
+            child: CircleAvatar(
+              radius: 14,
+              backgroundColor: Colors.transparent,
+              backgroundImage: avatarPath.startsWith('assets/')
+                  ? AssetImage(avatarPath) as ImageProvider
+                  : FileImage(File(avatarPath)) as ImageProvider,
             ),
           ),
         ],
@@ -323,16 +378,32 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
     final bool isThinking = entry.text.isEmpty && !entry.isComplete;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: 16),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
-            radius: 12,
-            backgroundColor: Colors.transparent,
-            backgroundImage: const AssetImage('assets/persona/gm_chanakya.png'),
+          Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: ScholarlyTheme.accentBlue.withValues(alpha: 0.4),
+                width: 1.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: ScholarlyTheme.accentBlue.withValues(alpha: 0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: CircleAvatar(
+              radius: 14,
+              backgroundColor: Colors.transparent,
+              backgroundImage: const AssetImage('assets/persona/gm_chanakya.png'),
+            ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -340,28 +411,36 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
                 Text(
                   'GM CHANAKYA • ${_formatTime(entry.timestamp)}',
                   style: GoogleFonts.inter(
-                    fontSize: 10,
-                    color: ScholarlyTheme.accentBlue.withValues(alpha: 0.8),
+                    fontSize: 9,
+                    color: ScholarlyTheme.accentBlue.withValues(alpha: 0.9),
                     fontWeight: FontWeight.w800,
-                    letterSpacing: 1.0,
+                    letterSpacing: 1.2,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
+                    horizontal: 14,
+                    vertical: 10,
                   ),
                   decoration: BoxDecoration(
                     color: ScholarlyTheme.backgroundStart,
                     borderRadius: const BorderRadius.only(
-                      topRight: Radius.circular(12),
-                      bottomLeft: Radius.circular(12),
-                      bottomRight: Radius.circular(12),
+                      topRight: Radius.circular(16),
+                      bottomLeft: Radius.circular(16),
+                      bottomRight: Radius.circular(16),
                     ),
                     border: Border.all(
-                      color: ScholarlyTheme.panelStroke.withValues(alpha: 0.5),
+                      color: ScholarlyTheme.panelStroke.withValues(alpha: 0.6),
+                      width: 1.2,
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.02),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: isThinking
                       ? Row(
@@ -650,7 +729,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
       r'\*\*(.*?)\*\*|'
       r'\b(Apprentice|Defender of Humanity|Kingslayer|Chanakya)\b|'
       r'\b(King|Queen|Rook|Bishop|Knight|Pawn)s?\b|'
-      r'\b(Consider|Observe|Strategy|Warning|Tactics|Recommended|Crucial|Focus|Analyze)\b|'
+      r'\b(Consider|Observe|Strategy|Warning|Tactics|Recommended|Crucial|Focus|Analyze|Blunder|Mistake|Inaccuracy|Brilliant|Strong|Neutral|Attack|Defend|Defense|Threat|Danger|Outpost|Pin|Fork|Check|Checkmate|Simplify|Passed Pawn|Opposition)\b|'
       r'\b([a-h][1-8]-?[a-h][1-8]|[a-h][1-8])\b|'
       r'\b([NBRQK]?[a-h]?[1-8]?x?[a-h][1-8](?:=[NBRQK])?[+#]?|O-O(?:-O)?)\b',
       caseSensitive: false,
@@ -759,13 +838,19 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
         final word = match.group(4)!;
         Color color = Colors.indigo;
         final lWord = word.toLowerCase();
-        if (lWord.contains('warning')) color = Colors.amber.shade700;
-        if (lWord.contains('strategy')) color = Colors.teal;
-        if (lWord.contains('tactics')) color = Colors.pink;
-        if (lWord.contains('crucial') || lWord.contains('focus')) {
+        if (lWord.contains('warning') || lWord.contains('blunder') || lWord.contains('mistake')) {
+          color = Colors.redAccent;
+        } else if (lWord.contains('brilliant') || lWord.contains('strong')) {
+          color = Colors.green;
+        } else if (lWord.contains('inaccuracy')) {
+          color = Colors.amber.shade700;
+        } else if (lWord.contains('strategy') || lWord.contains('defend') || lWord.contains('defense') || lWord.contains('simplify')) {
+          color = Colors.teal;
+        } else if (lWord.contains('tactics') || lWord.contains('fork') || lWord.contains('pin') || lWord.contains('threat') || lWord.contains('danger') || lWord.contains('attack')) {
+          color = Colors.pink;
+        } else if (lWord.contains('crucial') || lWord.contains('focus') || lWord.contains('check') || lWord.contains('checkmate')) {
           color = Colors.deepOrange;
-        }
-        if (lWord.contains('analyze') || lWord.contains('observe')) {
+        } else if (lWord.contains('analyze') || lWord.contains('observe') || lWord.contains('outpost') || lWord.contains('passed pawn') || lWord.contains('opposition')) {
           color = Colors.deepPurple;
         }
 

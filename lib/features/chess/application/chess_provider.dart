@@ -10,7 +10,10 @@ import 'package:kingslayer_chess/src/rust/api/threats.dart';
 import 'package:kingslayer_chess/src/rust/api/humanizer.dart';
 import 'package:kingslayer_chess/src/rust/api/context.dart';
 import 'package:kingslayer_chess/src/rust/api/chanakya.dart' as rust_chanakya;
+import 'package:kingslayer_chess/src/rust/api/commentary.dart' show resetCommentaryHistoryRust;
 import '../domain/models/precomputed_rust_context.dart';
+import '../domain/models/position_context.dart';
+import '../services/position_context_builder.dart';
 
 
 import '../data/saved_game.dart';
@@ -2498,9 +2501,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
         if (currentTypedText.length < targetText.length) {
           currentTypedText = targetText.substring(0, currentTypedText.length + 1);
           yield currentTypedText;
-          await Future.delayed(const Duration(milliseconds: 25));
+          await Future.delayed(const Duration(milliseconds: 10));
         } else {
-          await Future.delayed(const Duration(milliseconds: 50));
+          await Future.delayed(const Duration(milliseconds: 20));
         }
       }
     } finally {
@@ -2775,7 +2778,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
         await Future.delayed(const Duration(milliseconds: 500));
       }
 
-      String? structuredPrompt;
+      PositionContext? context;
       try {
         final bestMove = state.analysis['bestMove'] as String?;
         final pvRaw = state.analysis['pv'];
@@ -2791,28 +2794,29 @@ class ChessNotifier extends StateNotifier<ChessState> {
           _pendingRustContextFuture = null;
         }
 
-        structuredPrompt = await _aiContextService.generateCommentaryPrompt(
+        context = await PositionContextBuilder.build(
           move: move,
           currentEval: state.currentEvaluation,
           previousEval: state.previousEvaluation,
           game: state.game,
           bestMove: bestMove,
           pvLine: pv,
-          chatHistory: state.commentaryHistory,
           candidates: _currentCandidates,
-          userQuery: userQuery,
-          systemInstructionOverride: _commentaryEngine.systemInstruction,
           precomputed: precomputed,
         );
+        _aiContextService.setLastContext(context);
       } catch (e) {
         debugPrint('KingSlayer: Context injection failed: $e');
       }
+
+      final previousQuality = _aiContextService.lastContext?.quality ?? '';
 
       final stream = _commentaryEngine.generateCommentaryStream(
         player: player,
         move: move,
         evalScore: evalScore,
-        structuredPrompt: structuredPrompt,
+        context: context,
+        previousQuality: previousQuality,
         userQuery: userQuery,
       );
 
@@ -3128,6 +3132,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
     _undoStack.clear();
     _redoStack.clear();
+    resetCommentaryHistoryRust();
     _cancelCommentaryReveal();
     _pendingHintFen = null;
     _stopClock();

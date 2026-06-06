@@ -6,6 +6,7 @@
 import 'api/assignment.dart';
 import 'api/chanakya.dart';
 import 'api/cognitive.dart';
+import 'api/commentary.dart';
 import 'api/context.dart';
 import 'api/history.dart';
 import 'api/humanizer.dart';
