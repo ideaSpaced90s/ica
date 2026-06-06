@@ -79,6 +79,10 @@ class PracticeLabState {
     int? startNodeIndex,
     int? viewingMoveIndex,
     bool clearViewingMoveIndex = false,
+    // Sentinel flags to explicitly clear nullable promo fields.
+    // Using the same pattern as clearViewingMoveIndex because passing null
+    // via a nullable String? parameter cannot be distinguished from "not provided".
+    bool clearPendingPromo = false,
   }) {
     return PracticeLabState(
       isSessionActive: isSessionActive ?? this.isSessionActive,
@@ -95,8 +99,8 @@ class PracticeLabState {
       isGameOver: isGameOver ?? this.isGameOver,
       gameResult: gameResult ?? this.gameResult,
       isBoardFlipped: isBoardFlipped ?? this.isBoardFlipped,
-      pendingPromoFrom: pendingPromoFrom ?? this.pendingPromoFrom,
-      pendingPromoTo: pendingPromoTo ?? this.pendingPromoTo,
+      pendingPromoFrom: clearPendingPromo ? null : (pendingPromoFrom ?? this.pendingPromoFrom),
+      pendingPromoTo: clearPendingPromo ? null : (pendingPromoTo ?? this.pendingPromoTo),
       startNodeIndex: startNodeIndex ?? this.startNodeIndex,
       viewingMoveIndex: clearViewingMoveIndex ? null : (viewingMoveIndex ?? this.viewingMoveIndex),
     );
@@ -169,6 +173,20 @@ class PracticeLabNotifier extends StateNotifier<PracticeLabState> {
     await _ref.read(analysisEngineControllerProvider.notifier).toggleEngine(false, fen);
 
     // 2. Clear and set new state
+    final localChess = chess_lib.Chess.fromFEN(fen);
+    final isWhiteTurn = localChess.turn == chess_lib.Color.WHITE;
+    final isEngineTurn = isWhiteTurn != playerIsWhite;
+    final isGameOver = localChess.game_over;
+
+    String? gameResult;
+    if (isGameOver) {
+      if (localChess.in_checkmate) {
+        gameResult = isWhiteTurn ? '0-1' : '1-0';
+      } else {
+        gameResult = '½-½';
+      }
+    }
+
     final studyState = _ref.read(studyLabProvider);
     state = PracticeLabState(
       isSessionActive: true,
@@ -179,7 +197,8 @@ class PracticeLabNotifier extends StateNotifier<PracticeLabState> {
       moveHistory: const [],
       sanHistory: const [],
       isEngineThinking: false,
-      isGameOver: false,
+      isGameOver: isGameOver,
+      gameResult: gameResult,
       isBoardFlipped: !playerIsWhite,
       startNodeIndex: studyState.currentNodeIndex,
     );
@@ -190,9 +209,9 @@ class PracticeLabNotifier extends StateNotifier<PracticeLabState> {
     await _service.sendCommand('setoption name Skill Level value $skillLevel');
     await _service.sendCommand('setoption name MultiPV value 1');
 
-    // 4. Trigger engine move if user is playing as Black
-    if (!playerIsWhite) {
-      _logDebug('Player is Black. Triggering initial engine move.');
+    // 4. Trigger engine move if it is the engine's turn and the game is not already over
+    if (isEngineTurn && !isGameOver) {
+      _logDebug('It is Engine\'s turn to move. Triggering initial engine move.');
       await _triggerEngineMove();
     }
   }
@@ -409,10 +428,16 @@ class PracticeLabNotifier extends StateNotifier<PracticeLabState> {
   }
 
   void setPendingPromo(String? from, String? to) {
-    state = state.copyWith(
-      pendingPromoFrom: from,
-      pendingPromoTo: to,
-    );
+    if (from == null && to == null) {
+      // Use the sentinel flag to explicitly clear these nullable fields.
+      // Passing null directly to copyWith cannot clear them due to the ?? fallback.
+      state = state.copyWith(clearPendingPromo: true);
+    } else {
+      state = state.copyWith(
+        pendingPromoFrom: from,
+        pendingPromoTo: to,
+      );
+    }
   }
 
   void undo() {

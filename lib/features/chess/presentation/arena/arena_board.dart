@@ -363,7 +363,13 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard> {
                     effect['widget'] as Widget,
 
                   // 9. Pawn Promotion Overlay
-                  PromotionOverlay(theme: chessTheme),
+                  PromotionOverlay(
+                    theme: chessTheme,
+                    isPromotingOverride: arenaState.isPromoting,
+                    isWhiteOverride: arenaState.game.turn == chess_lib.Color.WHITE,
+                    onCompleteOverride: (piece) => ref.read(arenaProvider.notifier).completePromotion(piece),
+                    onCancelOverride: () => ref.read(arenaProvider.notifier).cancelPromotion(),
+                  ),
                 ],
               ),
             ),

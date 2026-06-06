@@ -49,7 +49,7 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
     _confettiBottomController = ConfettiController(duration: const Duration(seconds: 3));
     
     final initialState = ref.read(arenaProvider);
-    _showGameOverOverlayDelayed = (initialState.game.gameOver || initialState.isTimeOut) && !initialState.isGameOverDismissed;
+    _showGameOverOverlayDelayed = (initialState.isGameOver || initialState.isTimeOut) && !initialState.isGameOverDismissed;
   }
 
   @override
@@ -67,7 +67,7 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
         state == AppLifecycleState.inactive ||
         state == AppLifecycleState.detached) {
       final arenaState = ref.read(arenaProvider);
-      if (arenaState.recentMoves.isNotEmpty && !arenaState.game.gameOver) {
+      if (arenaState.recentMoves.isNotEmpty && !arenaState.isGameOver) {
         if (!arenaState.isPaused) {
           ref.read(arenaProvider.notifier).togglePause();
         }
@@ -82,8 +82,8 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
     final isLandscape = MediaQuery.of(context).size.width > MediaQuery.of(context).size.height;
 
     ref.listen<ArenaState>(arenaProvider, (previous, next) {
-      final wasGameOver = (previous?.game.gameOver ?? false) || (previous?.isTimeOut ?? false);
-      final isGameOver = next.game.gameOver || next.isTimeOut;
+      final wasGameOver = (previous?.isGameOver ?? false) || (previous?.isTimeOut ?? false);
+      final isGameOver = next.isGameOver || next.isTimeOut;
       final wasDismissed = previous?.isGameOverDismissed ?? false;
       final isDismissed = next.isGameOverDismissed;
 
@@ -129,7 +129,7 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                   : _buildPortraitLayout(context, ref, state),
             ),
             if (_showGameOverOverlayDelayed && !state.isGameOverDismissed)
-              state.isTimeOut && !state.game.gameOver
+              state.isTimeOut && !state.isGameOver
                   ? _buildTimeOutOverlay(context, ref, state)
                   : _buildGameOverOverlay(context, ref, state),
             

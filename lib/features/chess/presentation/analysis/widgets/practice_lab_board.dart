@@ -360,10 +360,16 @@ class _PracticeLabBoardState extends ConsumerState<PracticeLabBoard> {
               Positioned.fill(
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(16),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
-                    child: Container(
-                      color: Colors.black.withValues(alpha: 0.35),
+                  child: GestureDetector(
+                    onTap: () {
+                      _clearSelection();
+                      ref.read(practiceLabProvider.notifier).setPendingPromo(null, null);
+                    },
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+                      child: Container(
+                        color: Colors.black.withValues(alpha: 0.35),
+                      ),
                     ),
                   ),
                 ),
@@ -400,13 +406,15 @@ class _PracticeLabBoardState extends ConsumerState<PracticeLabBoard> {
                               final isWhite = chess.get(state.pendingPromoFrom!)?.color == chess_lib.Color.WHITE;
                               return GestureDetector(
                                 onTap: () {
+                                  // Clear local selection first so the board state
+                                  // is clean before any provider rebuild fires.
+                                  _clearSelection();
                                   ref.read(practiceLabProvider.notifier).makePlayerMove(
                                     state.pendingPromoFrom!,
                                     state.pendingPromoTo!,
                                     type.toLowerCase(),
                                   );
                                   ref.read(practiceLabProvider.notifier).setPendingPromo(null, null);
-                                  _clearSelection();
                                 },
                                 child: Container(
                                   margin: const EdgeInsets.symmetric(horizontal: 5),
@@ -423,6 +431,21 @@ class _PracticeLabBoardState extends ConsumerState<PracticeLabBoard> {
                                 ),
                               );
                             }).toList(),
+                          ),
+                          const SizedBox(height: 8),
+                          GestureDetector(
+                            onTap: () {
+                              _clearSelection();
+                              ref.read(practiceLabProvider.notifier).setPendingPromo(null, null);
+                            },
+                            child: Text(
+                              'TAP OUTSIDE TO CANCEL',
+                              style: GoogleFonts.inter(
+                                color: ScholarlyTheme.textMuted,
+                                fontSize: 9,
+                                letterSpacing: 0.8,
+                              ),
+                            ),
                           ),
                         ],
                       ),

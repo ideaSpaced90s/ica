@@ -691,6 +691,9 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
                             (piece?.color == chess_lib.Color.BLACK && targetRank == '1');
 
     if (isPawn && isPromotionRank) {
+      _stopClockTimer();
+      _soundService.playSfx(SoundEffect.promote);
+      _hapticsService.selection();
       state = state.copyWith(
         isPromoting: true,
         promotionSource: from,
@@ -1020,12 +1023,29 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
     });
 
     if (moveMade) {
-      _onMoveCompleted('$from$to$promotionPiece');
+      final wasClockStarted = state.clockStarted;
+      _onMoveCompleted('$from$to${promotionPiece.toLowerCase()}');
+      if (!wasClockStarted) {
+        state = state.copyWith(clockStarted: true);
+      }
+      state = state.copyWith(activeClockSide: _clockSideForTurn());
       _startClockTicker();
       unawaited(ensureGameServicesStarted(analyzeCurrentPosition: true));
       state = state.copyWith(isEngineThinking: state.engineReady);
     } else {
       state = state.copyWith(moveAnimation: null);
+    }
+  }
+
+  void cancelPromotion() {
+    if (!state.isPromoting) return;
+    state = state.copyWith(
+      isPromoting: false,
+      promotionSource: null,
+      promotionDestination: null,
+    );
+    if (state.clockStarted && !state.isPaused) {
+      _startClockTicker();
     }
   }
 

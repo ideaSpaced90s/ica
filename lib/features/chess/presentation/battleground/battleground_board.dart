@@ -304,7 +304,13 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
                       },
                     ),
 
-                  PromotionOverlay(theme: chessTheme),
+                  PromotionOverlay(
+                    theme: chessTheme,
+                    isPromotingOverride: bgState.isPromoting,
+                    isWhiteOverride: bgState.game.turn == chess_lib.Color.WHITE,
+                    onCompleteOverride: (piece) => ref.read(battlegroundProvider.notifier).completePromotion(piece),
+                    onCancelOverride: () => ref.read(battlegroundProvider.notifier).cancelPromotion(),
+                  ),
                 ],
               ),
             ),

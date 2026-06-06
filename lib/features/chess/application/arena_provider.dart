@@ -96,6 +96,7 @@ class ArenaState {
   final bool engineReady;
   final String? startupError;
   final String? loadedGameId;
+  final bool isGameOver;
 
   ArenaState({
     required this.game,
@@ -141,11 +142,12 @@ class ArenaState {
     this.engineReady = false,
     this.startupError,
     this.loadedGameId,
+    this.isGameOver = false,
   });
 
   bool get isChess960 => gameMode == 'chess960';
 
-  bool get isInReviewMode => (game.gameOver || isTimeOut) && isGameOverDismissed;
+  bool get isInReviewMode => (isGameOver || isTimeOut) && isGameOverDismissed;
 
   bool get canNavigateBack =>
       recentMoves.isNotEmpty &&
@@ -212,6 +214,7 @@ class ArenaState {
     bool? engineReady,
     Object? startupError = const Object(),
     Object? loadedGameId = const Object(),
+    bool? isGameOver,
   }) {
     return ArenaState(
       game: game ?? this.game,
@@ -257,6 +260,7 @@ class ArenaState {
       engineReady: engineReady ?? this.engineReady,
       startupError: startupError == const Object() ? this.startupError : startupError as String?,
       loadedGameId: loadedGameId == const Object() ? this.loadedGameId : loadedGameId as String?,
+      isGameOver: isGameOver ?? this.isGameOver,
     );
   }
 }
@@ -361,6 +365,7 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
       promotionDestination: null,
       isTimeOut: false,
       loadedGameId: null,
+      isGameOver: initialGame.gameOver,
     );
 
     if (playSound) {
@@ -726,9 +731,10 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
   void _restoreSnapshot(_ArenaSnapshot snapshot) {
     _pendingHintFen = null;
     final is960 = state.gameMode == 'chess960';
+    final restoredGame = ChessGame(fen: snapshot.fen, isChess960: is960);
 
     state = state.copyWith(
-      game: ChessGame(fen: snapshot.fen, isChess960: is960),
+      game: restoredGame,
       lastMove: snapshot.lastMove,
       recentMoves: snapshot.recentMoves,
       previousEvaluation: snapshot.previousEvaluation,
@@ -749,6 +755,7 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
       moveAnimation: snapshot.moveAnimation,
       isPlayerWhite: snapshot.isPlayerWhite,
       isBoardFlipped: snapshot.isBoardFlipped,
+      isGameOver: restoredGame.gameOver,
     );
 
     if (state.clockStarted) {
@@ -813,6 +820,9 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
                             (piece?.color == chess_lib.Color.BLACK && targetRank == '1');
 
     if (isPawn && isPromotionRank) {
+      _stopClockTimer();
+      _soundService.playSfx(SoundEffect.promote);
+      _hapticsService.selection();
       state = state.copyWith(
         isPromoting: true,
         promotionSource: from,
@@ -895,6 +905,7 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
       recentMoves: movesToKeep,
       lastMove: movesToKeep.isEmpty ? null : movesToKeep.last,
       viewingMoveIndex: null,
+      isGameOver: tempGame.gameOver,
     );
   }
 
@@ -946,6 +957,7 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
       isEngineThinking: _isAiTurn() && state.servicesStarted && state.engineReady,
       activeClockSide: state.clockStarted ? _clockSideForTurn() : state.activeClockSide,
       threatenedSquares: threatened,
+      isGameOver: state.game.gameOver,
     );
 
     if (state.game.gameOver) {
@@ -988,8 +1000,6 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
       );
     }
 
-    _saveSnapshotForUndo();
-
     state = state.copyWith(
       moveAnimation: MoveAnimationData(
         from: from,
@@ -1006,12 +1016,33 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
     });
 
     if (moveMade) {
-      _onMoveCompleted('$from$to$promotionPiece');
+      final wasClockStarted = state.clockStarted;
+      _onMoveCompleted('$from$to${promotionPiece.toLowerCase()}');
+      if (!wasClockStarted) {
+        state = state.copyWith(clockStarted: true);
+      }
+      state = state.copyWith(activeClockSide: _clockSideForTurn());
       _startClockTicker();
       unawaited(ensureGameServicesStarted(analyzeCurrentPosition: true));
       state = state.copyWith(isEngineThinking: state.engineReady);
     } else {
       state = state.copyWith(moveAnimation: null);
+    }
+  }
+
+  void cancelPromotion() {
+    if (!state.isPromoting) return;
+    if (_undoStack.isNotEmpty) {
+      _undoStack.removeLast();
+      _syncUndoRedoFlags();
+    }
+    state = state.copyWith(
+      isPromoting: false,
+      promotionSource: null,
+      promotionDestination: null,
+    );
+    if (state.clockStarted && !state.isPaused) {
+      _startClockTicker();
     }
   }
 
@@ -1392,6 +1423,7 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
       isGameOverDismissed: false,
       isTimeOut: false,
       loadedGameId: entry.id,
+      isGameOver: restoredGame.gameOver,
     );
   }
 

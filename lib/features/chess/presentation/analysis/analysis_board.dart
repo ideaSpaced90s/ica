@@ -522,10 +522,18 @@ class _StudyLabChessBoardState extends ConsumerState<StudyLabChessBoard> {
                     Positioned.fill(
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(16),
-                        child: BackdropFilter(
-                          filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
-                          child: Container(
-                            color: Colors.black.withValues(alpha: 0.35),
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _pendingPromoFrom = null;
+                              _pendingPromoTo = null;
+                            });
+                          },
+                          child: BackdropFilter(
+                            filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+                            child: Container(
+                              color: Colors.black.withValues(alpha: 0.35),
+                            ),
                           ),
                         ),
                       ),
@@ -589,6 +597,23 @@ class _StudyLabChessBoardState extends ConsumerState<StudyLabChessBoard> {
                                       ),
                                     );
                                   }).toList(),
+                                ),
+                                const SizedBox(height: 8),
+                                GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      _pendingPromoFrom = null;
+                                      _pendingPromoTo = null;
+                                    });
+                                  },
+                                  child: Text(
+                                    'TAP OUTSIDE TO CANCEL',
+                                    style: GoogleFonts.inter(
+                                      color: ScholarlyTheme.textMuted,
+                                      fontSize: 9,
+                                      letterSpacing: 0.8,
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
