@@ -38,7 +38,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.12.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1972798024;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1576935057;
 
 // Section: executor
 
@@ -73,6 +73,41 @@ fn wire__crate__api__cognitive__analyze_scotoma_impl(
             transform_result_sse::<_, ()>((move || {
                 let output_ok =
                     Result::<_, ()>::Ok(crate::api::cognitive::analyze_scotoma(api_games))?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__assignment__analyze_submitted_game_rust_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "analyze_submitted_game_rust",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_pgn_content = <String>::sse_decode(&mut deserializer);
+            let api_scotoma = <crate::api::cognitive::ScotomaResult>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok =
+                    Result::<_, ()>::Ok(crate::api::assignment::analyze_submitted_game_rust(
+                        api_pgn_content,
+                        api_scotoma,
+                    ))?;
                 Ok(output_ok)
             })())
         },
@@ -574,6 +609,42 @@ fn wire__crate__api__pgn_db__parse_pgn_database_impl(
         },
     )
 }
+fn wire__crate__api__assignment__recommend_tasks_rust_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "recommend_tasks_rust",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_elo = <i32>::sse_decode(&mut deserializer);
+            let api_scotoma = <crate::api::cognitive::ScotomaResult>::sse_decode(&mut deserializer);
+            let api_completed_tutorials = <Vec<i32>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok = Result::<_, ()>::Ok(crate::api::assignment::recommend_tasks_rust(
+                    api_elo,
+                    api_scotoma,
+                    api_completed_tutorials,
+                ))?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
 fn wire__crate__api__pgn_db__save_study_to_db_impl(
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -825,6 +896,18 @@ impl SseDecode for crate::api::chanakya::ChanakyaPlaystyle {
     }
 }
 
+impl SseDecode for crate::api::assignment::ChanakyaRoutine {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_tasks = <Vec<crate::api::assignment::ChanakyaTask>>::sse_decode(deserializer);
+        let mut var_wisdomMessage = <String>::sse_decode(deserializer);
+        return crate::api::assignment::ChanakyaRoutine {
+            tasks: var_tasks,
+            wisdom_message: var_wisdomMessage,
+        };
+    }
+}
+
 impl SseDecode for crate::api::chanakya::ChanakyaScotoma {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -845,6 +928,57 @@ impl SseDecode for crate::api::chanakya::ChanakyaScotoma {
             material_greed: var_materialGreed,
             tunnel_vision: var_tunnelVision,
             time_panic: var_timePanic,
+        };
+    }
+}
+
+impl SseDecode for crate::api::assignment::ChanakyaTask {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_title = <String>::sse_decode(deserializer);
+        let mut var_description = <String>::sse_decode(deserializer);
+        let mut var_taskType = <crate::api::assignment::ChanakyaTaskType>::sse_decode(deserializer);
+        let mut var_targetId = <String>::sse_decode(deserializer);
+        let mut var_targetValue = <i32>::sse_decode(deserializer);
+        return crate::api::assignment::ChanakyaTask {
+            title: var_title,
+            description: var_description,
+            task_type: var_taskType,
+            target_id: var_targetId,
+            target_value: var_targetValue,
+        };
+    }
+}
+
+impl SseDecode for crate::api::assignment::ChanakyaTaskType {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <i32>::sse_decode(deserializer);
+        return match inner {
+            0 => crate::api::assignment::ChanakyaTaskType::Arena,
+            1 => crate::api::assignment::ChanakyaTaskType::Puzzle,
+            2 => crate::api::assignment::ChanakyaTaskType::Tutorial,
+            _ => unreachable!("Invalid variant for ChanakyaTaskType: {}", inner),
+        };
+    }
+}
+
+impl SseDecode for crate::api::assignment::ChanakyaWeeklySummary {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_blundersFound = <i32>::sse_decode(deserializer);
+        let mut var_annotatedMovesCount = <i32>::sse_decode(deserializer);
+        let mut var_worstScotomaAxis = <String>::sse_decode(deserializer);
+        let mut var_matchCategory = <String>::sse_decode(deserializer);
+        let mut var_commentaryPrompt = <String>::sse_decode(deserializer);
+        let mut var_fallbackReport = <String>::sse_decode(deserializer);
+        return crate::api::assignment::ChanakyaWeeklySummary {
+            blunders_found: var_blundersFound,
+            annotated_moves_count: var_annotatedMovesCount,
+            worst_scotoma_axis: var_worstScotomaAxis,
+            match_category: var_matchCategory,
+            commentary_prompt: var_commentaryPrompt,
+            fallback_report: var_fallbackReport,
         };
     }
 }
@@ -907,6 +1041,20 @@ impl SseDecode for Vec<crate::api::chanakya::ChanakyaCandidate> {
     }
 }
 
+impl SseDecode for Vec<crate::api::assignment::ChanakyaTask> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::assignment::ChanakyaTask>::sse_decode(
+                deserializer,
+            ));
+        }
+        return ans_;
+    }
+}
+
 impl SseDecode for Vec<crate::api::persona::PersonaCandidate> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -930,6 +1078,18 @@ impl SseDecode for Vec<crate::api::pgn_db::PgnGameRecord> {
             ans_.push(<crate::api::pgn_db::PgnGameRecord>::sse_decode(
                 deserializer,
             ));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<i32> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<i32>::sse_decode(deserializer));
         }
         return ans_;
     }
@@ -1178,9 +1338,9 @@ fn pde_ffi_dispatcher_primary_impl(
 ) {
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
-        9 => wire__crate__api__puzzles__get_random_puzzle_impl(port, ptr, rust_vec_len, data_len),
-        14 => wire__crate__api__simple__init_app_impl(port, ptr, rust_vec_len, data_len),
-        18 => wire__crate__api__puzzles__search_puzzles_impl(port, ptr, rust_vec_len, data_len),
+        10 => wire__crate__api__puzzles__get_random_puzzle_impl(port, ptr, rust_vec_len, data_len),
+        15 => wire__crate__api__simple__init_app_impl(port, ptr, rust_vec_len, data_len),
+        20 => wire__crate__api__puzzles__search_puzzles_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -1194,25 +1354,31 @@ fn pde_ffi_dispatcher_sync_impl(
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
         1 => wire__crate__api__cognitive__analyze_scotoma_impl(ptr, rust_vec_len, data_len),
-        2 => wire__crate__api__threats__analyze_tactical_threats_impl(ptr, rust_vec_len, data_len),
-        3 => wire__crate__api__pgn_db__classify_opening_eco_impl(ptr, rust_vec_len, data_len),
-        4 => wire__crate__api__pgn_db__clear_all_studies_impl(ptr, rust_vec_len, data_len),
-        5 => wire__crate__api__status__evaluate_game_status_impl(ptr, rust_vec_len, data_len),
-        6 => wire__crate__api__context__evaluate_position_metrics_impl(ptr, rust_vec_len, data_len),
-        7 => wire__crate__api__pgn_db__export_pgn_with_headers_impl(ptr, rust_vec_len, data_len),
-        8 => wire__crate__api__moves__get_legal_destinations_impl(ptr, rust_vec_len, data_len),
-        10 => wire__crate__api__history__get_san_history_impl(ptr, rust_vec_len, data_len),
-        11 => wire__crate__api__threats__get_threatened_squares_impl(ptr, rust_vec_len, data_len),
-        12 => wire__crate__api__simple__greet_impl(ptr, rust_vec_len, data_len),
-        13 => wire__crate__api__humanizer__humanize_move_rust_impl(ptr, rust_vec_len, data_len),
-        15 => wire__crate__api__pgn_db__load_studies_from_db_impl(ptr, rust_vec_len, data_len),
-        16 => wire__crate__api__pgn_db__parse_pgn_database_impl(ptr, rust_vec_len, data_len),
-        17 => wire__crate__api__pgn_db__save_study_to_db_impl(ptr, rust_vec_len, data_len),
-        19 => {
+        2 => wire__crate__api__assignment__analyze_submitted_game_rust_impl(
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        3 => wire__crate__api__threats__analyze_tactical_threats_impl(ptr, rust_vec_len, data_len),
+        4 => wire__crate__api__pgn_db__classify_opening_eco_impl(ptr, rust_vec_len, data_len),
+        5 => wire__crate__api__pgn_db__clear_all_studies_impl(ptr, rust_vec_len, data_len),
+        6 => wire__crate__api__status__evaluate_game_status_impl(ptr, rust_vec_len, data_len),
+        7 => wire__crate__api__context__evaluate_position_metrics_impl(ptr, rust_vec_len, data_len),
+        8 => wire__crate__api__pgn_db__export_pgn_with_headers_impl(ptr, rust_vec_len, data_len),
+        9 => wire__crate__api__moves__get_legal_destinations_impl(ptr, rust_vec_len, data_len),
+        11 => wire__crate__api__history__get_san_history_impl(ptr, rust_vec_len, data_len),
+        12 => wire__crate__api__threats__get_threatened_squares_impl(ptr, rust_vec_len, data_len),
+        13 => wire__crate__api__simple__greet_impl(ptr, rust_vec_len, data_len),
+        14 => wire__crate__api__humanizer__humanize_move_rust_impl(ptr, rust_vec_len, data_len),
+        16 => wire__crate__api__pgn_db__load_studies_from_db_impl(ptr, rust_vec_len, data_len),
+        17 => wire__crate__api__pgn_db__parse_pgn_database_impl(ptr, rust_vec_len, data_len),
+        18 => wire__crate__api__assignment__recommend_tasks_rust_impl(ptr, rust_vec_len, data_len),
+        19 => wire__crate__api__pgn_db__save_study_to_db_impl(ptr, rust_vec_len, data_len),
+        21 => {
             wire__crate__api__chanakya__select_chanakya_move_rust_impl(ptr, rust_vec_len, data_len)
         }
-        20 => wire__crate__api__persona__select_persona_move_rust_impl(ptr, rust_vec_len, data_len),
-        21 => wire__crate__api__state__validate_and_apply_move_impl(ptr, rust_vec_len, data_len),
+        22 => wire__crate__api__persona__select_persona_move_rust_impl(ptr, rust_vec_len, data_len),
+        23 => wire__crate__api__state__validate_and_apply_move_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -1263,6 +1429,27 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::chanakya::ChanakyaPlaystyle>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::assignment::ChanakyaRoutine {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.tasks.into_into_dart().into_dart(),
+            self.wisdom_message.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::assignment::ChanakyaRoutine
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::assignment::ChanakyaRoutine>
+    for crate::api::assignment::ChanakyaRoutine
+{
+    fn into_into_dart(self) -> crate::api::assignment::ChanakyaRoutine {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::chanakya::ChanakyaScotoma {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -1286,6 +1473,77 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::chanakya::ChanakyaScotoma>
     for crate::api::chanakya::ChanakyaScotoma
 {
     fn into_into_dart(self) -> crate::api::chanakya::ChanakyaScotoma {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::assignment::ChanakyaTask {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.title.into_into_dart().into_dart(),
+            self.description.into_into_dart().into_dart(),
+            self.task_type.into_into_dart().into_dart(),
+            self.target_id.into_into_dart().into_dart(),
+            self.target_value.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::assignment::ChanakyaTask
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::assignment::ChanakyaTask>
+    for crate::api::assignment::ChanakyaTask
+{
+    fn into_into_dart(self) -> crate::api::assignment::ChanakyaTask {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::assignment::ChanakyaTaskType {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            Self::Arena => 0.into_dart(),
+            Self::Puzzle => 1.into_dart(),
+            Self::Tutorial => 2.into_dart(),
+            _ => unreachable!(),
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::assignment::ChanakyaTaskType
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::assignment::ChanakyaTaskType>
+    for crate::api::assignment::ChanakyaTaskType
+{
+    fn into_into_dart(self) -> crate::api::assignment::ChanakyaTaskType {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::assignment::ChanakyaWeeklySummary {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.blunders_found.into_into_dart().into_dart(),
+            self.annotated_moves_count.into_into_dart().into_dart(),
+            self.worst_scotoma_axis.into_into_dart().into_dart(),
+            self.match_category.into_into_dart().into_dart(),
+            self.commentary_prompt.into_into_dart().into_dart(),
+            self.fallback_report.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::assignment::ChanakyaWeeklySummary
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::assignment::ChanakyaWeeklySummary>
+    for crate::api::assignment::ChanakyaWeeklySummary
+{
+    fn into_into_dart(self) -> crate::api::assignment::ChanakyaWeeklySummary {
         self
     }
 }
@@ -1511,6 +1769,14 @@ impl SseEncode for crate::api::chanakya::ChanakyaPlaystyle {
     }
 }
 
+impl SseEncode for crate::api::assignment::ChanakyaRoutine {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <Vec<crate::api::assignment::ChanakyaTask>>::sse_encode(self.tasks, serializer);
+        <String>::sse_encode(self.wisdom_message, serializer);
+    }
+}
+
 impl SseEncode for crate::api::chanakya::ChanakyaScotoma {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -1522,6 +1788,46 @@ impl SseEncode for crate::api::chanakya::ChanakyaScotoma {
         <f64>::sse_encode(self.material_greed, serializer);
         <f64>::sse_encode(self.tunnel_vision, serializer);
         <f64>::sse_encode(self.time_panic, serializer);
+    }
+}
+
+impl SseEncode for crate::api::assignment::ChanakyaTask {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.title, serializer);
+        <String>::sse_encode(self.description, serializer);
+        <crate::api::assignment::ChanakyaTaskType>::sse_encode(self.task_type, serializer);
+        <String>::sse_encode(self.target_id, serializer);
+        <i32>::sse_encode(self.target_value, serializer);
+    }
+}
+
+impl SseEncode for crate::api::assignment::ChanakyaTaskType {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(
+            match self {
+                crate::api::assignment::ChanakyaTaskType::Arena => 0,
+                crate::api::assignment::ChanakyaTaskType::Puzzle => 1,
+                crate::api::assignment::ChanakyaTaskType::Tutorial => 2,
+                _ => {
+                    unimplemented!("");
+                }
+            },
+            serializer,
+        );
+    }
+}
+
+impl SseEncode for crate::api::assignment::ChanakyaWeeklySummary {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.blunders_found, serializer);
+        <i32>::sse_encode(self.annotated_moves_count, serializer);
+        <String>::sse_encode(self.worst_scotoma_axis, serializer);
+        <String>::sse_encode(self.match_category, serializer);
+        <String>::sse_encode(self.commentary_prompt, serializer);
+        <String>::sse_encode(self.fallback_report, serializer);
     }
 }
 
@@ -1570,6 +1876,16 @@ impl SseEncode for Vec<crate::api::chanakya::ChanakyaCandidate> {
     }
 }
 
+impl SseEncode for Vec<crate::api::assignment::ChanakyaTask> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::assignment::ChanakyaTask>::sse_encode(item, serializer);
+        }
+    }
+}
+
 impl SseEncode for Vec<crate::api::persona::PersonaCandidate> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -1586,6 +1902,16 @@ impl SseEncode for Vec<crate::api::pgn_db::PgnGameRecord> {
         <i32>::sse_encode(self.len() as _, serializer);
         for item in self {
             <crate::api::pgn_db::PgnGameRecord>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<i32> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <i32>::sse_encode(item, serializer);
         }
     }
 }

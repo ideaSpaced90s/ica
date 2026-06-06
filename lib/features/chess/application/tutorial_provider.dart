@@ -10,6 +10,8 @@ import '../data/tutorial_lessons.dart';
 import '../data/tutorial_progress_repository.dart';
 import '../services/chess_sound_service.dart';
 import 'chess_provider.dart';
+import 'assignment_provider.dart';
+import 'battleground_provider.dart';
 
 final tutorialProgressRepositoryProvider = Provider<TutorialProgressRepository>((ref) {
   throw UnimplementedError('Initialized in main() ProviderScope overrides');
@@ -18,7 +20,7 @@ final tutorialProgressRepositoryProvider = Provider<TutorialProgressRepository>(
 final tutorialProvider = StateNotifierProvider<TutorialNotifier, TutorialState>((ref) {
   final repo = ref.watch(tutorialProgressRepositoryProvider);
   final sounds = ref.watch(chessSoundServiceProvider);
-  return TutorialNotifier(repo, sounds);
+  return TutorialNotifier(repo, sounds, ref);
 });
 
 class TutorialState {
@@ -109,9 +111,10 @@ class TutorialState {
 class TutorialNotifier extends StateNotifier<TutorialState> {
   final TutorialProgressRepository _repository;
   final ChessSoundService _sounds;
+  final Ref ref;
   Timer? _hesitationTimer;
 
-  TutorialNotifier(this._repository, this._sounds) : super(_getInitialState()) {
+  TutorialNotifier(this._repository, this._sounds, this.ref) : super(_getInitialState()) {
     _initialize();
   }
 
@@ -195,6 +198,19 @@ class TutorialNotifier extends StateNotifier<TutorialState> {
       boardToUse = animatedBoard;
     }
 
+    String mentorDialogue = firstStep.dialogue;
+    try {
+      final assignmentState = ref.read(assignmentProvider);
+      final isRevisionMode = assignmentState.isCalibrated &&
+          assignmentState.goalDeadline != null &&
+          DateTime.now().isAfter(assignmentState.goalDeadline!) &&
+          ref.read(battlegroundProvider).consolidatedRating < assignmentState.goalElo;
+
+      if (isRevisionMode && chapterId >= 1 && chapterId <= 9) {
+        mentorDialogue = "[REVISION MODE] Apprentice, your target deadline has passed and your rating remains below target. We must revise the fundamentals. Let's review Chapter $chapterId: ${lesson.title}.\n\n$mentorDialogue";
+      }
+    } catch (_) {}
+
     state = state.copyWith(
       board: boardToUse,
       currentChapterIndex: chapterId,
@@ -203,7 +219,7 @@ class TutorialNotifier extends StateNotifier<TutorialState> {
       currentStep: firstStep,
       highlightSquares: firstStep.highlightSquares,
       animatePathSquares: firstStep.animatePathSquares,
-      lastMentorDialogue: firstStep.dialogue,
+      lastMentorDialogue: mentorDialogue,
       mentorMood: firstStep.mentorMood,
       isAwaitingMove: firstStep.type == TutorialStepType.awaitMove,
       isChapterComplete: false,

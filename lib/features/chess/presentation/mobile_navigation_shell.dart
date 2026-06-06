@@ -15,6 +15,7 @@ import 'academy/academy_page.dart';
 import 'puzzles/puzzles_page.dart';
 import 'analysis/analysis_page.dart';
 import 'history_page.dart';
+import 'assignment/assignment_page.dart';
 
 import 'tutorial_page.dart';
 import 'about_us_page.dart';
@@ -38,9 +39,9 @@ class MobileNavigationShell extends ConsumerWidget {
     final bgState = ref.watch(battlegroundProvider);
     final isBgMatchActive = currentIndex == 2 && bgState.recentMoves.isNotEmpty && !bgState.game.gameOver;
 
-    // Mute background music when in Arena (1), Battleground (2), Academy (3), or Puzzles (4)
+    // Mute background music when in Arena (1), Battleground (2), Academy (3), Puzzles (4), or Assignment (11)
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final isMuted = currentIndex == 1 || currentIndex == 2 || currentIndex == 3 || currentIndex == 4;
+      final isMuted = currentIndex == 1 || currentIndex == 2 || currentIndex == 3 || currentIndex == 4 || currentIndex == 11;
       ref.read(chessSoundServiceProvider).setMutedTabState(isMuted);
     });
 
@@ -57,6 +58,7 @@ class MobileNavigationShell extends ConsumerWidget {
       const AboutUsPage(),
       const SettingsPage(),
       const StorePage(),
+      const AssignmentPage(),
     ];
 
     // Determine logical title based on active tab
@@ -84,6 +86,8 @@ class MobileNavigationShell extends ConsumerWidget {
           return 'SETTINGS';
         case 10:
           return 'STORE';
+        case 11:
+          return 'ASSIGNMENT';
         default:
           return 'IDEASPACE CHESS ACADEMY';
       }
@@ -219,6 +223,14 @@ class _MobileSidebarDrawer extends ConsumerWidget {
                   isSelected: currentIndex == 0,
                   onTap: () {
                     _navigate(ref, context, 0);
+                  },
+                ),
+                _DrawerTile(
+                  label: 'Assignment',
+                  icon: Icons.assignment_turned_in_rounded,
+                  isSelected: currentIndex == 11,
+                  onTap: () {
+                    _navigate(ref, context, 11);
                   },
                 ),
                 const Padding(

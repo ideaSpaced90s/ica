@@ -1,0 +1,276 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kingslayer_chess/features/chess/domain/models/assignment_state.dart';
+import 'package:kingslayer_chess/features/chess/domain/models/tutorial_progress.dart';
+import 'package:kingslayer_chess/features/chess/data/assignment_repository.dart';
+import 'package:kingslayer_chess/features/chess/application/assignment_provider.dart';
+import 'package:kingslayer_chess/features/chess/application/battleground_provider.dart';
+import 'package:kingslayer_chess/features/chess/application/puzzles_provider.dart';
+import 'package:kingslayer_chess/features/chess/application/tutorial_provider.dart';
+import 'package:kingslayer_chess/features/chess/data/prescription_puzzle_repository.dart';
+import 'package:kingslayer_chess/src/rust/api/cognitive.dart' as rust_cognitive;
+
+class FakeAssignmentRepository implements AssignmentRepository {
+  AssignmentState? savedState;
+
+  @override
+  Future<AssignmentState> loadAssignment() async {
+    return savedState ?? AssignmentState(lastResetDate: DateTime.now().subtract(const Duration(days: 1)));
+  }
+
+  @override
+  Future<void> saveAssignment(AssignmentState state) async {
+    savedState = state;
+  }
+}
+
+class FakeBattlegroundState extends Fake implements BattlegroundState {
+  @override
+  final int consolidatedRating;
+  @override
+  final int totalRatedGamesCount;
+  @override
+  final rust_cognitive.ScotomaResult? cachedScotoma;
+
+  FakeBattlegroundState({
+    required this.consolidatedRating,
+    required this.totalRatedGamesCount,
+    this.cachedScotoma,
+  });
+}
+
+class FakeBattlegroundNotifier extends StateNotifier<BattlegroundState> implements BattlegroundNotifier {
+  FakeBattlegroundNotifier(super.state);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class FakePuzzlesState extends Fake implements PuzzlesState {
+  @override
+  final int solvedCount;
+  @override
+  final ScotomaAxis? activeAxis;
+
+  FakePuzzlesState({
+    required this.solvedCount,
+    this.activeAxis,
+  });
+}
+
+class FakePuzzlesNotifier extends StateNotifier<PuzzlesState> implements PuzzlesNotifier {
+  FakePuzzlesNotifier(super.state);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class FakeTutorialProgress extends Fake implements TutorialProgress {
+  @override
+  final Set<int> completedChapters;
+  FakeTutorialProgress({required this.completedChapters});
+}
+
+class FakeTutorialState extends Fake implements TutorialState {
+  @override
+  final TutorialProgress progress;
+  FakeTutorialState({required this.progress});
+}
+
+class FakeTutorialNotifier extends StateNotifier<TutorialState> implements TutorialNotifier {
+  FakeTutorialNotifier(super.state);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+void main() {
+  group('DailyTask and AssignmentState Model Tests', () {
+    test('DailyTask toJson and fromJson match', () {
+      const task = DailyTask(
+        title: 'Arena Battle',
+        description: 'Defeat Sparky',
+        taskType: DailyTaskType.arena,
+        targetId: 'avatar_0',
+        targetValue: 1,
+        isCompleted: true,
+      );
+
+      final json = task.toJson();
+      final fromJson = DailyTask.fromJson(json);
+
+      expect(fromJson.title, task.title);
+      expect(fromJson.description, task.description);
+      expect(fromJson.taskType, task.taskType);
+      expect(fromJson.targetId, task.targetId);
+      expect(fromJson.targetValue, task.targetValue);
+      expect(fromJson.isCompleted, task.isCompleted);
+    });
+
+    test('AssignmentState toJson and fromJson match', () {
+      final state = AssignmentState(
+        calibrationGamesPlayed: 5,
+        isCalibrated: true,
+        goalElo: 1200,
+        startElo: 1050,
+        goalDeadline: DateTime(2026, 7, 6),
+        dailyTasks: const [
+          DailyTask(
+            title: 'Solve Puzzles',
+            description: 'Solve 5 pinned puzzles',
+            taskType: DailyTaskType.puzzle,
+            targetId: 'pin',
+            targetValue: 5,
+            isCompleted: false,
+          ),
+        ],
+        lastResetDate: DateTime(2026, 6, 6),
+        historyLog: const {'2026-06-05': true},
+        weeklyReviewSubmitted: true,
+        submittedGameId: 'game_123',
+        weeklyReport: 'Excellent play!',
+        wisdomMessage: 'Patience is a weapon.',
+      );
+
+      final json = state.toJson();
+      final fromJson = AssignmentState.fromJson(json);
+
+      expect(fromJson.calibrationGamesPlayed, state.calibrationGamesPlayed);
+      expect(fromJson.isCalibrated, state.isCalibrated);
+      expect(fromJson.goalElo, state.goalElo);
+      expect(fromJson.startElo, state.startElo);
+      expect(fromJson.goalDeadline, state.goalDeadline);
+      expect(fromJson.dailyTasks.length, state.dailyTasks.length);
+      expect(fromJson.dailyTasks.first.title, state.dailyTasks.first.title);
+      expect(fromJson.lastResetDate.year, state.lastResetDate.year);
+      expect(fromJson.historyLog, state.historyLog);
+      expect(fromJson.weeklyReviewSubmitted, state.weeklyReviewSubmitted);
+      expect(fromJson.submittedGameId, state.submittedGameId);
+      expect(fromJson.weeklyReport, state.weeklyReport);
+      expect(fromJson.wisdomMessage, state.wisdomMessage);
+    });
+  });
+
+  group('AssignmentProvider State and Logic Tests', () {
+    late FakeAssignmentRepository fakeRepository;
+    late FakeBattlegroundNotifier fakeBattleground;
+    late FakePuzzlesNotifier fakePuzzles;
+    late FakeTutorialNotifier fakeTutorial;
+
+    setUp(() {
+      fakeRepository = FakeAssignmentRepository();
+      fakeBattleground = FakeBattlegroundNotifier(FakeBattlegroundState(
+        consolidatedRating: 1200,
+        totalRatedGamesCount: 0,
+      ));
+      fakePuzzles = FakePuzzlesNotifier(FakePuzzlesState(
+        solvedCount: 0,
+      ));
+      fakeTutorial = FakeTutorialNotifier(FakeTutorialState(
+        progress: FakeTutorialProgress(completedChapters: const {}),
+      ));
+    });
+
+    test('Initializes with default calibration state', () async {
+      final container = ProviderContainer(
+        overrides: [
+          assignmentRepositoryProvider.overrideWithValue(fakeRepository),
+          battlegroundProvider.overrideWith((ref) => fakeBattleground),
+          puzzlesProvider.overrideWith((ref) => fakePuzzles),
+          tutorialProvider.overrideWith((ref) => fakeTutorial),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      // Trigger and wait for initialization
+      container.read(assignmentProvider);
+      await Future.delayed(const Duration(milliseconds: 20));
+      
+      final updatedState = container.read(assignmentProvider);
+      expect(updatedState.isCalibrated, isFalse);
+      expect(updatedState.calibrationGamesPlayed, 0);
+      expect(updatedState.dailyTasks, isNotEmpty); // Initial calibration task generated
+    });
+
+    test('setupGoal sets new target rating', () async {
+      final container = ProviderContainer(
+        overrides: [
+          assignmentRepositoryProvider.overrideWithValue(fakeRepository),
+          battlegroundProvider.overrideWith((ref) => fakeBattleground),
+          puzzlesProvider.overrideWith((ref) => fakePuzzles),
+          tutorialProvider.overrideWith((ref) => fakeTutorial),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      // Wait for notifier initialization first
+      final notifier = container.read(assignmentProvider.notifier);
+      await Future.delayed(const Duration(milliseconds: 20));
+
+      await notifier.setupGoal(1400);
+
+      final state = container.read(assignmentProvider);
+      expect(state.goalElo, 1400);
+      expect(state.goalDeadline, isNotNull);
+      expect(fakeRepository.savedState?.goalElo, 1400);
+    });
+
+    test('resetAssignmentProgress clears all progress', () async {
+      final container = ProviderContainer(
+        overrides: [
+          assignmentRepositoryProvider.overrideWithValue(fakeRepository),
+          battlegroundProvider.overrideWith((ref) => fakeBattleground),
+          puzzlesProvider.overrideWith((ref) => fakePuzzles),
+          tutorialProvider.overrideWith((ref) => fakeTutorial),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(assignmentProvider.notifier);
+      await Future.delayed(const Duration(milliseconds: 20));
+
+      // 1. Mutate goal first
+      await notifier.setupGoal(1500);
+      expect(container.read(assignmentProvider).goalElo, 1500);
+
+      // 2. Clear progress
+      await notifier.resetAssignmentProgress();
+      
+      final state = container.read(assignmentProvider);
+      expect(state.goalElo, 0);
+      expect(state.isCalibrated, isFalse);
+      expect(fakeRepository.savedState?.goalElo, 0);
+    });
+
+    test('Revision mode triggers basic moves tutorial when goal deadline expires with low ELO', () async {
+      final container = ProviderContainer(
+        overrides: [
+          assignmentRepositoryProvider.overrideWithValue(fakeRepository),
+          battlegroundProvider.overrideWith((ref) => fakeBattleground),
+          puzzlesProvider.overrideWith((ref) => fakePuzzles),
+          tutorialProvider.overrideWith((ref) => fakeTutorial),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(assignmentProvider.notifier);
+      await Future.delayed(const Duration(milliseconds: 20));
+
+      notifier.state = notifier.state.copyWith(
+        isCalibrated: true,
+        goalElo: 1400,
+        startElo: 1200,
+        goalDeadline: DateTime.now().subtract(const Duration(days: 1)),
+      );
+
+      await notifier.generateActiveTasks(1200);
+
+      final state = container.read(assignmentProvider);
+      
+      final tutorialTask = state.dailyTasks.firstWhere((t) => t.taskType == DailyTaskType.tutorial);
+      expect(tutorialTask.title, "Basic Revision");
+      expect(tutorialTask.description, contains("GM Chanakya demands you revise Chapter"));
+      expect(state.wisdomMessage, contains("I have revised your syllabus to focus on basic moves revision"));
+    });
+  });
+}

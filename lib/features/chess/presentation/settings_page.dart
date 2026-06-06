@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../application/chess_provider.dart';
 import '../application/battleground_provider.dart';
 import '../application/tutorial_provider.dart';
+import '../application/assignment_provider.dart';
 import '../services/chess_sound_service.dart';
 import 'scholarly_theme.dart';
 import 'widgets/ambient_scaffold.dart';
@@ -224,11 +225,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     if (confirmed == true && context.mounted) {
       await ref.read(battlegroundProvider.notifier).resetRatedStats();
       await ref.read(tutorialProvider.notifier).resetAllProgress();
+      await ref.read(assignmentProvider.notifier).resetAssignmentProgress();
       await ref.read(chessProvider.notifier).clearAllHistory();
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('All progress, rated stats, match history, and tutorial records have been reset.'),
+            content: Text('All progress, rated stats, match history, assignment data, and tutorial records have been reset.'),
             backgroundColor: Colors.redAccent,
           ),
         );

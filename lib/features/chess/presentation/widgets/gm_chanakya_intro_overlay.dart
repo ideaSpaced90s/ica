@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -27,14 +26,14 @@ class GMChanakyaIntroOverlay extends ConsumerStatefulWidget {
 class _GMChanakyaIntroOverlayState extends ConsumerState<GMChanakyaIntroOverlay>
     with SingleTickerProviderStateMixin {
   late final AnimationController _pulseController;
-  String _displayedText = '';
-  int _charIndex = 0;
-  bool _isTyping = true;
-  Timer? _typewriterTimer;
+  late final String _displayedText;
+  final bool _isTyping = false;
 
   @override
   void initState() {
     super.initState();
+    _displayedText = widget.text;
+
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
@@ -44,50 +43,10 @@ class _GMChanakyaIntroOverlayState extends ConsumerState<GMChanakyaIntroOverlay>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(chessSoundServiceProvider).playSfx(SoundEffect.chanakyaNotify);
     });
-
-    _startTyping();
-  }
-
-  void _startTyping() {
-    _typewriterTimer = Timer.periodic(const Duration(milliseconds: 20), (timer) {
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
-
-      if (_charIndex < widget.text.length) {
-        setState(() {
-          _charIndex++;
-          _displayedText = widget.text.substring(0, _charIndex);
-        });
-
-        // Subtly play writing sound every 3rd character
-        if (_charIndex % 3 == 0) {
-          ref.read(chessSoundServiceProvider).playWriting();
-        }
-      } else {
-        setState(() {
-          _isTyping = false;
-        });
-        timer.cancel();
-      }
-    });
-  }
-
-  void _skipTypewriter() {
-    if (!_isTyping) return;
-    _typewriterTimer?.cancel();
-    ref.read(chessSoundServiceProvider).playSfx(SoundEffect.click);
-    setState(() {
-      _charIndex = widget.text.length;
-      _displayedText = widget.text;
-      _isTyping = false;
-    });
   }
 
   @override
   void dispose() {
-    _typewriterTimer?.cancel();
     _pulseController.dispose();
     super.dispose();
   }
@@ -112,7 +71,7 @@ class _GMChanakyaIntroOverlayState extends ConsumerState<GMChanakyaIntroOverlay>
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               child: GestureDetector(
-                onTap: _isTyping ? _skipTypewriter : null,
+                onTap: null,
                 behavior: HitTestBehavior.opaque,
                 child: Container(
                   constraints: const BoxConstraints(maxWidth: 420),

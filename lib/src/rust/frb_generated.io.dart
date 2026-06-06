@@ -3,6 +3,7 @@
 
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
+import 'api/assignment.dart';
 import 'api/chanakya.dart';
 import 'api/cognitive.dart';
 import 'api/context.dart';
@@ -55,13 +56,28 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Puzzle dco_decode_box_autoadd_puzzle(dynamic raw);
 
   @protected
+  ScotomaResult dco_decode_box_autoadd_scotoma_result(dynamic raw);
+
+  @protected
   ChanakyaCandidate dco_decode_chanakya_candidate(dynamic raw);
 
   @protected
   ChanakyaPlaystyle dco_decode_chanakya_playstyle(dynamic raw);
 
   @protected
+  ChanakyaRoutine dco_decode_chanakya_routine(dynamic raw);
+
+  @protected
   ChanakyaScotoma dco_decode_chanakya_scotoma(dynamic raw);
+
+  @protected
+  ChanakyaTask dco_decode_chanakya_task(dynamic raw);
+
+  @protected
+  ChanakyaTaskType dco_decode_chanakya_task_type(dynamic raw);
+
+  @protected
+  ChanakyaWeeklySummary dco_decode_chanakya_weekly_summary(dynamic raw);
 
   @protected
   double dco_decode_f_64(dynamic raw);
@@ -79,10 +95,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<ChanakyaCandidate> dco_decode_list_chanakya_candidate(dynamic raw);
 
   @protected
+  List<ChanakyaTask> dco_decode_list_chanakya_task(dynamic raw);
+
+  @protected
   List<PersonaCandidate> dco_decode_list_persona_candidate(dynamic raw);
 
   @protected
   List<PgnGameRecord> dco_decode_list_pgn_game_record(dynamic raw);
+
+  @protected
+  List<int> dco_decode_list_prim_i_32_loose(dynamic raw);
+
+  @protected
+  Int32List dco_decode_list_prim_i_32_strict(dynamic raw);
 
   @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
@@ -171,13 +196,32 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Puzzle sse_decode_box_autoadd_puzzle(SseDeserializer deserializer);
 
   @protected
+  ScotomaResult sse_decode_box_autoadd_scotoma_result(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   ChanakyaCandidate sse_decode_chanakya_candidate(SseDeserializer deserializer);
 
   @protected
   ChanakyaPlaystyle sse_decode_chanakya_playstyle(SseDeserializer deserializer);
 
   @protected
+  ChanakyaRoutine sse_decode_chanakya_routine(SseDeserializer deserializer);
+
+  @protected
   ChanakyaScotoma sse_decode_chanakya_scotoma(SseDeserializer deserializer);
+
+  @protected
+  ChanakyaTask sse_decode_chanakya_task(SseDeserializer deserializer);
+
+  @protected
+  ChanakyaTaskType sse_decode_chanakya_task_type(SseDeserializer deserializer);
+
+  @protected
+  ChanakyaWeeklySummary sse_decode_chanakya_weekly_summary(
+    SseDeserializer deserializer,
+  );
 
   @protected
   double sse_decode_f_64(SseDeserializer deserializer);
@@ -199,6 +243,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<ChanakyaTask> sse_decode_list_chanakya_task(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<PersonaCandidate> sse_decode_list_persona_candidate(
     SseDeserializer deserializer,
   );
@@ -207,6 +256,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<PgnGameRecord> sse_decode_list_pgn_game_record(
     SseDeserializer deserializer,
   );
+
+  @protected
+  List<int> sse_decode_list_prim_i_32_loose(SseDeserializer deserializer);
+
+  @protected
+  Int32List sse_decode_list_prim_i_32_strict(SseDeserializer deserializer);
 
   @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
@@ -303,6 +358,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_box_autoadd_puzzle(Puzzle self, SseSerializer serializer);
 
   @protected
+  void sse_encode_box_autoadd_scotoma_result(
+    ScotomaResult self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_chanakya_candidate(
     ChanakyaCandidate self,
     SseSerializer serializer,
@@ -315,8 +376,29 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_chanakya_routine(
+    ChanakyaRoutine self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_chanakya_scotoma(
     ChanakyaScotoma self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_chanakya_task(ChanakyaTask self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_chanakya_task_type(
+    ChanakyaTaskType self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_chanakya_weekly_summary(
+    ChanakyaWeeklySummary self,
     SseSerializer serializer,
   );
 
@@ -342,6 +424,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_chanakya_task(
+    List<ChanakyaTask> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_persona_candidate(
     List<PersonaCandidate> self,
     SseSerializer serializer,
@@ -350,6 +438,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_pgn_game_record(
     List<PgnGameRecord> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_prim_i_32_loose(
+    List<int> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_prim_i_32_strict(
+    Int32List self,
     SseSerializer serializer,
   );
 
