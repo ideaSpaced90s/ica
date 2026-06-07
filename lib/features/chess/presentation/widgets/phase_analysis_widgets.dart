@@ -848,6 +848,11 @@ class RepertoireCard extends ConsumerWidget {
             builder: (context, constraints) {
               final width = constraints.maxWidth;
               final crossCount = width > 900 ? 4 : (width > 600 ? 3 : 2);
+              final double aspect = width > 900
+                  ? 2.4
+                  : (width > 600
+                      ? 2.2
+                      : (width > 400 ? 1.7 : 1.45));
               return GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
@@ -855,7 +860,7 @@ class RepertoireCard extends ConsumerWidget {
                   crossAxisCount: crossCount,
                   crossAxisSpacing: 10,
                   mainAxisSpacing: 10,
-                  childAspectRatio: 2.4,
+                  childAspectRatio: aspect,
                 ),
                 itemCount: _kAllOpenings.length,
                 itemBuilder: (context, index) {

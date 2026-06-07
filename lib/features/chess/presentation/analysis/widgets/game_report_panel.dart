@@ -151,8 +151,10 @@ class _GameReportPanelState extends ConsumerState<GameReportPanel> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (!hasReport)
-            SizedBox(
-              height: MediaQuery.of(context).size.height * 0.65,
+            Container(
+              constraints: BoxConstraints(
+                minHeight: MediaQuery.of(context).size.height * 0.65,
+              ),
               child: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
