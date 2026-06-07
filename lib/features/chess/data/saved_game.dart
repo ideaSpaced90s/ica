@@ -50,6 +50,7 @@ class SavedGameEntry {
     required this.savedAt,
     required this.fen,
     required this.recentMoves,
+    this.uciMoves = const [],
     required this.isPlayerWhite,
     required this.isBoardFlipped,
     required this.whiteTimeLeftMs,
@@ -75,6 +76,7 @@ class SavedGameEntry {
   final DateTime savedAt;
   final String fen;
   final List<String> recentMoves;
+  final List<String> uciMoves;
   final bool isPlayerWhite;
   final bool isBoardFlipped;
   final int whiteTimeLeftMs;
@@ -100,6 +102,7 @@ class SavedGameEntry {
     DateTime? savedAt,
     String? fen,
     List<String>? recentMoves,
+    List<String>? uciMoves,
     bool? isPlayerWhite,
     bool? isBoardFlipped,
     int? whiteTimeLeftMs,
@@ -125,6 +128,7 @@ class SavedGameEntry {
       savedAt: savedAt ?? this.savedAt,
       fen: fen ?? this.fen,
       recentMoves: recentMoves ?? this.recentMoves,
+      uciMoves: uciMoves ?? this.uciMoves,
       isPlayerWhite: isPlayerWhite ?? this.isPlayerWhite,
       isBoardFlipped: isBoardFlipped ?? this.isBoardFlipped,
       whiteTimeLeftMs: whiteTimeLeftMs ?? this.whiteTimeLeftMs,
@@ -161,6 +165,9 @@ class SavedGameEntry {
       recentMoves: (json['recentMoves'] as List<dynamic>? ?? const [])
           .map((move) => move.toString())
           .toList(),
+      uciMoves: (json['uciMoves'] as List<dynamic>? ?? const [])
+          .map((move) => move.toString())
+          .toList(),
       isPlayerWhite: json['isPlayerWhite'] as bool? ?? true,
       isBoardFlipped: json['isBoardFlipped'] as bool? ?? false,
       whiteTimeLeftMs: json['whiteTimeLeftMs'] as int? ?? 600000,
@@ -192,6 +199,7 @@ class SavedGameEntry {
       'savedAt': savedAt.toIso8601String(),
       'fen': fen,
       'recentMoves': recentMoves,
+      'uciMoves': uciMoves,
       'isPlayerWhite': isPlayerWhite,
       'isBoardFlipped': isBoardFlipped,
       'whiteTimeLeftMs': whiteTimeLeftMs,

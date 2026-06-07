@@ -1,14 +1,19 @@
 class PerformanceLedgerEntry {
+  static const String ratedBattlegroundSource = 'ratedBattleground';
+
   final String id;
   final DateTime timestamp;
+  final String source;
   final String ratingCategory; // 'bullet', 'blitz', 'rapid'
-  final String gameMode;       // 'classic', 'chess960'
-  final String result;         // 'W', 'L', 'D'
+  final String gameMode; // 'classic', 'chess960'
+  final String result; // 'W', 'L', 'D'
   final double dominance;
   final String opponentName;
   final int ratingSnapshot;
   final String fen;
   final List<String> recentMoves;
+  final List<String> uciMoves;
+  final String? initialFen;
   final bool isPlayerWhite;
   final int whiteTimeLeftMs;
   final int blackTimeLeftMs;
@@ -16,6 +21,7 @@ class PerformanceLedgerEntry {
   const PerformanceLedgerEntry({
     required this.id,
     required this.timestamp,
+    this.source = ratedBattlegroundSource,
     required this.ratingCategory,
     required this.gameMode,
     required this.result,
@@ -24,6 +30,8 @@ class PerformanceLedgerEntry {
     required this.ratingSnapshot,
     required this.fen,
     required this.recentMoves,
+    this.uciMoves = const [],
+    this.initialFen,
     required this.isPlayerWhite,
     required this.whiteTimeLeftMs,
     required this.blackTimeLeftMs,
@@ -32,6 +40,7 @@ class PerformanceLedgerEntry {
   Map<String, dynamic> toJson() => {
     'id': id,
     'timestamp': timestamp.toIso8601String(),
+    'source': source,
     'ratingCategory': ratingCategory,
     'gameMode': gameMode,
     'result': result,
@@ -40,6 +49,8 @@ class PerformanceLedgerEntry {
     'ratingSnapshot': ratingSnapshot,
     'fen': fen,
     'recentMoves': recentMoves,
+    'uciMoves': uciMoves,
+    'initialFen': initialFen,
     'isPlayerWhite': isPlayerWhite,
     'whiteTimeLeftMs': whiteTimeLeftMs,
     'blackTimeLeftMs': blackTimeLeftMs,
@@ -49,6 +60,9 @@ class PerformanceLedgerEntry {
     return PerformanceLedgerEntry(
       id: json['id'] as String,
       timestamp: DateTime.parse(json['timestamp'] as String),
+      source:
+          json['source'] as String? ??
+          PerformanceLedgerEntry.ratedBattlegroundSource,
       ratingCategory: json['ratingCategory'] as String,
       gameMode: json['gameMode'] as String? ?? 'classic',
       result: json['result'] as String,
@@ -59,6 +73,10 @@ class PerformanceLedgerEntry {
       recentMoves: (json['recentMoves'] as List<dynamic>? ?? const [])
           .map((move) => move.toString())
           .toList(),
+      uciMoves: (json['uciMoves'] as List<dynamic>? ?? const [])
+          .map((move) => move.toString())
+          .toList(),
+      initialFen: json['initialFen'] as String?,
       isPlayerWhite: json['isPlayerWhite'] as bool? ?? true,
       whiteTimeLeftMs: json['whiteTimeLeftMs'] as int? ?? 600000,
       blackTimeLeftMs: json['blackTimeLeftMs'] as int? ?? 600000,

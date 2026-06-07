@@ -1364,15 +1364,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   SavedGameUci dco_decode_saved_game_uci(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 6)
-      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    if (arr.length != 10)
+      throw Exception('unexpected arr length: expect 10 but see ${arr.length}');
     return SavedGameUci(
       recentMoves: dco_decode_list_String(arr[0]),
-      isPlayerWhite: dco_decode_bool(arr[1]),
-      result: dco_decode_String(arr[2]),
-      whiteTimeLeftMs: dco_decode_i_32(arr[3]),
-      blackTimeLeftMs: dco_decode_i_32(arr[4]),
-      ratingCategory: dco_decode_String(arr[5]),
+      uciMoves: dco_decode_list_String(arr[1]),
+      initialFen: dco_decode_opt_String(arr[2]),
+      finalFen: dco_decode_String(arr[3]),
+      isChess960: dco_decode_bool(arr[4]),
+      isPlayerWhite: dco_decode_bool(arr[5]),
+      result: dco_decode_String(arr[6]),
+      whiteTimeLeftMs: dco_decode_i_32(arr[7]),
+      blackTimeLeftMs: dco_decode_i_32(arr[8]),
+      ratingCategory: dco_decode_String(arr[9]),
     );
   }
 
@@ -1380,8 +1384,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ScotomaResult dco_decode_scotoma_result(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 8)
-      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    if (arr.length != 11)
+      throw Exception('unexpected arr length: expect 11 but see ${arr.length}');
     return ScotomaResult(
       diagonalRetreats: dco_decode_f_64(arr[0]),
       horizontalSwings: dco_decode_f_64(arr[1]),
@@ -1391,6 +1395,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       tunnelVision: dco_decode_f_64(arr[5]),
       pinnedPieces: dco_decode_f_64(arr[6]),
       kingSafety: dco_decode_f_64(arr[7]),
+      totalRatedGames: dco_decode_i_32(arr[8]),
+      analyzedGames: dco_decode_i_32(arr[9]),
+      skippedGames: dco_decode_i_32(arr[10]),
     );
   }
 
@@ -1853,6 +1860,10 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   SavedGameUci sse_decode_saved_game_uci(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_recentMoves = sse_decode_list_String(deserializer);
+    var var_uciMoves = sse_decode_list_String(deserializer);
+    var var_initialFen = sse_decode_opt_String(deserializer);
+    var var_finalFen = sse_decode_String(deserializer);
+    var var_isChess960 = sse_decode_bool(deserializer);
     var var_isPlayerWhite = sse_decode_bool(deserializer);
     var var_result = sse_decode_String(deserializer);
     var var_whiteTimeLeftMs = sse_decode_i_32(deserializer);
@@ -1860,6 +1871,10 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_ratingCategory = sse_decode_String(deserializer);
     return SavedGameUci(
       recentMoves: var_recentMoves,
+      uciMoves: var_uciMoves,
+      initialFen: var_initialFen,
+      finalFen: var_finalFen,
+      isChess960: var_isChess960,
       isPlayerWhite: var_isPlayerWhite,
       result: var_result,
       whiteTimeLeftMs: var_whiteTimeLeftMs,
@@ -1879,6 +1894,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_tunnelVision = sse_decode_f_64(deserializer);
     var var_pinnedPieces = sse_decode_f_64(deserializer);
     var var_kingSafety = sse_decode_f_64(deserializer);
+    var var_totalRatedGames = sse_decode_i_32(deserializer);
+    var var_analyzedGames = sse_decode_i_32(deserializer);
+    var var_skippedGames = sse_decode_i_32(deserializer);
     return ScotomaResult(
       diagonalRetreats: var_diagonalRetreats,
       horizontalSwings: var_horizontalSwings,
@@ -1888,6 +1906,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       tunnelVision: var_tunnelVision,
       pinnedPieces: var_pinnedPieces,
       kingSafety: var_kingSafety,
+      totalRatedGames: var_totalRatedGames,
+      analyzedGames: var_analyzedGames,
+      skippedGames: var_skippedGames,
     );
   }
 
@@ -2304,6 +2325,10 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   void sse_encode_saved_game_uci(SavedGameUci self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_list_String(self.recentMoves, serializer);
+    sse_encode_list_String(self.uciMoves, serializer);
+    sse_encode_opt_String(self.initialFen, serializer);
+    sse_encode_String(self.finalFen, serializer);
+    sse_encode_bool(self.isChess960, serializer);
     sse_encode_bool(self.isPlayerWhite, serializer);
     sse_encode_String(self.result, serializer);
     sse_encode_i_32(self.whiteTimeLeftMs, serializer);
@@ -2322,6 +2347,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_f_64(self.tunnelVision, serializer);
     sse_encode_f_64(self.pinnedPieces, serializer);
     sse_encode_f_64(self.kingSafety, serializer);
+    sse_encode_i_32(self.totalRatedGames, serializer);
+    sse_encode_i_32(self.analyzedGames, serializer);
+    sse_encode_i_32(self.skippedGames, serializer);
   }
 
   @protected

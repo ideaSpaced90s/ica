@@ -5,7 +5,8 @@ import '../data/assignment_repository.dart';
 import 'battleground_provider.dart';
 import 'puzzles_provider.dart';
 import 'tutorial_provider.dart';
-import 'package:kingslayer_chess/src/rust/api/assignment.dart' as rust_assignment;
+import 'package:kingslayer_chess/src/rust/api/assignment.dart'
+    as rust_assignment;
 import 'package:kingslayer_chess/src/rust/api/cognitive.dart' as rust_cognitive;
 
 class AssignmentNotifier extends StateNotifier<AssignmentState> {
@@ -13,17 +14,21 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
   final Ref ref;
 
   AssignmentNotifier(this._repository, this.ref)
-      : super(AssignmentState(lastResetDate: DateTime.now().subtract(const Duration(days: 1)))) {
+    : super(
+        AssignmentState(
+          lastResetDate: DateTime.now().subtract(const Duration(days: 1)),
+        ),
+      ) {
     _init();
   }
 
   Future<void> _init() async {
     final loaded = await _repository.loadAssignment();
     state = loaded;
-    
+
     // Check daily reset on load
     await checkDailyReset();
-    
+
     // Set up listeners for other providers to auto-complete tasks
     _setupListeners();
 
@@ -57,7 +62,9 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
       } else {
         if (next.game.gameOver && !(previous?.game.gameOver ?? false)) {
           // Check if today's arena task is completed
-          final arenaTaskIndex = state.dailyTasks.indexWhere((t) => t.taskType == DailyTaskType.arena);
+          final arenaTaskIndex = state.dailyTasks.indexWhere(
+            (t) => t.taskType == DailyTaskType.arena,
+          );
           if (arenaTaskIndex != -1) {
             final task = state.dailyTasks[arenaTaskIndex];
             if (next.activeOpponent?.id == task.targetId && !task.isCompleted) {
@@ -71,7 +78,9 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
     // Listen to puzzles provider
     ref.listen(puzzlesProvider, (previous, next) {
       if (state.isCalibrated) {
-        final puzzleTaskIndex = state.dailyTasks.indexWhere((t) => t.taskType == DailyTaskType.puzzle);
+        final puzzleTaskIndex = state.dailyTasks.indexWhere(
+          (t) => t.taskType == DailyTaskType.puzzle,
+        );
         if (puzzleTaskIndex != -1) {
           final task = state.dailyTasks[puzzleTaskIndex];
           // Check if solvedCount matches target value
@@ -88,14 +97,16 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
     // Listen to tutorial provider
     ref.listen(tutorialProvider, (previous, next) {
       if (state.isCalibrated) {
-        final tutorialTaskIndex = state.dailyTasks.indexWhere((t) => t.taskType == DailyTaskType.tutorial);
+        final tutorialTaskIndex = state.dailyTasks.indexWhere(
+          (t) => t.taskType == DailyTaskType.tutorial,
+        );
         if (tutorialTaskIndex != -1) {
           final task = state.dailyTasks[tutorialTaskIndex];
           final targetChapterId = int.tryParse(task.targetId);
-          if (targetChapterId != null && 
-              next.currentChapterIndex == targetChapterId && 
-              next.isChapterComplete && 
-              !(previous?.isChapterComplete ?? false) && 
+          if (targetChapterId != null &&
+              next.currentChapterIndex == targetChapterId &&
+              next.isChapterComplete &&
+              !(previous?.isChapterComplete ?? false) &&
               !task.isCompleted) {
             _markTaskCompleted(tutorialTaskIndex);
           }
@@ -126,18 +137,20 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
     final lastReset = state.lastResetDate;
 
     // Check if day changed
-    if (now.year != lastReset.year || now.month != lastReset.month || now.day != lastReset.day) {
+    if (now.year != lastReset.year ||
+        now.month != lastReset.month ||
+        now.day != lastReset.day) {
       // 1. Log yesterday's completion status
-      final dateKey = "${lastReset.year}-${lastReset.month.toString().padLeft(2, '0')}-${lastReset.day.toString().padLeft(2, '0')}";
-      final allDone = state.dailyTasks.isNotEmpty && state.dailyTasks.every((t) => t.isCompleted);
-      
+      final dateKey =
+          "${lastReset.year}-${lastReset.month.toString().padLeft(2, '0')}-${lastReset.day.toString().padLeft(2, '0')}";
+      final allDone =
+          state.dailyTasks.isNotEmpty &&
+          state.dailyTasks.every((t) => t.isCompleted);
+
       final updatedHistory = Map<String, bool>.from(state.historyLog);
       updatedHistory[dateKey] = allDone;
 
-      state = state.copyWith(
-        historyLog: updatedHistory,
-        lastResetDate: now,
-      );
+      state = state.copyWith(historyLog: updatedHistory, lastResetDate: now);
 
       // Reset submission flag weekly on Mondays
       if (now.weekday == DateTime.monday) {
@@ -150,16 +163,18 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
 
       // 2. Generate new tasks
       final bgState = ref.read(battlegroundProvider);
-      
+
       if (!state.isCalibrated) {
         // Calibration Mode Tasks
         state = state.copyWith(
           calibrationGamesPlayed: bgState.totalRatedGamesCount,
-          wisdomMessage: "Apprentice, complete 10 rated games to calibrate your strength. Only then can I structure your daily training.",
+          wisdomMessage:
+              "Apprentice, complete 10 rated games to calibrate your strength. Only then can I structure your daily training.",
           dailyTasks: [
             DailyTask(
               title: "Calibrate Strength",
-              description: "Complete 10 rated games in Battleground to calibrate ELO and scotomas.",
+              description:
+                  "Complete 10 rated games in Battleground to calibrate ELO and scotomas.",
               taskType: DailyTaskType.arena,
               targetId: "calibration",
               targetValue: 10,
@@ -178,18 +193,24 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
     final bgState = ref.read(battlegroundProvider);
     final tutorialState = ref.read(tutorialProvider);
 
-    final scotomaInput = bgState.cachedScotoma ?? const rust_cognitive.ScotomaResult(
-      diagonalRetreats: 0.15,
-      horizontalSwings: 0.15,
-      knightForks: 0.15,
-      timePanic: 0.15,
-      materialGreed: 0.15,
-      tunnelVision: 0.15,
-      pinnedPieces: 0.15,
-      kingSafety: 0.15,
-    );
+    final scotomaInput =
+        bgState.cachedScotoma ??
+        const rust_cognitive.ScotomaResult(
+          diagonalRetreats: 0.15,
+          horizontalSwings: 0.15,
+          knightForks: 0.15,
+          timePanic: 0.15,
+          materialGreed: 0.15,
+          tunnelVision: 0.15,
+          pinnedPieces: 0.15,
+          kingSafety: 0.15,
+          totalRatedGames: 0,
+          analyzedGames: 0,
+          skippedGames: 0,
+        );
 
-    final completedTutorials = tutorialState.progress.completedChapters.toList();
+    final completedTutorials = tutorialState.progress.completedChapters
+        .toList();
 
     // Call Rust FFI logic (with test fallback)
     late final rust_assignment.ChanakyaRoutine routine;
@@ -252,35 +273,37 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
       );
     }).toList();
 
-    final isRevision = state.goalDeadline != null &&
+    final isRevision =
+        state.goalDeadline != null &&
         DateTime.now().isAfter(state.goalDeadline!) &&
         elo < state.goalElo;
 
     String wisdom = routine.wisdomMessage;
 
     if (isRevision) {
-      final tutorialIndex = dailyTasks.indexWhere((t) => t.taskType == DailyTaskType.tutorial);
+      final tutorialIndex = dailyTasks.indexWhere(
+        (t) => t.taskType == DailyTaskType.tutorial,
+      );
       if (tutorialIndex != -1) {
         final worstAxis = _getWorstScotomaAxis(scotomaInput);
         final chapterId = _mapScotomaToBasicChapter(worstAxis);
         final chapterTitle = _getChapterTitleText(chapterId);
-        
+
         dailyTasks[tutorialIndex] = DailyTask(
           title: "Basic Revision",
-          description: "Your target deadline has passed and your ELO is below target. GM Chanakya demands you revise Chapter $chapterId: '$chapterTitle'.",
+          description:
+              "Your target deadline has passed and your ELO is below target. GM Chanakya demands you revise Chapter $chapterId: '$chapterTitle'.",
           taskType: DailyTaskType.tutorial,
           targetId: chapterId.toString(),
           targetValue: 1,
           isCompleted: false,
         );
       }
-      wisdom = "Apprentice, your target deadline has passed but you remain below the target ELO of ${state.goalElo}. I have revised your syllabus to focus on basic moves revision. Repetition is the mother of wisdom.";
+      wisdom =
+          "Apprentice, your target deadline has passed but you remain below the target ELO of ${state.goalElo}. I have revised your syllabus to focus on basic moves revision. Repetition is the mother of wisdom.";
     }
 
-    state = state.copyWith(
-      dailyTasks: dailyTasks,
-      wisdomMessage: wisdom,
-    );
+    state = state.copyWith(dailyTasks: dailyTasks, wisdomMessage: wisdom);
   }
 
   String _getWorstScotomaAxis(rust_cognitive.ScotomaResult scotoma) {
@@ -341,16 +364,26 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
 
   String _getChapterTitleText(int chap) {
     switch (chap) {
-      case 1: return "Board Introduction";
-      case 2: return "Coordinates & Tiles";
-      case 3: return "Pawn Movement";
-      case 4: return "Rook Movement";
-      case 5: return "Bishop Movement";
-      case 6: return "Knight Movement";
-      case 7: return "Queen Movement";
-      case 8: return "King Movement";
-      case 9: return "Capturing Pieces";
-      default: return "Basic Moves";
+      case 1:
+        return "Board Introduction";
+      case 2:
+        return "Coordinates & Tiles";
+      case 3:
+        return "Pawn Movement";
+      case 4:
+        return "Rook Movement";
+      case 5:
+        return "Bishop Movement";
+      case 6:
+        return "Knight Movement";
+      case 7:
+        return "Queen Movement";
+      case 8:
+        return "King Movement";
+      case 9:
+        return "Capturing Pieces";
+      default:
+        return "Basic Moves";
     }
   }
 
@@ -358,7 +391,8 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
     state = state.copyWith(
       goalElo: targetElo,
       startElo: ref.read(battlegroundProvider).consolidatedRating,
-      goalDeadline: state.goalDeadline ?? DateTime.now().add(const Duration(days: 30)),
+      goalDeadline:
+          state.goalDeadline ?? DateTime.now().add(const Duration(days: 30)),
     );
     await _saveState();
     final bgState = ref.read(battlegroundProvider);
@@ -366,9 +400,7 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
   }
 
   Future<void> setupGoalDeadline(DateTime deadline) async {
-    state = state.copyWith(
-      goalDeadline: deadline,
-    );
+    state = state.copyWith(goalDeadline: deadline);
     await _saveState();
     final bgState = ref.read(battlegroundProvider);
     await generateActiveTasks(bgState.consolidatedRating);
@@ -378,22 +410,28 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
     state = state.copyWith(
       weeklyReviewSubmitted: true,
       submittedGameId: gameId,
-      weeklyReport: "GM Chanakya is reviewing your game records... Please wait.",
+      weeklyReport:
+          "GM Chanakya is reviewing your game records... Please wait.",
     );
     await _saveState();
 
     try {
       final bgState = ref.read(battlegroundProvider);
-      final scotomaInput = bgState.cachedScotoma ?? const rust_cognitive.ScotomaResult(
-        diagonalRetreats: 0.15,
-        horizontalSwings: 0.15,
-        knightForks: 0.15,
-        timePanic: 0.15,
-        materialGreed: 0.15,
-        tunnelVision: 0.15,
-        pinnedPieces: 0.15,
-        kingSafety: 0.15,
-      );
+      final scotomaInput =
+          bgState.cachedScotoma ??
+          const rust_cognitive.ScotomaResult(
+            diagonalRetreats: 0.15,
+            horizontalSwings: 0.15,
+            knightForks: 0.15,
+            timePanic: 0.15,
+            materialGreed: 0.15,
+            tunnelVision: 0.15,
+            pinnedPieces: 0.15,
+            kingSafety: 0.15,
+            totalRatedGames: 0,
+            analyzedGames: 0,
+            skippedGames: 0,
+          );
 
       // 1. Call Rust PGN analyzer
       final summary = rust_assignment.analyzeSubmittedGameRust(
@@ -404,9 +442,7 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
       state = state.copyWith(weeklyReport: summary.fallbackReport);
       await _saveState();
     } catch (e) {
-      state = state.copyWith(
-        weeklyReport: "Failed to generate review: $e",
-      );
+      state = state.copyWith(weeklyReport: "Failed to generate review: $e");
       await _saveState();
     }
   }
@@ -432,7 +468,8 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
 
 final assignmentRepositoryProvider = Provider((ref) => AssignmentRepository());
 
-final assignmentProvider = StateNotifierProvider<AssignmentNotifier, AssignmentState>((ref) {
-  final repository = ref.watch(assignmentRepositoryProvider);
-  return AssignmentNotifier(repository, ref);
-});
+final assignmentProvider =
+    StateNotifierProvider<AssignmentNotifier, AssignmentState>((ref) {
+      final repository = ref.watch(assignmentRepositoryProvider);
+      return AssignmentNotifier(repository, ref);
+    });

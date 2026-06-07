@@ -273,7 +273,10 @@ class ChessGame {
   }
 
   List<chess_lib.Move> generateMoves({String? square}) {
-    return _chess.generate_moves({'square': square});
+    if (square != null) {
+      return _chess.generate_moves({'square': square});
+    }
+    return _chess.generate_moves();
   }
 
   void _applyChess960CastlingDestinations(List<String> destinations, String fromSquare) {

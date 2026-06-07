@@ -1339,6 +1339,10 @@ impl SseDecode for crate::api::cognitive::SavedGameUci {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_recentMoves = <Vec<String>>::sse_decode(deserializer);
+        let mut var_uciMoves = <Vec<String>>::sse_decode(deserializer);
+        let mut var_initialFen = <Option<String>>::sse_decode(deserializer);
+        let mut var_finalFen = <String>::sse_decode(deserializer);
+        let mut var_isChess960 = <bool>::sse_decode(deserializer);
         let mut var_isPlayerWhite = <bool>::sse_decode(deserializer);
         let mut var_result = <String>::sse_decode(deserializer);
         let mut var_whiteTimeLeftMs = <i32>::sse_decode(deserializer);
@@ -1346,6 +1350,10 @@ impl SseDecode for crate::api::cognitive::SavedGameUci {
         let mut var_ratingCategory = <String>::sse_decode(deserializer);
         return crate::api::cognitive::SavedGameUci {
             recent_moves: var_recentMoves,
+            uci_moves: var_uciMoves,
+            initial_fen: var_initialFen,
+            final_fen: var_finalFen,
+            is_chess960: var_isChess960,
             is_player_white: var_isPlayerWhite,
             result: var_result,
             white_time_left_ms: var_whiteTimeLeftMs,
@@ -1366,6 +1374,9 @@ impl SseDecode for crate::api::cognitive::ScotomaResult {
         let mut var_tunnelVision = <f64>::sse_decode(deserializer);
         let mut var_pinnedPieces = <f64>::sse_decode(deserializer);
         let mut var_kingSafety = <f64>::sse_decode(deserializer);
+        let mut var_totalRatedGames = <i32>::sse_decode(deserializer);
+        let mut var_analyzedGames = <i32>::sse_decode(deserializer);
+        let mut var_skippedGames = <i32>::sse_decode(deserializer);
         return crate::api::cognitive::ScotomaResult {
             diagonal_retreats: var_diagonalRetreats,
             horizontal_swings: var_horizontalSwings,
@@ -1375,6 +1386,9 @@ impl SseDecode for crate::api::cognitive::ScotomaResult {
             tunnel_vision: var_tunnelVision,
             pinned_pieces: var_pinnedPieces,
             king_safety: var_kingSafety,
+            total_rated_games: var_totalRatedGames,
+            analyzed_games: var_analyzedGames,
+            skipped_games: var_skippedGames,
         };
     }
 }
@@ -1776,6 +1790,10 @@ impl flutter_rust_bridge::IntoDart for crate::api::cognitive::SavedGameUci {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
             self.recent_moves.into_into_dart().into_dart(),
+            self.uci_moves.into_into_dart().into_dart(),
+            self.initial_fen.into_into_dart().into_dart(),
+            self.final_fen.into_into_dart().into_dart(),
+            self.is_chess960.into_into_dart().into_dart(),
             self.is_player_white.into_into_dart().into_dart(),
             self.result.into_into_dart().into_dart(),
             self.white_time_left_ms.into_into_dart().into_dart(),
@@ -1808,6 +1826,9 @@ impl flutter_rust_bridge::IntoDart for crate::api::cognitive::ScotomaResult {
             self.tunnel_vision.into_into_dart().into_dart(),
             self.pinned_pieces.into_into_dart().into_dart(),
             self.king_safety.into_into_dart().into_dart(),
+            self.total_rated_games.into_into_dart().into_dart(),
+            self.analyzed_games.into_into_dart().into_dart(),
+            self.skipped_games.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -2126,6 +2147,10 @@ impl SseEncode for crate::api::cognitive::SavedGameUci {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <Vec<String>>::sse_encode(self.recent_moves, serializer);
+        <Vec<String>>::sse_encode(self.uci_moves, serializer);
+        <Option<String>>::sse_encode(self.initial_fen, serializer);
+        <String>::sse_encode(self.final_fen, serializer);
+        <bool>::sse_encode(self.is_chess960, serializer);
         <bool>::sse_encode(self.is_player_white, serializer);
         <String>::sse_encode(self.result, serializer);
         <i32>::sse_encode(self.white_time_left_ms, serializer);
@@ -2145,6 +2170,9 @@ impl SseEncode for crate::api::cognitive::ScotomaResult {
         <f64>::sse_encode(self.tunnel_vision, serializer);
         <f64>::sse_encode(self.pinned_pieces, serializer);
         <f64>::sse_encode(self.king_safety, serializer);
+        <i32>::sse_encode(self.total_rated_games, serializer);
+        <i32>::sse_encode(self.analyzed_games, serializer);
+        <i32>::sse_encode(self.skipped_games, serializer);
     }
 }
 

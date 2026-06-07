@@ -423,6 +423,9 @@ mod tests {
             tunnel_vision: 0.4,
             pinned_pieces: 0.5,
             king_safety: 0.15,
+            total_rated_games: 10,
+            analyzed_games: 10,
+            skipped_games: 0,
         };
         let (name, score) = get_worst_scotoma(&scotoma);
         assert_eq!(name, "knight_forks");
@@ -468,6 +471,9 @@ mod tests {
             tunnel_vision: 0.1,
             pinned_pieces: 0.1,
             king_safety: 0.1,
+            total_rated_games: 10,
+            analyzed_games: 10,
+            skipped_games: 0,
         };
         let summary = analyze_submitted_game_rust(pgn, scotoma);
         assert_eq!(summary.blunders_found, 2); // '??' and '?' count as blunders
@@ -476,4 +482,3 @@ mod tests {
         assert!(summary.fallback_report.contains("GM CHANAKYA'S WEEKLY REPORT"));
     }
 }
-

@@ -14,6 +14,10 @@ ScotomaResult analyzeScotoma({required List<SavedGameUci> games}) =>
 
 class SavedGameUci {
   final List<String> recentMoves;
+  final List<String> uciMoves;
+  final String? initialFen;
+  final String finalFen;
+  final bool isChess960;
   final bool isPlayerWhite;
   final String result;
   final int whiteTimeLeftMs;
@@ -22,6 +26,10 @@ class SavedGameUci {
 
   const SavedGameUci({
     required this.recentMoves,
+    required this.uciMoves,
+    this.initialFen,
+    required this.finalFen,
+    required this.isChess960,
     required this.isPlayerWhite,
     required this.result,
     required this.whiteTimeLeftMs,
@@ -32,6 +40,10 @@ class SavedGameUci {
   @override
   int get hashCode =>
       recentMoves.hashCode ^
+      uciMoves.hashCode ^
+      initialFen.hashCode ^
+      finalFen.hashCode ^
+      isChess960.hashCode ^
       isPlayerWhite.hashCode ^
       result.hashCode ^
       whiteTimeLeftMs.hashCode ^
@@ -44,6 +56,10 @@ class SavedGameUci {
       other is SavedGameUci &&
           runtimeType == other.runtimeType &&
           recentMoves == other.recentMoves &&
+          uciMoves == other.uciMoves &&
+          initialFen == other.initialFen &&
+          finalFen == other.finalFen &&
+          isChess960 == other.isChess960 &&
           isPlayerWhite == other.isPlayerWhite &&
           result == other.result &&
           whiteTimeLeftMs == other.whiteTimeLeftMs &&
@@ -60,6 +76,9 @@ class ScotomaResult {
   final double tunnelVision;
   final double pinnedPieces;
   final double kingSafety;
+  final int totalRatedGames;
+  final int analyzedGames;
+  final int skippedGames;
 
   const ScotomaResult({
     required this.diagonalRetreats,
@@ -70,6 +89,9 @@ class ScotomaResult {
     required this.tunnelVision,
     required this.pinnedPieces,
     required this.kingSafety,
+    required this.totalRatedGames,
+    required this.analyzedGames,
+    required this.skippedGames,
   });
 
   @override
@@ -81,7 +103,10 @@ class ScotomaResult {
       materialGreed.hashCode ^
       tunnelVision.hashCode ^
       pinnedPieces.hashCode ^
-      kingSafety.hashCode;
+      kingSafety.hashCode ^
+      totalRatedGames.hashCode ^
+      analyzedGames.hashCode ^
+      skippedGames.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -95,5 +120,8 @@ class ScotomaResult {
           materialGreed == other.materialGreed &&
           tunnelVision == other.tunnelVision &&
           pinnedPieces == other.pinnedPieces &&
-          kingSafety == other.kingSafety;
+          kingSafety == other.kingSafety &&
+          totalRatedGames == other.totalRatedGames &&
+          analyzedGames == other.analyzedGames &&
+          skippedGames == other.skippedGames;
 }

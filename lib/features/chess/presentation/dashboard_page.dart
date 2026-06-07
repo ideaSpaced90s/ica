@@ -23,59 +23,57 @@ class DashboardPage extends ConsumerWidget {
     final state = ref.watch(chessProvider);
     final bgState = ref.watch(battlegroundProvider);
     final screenWidth = MediaQuery.of(context).size.width;
-    final isMobile = screenWidth < 900;
+    final isMobile =
+        screenWidth <
+        1100; // Increased width threshold for better desktop layout spacing
 
     // LEFT COLUMN: Avatar, Master Standing, ELO Progression
     final Widget leftColumn = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Center(
-          child: GestureDetector(
-            onTap: () => showProfileCustomizationOverlay(context, ref),
-            child: Container(
-              width: 140,
-              height: 140,
-              margin: const EdgeInsets.only(bottom: 24),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: ScholarlyTheme.accentBlue.withValues(alpha: 0.8),
-                  width: 4,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: ScholarlyTheme.accentBlue.withValues(alpha: 0.25),
-                    blurRadius: 24,
-                    spreadRadius: 4,
+        if (isMobile) ...[
+          Center(
+            child: GestureDetector(
+              onTap: () => showProfileCustomizationOverlay(context, ref),
+              child: Container(
+                width: 140,
+                height: 140,
+                margin: const EdgeInsets.only(bottom: 24),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: ScholarlyTheme.accentBlue.withValues(alpha: 0.8),
+                    width: 4,
                   ),
-                ],
-              ),
-              child: ClipOval(
-                child: state.userAvatarPath.startsWith('assets/')
-                    ? Image.asset(
-                        state.userAvatarPath,
-                        fit: BoxFit.cover,
-                      )
-                    : Image.file(
-                        File(state.userAvatarPath),
-                        fit: BoxFit.cover,
-                      ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: ScholarlyTheme.accentBlue.withValues(alpha: 0.25),
+                      blurRadius: 24,
+                      spreadRadius: 4,
+                    ),
+                  ],
+                ),
+                child: ClipOval(
+                  child: state.userAvatarPath.startsWith('assets/')
+                      ? Image.asset(state.userAvatarPath, fit: BoxFit.cover)
+                      : Image.file(
+                          File(state.userAvatarPath),
+                          fit: BoxFit.cover,
+                        ),
+                ),
               ),
             ),
           ),
-        ),
-        _buildMasterCard(state, bgState),
-        const SizedBox(height: 32),
+          _buildMasterCard(state, bgState),
+          const SizedBox(height: 32),
+        ],
         _buildSectionHeader('30D', icon: Icons.calendar_today_rounded),
         const SizedBox(height: 16),
         const DominanceHeatmap(),
         const SizedBox(height: 32),
         _buildSectionHeader('ELO PROGRESS', icon: Icons.show_chart_rounded),
         const SizedBox(height: 16),
-        const SizedBox(
-          height: 240,
-          child: EloAscentChart(),
-        ),
+        const SizedBox(height: 240, child: EloAscentChart()),
       ],
     );
 
@@ -120,10 +118,14 @@ class DashboardPage extends ConsumerWidget {
               bgState.rapidGames960,
               bgState.rapidDominance,
             ),
+            _buildGameModesCard(),
           ],
         ),
         const SizedBox(height: 32),
-        _buildSectionHeader('RECENT WINS', icon: Icons.workspace_premium_rounded),
+        _buildSectionHeader(
+          'RECENT WINS',
+          icon: Icons.workspace_premium_rounded,
+        ),
         const SizedBox(height: 16),
         _buildRecentMasterpieces(state),
         const SizedBox(height: 32),
@@ -148,20 +150,13 @@ class DashboardPage extends ConsumerWidget {
       ],
     );
 
-    // RIGHT COLUMN: Tactical Persona, Modes, Heatmap
-    final Widget rightColumn = Column(
+    // INSIGHT SECTIONS: Tactical Persona, Modes, Heatmap
+    final Widget insightSections = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildSectionHeader('PLAYSTYLE', icon: Icons.radar_rounded),
         const SizedBox(height: 16),
         const TacticalRadarChart(),
-        const SizedBox(height: 32),
-        _buildSectionHeader('GAME MODES', icon: Icons.pie_chart_rounded),
-        const SizedBox(height: 16),
-        const SizedBox(
-          height: 180,
-          child: ModeDistributionChart(),
-        ),
         const SizedBox(height: 32),
         _buildSectionHeader('SCOTOMA', icon: Icons.visibility_off_rounded),
         const SizedBox(height: 16),
@@ -185,20 +180,238 @@ class DashboardPage extends ConsumerWidget {
                     const SizedBox(height: 32),
                     centerColumn,
                     const SizedBox(height: 32),
-                    rightColumn,
+                    insightSections,
                   ],
                 )
-              : Row(
+              : Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SizedBox(width: 320, child: leftColumn),
-                    const SizedBox(width: 32),
-                    Expanded(child: centerColumn),
-                    const SizedBox(width: 32),
-                    SizedBox(width: 320, child: rightColumn),
+                    _buildHeaderSection(context, ref, state, bgState),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(width: 320, child: leftColumn),
+                        const SizedBox(width: 32),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              centerColumn,
+                              const SizedBox(height: 32),
+                              insightSections,
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildHeaderSection(
+    BuildContext context,
+    WidgetRef ref,
+    ChessState state,
+    BattlegroundState bgState,
+  ) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 32),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.6),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final profile = Row(
+            children: [
+              GestureDetector(
+                onTap: () => showProfileCustomizationOverlay(context, ref),
+                child: Container(
+                  width: 90,
+                  height: 90,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: ScholarlyTheme.accentBlue.withValues(alpha: 0.8),
+                      width: 3.5,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: ScholarlyTheme.accentBlue.withValues(alpha: 0.2),
+                        blurRadius: 16,
+                      ),
+                    ],
+                  ),
+                  child: ClipOval(
+                    child: state.userAvatarPath.startsWith('assets/')
+                        ? Image.asset(state.userAvatarPath, fit: BoxFit.cover)
+                        : Image.file(
+                            File(state.userAvatarPath),
+                            fit: BoxFit.cover,
+                          ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 24),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'WELCOME BACK,',
+                      style: GoogleFonts.outfit(
+                        color: ScholarlyTheme.textMuted,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 2.0,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      state.userName.toUpperCase(),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.outfit(
+                        color: ScholarlyTheme.textPrimary,
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      '“The chess board is the world, the pieces are the phenomena of the universe...”',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(
+                        color: ScholarlyTheme.textSubtle,
+                        fontSize: 11,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+
+          final metrics = Wrap(
+            spacing: 16,
+            runSpacing: 12,
+            alignment: WrapAlignment.end,
+            children: [
+              _buildHeaderMetricCard(
+                title: 'CONSOLIDATED ELO',
+                value: '${bgState.consolidatedRating}',
+                color: ScholarlyTheme.accentBlue,
+                icon: Icons.emoji_events_rounded,
+              ),
+              _buildHeaderMetricCard(
+                title: 'TOTAL MATCHES',
+                value: '${bgState.totalRatedGamesCount}',
+                color: ScholarlyTheme.accentGold,
+                icon: Icons.sports_esports_rounded,
+              ),
+              if (bgState.totalWinningStreak > 0)
+                _buildHeaderMetricCard(
+                  title: 'WIN STREAK',
+                  value: '${bgState.totalWinningStreak}',
+                  color: Colors.deepOrangeAccent,
+                  icon: Icons.local_fire_department_rounded,
+                ),
+            ],
+          );
+
+          if (constraints.maxWidth < 1160) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [profile, const SizedBox(height: 20), metrics],
+            );
+          }
+
+          return Row(
+            children: [
+              Expanded(child: profile),
+              const SizedBox(width: 32),
+              metrics,
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildHeaderMetricCard({
+    required String title,
+    required String value,
+    required Color color,
+    required IconData icon,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.8),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.3), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(width: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                title,
+                style: GoogleFonts.inter(
+                  color: ScholarlyTheme.textMuted,
+                  fontSize: 9,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                value,
+                style: GoogleFonts.outfit(
+                  color: ScholarlyTheme.textPrimary,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -208,12 +421,14 @@ class DashboardPage extends ConsumerWidget {
     final blitzCount = bgState.blitzGamesClassic + bgState.blitzGames960;
     final rapidCount = bgState.rapidGamesClassic + bgState.rapidGames960;
     final totalCount = bulletCount + blitzCount + rapidCount;
-    
+
     double avgDominance = 0.0;
     if (totalCount > 0) {
-      avgDominance = (bgState.bulletDominance * bulletCount + 
-                      bgState.blitzDominance * blitzCount + 
-                      bgState.rapidDominance * rapidCount) / totalCount;
+      avgDominance =
+          (bgState.bulletDominance * bulletCount +
+              bgState.blitzDominance * blitzCount +
+              bgState.rapidDominance * rapidCount) /
+          totalCount;
     }
 
     return Container(
@@ -245,15 +460,24 @@ class DashboardPage extends ConsumerWidget {
               ),
               if (bgState.totalWinningStreak > 0)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.2),
+                    ),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.local_fire_department_rounded, color: Colors.deepOrangeAccent, size: 14),
+                      const Icon(
+                        Icons.local_fire_department_rounded,
+                        color: Colors.deepOrangeAccent,
+                        size: 14,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         'STREAK: ${bgState.totalWinningStreak}',
@@ -274,7 +498,10 @@ class DashboardPage extends ConsumerWidget {
             children: [
               _buildBigStat('ELO', '${bgState.consolidatedRating}'),
               _buildBigStat('MATCHES', '${bgState.totalRatedGamesCount}'),
-              _buildBigStat('DOM', '${avgDominance >= 0 ? '+' : ''}${avgDominance.toStringAsFixed(1)}'),
+              _buildBigStat(
+                'DOM',
+                '${avgDominance >= 0 ? '+' : ''}${avgDominance.toStringAsFixed(1)}',
+              ),
             ],
           ),
         ],
@@ -307,12 +534,20 @@ class DashboardPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildTierCard(String title, IconData icon, int elo, int streak, int classic, int nineSixty, double dominance) {
+  Widget _buildTierCard(
+    String title,
+    IconData icon,
+    int elo,
+    int streak,
+    int classic,
+    int nineSixty,
+    double dominance,
+  ) {
     final Color accentColor = title.contains('BULLET')
         ? Colors.cyan
         : title.contains('BLITZ')
-            ? Colors.orangeAccent
-            : ScholarlyTheme.accentBlue;
+        ? Colors.orangeAccent
+        : ScholarlyTheme.accentBlue;
 
     return JuicyGlassCard(
       borderRadius: 20,
@@ -362,7 +597,11 @@ class DashboardPage extends ConsumerWidget {
                     if (streak > 0)
                       Row(
                         children: [
-                          const Icon(Icons.local_fire_department_rounded, color: Colors.deepOrangeAccent, size: 10),
+                          const Icon(
+                            Icons.local_fire_department_rounded,
+                            color: Colors.deepOrangeAccent,
+                            size: 10,
+                          ),
                           Text(
                             ' $streak',
                             style: GoogleFonts.jetBrainsMono(
@@ -388,9 +627,13 @@ class DashboardPage extends ConsumerWidget {
                     ),
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
-                        color: (dominance >= 0 ? Colors.green : Colors.red).withValues(alpha: 0.1),
+                        color: (dominance >= 0 ? Colors.green : Colors.red)
+                            .withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
@@ -425,16 +668,64 @@ class DashboardPage extends ConsumerWidget {
     return JuicySectionHeader(title: title, icon: icon);
   }
 
+  Widget _buildGameModesCard() {
+    return JuicyGlassCard(
+      borderRadius: 20,
+      borderColor: const Color(0xFF06B6D4),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF06B6D4).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.pie_chart_rounded,
+                  color: Color(0xFF06B6D4),
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'GAME MODES',
+                style: GoogleFonts.outfit(
+                  color: ScholarlyTheme.textPrimary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.6,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          const Expanded(child: ModeDistributionChart()),
+        ],
+      ),
+    );
+  }
+
   Widget _buildRecentMasterpieces(ChessState state) {
-    final ratedWins = state.savedGames.where((s) => s.isRatedMode && s.result == 'W').take(5).toList();
-    
+    final ratedWins = state.savedGames
+        .where((s) => s.isRatedMode && s.result == 'W')
+        .take(5)
+        .toList();
+
     if (ratedWins.isEmpty) {
       return JuicyGlassCard(
         padding: const EdgeInsets.symmetric(vertical: 24),
         borderRadius: 16,
         child: Center(
-          child: Text('No rated victories recorded yet.', 
-            style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 12)
+          child: Text(
+            'No rated victories recorded yet.',
+            style: GoogleFonts.inter(
+              color: ScholarlyTheme.textMuted,
+              fontSize: 12,
+            ),
           ),
         ),
       );
@@ -456,7 +747,11 @@ class DashboardPage extends ConsumerWidget {
               borderRadius: 16,
               child: Row(
                 children: [
-                  MiniBoardPreview(fen: game.fen, size: 70, isFlipped: !game.isPlayerWhite),
+                  MiniBoardPreview(
+                    fen: game.fen,
+                    size: 70,
+                    isFlipped: !game.isPlayerWhite,
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -465,23 +760,40 @@ class DashboardPage extends ConsumerWidget {
                       children: [
                         Text(
                           game.ratingCategory?.toUpperCase() ?? 'MATCH',
-                          style: GoogleFonts.inter(color: ScholarlyTheme.accentBlue, fontSize: 9, fontWeight: FontWeight.w900),
+                          style: GoogleFonts.inter(
+                            color: ScholarlyTheme.accentBlue,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w900,
+                          ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           DateFormat('MMM d').format(game.savedAt),
-                          style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 12, fontWeight: FontWeight.bold),
+                          style: GoogleFonts.inter(
+                            color: ScholarlyTheme.textPrimary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         const SizedBox(height: 6),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
-                            color: ScholarlyTheme.accentGold.withValues(alpha: 0.1),
+                            color: ScholarlyTheme.accentGold.withValues(
+                              alpha: 0.1,
+                            ),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
                             'DOM: ${game.dominanceSnapshot?.toStringAsFixed(1) ?? "0.0"}',
-                            style: GoogleFonts.jetBrainsMono(color: ScholarlyTheme.accentGold, fontSize: 9, fontWeight: FontWeight.bold),
+                            style: GoogleFonts.jetBrainsMono(
+                              color: ScholarlyTheme.accentGold,
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ],
@@ -508,7 +820,9 @@ void exitToDashboardWithSidebar(BuildContext context, WidgetRef ref) {
       final currentIndex = container.read(mobileNavIndexProvider);
       if (currentIndex == 1) {
         final arenaState = container.read(arenaProvider);
-        if (arenaState.recentMoves.isNotEmpty && !arenaState.game.gameOver && !arenaState.isPaused) {
+        if (arenaState.recentMoves.isNotEmpty &&
+            !arenaState.game.gameOver &&
+            !arenaState.isPaused) {
           container.read(arenaProvider.notifier).togglePause();
         }
       }
@@ -519,7 +833,9 @@ void exitToDashboardWithSidebar(BuildContext context, WidgetRef ref) {
         final currentIndex = ref.read(mobileNavIndexProvider);
         if (currentIndex == 1) {
           final arenaState = ref.read(arenaProvider);
-          if (arenaState.recentMoves.isNotEmpty && !arenaState.game.gameOver && !arenaState.isPaused) {
+          if (arenaState.recentMoves.isNotEmpty &&
+              !arenaState.game.gameOver &&
+              !arenaState.isPaused) {
             ref.read(arenaProvider.notifier).togglePause();
           }
         }
@@ -531,4 +847,3 @@ void exitToDashboardWithSidebar(BuildContext context, WidgetRef ref) {
     }
   });
 }
-
