@@ -971,7 +971,7 @@ class _GameLibraryCardWidgetState extends State<GameLibraryCardWidget>
             onLongPress: _toggleDeleteBin,
             onTap: () {
               if (!_showDeleteBin) {
-                widget.notifier.loadPgnRecord(widget.record);
+                widget.notifier.loadPgnRecord(widget.record, widget.index);
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -1040,7 +1040,7 @@ class _GameLibraryCardWidgetState extends State<GameLibraryCardWidget>
                       icon: const Icon(Icons.folder_open_rounded, color: ScholarlyTheme.accentBlue, size: 20),
                       tooltip: 'Open Study',
                       onPressed: () {
-                        widget.notifier.loadPgnRecord(widget.record);
+                        widget.notifier.loadPgnRecord(widget.record, widget.index);
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(

@@ -366,7 +366,6 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
     StudyLabNotifier notifier,
     double boardSize,
   ) {
-    final engineState = ref.watch(analysisEngineControllerProvider);
     final activeIndex = state.currentNodeIndex;
     final bool hasActiveNode = activeIndex != null && activeIndex < state.nodes.length;
     final activeNode = hasActiveNode ? state.nodes[activeIndex] : null;
@@ -451,16 +450,6 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
                         ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
                       },
                       child: const Icon(Icons.flip_camera_android_rounded),
-                    ),
-                    _CompactBoxButton(
-                      tooltip: 'Toggle Engine',
-                      activeColor: const Color(0xFFFFD740), // Vibrant Amber
-                      isActive: engineState.isEngineOn,
-                      onTap: () {
-                        ref.read(analysisEngineControllerProvider.notifier).toggleEngine(!engineState.isEngineOn, state.activeFen);
-                        ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiToggle);
-                      },
-                      child: const Icon(Icons.bolt_rounded),
                     ),
                     _CompactBoxButton(
                       tooltip: 'Reset Position',
@@ -663,6 +652,8 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
 
   Widget _buildActionBar(BuildContext context, StudyLabState state, StudyLabNotifier notifier) {
     final isDirty = state.isDirty && state.nodes.isNotEmpty;
+    final engineState = ref.watch(analysisEngineControllerProvider);
+
     return JuicyGlassCard(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       borderRadius: 16,
@@ -705,9 +696,24 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
                     size: 26,
                   ),
                   onPressed: isDirty
-                      ? () {
+                      ? () async {
                           ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                          _showSaveStudyDialog(context, notifier, state);
+                          if (state.libraryIndex != null) {
+                            final success = await notifier.saveExistingStudyInLibrary(state.libraryIndex!);
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    success ? 'Study saved successfully!' : 'Failed to save study.',
+                                    style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                                  ),
+                                  backgroundColor: success ? const Color(0xFF00E676) : Colors.redAccent,
+                                ),
+                              );
+                            }
+                          } else {
+                            _showSaveStudyDialog(context, notifier, state);
+                          }
                         }
                       : null,
                   tooltip: isDirty ? 'Save Study (Unsaved Changes)' : 'Save Study (No Changes)',
@@ -726,6 +732,14 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
                     ),
                   ),
               ],
+            ),
+            // --- Toggle Engine / Flash Button ---
+            FlashingEngineButton(
+              isEngineOn: engineState.isEngineOn,
+              onTap: () {
+                ref.read(analysisEngineControllerProvider.notifier).toggleEngine(!engineState.isEngineOn, state.activeFen);
+                ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiToggle);
+              },
             ),
             IconButton(
               icon: const Icon(Icons.sports_esports_rounded, color: Colors.purpleAccent, size: 26),
@@ -793,7 +807,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
               ),
               const SizedBox(width: 12),
               Text(
-                'Save Study',
+                'Save to Game Library',
                 style: GoogleFonts.outfit(
                   fontWeight: FontWeight.bold,
                   color: ScholarlyTheme.textPrimary,
@@ -807,7 +821,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Give your study a name to save it to the library.',
+                'Give your progress a title to save it in the game library.',
                 style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 12),
               ),
               const SizedBox(height: 12),
@@ -940,12 +954,24 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
-              onPressed: () {
+              onPressed: () async {
                 Navigator.pop(ctx);
-                // Show name dialog for saving, then leave
-                _showSaveAndLeaveDialog(context, notifier, state, onSaved: () {
-                  shouldLeave = true;
-                });
+                if (state.libraryIndex != null) {
+                  final success = await notifier.saveExistingStudyInLibrary(state.libraryIndex!);
+                  if (success) {
+                    shouldLeave = true;
+                    if (context.mounted) {
+                      Navigator.of(context).popUntil((route) => route.isFirst);
+                    }
+                  }
+                } else {
+                  _showSaveAndLeaveDialog(context, notifier, state, onSaved: () {
+                    shouldLeave = true;
+                    if (context.mounted) {
+                      Navigator.of(context).popUntil((route) => route.isFirst);
+                    }
+                  });
+                }
               },
             ),
           ],
@@ -989,7 +1015,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
               ),
               const SizedBox(width: 12),
               Text(
-                'Name Your Study',
+                'Save to Game Library',
                 style: GoogleFonts.outfit(
                   fontWeight: FontWeight.bold,
                   color: ScholarlyTheme.textPrimary,
@@ -998,24 +1024,35 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
               ),
             ],
           ),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary),
-            decoration: InputDecoration(
-              hintText: 'e.g. Ruy Lopez Study, Endgame Practice...',
-              hintStyle: GoogleFonts.inter(color: ScholarlyTheme.textMuted),
-              filled: true,
-              fillColor: ScholarlyTheme.panelBase,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: ScholarlyTheme.panelStroke),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Give your progress a title to save it in the game library.',
+                style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 12),
               ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Color(0xFF00E676), width: 1.5),
+              const SizedBox(height: 12),
+              TextField(
+                controller: controller,
+                autofocus: true,
+                style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary),
+                decoration: InputDecoration(
+                  hintText: 'e.g. Ruy Lopez Study, Endgame Practice...',
+                  hintStyle: GoogleFonts.inter(color: ScholarlyTheme.textMuted),
+                  filled: true,
+                  fillColor: ScholarlyTheme.panelBase,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: ScholarlyTheme.panelStroke),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFF00E676), width: 1.5),
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
           actions: [
             TextButton(
@@ -1486,6 +1523,103 @@ class _CompactBoxButtonState extends State<_CompactBoxButton>
           ),
         ),
       ),
+    );
+  }
+}
+
+class FlashingEngineButton extends StatefulWidget {
+  final bool isEngineOn;
+  final VoidCallback onTap;
+  final double size;
+
+  const FlashingEngineButton({
+    super.key,
+    required this.isEngineOn,
+    required this.onTap,
+    this.size = 34.0,
+  });
+
+  @override
+  State<FlashingEngineButton> createState() => _FlashingEngineButtonState();
+}
+
+class _FlashingEngineButtonState extends State<FlashingEngineButton> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _opacityAnimation;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _opacityAnimation = Tween<double>(begin: 0.4, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+    _scaleAnimation = Tween<double>(begin: 0.9, end: 1.15).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+
+    if (widget.isEngineOn) {
+      _controller.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void didUpdateWidget(FlashingEngineButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isEngineOn != oldWidget.isEngineOn) {
+      if (widget.isEngineOn) {
+        _controller.repeat(reverse: true);
+      } else {
+        _controller.stop();
+        _controller.value = 0.0;
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final double opacity = widget.isEngineOn ? _opacityAnimation.value : 1.0;
+        final double scale = widget.isEngineOn ? _scaleAnimation.value : 1.0;
+        final Color color = widget.isEngineOn ? const Color(0xFFFFD740) : ScholarlyTheme.textMuted.withValues(alpha: 0.5);
+
+        return Transform.scale(
+          scale: scale,
+          child: Opacity(
+            opacity: opacity,
+            child: IconButton(
+              icon: Icon(
+                Icons.bolt_rounded,
+                color: color,
+                size: widget.size,
+                shadows: widget.isEngineOn
+                    ? [
+                        BoxShadow(
+                          color: const Color(0xFFFFD740).withValues(alpha: 0.5),
+                          blurRadius: 8 * _opacityAnimation.value,
+                          spreadRadius: 2,
+                        ),
+                      ]
+                    : null,
+              ),
+              onPressed: widget.onTap,
+              tooltip: widget.isEngineOn ? 'Turn Engine Off' : 'Turn Engine On',
+            ),
+          ),
+        );
+      },
     );
   }
 }

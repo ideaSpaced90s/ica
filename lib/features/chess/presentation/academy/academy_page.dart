@@ -60,58 +60,11 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
     super.dispose();
   }
 
+
   Future<void> _requestExitAcademy() async {
-    final bool? confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: ScholarlyTheme.panelBase,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: Text(
-          'Exit Academy Mode?',
-          style: GoogleFonts.inter(
-            fontWeight: FontWeight.w600,
-            color: ScholarlyTheme.textPrimary,
-          ),
-        ),
-        content: Text(
-          'Do you want to exit the academy study environment and return to the main app interface?',
-          style: GoogleFonts.inter(
-            color: ScholarlyTheme.textPrimary,
-            fontSize: 14,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(
-              'Stay',
-              style: GoogleFonts.inter(
-                color: ScholarlyTheme.accentBlue,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: FilledButton.styleFrom(
-              backgroundColor: Colors.redAccent,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            child: Text(
-              'Exit Academy',
-              style: GoogleFonts.inter(
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+    final state = ref.read(chessProvider);
+    final hasActiveMatch = state.recentMoves.isNotEmpty && !state.game.gameOver;
+    final bool? confirm = await showAcademyExitDialog(context, hasActiveMatch: hasActiveMatch);
 
     if (confirm == true) {
       if (!mounted) return;
@@ -426,31 +379,22 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back_ios_new_rounded, color: ScholarlyTheme.textPrimary),
-                      onPressed: _requestExitAcademy,
+                    const CircleAvatar(
+                      radius: 14,
+                      backgroundImage: AssetImage('assets/persona/gm_chanakya.png'),
                     ),
-                    Row(
-                      children: [
-                        const CircleAvatar(
-                          radius: 14,
-                          backgroundImage: AssetImage('assets/persona/gm_chanakya.png'),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'ACADEMY STUDY',
-                          style: GoogleFonts.outfit(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                            color: ScholarlyTheme.accentGold,
-                            letterSpacing: 1.0,
-                          ),
-                        ),
-                      ],
+                    const SizedBox(width: 8),
+                    Text(
+                      'ACADEMY STUDY',
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: ScholarlyTheme.accentGold,
+                        letterSpacing: 1.0,
+                      ),
                     ),
-                    const SizedBox(width: 48), // spacer balance
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -981,4 +925,86 @@ class _InlineCapturedGroup extends ConsumerWidget {
       ],
     );
   }
+}
+
+Future<bool?> showAcademyExitDialog(BuildContext context, {required bool hasActiveMatch}) async {
+  return showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      backgroundColor: ScholarlyTheme.panelBase,
+      surfaceTintColor: ScholarlyTheme.accentGold,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+        side: BorderSide(
+          color: ScholarlyTheme.accentGold.withValues(alpha: 0.3),
+          width: 1.5,
+        ),
+      ),
+      title: Row(
+        children: [
+          const CircleAvatar(
+            radius: 20,
+            backgroundImage: AssetImage('assets/persona/gm_chanakya.png'),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            'GM Chanakya',
+            style: GoogleFonts.inter(
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
+              color: ScholarlyTheme.accentGold,
+            ),
+          ),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Exit Academy?',
+            style: GoogleFonts.inter(
+              fontWeight: FontWeight.bold,
+              color: ScholarlyTheme.textPrimary,
+              fontSize: 16,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            hasActiveMatch
+                ? 'Are you sure you wish to leave the Academy?\n\nIf you leave the current match without finishing, it will not be counted in your attendance.'
+                : 'Do you want to exit the academy study environment and return to the main app interface?',
+            style: GoogleFonts.inter(
+              color: ScholarlyTheme.textPrimary,
+              fontSize: 14,
+              height: 1.5,
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: Text(
+            hasActiveMatch ? 'STAY & PLAY' : 'STAY',
+            style: GoogleFonts.inter(
+              color: ScholarlyTheme.textMuted,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, true),
+          style: FilledButton.styleFrom(
+            backgroundColor: ScholarlyTheme.accentGold,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          child: const Text('EXIT'),
+        ),
+      ],
+    ),
+  );
 }

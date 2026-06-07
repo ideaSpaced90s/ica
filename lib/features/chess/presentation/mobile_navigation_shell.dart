@@ -41,6 +41,10 @@ class MobileNavigationShell extends ConsumerWidget {
     final bgState = ref.watch(battlegroundProvider);
     final isBgMatchActive = currentIndex == 2 && bgState.recentMoves.isNotEmpty && !bgState.game.gameOver;
 
+    final academyState = ref.watch(chessProvider);
+    final isAcademyMatchActive = currentIndex == 3 && academyState.recentMoves.isNotEmpty && !academyState.game.gameOver;
+    final isDrawerDisabled = isBgMatchActive || isAcademyMatchActive;
+
     // Mute background music when in Arena (1), Battleground (2), Academy (3), Puzzles (4), or Assignment (11)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final isMuted = currentIndex == 1 || currentIndex == 2 || currentIndex == 3 || currentIndex == 4 || currentIndex == 11;
@@ -99,7 +103,7 @@ class MobileNavigationShell extends ConsumerWidget {
 
     Widget result = Scaffold(
       backgroundColor: ScholarlyTheme.backgroundStart,
-      drawerEnableOpenDragGesture: !isBgMatchActive,
+      drawerEnableOpenDragGesture: !isDrawerDisabled,
       appBar: AppBar(
         backgroundColor: ScholarlyTheme.backgroundStart,
         elevation: 0,
@@ -138,6 +142,20 @@ class MobileNavigationShell extends ConsumerWidget {
                     if (context.mounted) {
                       exitToDashboardWithSidebar(context, ref);
                     }
+                  }
+                } else if (isAcademyMatchActive) {
+                  final confirm = await showAcademyExitDialog(context, hasActiveMatch: true);
+                  if (confirm == true) {
+                    if (context.mounted) {
+                      exitToDashboardWithSidebar(context, ref);
+                    }
+                  }
+                } else if (currentIndex == 5) {
+                  final studyState = ref.read(studyLabProvider);
+                  if (studyState.isDirty && studyState.nodes.isNotEmpty) {
+                    _showUnsavedChangesOnMenuClick(ref, context);
+                  } else {
+                    Scaffold.of(context).openDrawer();
                   }
                 } else {
                   Scaffold.of(context).openDrawer();
@@ -183,6 +201,216 @@ class MobileNavigationShell extends ConsumerWidget {
     }
 
     return result;
+  }
+
+  Future<void> _showUnsavedChangesOnMenuClick(
+    WidgetRef ref,
+    BuildContext context,
+  ) async {
+    final notifier = ref.read(studyLabProvider.notifier);
+    final state = ref.read(studyLabProvider);
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        return AlertDialog(
+          backgroundColor: ScholarlyTheme.panelBase,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(color: Colors.orangeAccent.withValues(alpha: 0.6), width: 1.5),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.orangeAccent.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.warning_amber_rounded, color: Colors.orangeAccent, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Unsaved Changes',
+                  style: GoogleFonts.outfit(
+                    fontWeight: FontWeight.bold,
+                    color: ScholarlyTheme.textPrimary,
+                    fontSize: 18,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            'Your study has unsaved changes. Would you like to save before opening the menu?',
+            style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 13, height: 1.5),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text('Stay', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted)),
+            ),
+            TextButton(
+              onPressed: () {
+                notifier.clearDirty();
+                Navigator.pop(ctx);
+                Scaffold.of(context).openDrawer();
+              },
+              child: Text(
+                'Discard',
+                style: GoogleFonts.inter(color: Colors.redAccent, fontWeight: FontWeight.w600),
+              ),
+            ),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.save_rounded, size: 15, color: Colors.white),
+              label: Text('Save', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF00E676),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: () async {
+                Navigator.pop(ctx);
+                if (state.libraryIndex != null) {
+                  final success = await notifier.saveExistingStudyInLibrary(state.libraryIndex!);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          success ? 'Study saved successfully!' : 'Save failed.',
+                          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                        ),
+                        backgroundColor: success ? const Color(0xFF00E676) : Colors.redAccent,
+                      ),
+                    );
+                    if (success) {
+                      Scaffold.of(context).openDrawer();
+                    }
+                  }
+                } else {
+                  _showSaveDialogOnMenuClick(ref, context, state, notifier);
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showSaveDialogOnMenuClick(
+    WidgetRef ref,
+    BuildContext context,
+    StudyLabState state,
+    StudyLabNotifier notifier,
+  ) {
+    final defaultName = (state.metadata.event.isNotEmpty &&
+            state.metadata.event != 'Study Lab Analysis')
+        ? state.metadata.event
+        : '';
+    final controller = TextEditingController(text: defaultName);
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        return AlertDialog(
+          backgroundColor: ScholarlyTheme.panelBase,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: const BorderSide(color: ScholarlyTheme.panelStroke, width: 1.5),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF00E676).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.save_rounded, color: Color(0xFF00E676), size: 20),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Save to Game Library',
+                style: GoogleFonts.outfit(
+                  fontWeight: FontWeight.bold,
+                  color: ScholarlyTheme.textPrimary,
+                  fontSize: 17,
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Give your progress a title to save it in the game library.',
+                style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 12),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: controller,
+                autofocus: true,
+                style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary),
+                decoration: InputDecoration(
+                  hintText: 'e.g. Ruy Lopez Study, Endgame Practice...',
+                  hintStyle: GoogleFonts.inter(color: ScholarlyTheme.textMuted),
+                  filled: true,
+                  fillColor: ScholarlyTheme.panelBase,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: ScholarlyTheme.panelStroke),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFF00E676), width: 1.5),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text('Cancel', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted)),
+            ),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.save_rounded, size: 16, color: Colors.white),
+              label: Text('Save', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF00E676),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: () async {
+                final name = controller.text.trim();
+                if (name.isEmpty) return;
+                Navigator.pop(ctx);
+                final success = await notifier.saveCurrentGameToLibrary(name);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        success ? 'Study "$name" saved!' : 'Save failed.',
+                        style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                      ),
+                      backgroundColor: success ? const Color(0xFF00E676) : Colors.redAccent,
+                    ),
+                  );
+                  if (success) {
+                    Scaffold.of(context).openDrawer();
+                  }
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 }
 
@@ -543,15 +771,34 @@ class _MobileSidebarDrawer extends ConsumerWidget {
             ),
             ElevatedButton.icon(
               icon: const Icon(Icons.save_rounded, size: 15, color: Colors.white),
-              label: Text('Save & Go', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
+              label: Text('Save', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF00E676),
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
-              onPressed: () {
+              onPressed: () async {
                 Navigator.pop(ctx); // close unsaved dialog
-                _showSaveNameDialog(ref, context, state, notifier, destinationIndex);
+                if (state.libraryIndex != null) {
+                  final success = await notifier.saveExistingStudyInLibrary(state.libraryIndex!);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          success ? 'Study saved successfully!' : 'Save failed.',
+                          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                        ),
+                        backgroundColor: success ? const Color(0xFF00E676) : Colors.redAccent,
+                      ),
+                    );
+                    if (success) {
+                      ref.read(mobileNavIndexProvider.notifier).state = destinationIndex;
+                      Navigator.of(context).pop(); // Close drawer
+                    }
+                  }
+                } else {
+                  _showSaveNameDialog(ref, context, state, notifier, destinationIndex);
+                }
               },
             ),
           ],
@@ -595,7 +842,7 @@ class _MobileSidebarDrawer extends ConsumerWidget {
               ),
               const SizedBox(width: 12),
               Text(
-                'Name Your Study',
+                'Save to Game Library',
                 style: GoogleFonts.outfit(
                   fontWeight: FontWeight.bold,
                   color: ScholarlyTheme.textPrimary,
@@ -604,24 +851,35 @@ class _MobileSidebarDrawer extends ConsumerWidget {
               ),
             ],
           ),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary),
-            decoration: InputDecoration(
-              hintText: 'e.g. Ruy Lopez Study, Endgame Practice...',
-              hintStyle: GoogleFonts.inter(color: ScholarlyTheme.textMuted),
-              filled: true,
-              fillColor: ScholarlyTheme.panelBase,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: ScholarlyTheme.panelStroke),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Give your progress a title to save it in the game library.',
+                style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 12),
               ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Color(0xFF00E676), width: 1.5),
+              const SizedBox(height: 12),
+              TextField(
+                controller: controller,
+                autofocus: true,
+                style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary),
+                decoration: InputDecoration(
+                  hintText: 'e.g. Ruy Lopez Study, Endgame Practice...',
+                  hintStyle: GoogleFonts.inter(color: ScholarlyTheme.textMuted),
+                  filled: true,
+                  fillColor: ScholarlyTheme.panelBase,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: ScholarlyTheme.panelStroke),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFF00E676), width: 1.5),
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
           actions: [
             TextButton(
@@ -630,7 +888,7 @@ class _MobileSidebarDrawer extends ConsumerWidget {
             ),
             ElevatedButton.icon(
               icon: const Icon(Icons.save_rounded, size: 16, color: Colors.white),
-              label: Text('Save & Go', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
+              label: Text('Save', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF00E676),
                 foregroundColor: Colors.white,
@@ -651,9 +909,10 @@ class _MobileSidebarDrawer extends ConsumerWidget {
                       backgroundColor: success ? const Color(0xFF00E676) : Colors.redAccent,
                     ),
                   );
-                  // Navigate to destination after saving
-                  ref.read(mobileNavIndexProvider.notifier).state = destinationIndex;
-                  Navigator.of(context).pop(); // close drawer
+                  if (success) {
+                    ref.read(mobileNavIndexProvider.notifier).state = destinationIndex;
+                    Navigator.of(context).pop(); // close drawer
+                  }
                 }
               },
             ),

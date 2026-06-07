@@ -501,29 +501,6 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
         const SizedBox(height: 16),
         const RepertoireCard(),
         const SizedBox(height: 32),
-        _buildSectionHeader('PHASE ANALYSIS', icon: Icons.insights_rounded),
-        const SizedBox(height: 16),
-        isMobile
-            ? const Column(
-                children: [
-                  OpeningRepertoireCard(),
-                  SizedBox(height: 16),
-                  MiddlegamePerformanceCard(),
-                  SizedBox(height: 16),
-                  EndgameTechniqueCard(),
-                ],
-              )
-            : const Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(child: OpeningRepertoireCard()),
-                  SizedBox(width: 16),
-                  Expanded(child: MiddlegamePerformanceCard()),
-                  SizedBox(width: 16),
-                  Expanded(child: EndgameTechniqueCard()),
-                ],
-              ),
-        const SizedBox(height: 32),
       ],
     );
 

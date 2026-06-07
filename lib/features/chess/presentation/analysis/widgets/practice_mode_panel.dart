@@ -87,8 +87,8 @@ class _PracticeModePanelState extends ConsumerState<PracticeModePanel> {
   ) {
     final boardSize = math.min(
       (constraints.maxWidth * 0.55) - 36,
-      constraints.maxHeight - 120,
-    ).clamp(100.0, 420.0);
+      constraints.maxHeight - 24,
+    ).clamp(100.0, 520.0);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
@@ -101,34 +101,6 @@ class _PracticeModePanelState extends ConsumerState<PracticeModePanel> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Opponent Header Row
-                Row(
-                  children: [
-                    ModernThinkingAvatar(
-                      isThinking: practiceState.isEngineThinking,
-                      child: CircleAvatar(
-                        radius: 14,
-                        backgroundColor: ScholarlyTheme.panelBase,
-                        child: const Icon(Icons.smart_toy_outlined, size: 16, color: ScholarlyTheme.accentBlue),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      _getSkillNameFromStop(_difficultyStop),
-                      style: GoogleFonts.inter(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                        color: ScholarlyTheme.textPrimary,
-                      ),
-                    ),
-                    if (practiceState.isEngineThinking) ...[
-                      const SizedBox(width: 12),
-                      const WavingDotsIndicator(),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 8),
-
                 // Board Row (EvalBar + Board)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -172,27 +144,6 @@ class _PracticeModePanelState extends ConsumerState<PracticeModePanel> {
                             ),
                           ),
                       ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-
-                // Player Header Row
-                Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 14,
-                      backgroundColor: ScholarlyTheme.panelBase,
-                      child: const Icon(Icons.person_outline, size: 16, color: ScholarlyTheme.textPrimary),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'You',
-                      style: GoogleFonts.inter(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                        color: ScholarlyTheme.textPrimary,
-                      ),
                     ),
                   ],
                 ),
@@ -304,29 +255,6 @@ class _PracticeModePanelState extends ConsumerState<PracticeModePanel> {
                           onPressed: () => ref.read(practiceLabProvider.notifier).navigateToMove(null),
                         ),
                       ),
-                    
-                    const SizedBox(width: 8),
-                    
-                    // Exit Game (replaces Resign)
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.redAccent.withValues(alpha: 0.1),
-                          foregroundColor: Colors.redAccent,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            side: const BorderSide(color: Colors.redAccent, width: 1.2),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                        ),
-                        icon: const Icon(Icons.exit_to_app_rounded, size: 16),
-                        label: Text('EXIT', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 11)),
-                        onPressed: () {
-                          ref.read(practiceLabProvider.notifier).endSession(studyState.activeFen);
-                        },
-                      ),
-                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -344,8 +272,8 @@ class _PracticeModePanelState extends ConsumerState<PracticeModePanel> {
   ) {
     final boardSize = math.min(
       (constraints.maxWidth * 0.55) - 36,
-      constraints.maxHeight - 120,
-    ).clamp(100.0, 420.0);
+      constraints.maxHeight - 24,
+    ).clamp(100.0, 520.0);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
@@ -358,27 +286,6 @@ class _PracticeModePanelState extends ConsumerState<PracticeModePanel> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Opponent Header Row
-                Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 14,
-                      backgroundColor: ScholarlyTheme.panelBase,
-                      child: const Icon(Icons.sports_esports_outlined, size: 16, color: ScholarlyTheme.accentBlue),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Sparring Lobby',
-                      style: GoogleFonts.inter(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                        color: ScholarlyTheme.textPrimary,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-
                 // Board Row (EvalBar + Board)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -825,28 +732,6 @@ class _PracticeModePanelState extends ConsumerState<PracticeModePanel> {
                       ),
                     ),
                   
-                  const SizedBox(width: 8),
-                  
-                  // Exit Game (replaces Resign)
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.redAccent.withValues(alpha: 0.1),
-                        foregroundColor: Colors.redAccent,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          side: const BorderSide(color: Colors.redAccent, width: 1.2),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                      ),
-                      icon: const Icon(Icons.exit_to_app_rounded, size: 16),
-                      label: Text('EXIT', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 11)),
-                      onPressed: () {
-                        ref.read(practiceLabProvider.notifier).endSession(studyState.activeFen);
-                      },
-                    ),
-                  ),
                 ],
               ),
 

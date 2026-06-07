@@ -16,7 +16,8 @@ import 'widgets/ambient_scaffold.dart';
 import 'dashboard_page.dart';
 import 'mobile_navigation_shell.dart';
 
-enum HistoryFilter { all, favorites, rated, unrated }
+enum HistoryFilterType { all, favorites }
+enum HistorySubFilter { none, arena, battleground }
 
 class HistoryPage extends ConsumerStatefulWidget {
   const HistoryPage({super.key});
@@ -28,7 +29,9 @@ class HistoryPage extends ConsumerStatefulWidget {
 class _HistoryPageState extends ConsumerState<HistoryPage> with SingleTickerProviderStateMixin {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final TextEditingController _searchController = TextEditingController();
-  HistoryFilter _currentFilter = HistoryFilter.all;
+  HistoryFilterType _currentFilter = HistoryFilterType.all;
+  HistorySubFilter _allSubFilter = HistorySubFilter.none;
+  HistorySubFilter _favoritesSubFilter = HistorySubFilter.none;
   bool _isSearchExpanded = false;
 
   late AnimationController _pulseController;
@@ -106,19 +109,19 @@ class _HistoryPageState extends ConsumerState<HistoryPage> with SingleTickerProv
     }
 
     // Tab filtering
-    switch (_currentFilter) {
-      case HistoryFilter.favorites:
-        filteredSaves = filteredSaves.where((s) => s.isFavorite).toList();
-        break;
-      case HistoryFilter.rated:
-        filteredSaves = filteredSaves.where((s) => s.isRatedMode).toList();
-        break;
-      case HistoryFilter.unrated:
+    if (_currentFilter == HistoryFilterType.favorites) {
+      filteredSaves = filteredSaves.where((s) => s.isFavorite).toList();
+      if (_favoritesSubFilter == HistorySubFilter.arena) {
         filteredSaves = filteredSaves.where((s) => !s.isRatedMode).toList();
-        break;
-      case HistoryFilter.all:
-        // Already assigned
-        break;
+      } else if (_favoritesSubFilter == HistorySubFilter.battleground) {
+        filteredSaves = filteredSaves.where((s) => s.isRatedMode).toList();
+      }
+    } else {
+      if (_allSubFilter == HistorySubFilter.arena) {
+        filteredSaves = filteredSaves.where((s) => !s.isRatedMode).toList();
+      } else if (_allSubFilter == HistorySubFilter.battleground) {
+        filteredSaves = filteredSaves.where((s) => s.isRatedMode).toList();
+      }
     }
 
     return PopScope(
@@ -207,11 +210,66 @@ class _HistoryPageState extends ConsumerState<HistoryPage> with SingleTickerProv
                               Expanded(
                                 child: Row(
                                   children: [
-                                    Expanded(child: _buildFilterTab('ALL', HistoryFilter.all)),
-                                    const SizedBox(width: 6),
-                                    Expanded(child: _buildFilterTab('FAV', HistoryFilter.favorites)),
-                                    const SizedBox(width: 6),
-                                    Expanded(child: _buildFilterTab('RATED', HistoryFilter.rated)),
+                                    Expanded(
+                                      child: Builder(
+                                        builder: (buttonContext) {
+                                          String label = 'ALL';
+                                          Color activeColor = ScholarlyTheme.accentBlue;
+                                          if (_allSubFilter == HistorySubFilter.arena) {
+                                            label = 'ARENA';
+                                            activeColor = const Color(0xFF0D9488);
+                                          } else if (_allSubFilter == HistorySubFilter.battleground) {
+                                            label = 'BATTLEGROUND';
+                                            activeColor = ScholarlyTheme.realGold;
+                                          }
+                                          return _buildTabButton(
+                                            label: label,
+                                            isSelected: _currentFilter == HistoryFilterType.all,
+                                            activeColor: activeColor,
+                                            onTap: () {
+                                              ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                                              setState(() {
+                                                _currentFilter = HistoryFilterType.all;
+                                                _allSubFilter = HistorySubFilter.none;
+                                              });
+                                              _showTabDropdown(buttonContext, true);
+                                            },
+                                            context: buttonContext,
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Builder(
+                                        builder: (buttonContext) {
+                                          String label = 'FAVOURITES';
+                                          Color activeColor = const Color(0xFF10B981);
+                                          if (_favoritesSubFilter == HistorySubFilter.arena) {
+                                            label = 'ARENA';
+                                            activeColor = const Color(0xFF0D9488);
+                                          } else if (_favoritesSubFilter == HistorySubFilter.battleground) {
+                                            label = 'BATTLEGROUND';
+                                            activeColor = ScholarlyTheme.realGold;
+                                          }
+                                          return _buildTabButton(
+                                            label: label,
+                                            isSelected: _currentFilter == HistoryFilterType.favorites,
+                                            activeColor: activeColor,
+                                            onTap: () {
+                                              ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                                              setState(() {
+                                                _currentFilter = HistoryFilterType.favorites;
+                                                _favoritesSubFilter = HistorySubFilter.none;
+                                              });
+                                              _showTabDropdown(buttonContext, false);
+                                            },
+                                            context: buttonContext,
+                                            isPulse: true,
+                                          );
+                                        },
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -249,31 +307,31 @@ class _HistoryPageState extends ConsumerState<HistoryPage> with SingleTickerProv
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Icon(
-                                    _currentFilter == HistoryFilter.favorites
-                                        ? Icons.star_rounded
-                                        : Icons.history_rounded,
-                                    size: 64,
-                                    color: _currentFilter == HistoryFilter.favorites
-                                        ? ScholarlyTheme.accentYellow.withValues(alpha: 0.5)
-                                        : ScholarlyTheme.panelStroke,
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 32.0),
-                                    child: Text(
-                                      _currentFilter == HistoryFilter.favorites
-                                          ? 'Add games to favorites to analyze and study'
-                                          : 'No games found',
-                                      textAlign: TextAlign.center,
-                                      style: GoogleFonts.outfit(
-                                        color: ScholarlyTheme.textMuted,
-                                        fontSize: _currentFilter == HistoryFilter.favorites ? 16 : 14,
-                                        fontWeight: _currentFilter == HistoryFilter.favorites
-                                            ? FontWeight.w500
-                                            : FontWeight.normal,
+                                      _currentFilter == HistoryFilterType.favorites
+                                          ? Icons.star_rounded
+                                          : Icons.history_rounded,
+                                      size: 64,
+                                      color: _currentFilter == HistoryFilterType.favorites
+                                          ? ScholarlyTheme.accentYellow.withValues(alpha: 0.5)
+                                          : ScholarlyTheme.panelStroke,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                                      child: Text(
+                                        _currentFilter == HistoryFilterType.favorites
+                                            ? 'Add games to favorites to analyze and study'
+                                            : 'No games found',
+                                        textAlign: TextAlign.center,
+                                        style: GoogleFonts.outfit(
+                                          color: ScholarlyTheme.textMuted,
+                                          fontSize: _currentFilter == HistoryFilterType.favorites ? 16 : 14,
+                                          fontWeight: _currentFilter == HistoryFilterType.favorites
+                                              ? FontWeight.w500
+                                              : FontWeight.normal,
+                                        ),
                                       ),
                                     ),
-                                  ),
                                 ],
                               ),
                             )
@@ -329,61 +387,39 @@ class _HistoryPageState extends ConsumerState<HistoryPage> with SingleTickerProv
    ); // End of PopScope
   }
 
-  Widget _buildFilterTab(String label, HistoryFilter filter) {
-    final isSelected = _currentFilter == filter;
-    Color activeColor = ScholarlyTheme.accentBlue;
-    if (filter == HistoryFilter.rated) activeColor = ScholarlyTheme.realGold; // Real gold from theme
-    if (filter == HistoryFilter.unrated) activeColor = const Color(0xFF0D9488); // Modern teal
-    if (filter == HistoryFilter.favorites) activeColor = const Color(0xFF10B981); // Emerald green
-
+  Widget _buildTabButton({
+    required String label,
+    required bool isSelected,
+    required Color activeColor,
+    required VoidCallback onTap,
+    required BuildContext context,
+    bool isPulse = false,
+  }) {
     final Color bgColor;
     final Color borderColor;
     final Color textColor;
     final List<BoxShadow>? shadow;
 
-    if (filter == HistoryFilter.favorites) {
-      bgColor = isSelected
-          ? activeColor.withValues(alpha: 0.18)
-          : activeColor.withValues(alpha: 0.08);
-      borderColor = isSelected
-          ? activeColor
-          : activeColor.withValues(alpha: 0.4);
-      textColor = isSelected
-          ? activeColor
-          : activeColor.withValues(alpha: 0.8);
+    if (isSelected) {
+      bgColor = activeColor.withValues(alpha: 0.15);
+      borderColor = activeColor;
+      textColor = activeColor;
       shadow = [
         BoxShadow(
-          color: activeColor.withValues(alpha: isSelected ? 0.25 : 0.1),
-          blurRadius: isSelected ? 12 : 8,
+          color: activeColor.withValues(alpha: 0.2),
+          blurRadius: 10,
           offset: const Offset(0, 2),
         )
       ];
     } else {
-      bgColor = isSelected
-          ? activeColor.withValues(alpha: 0.15)
-          : Colors.white.withValues(alpha: 0.35);
-      borderColor = isSelected
-          ? activeColor
-          : Colors.white.withValues(alpha: 0.5);
-      textColor = isSelected
-          ? activeColor
-          : ScholarlyTheme.textPrimary.withValues(alpha: 0.8);
-      shadow = isSelected
-          ? [
-              BoxShadow(
-                color: activeColor.withValues(alpha: 0.2),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
-              )
-            ]
-          : null;
+      bgColor = Colors.white.withValues(alpha: 0.35);
+      borderColor = Colors.white.withValues(alpha: 0.5);
+      textColor = ScholarlyTheme.textPrimary.withValues(alpha: 0.8);
+      shadow = null;
     }
 
     final Widget tabContent = GestureDetector(
-      onTap: () {
-        ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-        setState(() => _currentFilter = filter);
-      },
+      onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         width: double.infinity,
@@ -400,20 +436,31 @@ class _HistoryPageState extends ConsumerState<HistoryPage> with SingleTickerProv
         child: Center(
           child: FittedBox(
             fit: BoxFit.scaleDown,
-            child: Text(
-              label,
-              style: GoogleFonts.inter(
-                color: textColor,
-                fontSize: 13,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-              ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  label,
+                  style: GoogleFonts.inter(
+                    color: textColor,
+                    fontSize: 13,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Icon(
+                  Icons.arrow_drop_down_rounded,
+                  size: 18,
+                  color: textColor,
+                ),
+              ],
             ),
           ),
         ),
       ),
     );
 
-    if (filter == HistoryFilter.favorites) {
+    if (isPulse) {
       return FadeTransition(
         opacity: _pulseAnimation,
         child: tabContent,
@@ -421,6 +468,93 @@ class _HistoryPageState extends ConsumerState<HistoryPage> with SingleTickerProv
     }
 
     return tabContent;
+  }
+
+  void _showTabDropdown(BuildContext buttonContext, bool isAllTab) async {
+    final RenderBox renderBox = buttonContext.findRenderObject() as RenderBox;
+    final Offset offset = renderBox.localToGlobal(Offset.zero);
+    final Size size = renderBox.size;
+
+    final RelativeRect position = RelativeRect.fromRect(
+      Rect.fromLTWH(offset.dx, offset.dy + size.height + 4, size.width, size.height),
+      Offset.zero & MediaQuery.of(buttonContext).size,
+    );
+
+    final result = await showMenu<HistorySubFilter>(
+      context: buttonContext,
+      position: position,
+      color: ScholarlyTheme.panelBase,
+      elevation: 8,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: ScholarlyTheme.panelStroke, width: 1.5),
+      ),
+      items: [
+        PopupMenuItem(
+          value: HistorySubFilter.none,
+          child: Row(
+            children: [
+              const Icon(Icons.all_inclusive_rounded, size: 18, color: ScholarlyTheme.accentBlue),
+              const SizedBox(width: 8),
+              Text(
+                isAllTab ? 'All Games' : 'All Favourites',
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w500,
+                  color: ScholarlyTheme.textPrimary,
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: HistorySubFilter.arena,
+          child: Row(
+            children: [
+              const Icon(Icons.sports_esports_rounded, size: 18, color: Color(0xFF0D9488)),
+              const SizedBox(width: 8),
+              Text(
+                'Arena (Unrated)',
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w500,
+                  color: ScholarlyTheme.textPrimary,
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: HistorySubFilter.battleground,
+          child: Row(
+            children: [
+              const Icon(Icons.flash_on_rounded, size: 18, color: ScholarlyTheme.realGold),
+              const SizedBox(width: 8),
+              Text(
+                'Battleground (Rated)',
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w500,
+                  color: ScholarlyTheme.textPrimary,
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+
+    if (result != null) {
+      setState(() {
+        if (isAllTab) {
+          _currentFilter = HistoryFilterType.all;
+          _allSubFilter = result;
+        } else {
+          _currentFilter = HistoryFilterType.favorites;
+          _favoritesSubFilter = result;
+        }
+      });
+    }
   }
 
   Widget _buildSearchBar() {

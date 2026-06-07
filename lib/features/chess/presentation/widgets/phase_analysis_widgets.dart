@@ -897,85 +897,107 @@ class RepertoireCard extends ConsumerWidget {
 
         if (middlegames != null) {
           final m = middlegames;
-          return _endgameRow([
-            _buildEndgameMetricCard(
-              label: 'MPI Score',
-              icon: Icons.track_changes_rounded,
-              value: '${m.mpi.toStringAsFixed(1)}%',
-              sub: m.archetype,
-              accentColor: const Color(0xFF8B5CF6),
-              active: true,
-              progressValue: m.mpi / 100,
-            ),
-            _buildEndgameMetricCard(
-              label: 'Win Rate',
-              icon: Icons.arrow_upward_rounded,
-              value: '${m.winRate.toStringAsFixed(0)}%',
-              sub: 'win/draw performance',
-              accentColor: const Color(0xFF10B981),
-              active: true,
-              progressValue: m.winRate / 100,
-            ),
-            _buildEndgameMetricCard(
-              label: 'Decided Midgame',
-              icon: Icons.insights_rounded,
-              value: '${m.decidedPercentage.toStringAsFixed(0)}%',
-              sub: 'no endgame reached',
-              accentColor: const Color(0xFF06B6D4),
-              active: true,
-              progressValue: m.decidedPercentage / 100,
-            ),
-            _buildEndgameMetricCard(
-              label: 'Total Midgames',
-              icon: Icons.workspace_premium_rounded,
-              value: '${m.totalMiddlegames}',
-              sub: 'middlegame matches',
-              accentColor: const Color(0xFFF59E0B),
-              active: true,
-              progressValue: null,
-            ),
-          ], isNarrow);
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _endgameRow([
+                _buildEndgameMetricCard(
+                  label: 'MPI Score',
+                  icon: Icons.track_changes_rounded,
+                  value: '${m.mpi.toStringAsFixed(1)}%',
+                  sub: m.archetype,
+                  accentColor: const Color(0xFF8B5CF6),
+                  active: true,
+                  progressValue: m.mpi / 100,
+                ),
+                _buildEndgameMetricCard(
+                  label: 'Win Rate',
+                  icon: Icons.arrow_upward_rounded,
+                  value: '${m.winRate.toStringAsFixed(0)}%',
+                  sub: 'win/draw performance',
+                  accentColor: const Color(0xFF10B981),
+                  active: true,
+                  progressValue: m.winRate / 100,
+                ),
+                _buildEndgameMetricCard(
+                  label: 'Decided Midgame',
+                  icon: Icons.insights_rounded,
+                  value: '${m.decidedPercentage.toStringAsFixed(0)}%',
+                  sub: 'no endgame reached',
+                  accentColor: const Color(0xFF06B6D4),
+                  active: true,
+                  progressValue: m.decidedPercentage / 100,
+                ),
+                _buildEndgameMetricCard(
+                  label: 'Total Midgames',
+                  icon: Icons.workspace_premium_rounded,
+                  value: '${m.totalMiddlegames}',
+                  sub: 'middlegame matches',
+                  accentColor: const Color(0xFFF59E0B),
+                  active: true,
+                  progressValue: null,
+                ),
+              ], isNarrow),
+              _buildPremiumDescriptionBlock(
+                title: "STRATEGIC DIAGNOSIS (${m.archetype.toUpperCase()})",
+                description: _getMiddlegameDescription(m),
+                icon: Icons.psychology_rounded,
+                accentColor: const Color(0xFF8B5CF6),
+              ),
+            ],
+          );
         }
 
         // No middlegame data yet — all greyed out
-        return _endgameRow([
-          _buildEndgameMetricCard(
-            label: 'MPI Score',
-            icon: Icons.track_changes_rounded,
-            value: '—',
-            sub: 'No data',
-            accentColor: const Color(0xFF8B5CF6),
-            active: false,
-            progressValue: null,
-          ),
-          _buildEndgameMetricCard(
-            label: 'Win Rate',
-            icon: Icons.arrow_upward_rounded,
-            value: '—',
-            sub: 'No data',
-            accentColor: const Color(0xFF10B981),
-            active: false,
-            progressValue: null,
-          ),
-          _buildEndgameMetricCard(
-            label: 'Decided Midgame',
-            icon: Icons.insights_rounded,
-            value: '—',
-            sub: 'No data',
-            accentColor: const Color(0xFF06B6D4),
-            active: false,
-            progressValue: null,
-          ),
-          _buildEndgameMetricCard(
-            label: 'Total Midgames',
-            icon: Icons.workspace_premium_rounded,
-            value: '0',
-            sub: 'middlegame matches',
-            accentColor: const Color(0xFFF59E0B),
-            active: false,
-            progressValue: null,
-          ),
-        ], isNarrow);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _endgameRow([
+              _buildEndgameMetricCard(
+                label: 'MPI Score',
+                icon: Icons.track_changes_rounded,
+                value: '—',
+                sub: 'No data',
+                accentColor: const Color(0xFF8B5CF6),
+                active: false,
+                progressValue: null,
+              ),
+              _buildEndgameMetricCard(
+                label: 'Win Rate',
+                icon: Icons.arrow_upward_rounded,
+                value: '—',
+                sub: 'No data',
+                accentColor: const Color(0xFF10B981),
+                active: false,
+                progressValue: null,
+              ),
+              _buildEndgameMetricCard(
+                label: 'Decided Midgame',
+                icon: Icons.insights_rounded,
+                value: '—',
+                sub: 'No data',
+                accentColor: const Color(0xFF06B6D4),
+                active: false,
+                progressValue: null,
+              ),
+              _buildEndgameMetricCard(
+                label: 'Total Midgames',
+                icon: Icons.workspace_premium_rounded,
+                value: '0',
+                sub: 'middlegame matches',
+                accentColor: const Color(0xFFF59E0B),
+                active: false,
+                progressValue: null,
+              ),
+            ], isNarrow),
+            _buildPremiumDescriptionBlock(
+              title: "STRATEGIC DIAGNOSIS",
+              description: "Play rated games past move 10 to identify your middlegame playstyle archetype and performance diagnosis.",
+              icon: Icons.psychology_rounded,
+              accentColor: const Color(0xFF8B5CF6),
+            ),
+          ],
+        );
       },
     );
   }
@@ -1151,86 +1173,223 @@ class RepertoireCard extends ConsumerWidget {
 
         if (endgames != null) {
           final e = endgames;
-          return _endgameRow([
-            _buildEndgameMetricCard(
-              label: 'EPI Score',
-              icon: Icons.track_changes_rounded,
-              value: '${e.epi.toStringAsFixed(1)}%',
-              sub: e.ratingCategory,
-              accentColor: const Color(0xFFF59E0B),
-              active: true,
-              progressValue: e.epi / 100,
-            ),
-            _buildEndgameMetricCard(
-              label: 'Conversion Rate',
-              icon: Icons.arrow_upward_rounded,
-              value: '${e.conversionRate.toStringAsFixed(0)}%',
-              sub: '${e.advantageGames} adv. games',
-              accentColor: const Color(0xFF10B981),
-              active: true,
-              progressValue: e.conversionRate / 100,
-            ),
-            _buildEndgameMetricCard(
-              label: 'Defensive Save',
-              icon: Icons.shield_rounded,
-              value: '${e.saveRate.toStringAsFixed(0)}%',
-              sub: '${e.disadvantageGames} def. games',
-              accentColor: const Color(0xFF06B6D4),
-              active: true,
-              progressValue: e.saveRate / 100,
-            ),
-            _buildEndgameMetricCard(
-              label: 'Total Endgames',
-              icon: Icons.flag_rounded,
-              value: '${e.endgameSavesCount}',
-              sub: 'endgame positions',
-              accentColor: const Color(0xFFA855F7),
-              active: true,
-              progressValue: null,
-            ),
-          ], isNarrow);
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _endgameRow([
+                _buildEndgameMetricCard(
+                  label: 'EPI Score',
+                  icon: Icons.track_changes_rounded,
+                  value: '${e.epi.toStringAsFixed(1)}%',
+                  sub: e.ratingCategory,
+                  accentColor: const Color(0xFFF59E0B),
+                  active: true,
+                  progressValue: e.epi / 100,
+                ),
+                _buildEndgameMetricCard(
+                  label: 'Conversion Rate',
+                  icon: Icons.arrow_upward_rounded,
+                  value: '${e.conversionRate.toStringAsFixed(0)}%',
+                  sub: '${e.advantageGames} adv. games',
+                  accentColor: const Color(0xFF10B981),
+                  active: true,
+                  progressValue: e.conversionRate / 100,
+                ),
+                _buildEndgameMetricCard(
+                  label: 'Defensive Save',
+                  icon: Icons.shield_rounded,
+                  value: '${e.saveRate.toStringAsFixed(0)}%',
+                  sub: '${e.disadvantageGames} def. games',
+                  accentColor: const Color(0xFF06B6D4),
+                  active: true,
+                  progressValue: e.saveRate / 100,
+                ),
+                _buildEndgameMetricCard(
+                  label: 'Total Endgames',
+                  icon: Icons.flag_rounded,
+                  value: '${e.endgameSavesCount}',
+                  sub: 'endgame positions',
+                  accentColor: const Color(0xFFA855F7),
+                  active: true,
+                  progressValue: null,
+                ),
+              ], isNarrow),
+              _buildPremiumDescriptionBlock(
+                title: "TECHNICAL DIAGNOSIS (${e.ratingCategory.toUpperCase()})",
+                description: _getEndgameDescription(e),
+                icon: Icons.emoji_events_rounded,
+                accentColor: const Color(0xFFF59E0B),
+              ),
+            ],
+          );
         }
 
         // No endgame data yet — all greyed out
-        return _endgameRow([
-          _buildEndgameMetricCard(
-            label: 'EPI Score',
-            icon: Icons.track_changes_rounded,
-            value: '—',
-            sub: 'No data',
-            accentColor: const Color(0xFFF59E0B),
-            active: false,
-            progressValue: null,
-          ),
-          _buildEndgameMetricCard(
-            label: 'Conversion Rate',
-            icon: Icons.arrow_upward_rounded,
-            value: '—',
-            sub: 'No data',
-            accentColor: const Color(0xFF10B981),
-            active: false,
-            progressValue: null,
-          ),
-          _buildEndgameMetricCard(
-            label: 'Defensive Save',
-            icon: Icons.shield_rounded,
-            value: '—',
-            sub: 'No data',
-            accentColor: const Color(0xFF06B6D4),
-            active: false,
-            progressValue: null,
-          ),
-          _buildEndgameMetricCard(
-            label: 'Total Endgames',
-            icon: Icons.flag_rounded,
-            value: '0',
-            sub: 'endgame positions',
-            accentColor: const Color(0xFFA855F7),
-            active: false,
-            progressValue: null,
-          ),
-        ], isNarrow);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _endgameRow([
+              _buildEndgameMetricCard(
+                label: 'EPI Score',
+                icon: Icons.track_changes_rounded,
+                value: '—',
+                sub: 'No data',
+                accentColor: const Color(0xFFF59E0B),
+                active: false,
+                progressValue: null,
+              ),
+              _buildEndgameMetricCard(
+                label: 'Conversion Rate',
+                icon: Icons.arrow_upward_rounded,
+                value: '—',
+                sub: 'No data',
+                accentColor: const Color(0xFF10B981),
+                active: false,
+                progressValue: null,
+              ),
+              _buildEndgameMetricCard(
+                label: 'Defensive Save',
+                icon: Icons.shield_rounded,
+                value: '—',
+                sub: 'No data',
+                accentColor: const Color(0xFF06B6D4),
+                active: false,
+                progressValue: null,
+              ),
+              _buildEndgameMetricCard(
+                label: 'Total Endgames',
+                icon: Icons.flag_rounded,
+                value: '0',
+                sub: 'endgame positions',
+                accentColor: const Color(0xFFA855F7),
+                active: false,
+                progressValue: null,
+              ),
+            ], isNarrow),
+            _buildPremiumDescriptionBlock(
+              title: "TECHNICAL DIAGNOSIS",
+              description: "Play rated games reaching endgame stages to view your technical endgame efficiency and diagnostic breakdown.",
+              icon: Icons.flag_rounded,
+              accentColor: const Color(0xFFF59E0B),
+            ),
+          ],
+        );
       },
+    );
+  }
+
+  String _getMiddlegameDescription(MiddlegamePerformanceStats m) {
+    final mpi = m.mpi;
+    String performanceText = '';
+    if (mpi >= 85) {
+      performanceText = "With an outstanding MPI of ${mpi.toStringAsFixed(1)}%, your middle game execution is near-flawless, reflecting grandmaster-level planning and calculation.";
+    } else if (mpi >= 70) {
+      performanceText = "An MPI of ${mpi.toStringAsFixed(1)}% shows strong midgame competence, successfully executing active plans and centralizing pieces.";
+    } else if (mpi >= 50) {
+      performanceText = "An MPI of ${mpi.toStringAsFixed(1)}% indicates solid midgame play, but there is room to improve tactical vigilance and prophylactic thinking.";
+    } else {
+      performanceText = "An MPI of ${mpi.toStringAsFixed(1)}% suggests developing midgame play. Focus on reducing unforced blunders and coordinating piece activity.";
+    }
+
+    return "${m.description} $performanceText";
+  }
+
+  String _getEndgameDescription(EndgamePerformanceStats e) {
+    final epi = e.epi;
+    String performanceText = '';
+    if (epi >= 85) {
+      performanceText = "Exceptional technical precision. You convert winning advantages ruthlessly and salvage tough positions with masterclass defense.";
+    } else if (epi >= 70) {
+      performanceText = "Strong technical foundation. You show great accuracy in converting pawn structures and maintaining defensive holds in minor piece endings.";
+    } else if (epi >= 50) {
+      performanceText = "Capable endgame handling. Solid conversion of basic king-and-pawn endings, though complex rook endgames remain a key area for growth.";
+    } else {
+      performanceText = "Endgame technique in development. Prioritize study of fundamental mating patterns, opposition concepts, and active defensive setups.";
+    }
+
+    String focusText = '';
+    if (e.conversionRate >= 75 && e.saveRate >= 50) {
+      focusText = "Displays a highly balanced technical profile, combining lethal conversion power and resilient defensive skills.";
+    } else if (e.conversionRate >= 75) {
+      focusText = "Lethal in converting winning advantages, though defensive tenacity under pressure can be further reinforced.";
+    } else if (e.saveRate >= 50) {
+      focusText = "Remarkable defensive save rate, showing great resilience when down, though converting winning advantages should be practiced.";
+    } else if (e.endgameSavesCount > 0) {
+      focusText = "Focus on basic conversion techniques and defensive pawn structures to build overall endgame stability.";
+    }
+
+    return focusText.isNotEmpty ? "$performanceText $focusText" : performanceText;
+  }
+
+  Widget _buildPremiumDescriptionBlock({
+    required String title,
+    required String description,
+    required IconData icon,
+    required Color accentColor,
+  }) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 14),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: accentColor.withValues(alpha: 0.25),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.01),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: accentColor.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              icon,
+              color: accentColor,
+              size: 18,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.outfit(
+                    color: ScholarlyTheme.textPrimary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.0,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  description,
+                  style: GoogleFonts.inter(
+                    color: ScholarlyTheme.textPrimary.withValues(alpha: 0.85),
+                    fontSize: 12,
+                    height: 1.45,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1337,6 +1496,8 @@ class RepertoireCard extends ConsumerWidget {
                   ),
                 ),
               ),
+            ] else ...[
+              const SizedBox(height: 15),
             ],
           ],
         ),

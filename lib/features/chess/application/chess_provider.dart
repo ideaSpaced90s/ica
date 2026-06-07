@@ -1949,12 +1949,13 @@ class ChessNotifier extends StateNotifier<ChessState> {
       final wasClockStarted = state.clockStarted;
       _onMoveCompleted('$from$to');
 
-      if (!wasClockStarted) {
-        state = state.copyWith(clockStarted: true);
+      if (!state.isAcademyActive) {
+        if (!wasClockStarted) {
+          state = state.copyWith(clockStarted: true);
+        }
+        _setActiveClockSide(_clockSideForTurn());
+        _startClockTicker();
       }
-
-      _setActiveClockSide(_clockSideForTurn());
-      _startClockTicker();
 
       // Always trigger analysis after an engine move to get the score for commentary
       if (!state.game.gameOver) {
@@ -2122,12 +2123,13 @@ class ChessNotifier extends StateNotifier<ChessState> {
     final wasClockStarted = state.clockStarted;
     _onMoveCompleted('$from$to');
 
-    if (!wasClockStarted) {
-      state = state.copyWith(clockStarted: true);
+    if (!state.isAcademyActive) {
+      if (!wasClockStarted) {
+        state = state.copyWith(clockStarted: true);
+      }
+      _setActiveClockSide(_clockSideForTurn());
+      _startClockTicker();
     }
-
-    _setActiveClockSide(_clockSideForTurn());
-    _startClockTicker();
 
     // The Scout (Stockfish) starts its calculation
     // debugPrint(
@@ -2428,12 +2430,13 @@ class ChessNotifier extends StateNotifier<ChessState> {
     final wasClockStarted = state.clockStarted;
     _onMoveCompleted('$from$to');
 
-    if (!wasClockStarted) {
-      state = state.copyWith(clockStarted: true);
+    if (!state.isAcademyActive) {
+      if (!wasClockStarted) {
+        state = state.copyWith(clockStarted: true);
+      }
+      _setActiveClockSide(_clockSideForTurn());
+      _startClockTicker();
     }
-
-    _setActiveClockSide(_clockSideForTurn());
-    _startClockTicker();
 
     await ensureGameServicesStarted(analyzeCurrentPosition: true);
 
@@ -2498,7 +2501,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
   void _onMoveCompleted(String lastMove) {
     _startPrecomputingRustContext(lastMove, state.game);
-    if (state.clockStarted) {
+    if (state.clockStarted && !state.isAcademyActive) {
       final clockState = ref.read(gameClockProvider);
       state = state.copyWith(
         whiteTimeLeft: clockState.whiteTimeLeft,
@@ -2512,7 +2515,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
     final player = _playerWhoJustMoved();
 
     // Apply Clock Increment
-    if (state.clockStarted && !state.game.gameOver) {
+    if (state.clockStarted && !state.game.gameOver && !state.isAcademyActive) {
       final isWhite = player == 'White';
       ref.read(gameClockProvider.notifier).applyIncrement(state.incrementDuration, isWhite);
       if (isWhite) {
@@ -2923,6 +2926,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
   }
 
   void _syncTimesToClockProvider() {
+    if (state.isAcademyActive) return;
     ref.read(gameClockProvider.notifier).setClock(
       whiteTime: state.whiteTimeLeft,
       blackTime: state.blackTimeLeft,
@@ -2933,10 +2937,12 @@ class ChessNotifier extends StateNotifier<ChessState> {
   }
 
   void handleClockTimeout(String side) {
+    if (state.isAcademyActive) return;
     _handleClockTimeout(side);
   }
 
   void _startClockTicker() {
+    if (state.isAcademyActive) return;
     ref.read(gameClockProvider.notifier).setClock(
       whiteTime: state.whiteTimeLeft,
       blackTime: state.blackTimeLeft,
@@ -2953,6 +2959,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
   }
 
   void _setActiveClockSide(String? side) {
+    if (state.isAcademyActive) return;
     if (!state.clockStarted || side == null || state.game.gameOver) {
       state = state.copyWith(activeClockSide: null);
       _stopClock();
@@ -2963,6 +2970,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
   }
 
   void _handleClockTimeout(String side) {
+    if (state.isAcademyActive) return;
     _stopClock();
 
     state = state.copyWith(

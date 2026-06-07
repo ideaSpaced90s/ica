@@ -211,6 +211,7 @@ class StudyLabState {
   final List<int> guessedNodes; // Mainline node indices guessed successfully
 
   final bool isDirty; // Tracks unsaved changes in the study
+  final int? libraryIndex; // Tracks index of the study in sqlite library if saved/loaded
 
   StudyLabState({
     this.nodes = const [],
@@ -222,6 +223,7 @@ class StudyLabState {
     this.isGuessingMode = false,
     this.guessedNodes = const [],
     this.isDirty = false,
+    this.libraryIndex,
   });
 
   String get activeFen {
@@ -249,6 +251,7 @@ class StudyLabState {
     bool? isGuessingMode,
     List<int>? guessedNodes,
     bool? isDirty,
+    Object? libraryIndex = const Object(),
   }) {
     return StudyLabState(
       nodes: nodes ?? this.nodes,
@@ -264,6 +267,9 @@ class StudyLabState {
       isGuessingMode: isGuessingMode ?? this.isGuessingMode,
       guessedNodes: guessedNodes ?? this.guessedNodes,
       isDirty: isDirty ?? this.isDirty,
+      libraryIndex: libraryIndex == const Object()
+          ? this.libraryIndex
+          : libraryIndex as int?,
     );
   }
 }
@@ -464,6 +470,7 @@ class StudyLabNotifier extends StateNotifier<StudyLabState> {
       startFen: chess_lib.Chess.DEFAULT_POSITION,
       isBoardFlipped: state.isBoardFlipped,
       isDirty: false,
+      libraryIndex: null,
     );
   }
 
@@ -474,6 +481,7 @@ class StudyLabNotifier extends StateNotifier<StudyLabState> {
       startFen: fen,
       isBoardFlipped: state.isBoardFlipped,
       isDirty: true,
+      libraryIndex: null,
     );
   }
 
@@ -731,7 +739,7 @@ class StudyLabNotifier extends StateNotifier<StudyLabState> {
   }
 
   // Load a single game record (usually selected from a multi-game PGN picker)
-  void loadPgnRecord(rust_pgn.PgnGameRecord record) {
+  void loadPgnRecord(rust_pgn.PgnGameRecord record, [int? libraryIndex]) {
     final meta = GameMetadata(
       event: record.header.event,
       site: record.header.site,
@@ -753,6 +761,7 @@ class StudyLabNotifier extends StateNotifier<StudyLabState> {
           ? '${record.header.eco}: ${record.header.opening}' 
           : null,
       isDirty: false,
+      libraryIndex: libraryIndex,
     );
   }
 
@@ -1087,10 +1096,45 @@ class StudyLabNotifier extends StateNotifier<StudyLabState> {
 
     final success = rust_pgn.saveStudyToDb(dbPath: dbPath, game: record);
     if (success) {
+      final games = await loadGamesFromLibrary();
+      final newIndex = games.length - 1;
       state = state.copyWith(
         isDirty: false,
         metadata: state.metadata.copyWith(event: gameName),
+        libraryIndex: newIndex,
       );
+    }
+    return success;
+  }
+
+  Future<bool> saveExistingStudyInLibrary(int libraryIndex) async {
+    final dbPath = await _getDbPath();
+    final games = await loadGamesFromLibrary();
+    if (libraryIndex < 0 || libraryIndex >= games.length) return false;
+
+    // Clear all studies
+    await clearLibrary();
+
+    final movesOnly = exportToPgn();
+    var success = true;
+    for (var i = 0; i < games.length; i++) {
+      final game = games[i];
+      final record = i == libraryIndex
+          ? rust_pgn.PgnGameRecord(
+              header: game.header,
+              movesPgn: movesOnly,
+              index: game.index,
+            )
+          : game;
+
+      final saveOk = rust_pgn.saveStudyToDb(dbPath: dbPath, game: record);
+      if (!saveOk) {
+        success = false;
+      }
+    }
+
+    if (success) {
+      state = state.copyWith(isDirty: false);
     }
     return success;
   }
@@ -1158,6 +1202,15 @@ class StudyLabNotifier extends StateNotifier<StudyLabState> {
         success = false;
       }
     }
+
+    if (success) {
+      if (state.libraryIndex == indexToDelete) {
+        state = state.copyWith(libraryIndex: null);
+      } else if (state.libraryIndex != null && state.libraryIndex! > indexToDelete) {
+        state = state.copyWith(libraryIndex: state.libraryIndex! - 1);
+      }
+    }
+
     return success;
   }
 }
