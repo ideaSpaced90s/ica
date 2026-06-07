@@ -255,6 +255,215 @@ class _PositionSetupPageState extends ConsumerState<PositionSetupPage> {
     );
   }
 
+  Widget _buildChessboard(double boardSize, AnalysisClassicTheme theme) {
+    return Container(
+      width: boardSize,
+      height: boardSize,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: ScholarlyTheme.boardShadow,
+      ),
+      child: Stack(
+        children: [
+          // Board theme background
+          ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: theme.buildBackground(context, true),
+          ),
+          // Grid of squares
+          ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: GridView.builder(
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 8,
+              ),
+              itemCount: 64,
+              itemBuilder: (context, index) {
+                final row = index ~/ 8;
+                final col = index % 8;
+                final isLight = (row + col) % 2 == 0;
+                final sq = _getSquareName(row, col);
+                final piece = _boardPieces[sq];
+
+                return GestureDetector(
+                  onTap: () => _handleSquareTap(sq),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: isLight ? theme.lightSquare : theme.darkSquare,
+                    ),
+                    child: Stack(
+                      children: [
+                        if (theme.getSquarePainter(isLight, 0) != null)
+                          CustomPaint(
+                            painter: theme.getSquarePainter(isLight, 0.0),
+                            size: Size.infinite,
+                          ),
+                        if (piece != null)
+                          Center(
+                            child: theme.buildPiece(
+                              context,
+                              piece.substring(1),
+                              piece.startsWith('w'),
+                              false,
+                              0,
+                            ),
+                          ),
+                        // Coordinate label corner
+                        Positioned(
+                          top: 2,
+                          left: 4,
+                          child: Text(
+                            sq,
+                            style: GoogleFonts.inter(
+                              fontSize: 7.5,
+                              fontWeight: FontWeight.bold,
+                              color: isLight 
+                                  ? ScholarlyTheme.textMuted 
+                                  : Colors.white.withValues(alpha: 0.5),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSettingsPanel() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: ScholarlyTheme.panelBase,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: ScholarlyTheme.panelStroke, width: 1.2),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'SETTINGS',
+            style: GoogleFonts.outfit(
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+              letterSpacing: 1.2,
+              color: ScholarlyTheme.textMuted,
+            ),
+          ),
+          const Divider(color: ScholarlyTheme.panelStroke),
+          
+          // Side to Move Row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Side to Move:',
+                style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary),
+              ),
+              Row(
+                children: [
+                  ChoiceChip(
+                    label: const Text('White'),
+                    selected: _isWhiteToMove,
+                    selectedColor: ScholarlyTheme.accentBlue.withValues(alpha: 0.2),
+                    onSelected: (val) => setState(() => _isWhiteToMove = true),
+                  ),
+                  const SizedBox(width: 8),
+                  ChoiceChip(
+                    label: const Text('Black'),
+                    selected: !_isWhiteToMove,
+                    selectedColor: ScholarlyTheme.accentBlue.withValues(alpha: 0.2),
+                    onSelected: (val) => setState(() => _isWhiteToMove = false),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Castling Rights
+          Text(
+            'Castling Rights:',
+            style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Checkbox(
+                    value: _wkCastling,
+                    onChanged: (val) => setState(() => _wkCastling = val ?? false),
+                  ),
+                  Text('White Kingside (O-O)', style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 12)),
+                ],
+              ),
+              Row(
+                children: [
+                  Checkbox(
+                    value: _wqCastling,
+                    onChanged: (val) => setState(() => _wqCastling = val ?? false),
+                  ),
+                  Text('White Queenside (O-O-O)', style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 12)),
+                ],
+              ),
+              Row(
+                children: [
+                  Checkbox(
+                    value: _bkCastling,
+                    onChanged: (val) => setState(() => _bkCastling = val ?? false),
+                  ),
+                  Text('Black Kingside (o-o)', style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 12)),
+                ],
+              ),
+              Row(
+                children: [
+                  Checkbox(
+                    value: _bqCastling,
+                    onChanged: (val) => setState(() => _bqCastling = val ?? false),
+                  ),
+                  Text('Black Queenside (o-o-o)', style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 12)),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButtons() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        OutlinedButton.icon(
+          style: OutlinedButton.styleFrom(
+            foregroundColor: Colors.redAccent,
+            side: const BorderSide(color: Colors.redAccent),
+          ),
+          icon: const Icon(Icons.clear),
+          label: const Text('Clear Board'),
+          onPressed: _clearBoard,
+        ),
+        OutlinedButton.icon(
+          style: OutlinedButton.styleFrom(
+            foregroundColor: ScholarlyTheme.textMuted,
+          ),
+          icon: const Icon(Icons.settings_backup_restore),
+          label: const Text('Reset Start'),
+          onPressed: _resetToDefaultPosition,
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     const theme = AnalysisClassicTheme();
@@ -292,225 +501,56 @@ class _PositionSetupPageState extends ConsumerState<PositionSetupPage> {
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // 1. Board Editor
-              Center(
-                child: Container(
-                  width: boardSize,
-                  height: boardSize,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: ScholarlyTheme.boardShadow,
-                  ),
-                  child: Stack(
-                    children: [
-                      // Board theme background
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: theme.buildBackground(context, true),
-                      ),
-                      // Grid of squares
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: GridView.builder(
-                          physics: const NeverScrollableScrollPhysics(),
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 8,
-                          ),
-                          itemCount: 64,
-                          itemBuilder: (context, index) {
-                            final row = index ~/ 8;
-                            final col = index % 8;
-                            final isLight = (row + col) % 2 == 0;
-                            final sq = _getSquareName(row, col);
-                            final piece = _boardPieces[sq];
-
-                            return GestureDetector(
-                              onTap: () => _handleSquareTap(sq),
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: isLight ? theme.lightSquare : theme.darkSquare,
-                                ),
-                                child: Stack(
-                                  children: [
-                                    if (theme.getSquarePainter(isLight, 0) != null)
-                                      CustomPaint(
-                                        painter: theme.getSquarePainter(isLight, 0.0),
-                                        size: Size.infinite,
-                                      ),
-                                    if (piece != null)
-                                      Center(
-                                        child: theme.buildPiece(
-                                          context,
-                                          piece.substring(1),
-                                          piece.startsWith('w'),
-                                          false,
-                                          0,
-                                        ),
-                                      ),
-                                    // Coordinate label corner
-                                    Positioned(
-                                      top: 2,
-                                      left: 4,
-                                      child: Text(
-                                        sq,
-                                        style: GoogleFonts.inter(
-                                          fontSize: 7.5,
-                                          fontWeight: FontWeight.bold,
-                                          color: isLight 
-                                              ? ScholarlyTheme.textMuted 
-                                              : Colors.white.withValues(alpha: 0.5),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // 2. Piece Palette
-              _buildPiecePalette(ref),
-              const SizedBox(height: 16),
-
-              // 3. Settings / Options panel
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: ScholarlyTheme.panelBase,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: ScholarlyTheme.panelStroke, width: 1.2),
-                ),
-                child: Column(
+          child: screenWidth > 800
+              ? Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'SETTINGS',
-                      style: GoogleFonts.outfit(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                        letterSpacing: 1.2,
-                        color: ScholarlyTheme.textMuted,
+                    // Left Column: Chessboard
+                    Expanded(
+                      flex: 5,
+                      child: Center(
+                        child: _buildChessboard(boardSize, theme),
                       ),
                     ),
-                    const Divider(color: ScholarlyTheme.panelStroke),
-                    
-                    // Side to Move Row
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Side to Move:',
-                          style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary),
-                        ),
-                        Row(
-                          children: [
-                            ChoiceChip(
-                              label: const Text('White'),
-                              selected: _isWhiteToMove,
-                              selectedColor: ScholarlyTheme.accentBlue.withValues(alpha: 0.2),
-                              onSelected: (val) => setState(() => _isWhiteToMove = true),
-                            ),
-                            const SizedBox(width: 8),
-                            ChoiceChip(
-                              label: const Text('Black'),
-                              selected: !_isWhiteToMove,
-                              selectedColor: ScholarlyTheme.accentBlue.withValues(alpha: 0.2),
-                              onSelected: (val) => setState(() => _isWhiteToMove = false),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Castling Rights
-                    Text(
-                      'Castling Rights:',
-                      style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 8),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Checkbox(
-                              value: _wkCastling,
-                              onChanged: (val) => setState(() => _wkCastling = val ?? false),
-                            ),
-                            Text('White Kingside (O-O)', style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 12)),
-                          ],
-                        ),
-                        Row(
-                          children: [
-                            Checkbox(
-                              value: _wqCastling,
-                              onChanged: (val) => setState(() => _wqCastling = val ?? false),
-                            ),
-                            Text('White Queenside (O-O-O)', style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 12)),
-                          ],
-                        ),
-                        Row(
-                          children: [
-                            Checkbox(
-                              value: _bkCastling,
-                              onChanged: (val) => setState(() => _bkCastling = val ?? false),
-                            ),
-                            Text('Black Kingside (o-o)', style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 12)),
-                          ],
-                        ),
-                        Row(
-                          children: [
-                            Checkbox(
-                              value: _bqCastling,
-                              onChanged: (val) => setState(() => _bqCastling = val ?? false),
-                            ),
-                            Text('Black Queenside (o-o-o)', style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 12)),
-                          ],
-                        ),
-                      ],
+                    const SizedBox(width: 24),
+                    // Right Column: Editing Tools
+                    Expanded(
+                      flex: 6,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _buildPiecePalette(ref),
+                          const SizedBox(height: 16),
+                          _buildSettingsPanel(),
+                          const SizedBox(height: 16),
+                          _buildActionButtons(),
+                        ],
+                      ),
                     ),
                   ],
-                ),
-              ),
-              const SizedBox(height: 16),
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // 1. Board Editor
+                    Center(
+                      child: _buildChessboard(boardSize, theme),
+                    ),
+                    const SizedBox(height: 16),
 
-              // 4. Utility Action Buttons
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.redAccent,
-                      side: const BorderSide(color: Colors.redAccent),
-                    ),
-                    icon: const Icon(Icons.clear),
-                    label: const Text('Clear Board'),
-                    onPressed: _clearBoard,
-                  ),
-                  OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: ScholarlyTheme.textMuted,
-                    ),
-                    icon: const Icon(Icons.settings_backup_restore),
-                    label: const Text('Reset Start'),
-                    onPressed: _resetToDefaultPosition,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 32),
-            ],
-          ),
+                    // 2. Piece Palette
+                    _buildPiecePalette(ref),
+                    const SizedBox(height: 16),
+
+                    // 3. Settings / Options panel
+                    _buildSettingsPanel(),
+                    const SizedBox(height: 16),
+
+                    // 4. Utility Action Buttons
+                    _buildActionButtons(),
+                    const SizedBox(height: 32),
+                  ],
+                ),
         ),
       ),
     );

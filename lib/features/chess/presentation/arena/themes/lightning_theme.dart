@@ -185,6 +185,7 @@ class _StaticDischargeAmbientState extends State<StaticDischargeAmbient>
   late AnimationController _controller;
   final List<_ArcData> _arcs = [];
   final Random _random = Random();
+  Size _lastSize = Size.zero;
 
   @override
   void initState() {
@@ -192,7 +193,9 @@ class _StaticDischargeAmbientState extends State<StaticDischargeAmbient>
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 5),
-    )..repeat();
+    )
+      ..addListener(_onAnimationTick)
+      ..repeat();
   }
 
   @override
@@ -201,42 +204,52 @@ class _StaticDischargeAmbientState extends State<StaticDischargeAmbient>
     super.dispose();
   }
 
+  void _onAnimationTick() {
+    if (!mounted || _lastSize == Size.zero) return;
+
+    bool changed = false;
+    if (_random.nextDouble() > 0.97) {
+      final start = Offset(
+        _random.nextDouble() * _lastSize.width,
+        _random.nextDouble() * _lastSize.height,
+      );
+      final end = start + Offset(
+        (_random.nextDouble() - 0.5) * _lastSize.width * 0.25,
+        (_random.nextDouble() - 0.5) * _lastSize.height * 0.25,
+      );
+      _arcs.add(_ArcData(start: start, end: end, startTime: DateTime.now()));
+      changed = true;
+    }
+
+    final now = DateTime.now();
+    final initialLength = _arcs.length;
+    _arcs.removeWhere((arc) => now.difference(arc.startTime).inMilliseconds > 150);
+    if (_arcs.length != initialLength) {
+      changed = true;
+    }
+
+    if (_arcs.isNotEmpty) {
+      changed = true;
+    }
+
+    if (changed) {
+      setState(() {});
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return IgnorePointer(
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final size = Size(constraints.maxWidth, constraints.maxHeight);
-          return AnimatedBuilder(
-            animation: _controller,
-            builder: (context, child) {
-              if (_random.nextDouble() > 0.97) { // 3% chance
-                _triggerArc(size);
-              }
-              final now = DateTime.now();
-              _arcs.removeWhere((arc) => now.difference(arc.startTime).inMilliseconds > 150);
-              return CustomPaint(
-                painter: _StaticArcPainter(arcs: List.from(_arcs)),
-                size: Size.infinite,
-              );
-            },
+          _lastSize = Size(constraints.maxWidth, constraints.maxHeight);
+          return CustomPaint(
+            painter: _StaticArcPainter(arcs: List.from(_arcs)),
+            size: Size.infinite,
           );
         },
       ),
     );
-  }
-
-  void _triggerArc(Size size) {
-    final start = Offset(
-      _random.nextDouble() * size.width,
-      _random.nextDouble() * size.height,
-    );
-    final end = start + Offset(
-      (_random.nextDouble() - 0.5) * size.width * 0.25,
-      (_random.nextDouble() - 0.5) * size.height * 0.25,
-    );
-    final arc = _ArcData(start: start, end: end, startTime: DateTime.now());
-    setState(() => _arcs.add(arc));
   }
 }
 

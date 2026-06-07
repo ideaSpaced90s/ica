@@ -15,6 +15,8 @@ import '../data/saved_game.dart'; // For CommentaryEntry
 import 'chess_provider.dart' show MoveAnimationData, chessProvider, chessHapticsServiceProvider, chessSoundServiceProvider;
 import '../services/chess_sound_service.dart';
 
+import '../presentation/widgets/scotoma_card.dart' show hasScotomaDiagnosis;
+
 const _sentinel = Object();
 
 class PuzzlesState {
@@ -209,7 +211,10 @@ class PuzzlesNotifier extends StateNotifier<PuzzlesState> {
         };
 
         var maxEntry = axisValues.entries.reduce((a, b) => a.value > b.value ? a : b);
-        if (maxEntry.value > 0.3) {
+        if (hasScotomaDiagnosis(
+          peakRate: maxEntry.value,
+          analyzedGames: scotoma.analyzedGames,
+        )) {
           chosenAxis = maxEntry.key;
         }
       }

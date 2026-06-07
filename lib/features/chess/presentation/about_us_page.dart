@@ -214,6 +214,33 @@ class _AboutUsPageState extends ConsumerState<AboutUsPage> {
                           '• Streak Bonus (S_bonus): To reward consistent excellence, maintaining an active winning streak of 3 or more games automatically grants a bonus of +5 Elo points for each consecutive victory.'
                         ),
                         const SizedBox(height: 24),
+                        _buildMathSectionHeader('CALIBRATION PHASE — FIRST 10 RATED MATCHES'),
+                        const SizedBox(height: 10),
+                        _buildMathText(
+                          'Every player begins their journey at an ELO rating of 400. The first 10 rated matches are your '
+                          'Calibration Phase — a rapid placement period designed to quickly position you in the correct skill '
+                          'bracket before stable rating progression begins.\n\n'
+                          'During calibration, the K-factor is set to 40 (double the stable rate of 20). This amplifies both '
+                          'wins and losses, allowing the system to converge on your true skill level in as few games as possible. '
+                          'Once 10 matches are complete, K drops to 20 for steady, reliable rating growth.\n\n'
+                          'While you are in the Calibration Phase, a gold badge on your dashboard home card will show how many '
+                          'matches remain to complete your placement.'
+                        ),
+                        const SizedBox(height: 12),
+                        _buildMathFormula(
+                          'Starting ELO = 400   (ELO floor = 400; rating never drops below this)\n\n'
+                          'Calibration K-Factor (Matches 1–10) : K = 40\n'
+                          'Stable K-Factor (Match 11+)         : K = 20\n\n'
+                          'Max ELO swing per calibration game (K=40, equal opponents):\n'
+                          '  Win  : +20 ELO   (40 × (1.0 - 0.5))\n'
+                          '  Loss : -20 ELO   (40 × (0.0 - 0.5))   → floored at 400\n'
+                          '  Draw :   0 ELO   (40 × (0.5 - 0.5))\n\n'
+                          'Max ELO swing per stable game (K=20, equal opponents):\n'
+                          '  Win  : +10 ELO\n'
+                          '  Loss : -10 ELO\n'
+                          '  Draw :   0 ELO'
+                        ),
+                        const SizedBox(height: 24),
                         
                         _buildMathSectionHeader('2. CUMULATIVE MATERIAL DOMINANCE'),
                         const SizedBox(height: 10),

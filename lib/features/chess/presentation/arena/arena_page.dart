@@ -336,12 +336,14 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                             isWhite: state.isPlayerWhite,
                             isActive: isTurn,
                             timeLeft: state.isPlayerWhite ? state.whiteTimeLeft : state.blackTimeLeft,
+                            baseTimeDuration: state.baseTimeDuration,
                           ),
                           const SizedBox(width: 12),
                           ArenaTimeDisplay(
                             isWhite: !state.isPlayerWhite,
                             isActive: !isTurn,
                             timeLeft: !state.isPlayerWhite ? state.whiteTimeLeft : state.blackTimeLeft,
+                            baseTimeDuration: state.baseTimeDuration,
                           ),
                           const Spacer(),
                           Row(
@@ -440,12 +442,14 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                           isWhite: state.isPlayerWhite,
                           isActive: isTurn,
                           timeLeft: state.isPlayerWhite ? state.whiteTimeLeft : state.blackTimeLeft,
+                          baseTimeDuration: state.baseTimeDuration,
                         ),
                         const SizedBox(width: 12),
                         ArenaTimeDisplay(
                           isWhite: !state.isPlayerWhite,
                           isActive: !isTurn,
                           timeLeft: !state.isPlayerWhite ? state.whiteTimeLeft : state.blackTimeLeft,
+                          baseTimeDuration: state.baseTimeDuration,
                         ),
                         const Spacer(),
                         Row(

@@ -25,6 +25,7 @@ import '../../application/onboarding_provider.dart';
 import '../../application/tutorial_provider.dart';
 import '../widgets/gm_chanakya_intro_overlay.dart';
 import '../widgets/neural_connectivity_mesh.dart';
+import '../widgets/countdown_overlay.dart';
 
 class BattlegroundPage extends ConsumerStatefulWidget {
   const BattlegroundPage({super.key});
@@ -41,6 +42,7 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
   bool _assignedWhite = true;
   late ConfettiController _confettiController;
   bool _hasTriggeredConfetti = false;
+  bool _isCountdownActive = false;
 
   @override
   void initState() {
@@ -215,6 +217,7 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
                         CapturedPiecesInline(
                           pieces: topPieces,
                           opponentPieces: bottomPieces,
+                          useBnwTheme: true,
                         ),
                       ],
                     ),
@@ -227,6 +230,12 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
                 child: Stack(
                   children: [
                     const BattlegroundBoard(alignment: Alignment.topCenter),
+                    if (_isCountdownActive)
+                      Positioned.fill(
+                        child: CountdownOverlay(
+                          onComplete: _startNewGame,
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -240,6 +249,7 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
                       child: CapturedPiecesInline(
                         pieces: bottomPieces,
                         opponentPieces: topPieces,
+                        useBnwTheme: true,
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -293,12 +303,14 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
                             isWhite: state.isPlayerWhite,
                             isActive: isTurn,
                             timeLeft: state.isPlayerWhite ? state.whiteTimeLeft : state.blackTimeLeft,
+                            baseTimeDuration: state.baseTimeDuration,
                           ),
                           const SizedBox(width: 12),
                           ArenaTimeDisplay(
                             isWhite: !state.isPlayerWhite,
                             isActive: !isTurn,
                             timeLeft: state.isPlayerWhite ? state.blackTimeLeft : state.whiteTimeLeft,
+                            baseTimeDuration: state.baseTimeDuration,
                           ),
                           const Spacer(),
                           Row(
@@ -387,12 +399,14 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
                       isWhite: state.isPlayerWhite,
                       isActive: isTurn,
                       timeLeft: state.isPlayerWhite ? state.whiteTimeLeft : state.blackTimeLeft,
+                      baseTimeDuration: state.baseTimeDuration,
                     ),
                     const SizedBox(width: 12),
                     ArenaTimeDisplay(
                       isWhite: !state.isPlayerWhite,
                       isActive: !isTurn,
                       timeLeft: state.isPlayerWhite ? state.blackTimeLeft : state.whiteTimeLeft,
+                      baseTimeDuration: state.baseTimeDuration,
                     ),
                     const Spacer(),
                     Row(
@@ -431,6 +445,7 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
                       child: CapturedPiecesInline(
                         pieces: topPieces,
                         opponentPieces: bottomPieces,
+                        useBnwTheme: true,
                       ),
                     ),
                   ],
@@ -447,6 +462,12 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
             child: Stack(
               children: [
                 const BattlegroundBoard(alignment: Alignment.center),
+                if (_isCountdownActive)
+                  Positioned.fill(
+                    child: CountdownOverlay(
+                      onComplete: _startNewGame,
+                    ),
+                  ),
               ],
             ),
           ),
@@ -461,6 +482,7 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
                 child: CapturedPiecesInline(
                   pieces: bottomPieces,
                   opponentPieces: topPieces,
+                  useBnwTheme: true,
                 ),
               ),
               const SizedBox(width: 12),
@@ -496,9 +518,8 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
         mainAxisSize: MainAxisSize.min,
         children: [
           ActionIconButton(
-            icon: state.gameMode == 'chess960' ? Icons.grid_view_rounded : Icons.shuffle_rounded,
-            size: 22,
-            iconColor: isMatchActive ? ScholarlyTheme.textSubtle : null,
+            icon: Icons.casino_rounded, // RATED uses Dice
+            size: 30, // 20% reduction logic
             onTap: () async {
               if (isMatchActive) {
                 final resigned = await _showRatedNewGameDialog(context);
@@ -513,44 +534,11 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
                   }
                 }
               } else {
-                final newMode = state.gameMode == 'chess960' ? 'classic' : 'chess960';
-                _showModeChangeConfirmation(context, newMode);
-              }
-            },
-          ),
-          const SizedBox(width: 8),
-          ActionIconButton(
-            icon: Icons.timer_rounded,
-            size: 22,
-            iconColor: isMatchActive ? ScholarlyTheme.textSubtle : null,
-            onTap: () async {
-              if (isMatchActive) {
-                final resigned = await _showRatedNewGameDialog(context);
-                if (resigned == true) {
-                  await ref.read(battlegroundProvider.notifier).resignRatedGame();
-                  if (context.mounted) {
-                    await _showTimeArenaSelectionDialog(context);
-                    _triggerDiceRoll();
-                  }
-                }
-              } else {
-                _showTimeControlSelector(context, ref);
-              }
-            },
-          ),
-          const SizedBox(width: 8),
-          ActionIconButton(
-            icon: Icons.casino_rounded, // RATED uses Dice
-            size: 30, // 20% reduction logic
-            onTap: () async {
-              if (isMatchActive) {
-                final resigned = await _showRatedNewGameDialog(context);
-                if (resigned == true) {
-                  await ref.read(battlegroundProvider.notifier).resignRatedGame();
+                await _showModeSelectionDialog(context);
+                if (context.mounted) {
+                  await _showTimeArenaSelectionDialog(context);
                   _triggerDiceRoll();
                 }
-              } else {
-                _triggerDiceRoll();
               }
             },
           ),
@@ -684,6 +672,7 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
                                   setState(() {
                                     _hasTriggeredConfetti = false;
                                     _hasShownRatedCaution = false;
+                                    _isCountdownActive = false;
                                   });
                                   ref.read(battlegroundProvider.notifier).dismissGameOver();
                                   ref.read(battlegroundProvider.notifier).clearBoard();
@@ -789,8 +778,23 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
 
   void _onDiceRollComplete() {
     if (mounted) {
-      ref.read(battlegroundProvider.notifier).reset(forcedPlayerWhite: _assignedWhite);
-      setState(() => _isDiceRolling = false);
+      ref.read(battlegroundProvider.notifier).reset(
+        forcedPlayerWhite: _assignedWhite,
+        startClockImmediate: false,
+      );
+      setState(() {
+        _isDiceRolling = false;
+        _isCountdownActive = true;
+      });
+    }
+  }
+
+  void _startNewGame() {
+    if (mounted) {
+      setState(() {
+        _isCountdownActive = false;
+      });
+      ref.read(battlegroundProvider.notifier).startGame();
     }
   }
 
@@ -1079,140 +1083,7 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
     );
   }
 
-  void _showTimeControlSelector(BuildContext context, WidgetRef ref) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) {
-        return Consumer(
-          builder: (context, ref, _) {
-            final state = ref.watch(battlegroundProvider);
-            final notifier = ref.read(battlegroundProvider.notifier);
-            
-            final bulletPresets = [
-              {'label': '0.5+0', 'min': 0, 'sec': 30, 'inc': 0},
-              {'label': '1+0', 'min': 1, 'sec': 0, 'inc': 0},
-              {'label': '2+1', 'min': 2, 'sec': 0, 'inc': 1},
-            ];
-            final blitzPresets = [
-              {'label': '3+0', 'min': 3, 'sec': 0, 'inc': 0},
-              {'label': '3+2', 'min': 3, 'sec': 0, 'inc': 2},
-              {'label': '5+0', 'min': 5, 'sec': 0, 'inc': 0},
-            ];
-            final rapidPresets = [
-              {'label': '10+0', 'min': 10, 'sec': 0, 'inc': 0},
-              {'label': '15+10', 'min': 15, 'sec': 0, 'inc': 10},
-              {'label': '30+0', 'min': 30, 'sec': 0, 'inc': 0},
-            ];
 
-            Widget buildGroup(String title, IconData icon, List<Map<String, dynamic>> group) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(icon, color: ScholarlyTheme.accentBlue, size: 16),
-                      const SizedBox(width: 8),
-                      Text(title.toUpperCase(), style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1.2)),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: group.map((p) {
-                      final isSelected = state.baseTimeDuration.inMinutes == p['min'] && 
-                                       state.baseTimeDuration.inSeconds % 60 == p['sec'] &&
-                                       state.incrementDuration.inSeconds == p['inc'];
-                      return ChoiceChip(
-                        showCheckmark: false,
-                        label: Text(p['label'] as String),
-                        selected: isSelected,
-                        onSelected: (selected) {
-                          if (selected) {
-                            notifier.setTimeControl(
-                              Duration(minutes: p['min'] as int, seconds: p['sec'] as int),
-                              Duration(seconds: p['inc'] as int),
-                            );
-                            Navigator.pop(context);
-                          }
-                        },
-                        selectedColor: ScholarlyTheme.accentBlue.withValues(alpha: 0.2),
-                        labelStyle: GoogleFonts.inter(
-                          color: isSelected ? ScholarlyTheme.accentBlue : ScholarlyTheme.textPrimary,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                          fontSize: 13,
-                        ),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        side: BorderSide(color: isSelected ? ScholarlyTheme.accentBlue : ScholarlyTheme.panelStroke),
-                        backgroundColor: ScholarlyTheme.panelBase,
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 24),
-                ],
-              );
-            }
-
-            return Container(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
-              decoration: BoxDecoration(
-                color: ScholarlyTheme.panelBase,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-                border: Border.all(color: ScholarlyTheme.panelStroke),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(color: ScholarlyTheme.panelStroke, borderRadius: BorderRadius.circular(2)),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Text('Tiered Time Arenas', style: GoogleFonts.inter(color: ScholarlyTheme.accentBlue, fontSize: 20, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 24),
-                  buildGroup('Bullet Arena', Icons.bolt_rounded, bulletPresets),
-                  buildGroup('Blitz Arena', Icons.local_fire_department_rounded, blitzPresets),
-                  buildGroup('Rapid Arena', Icons.timer_rounded, rapidPresets),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Future<void> _showModeChangeConfirmation(BuildContext context, String targetMode) async {
-    final is960 = targetMode == 'chess960';
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: ScholarlyTheme.panelBase,
-        surfaceTintColor: ScholarlyTheme.accentBlue,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28), side: BorderSide(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.2), width: 1)),
-        title: Column(mainAxisSize: MainAxisSize.min, children: [
-          Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.1), shape: BoxShape.circle), child: Icon(is960 ? Icons.shuffle_rounded : Icons.grid_view_rounded, color: ScholarlyTheme.accentBlue, size: 24)),
-          const SizedBox(height: 16),
-          Text(is960 ? 'Switch to Chess 960?' : 'Switch to Classic?', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary, fontSize: 20)),
-        ]),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('CANCEL')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), style: FilledButton.styleFrom(backgroundColor: ScholarlyTheme.accentBlue, foregroundColor: Colors.white), child: const Text('CONFIRM')),
-        ],
-      ),
-    );
-
-    if (confirmed == true && mounted) {
-      ref.read(battlegroundProvider.notifier).setGameMode(targetMode);
-      _triggerDiceRoll();
-    }
-  }
 }
 
 class ActiveAvatarWrapper extends StatefulWidget {

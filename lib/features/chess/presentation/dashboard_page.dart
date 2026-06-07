@@ -13,7 +13,9 @@ import 'widgets/ambient_scaffold.dart';
 import 'widgets/profile_customization_overlay.dart';
 import 'widgets/phase_analysis_widgets.dart';
 import 'widgets/scotoma_card.dart';
+import 'widgets/daily_motivational_quote.dart';
 import 'package:intl/intl.dart';
+
 
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
@@ -64,6 +66,8 @@ class DashboardPage extends ConsumerWidget {
               ),
             ),
           ),
+          const DailyMotivationalQuoteCard(),
+          const SizedBox(height: 20),
           _buildMasterCard(state, bgState),
           const SizedBox(height: 32),
         ],
@@ -73,7 +77,7 @@ class DashboardPage extends ConsumerWidget {
         const SizedBox(height: 32),
         _buildSectionHeader('ELO PROGRESS', icon: Icons.show_chart_rounded),
         const SizedBox(height: 16),
-        const SizedBox(height: 240, child: EloAscentChart()),
+        const SizedBox(height: 268, child: EloAscentChart()),
       ],
     );
 
@@ -92,7 +96,7 @@ class DashboardPage extends ConsumerWidget {
           mainAxisSpacing: 16,
           children: [
             _buildTierCard(
-              'BULLET ARENA',
+              'BULLET',
               Icons.bolt_rounded,
               bgState.bulletElo,
               bgState.bulletStreak,
@@ -101,7 +105,7 @@ class DashboardPage extends ConsumerWidget {
               bgState.bulletDominance,
             ),
             _buildTierCard(
-              'BLITZ ARENA',
+              'BLITZ',
               Icons.local_fire_department_rounded,
               bgState.blitzElo,
               bgState.blitzStreak,
@@ -110,7 +114,7 @@ class DashboardPage extends ConsumerWidget {
               bgState.blitzDominance,
             ),
             _buildTierCard(
-              'RAPID ARENA',
+              'RAPID',
               Icons.timer_rounded,
               bgState.rapidElo,
               bgState.rapidStreak,
@@ -183,31 +187,100 @@ class DashboardPage extends ConsumerWidget {
                     insightSections,
                   ],
                 )
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildHeaderSection(context, ref, state, bgState),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(width: 320, child: leftColumn),
-                        const SizedBox(width: 32),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              centerColumn,
-                              const SizedBox(height: 32),
-                              insightSections,
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+              : _buildDesktopBody(context, ref, state, bgState),
         ),
       ),
+    );
+  }
+
+  // ── Desktop layout ────────────────────────────────────────────────────────
+
+  Widget _buildDesktopBody(
+    BuildContext context,
+    WidgetRef ref,
+    ChessState state,
+    BattlegroundState bgState,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ── Header Banner (avatar + name + metrics + game modes) ────────────
+        _buildHeaderSection(context, ref, state, bgState),
+        const SizedBox(height: 28),
+
+        // ── 3 Arena cards in a row ─────────────────────────────────────────
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: _buildTierCard(
+                'BULLET',
+                Icons.bolt_rounded,
+                bgState.bulletElo,
+                bgState.bulletStreak,
+                bgState.bulletGamesClassic,
+                bgState.bulletGames960,
+                bgState.bulletDominance,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildTierCard(
+                'BLITZ',
+                Icons.local_fire_department_rounded,
+                bgState.blitzElo,
+                bgState.blitzStreak,
+                bgState.blitzGamesClassic,
+                bgState.blitzGames960,
+                bgState.blitzDominance,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildTierCard(
+                'RAPID',
+                Icons.timer_rounded,
+                bgState.rapidElo,
+                bgState.rapidStreak,
+                bgState.rapidGamesClassic,
+                bgState.rapidGames960,
+                bgState.rapidDominance,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 32),
+
+        // ── 30D Heatmap ─────────────────────────────────────────────────────
+        _buildSectionHeader('30D', icon: Icons.calendar_today_rounded),
+        const SizedBox(height: 16),
+        const DominanceHeatmap(),
+        const SizedBox(height: 32),
+
+        // ── ELO Progress ───────────────────────────────────────────────────
+        _buildSectionHeader('ELO PROGRESS', icon: Icons.show_chart_rounded),
+        const SizedBox(height: 16),
+        const SizedBox(height: 340, child: EloAscentChart()),
+        const SizedBox(height: 32),
+
+        // ── Repertoire (Openings + Endgame) ─────────────────────────────────
+        _buildSectionHeader('REPERTOIRE', icon: Icons.auto_stories_rounded),
+        const SizedBox(height: 16),
+        const RepertoireCard(),
+        const SizedBox(height: 32),
+
+        // ── Playstyle ───────────────────────────────────────────────────────
+        _buildSectionHeader('PLAYSTYLE', icon: Icons.radar_rounded),
+        const SizedBox(height: 16),
+        const TacticalRadarChart(),
+        const SizedBox(height: 32),
+
+        // ── Scotoma ─────────────────────────────────────────────────────────
+        _buildSectionHeader('SCOTOMA', icon: Icons.visibility_off_rounded),
+        const SizedBox(height: 16),
+        const ScotomaCard(),
+        const SizedBox(height: 32),
+      ],
     );
   }
 
@@ -237,76 +310,73 @@ class DashboardPage extends ConsumerWidget {
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final profile = Row(
+          final profile = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              GestureDetector(
-                onTap: () => showProfileCustomizationOverlay(context, ref),
-                child: Container(
-                  width: 90,
-                  height: 90,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: ScholarlyTheme.accentBlue.withValues(alpha: 0.8),
-                      width: 3.5,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: ScholarlyTheme.accentBlue.withValues(alpha: 0.2),
-                        blurRadius: 16,
-                      ),
-                    ],
-                  ),
-                  child: ClipOval(
-                    child: state.userAvatarPath.startsWith('assets/')
-                        ? Image.asset(state.userAvatarPath, fit: BoxFit.cover)
-                        : Image.file(
-                            File(state.userAvatarPath),
-                            fit: BoxFit.cover,
+              Row(
+                children: [
+                  GestureDetector(
+                    onTap: () => showProfileCustomizationOverlay(context, ref),
+                    child: Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: ScholarlyTheme.accentBlue.withValues(alpha: 0.8),
+                          width: 3.5,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: ScholarlyTheme.accentBlue.withValues(alpha: 0.2),
+                            blurRadius: 16,
                           ),
+                        ],
+                      ),
+                      child: ClipOval(
+                        child: state.userAvatarPath.startsWith('assets/')
+                            ? Image.asset(state.userAvatarPath, fit: BoxFit.cover)
+                            : Image.file(
+                                File(state.userAvatarPath),
+                                fit: BoxFit.cover,
+                              ),
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 20),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'WELCOME BACK,',
+                          style: GoogleFonts.outfit(
+                            color: ScholarlyTheme.textMuted,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 2.0,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          state.userName.toUpperCase(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.outfit(
+                            color: ScholarlyTheme.textPrimary,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 24),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'WELCOME BACK,',
-                      style: GoogleFonts.outfit(
-                        color: ScholarlyTheme.textMuted,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 2.0,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      state.userName.toUpperCase(),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.outfit(
-                        color: ScholarlyTheme.textPrimary,
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      '“The chess board is the world, the pieces are the phenomena of the universe...”',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.inter(
-                        color: ScholarlyTheme.textSubtle,
-                        fontSize: 11,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              const SizedBox(height: 16),
+              const DailyMotivationalQuoteCard(),
             ],
           );
 
@@ -315,18 +385,8 @@ class DashboardPage extends ConsumerWidget {
             runSpacing: 12,
             alignment: WrapAlignment.end,
             children: [
-              _buildHeaderMetricCard(
-                title: 'CONSOLIDATED ELO',
-                value: '${bgState.consolidatedRating}',
-                color: ScholarlyTheme.accentBlue,
-                icon: Icons.emoji_events_rounded,
-              ),
-              _buildHeaderMetricCard(
-                title: 'TOTAL MATCHES',
-                value: '${bgState.totalRatedGamesCount}',
-                color: ScholarlyTheme.accentGold,
-                icon: Icons.sports_esports_rounded,
-              ),
+              _buildConsolidatedEloCard(bgState),
+              _buildTotalMatchesCard(bgState),
               if (bgState.totalWinningStreak > 0)
                 _buildHeaderMetricCard(
                   title: 'WIN STREAK',
@@ -334,6 +394,7 @@ class DashboardPage extends ConsumerWidget {
                   color: Colors.deepOrangeAccent,
                   icon: Icons.local_fire_department_rounded,
                 ),
+              _buildGameModesCard(),
             ],
           );
 
@@ -356,62 +417,343 @@ class DashboardPage extends ConsumerWidget {
     );
   }
 
+  Widget _buildConsolidatedEloCard(BattlegroundState bgState) {
+    final Color color = ScholarlyTheme.accentBlue;
+    final isCalibrated = bgState.isCalibrated;
+    final isCalibratingInitial = bgState.totalRatedGamesCount < 10;
+    final gamesRemaining = isCalibratingInitial
+        ? (10 - bgState.totalRatedGamesCount)
+        : bgState.recalibrationGamesRemaining;
+
+    final lastGameMs = bgState.lastRatedGameTimestampMs;
+    String lastPlayedString = 'Never';
+    if (lastGameMs != null) {
+      final dt = DateTime.fromMillisecondsSinceEpoch(lastGameMs).toLocal();
+      lastPlayedString = DateFormat.yMd().add_jm().format(dt);
+    }
+
+    return SizedBox(
+      width: 200,
+      height: 208, // Match the Game Modes card height exactly
+      child: JuicyGlassCard(
+        borderRadius: 20,
+        borderColor: color,
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header: Icon + Title
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    Icons.emoji_events_rounded,
+                    color: color,
+                    size: 18,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'CONSOLIDATED ELO',
+                    style: GoogleFonts.outfit(
+                      color: ScholarlyTheme.textPrimary,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.6,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            const Spacer(),
+            // Large Centered Value
+            Center(
+              child: Text(
+                '${bgState.consolidatedRating}',
+                style: GoogleFonts.outfit(
+                  color: ScholarlyTheme.textPrimary,
+                  fontSize: 40,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: -0.5,
+                ),
+              ),
+            ),
+            const Spacer(),
+            // Calibration Status Badge
+            Row(
+              children: [
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: isCalibrated ? const Color(0xFF22C55E) : const Color(0xFFEF4444),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  isCalibrated ? 'Calibrated' : 'Uncalibrated',
+                  style: GoogleFonts.inter(
+                    color: isCalibrated ? const Color(0xFF22C55E) : const Color(0xFFEF4444),
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            if (!isCalibrated) ...[
+              const SizedBox(height: 3),
+              Text(
+                '($gamesRemaining matches left)',
+                style: GoogleFonts.inter(
+                  color: const Color(0xFFF59E0B),
+                  fontSize: 9,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+            const SizedBox(height: 6),
+            // Last game date/time label
+            Text(
+              'Last game: $lastPlayedString',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.inter(
+                color: ScholarlyTheme.textMuted,
+                fontSize: 9,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTotalMatchesCard(BattlegroundState bgState) {
+    final Color color = ScholarlyTheme.accentGold;
+    return SizedBox(
+      width: 200,
+      height: 208, // Match the Game Modes card height exactly
+      child: JuicyGlassCard(
+        borderRadius: 20,
+        borderColor: color,
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header: Icon + Title
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    Icons.sports_esports_rounded,
+                    color: color,
+                    size: 16,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'TOTAL MATCHES',
+                    style: GoogleFonts.outfit(
+                      color: ScholarlyTheme.textPrimary,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.6,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            const Spacer(),
+            // Large Centered Value
+            Center(
+              child: Text(
+                '${bgState.totalRatedGamesCount}',
+                style: GoogleFonts.outfit(
+                  color: ScholarlyTheme.textPrimary,
+                  fontSize: 34,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: -0.5,
+                ),
+              ),
+            ),
+            const Spacer(),
+            // Breakdown rows
+            _buildMatchBreakdownRow('BULLET', bgState.bulletGamesClassic, bgState.bulletGames960, Colors.cyan),
+            const SizedBox(height: 3),
+            _buildMatchBreakdownRow('BLITZ', bgState.blitzGamesClassic, bgState.blitzGames960, Colors.orangeAccent),
+            const SizedBox(height: 3),
+            _buildMatchBreakdownRow('RAPID', bgState.rapidGamesClassic, bgState.rapidGames960, ScholarlyTheme.accentBlue),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMatchBreakdownRow(String label, int classic, int nineSixty, Color dotColor) {
+    return Row(
+      children: [
+        Container(
+          width: 5,
+          height: 5,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: dotColor,
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            color: ScholarlyTheme.textPrimary,
+            fontSize: 9,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const Spacer(),
+        Text(
+          'C:$classic | 960:$nineSixty',
+          style: GoogleFonts.jetBrainsMono(
+            color: ScholarlyTheme.textMuted,
+            fontSize: 9,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMobileMatchBreakdownRow(String label, int classic, int nineSixty, Color dotColor) {
+    return Row(
+      children: [
+        Container(
+          width: 5,
+          height: 5,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: dotColor,
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            color: Colors.white.withValues(alpha: 0.7),
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const Spacer(),
+        Text(
+          'Classic: $classic  |  960: $nineSixty',
+          style: GoogleFonts.jetBrainsMono(
+            color: Colors.white.withValues(alpha: 0.9),
+            fontSize: 10,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildHeaderMetricCard({
     required String title,
     required String value,
     required Color color,
     required IconData icon,
   }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.8),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.3), width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: color, size: 20),
-          ),
-          const SizedBox(width: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                title,
-                style: GoogleFonts.inter(
-                  color: ScholarlyTheme.textMuted,
-                  fontSize: 9,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.5,
+    return SizedBox(
+      width: 200,
+      height: 208, // Match the Game Modes card height exactly
+      child: JuicyGlassCard(
+        borderRadius: 20,
+        borderColor: color,
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header: Icon + Title
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: color,
+                    size: 18,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: GoogleFonts.outfit(
+                      color: ScholarlyTheme.textPrimary,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.6,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            const Spacer(),
+            // Large Centered Value
+            Center(
+              child: Text(
                 value,
                 style: GoogleFonts.outfit(
                   color: ScholarlyTheme.textPrimary,
-                  fontSize: 22,
+                  fontSize: 40,
                   fontWeight: FontWeight.bold,
+                  letterSpacing: -0.5,
                 ),
               ),
-            ],
-          ),
-        ],
+            ),
+            const Spacer(),
+            // A subtle indicator bar and subtitle
+            Container(
+              height: 4,
+              width: 40,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Live Performance',
+              style: GoogleFonts.inter(
+                color: ScholarlyTheme.textMuted,
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -496,13 +838,103 @@ class DashboardPage extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildBigStat('ELO', '${bgState.consolidatedRating}'),
+                        _buildBigStat('ELO', '${bgState.consolidatedRating}'),
               _buildBigStat('MATCHES', '${bgState.totalRatedGamesCount}'),
               _buildBigStat(
                 'DOM',
                 '${avgDominance >= 0 ? '+' : ''}${avgDominance.toStringAsFixed(1)}',
               ),
             ],
+          ),
+          // Calibration Status and Last Game Info
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.15),
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: bgState.isCalibrated ? const Color(0xFF22C55E) : const Color(0xFFEF4444),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          bgState.isCalibrated ? 'CALIBRATED' : 'UNCALIBRATED',
+                          style: GoogleFonts.inter(
+                            color: bgState.isCalibrated ? const Color(0xFF22C55E) : const Color(0xFFEF4444),
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (!bgState.isCalibrated) ...[
+                      Text(
+                        bgState.totalRatedGamesCount < 10
+                            ? '${10 - bgState.totalRatedGamesCount} games left'
+                            : '${bgState.recalibrationGamesRemaining} games left',
+                        style: GoogleFonts.inter(
+                          color: const Color(0xFFF59E0B),
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'LAST GAME',
+                      style: GoogleFonts.inter(
+                        color: Colors.white.withValues(alpha: 0.6),
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    Text(
+                      bgState.lastRatedGameTimestampMs != null
+                          ? DateFormat.yMd().add_jm().format(
+                              DateTime.fromMillisecondsSinceEpoch(bgState.lastRatedGameTimestampMs!).toLocal())
+                          : 'Never',
+                      style: GoogleFonts.jetBrainsMono(
+                        color: Colors.white.withValues(alpha: 0.9),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                const Divider(color: Colors.white24, height: 1),
+                const SizedBox(height: 8),
+                _buildMobileMatchBreakdownRow('BULLET', bgState.bulletGamesClassic, bgState.bulletGames960, Colors.cyan),
+                const SizedBox(height: 4),
+                _buildMobileMatchBreakdownRow('BLITZ', bgState.blitzGamesClassic, bgState.blitzGames960, Colors.orangeAccent),
+                const SizedBox(height: 4),
+                _buildMobileMatchBreakdownRow('RAPID', bgState.rapidGamesClassic, bgState.rapidGames960, ScholarlyTheme.accentBlue),
+              ],
+            ),
           ),
         ],
       ),
@@ -648,14 +1080,6 @@ class DashboardPage extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: 6),
-                Text(
-                  'C: $classic | 960: $nineSixty',
-                  style: GoogleFonts.inter(
-                    color: ScholarlyTheme.textSubtle,
-                    fontSize: 9,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
               ],
             ),
           ),
@@ -669,42 +1093,46 @@ class DashboardPage extends ConsumerWidget {
   }
 
   Widget _buildGameModesCard() {
-    return JuicyGlassCard(
-      borderRadius: 20,
-      borderColor: const Color(0xFF06B6D4),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(7),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF06B6D4).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
+    return SizedBox(
+      width: 200,
+      height: 208,
+      child: JuicyGlassCard(
+        borderRadius: 20,
+        borderColor: const Color(0xFF06B6D4),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF06B6D4).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.pie_chart_rounded,
+                    color: Color(0xFF06B6D4),
+                    size: 18,
+                  ),
                 ),
-                child: const Icon(
-                  Icons.pie_chart_rounded,
-                  color: Color(0xFF06B6D4),
-                  size: 18,
+                const SizedBox(width: 10),
+                Text(
+                  'GAME MODES',
+                  style: GoogleFonts.outfit(
+                    color: ScholarlyTheme.textPrimary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.6,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 10),
-              Text(
-                'GAME MODES',
-                style: GoogleFonts.outfit(
-                  color: ScholarlyTheme.textPrimary,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0.6,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          const Expanded(child: ModeDistributionChart()),
-        ],
+              ],
+            ),
+            const SizedBox(height: 12),
+            const Expanded(child: ModeDistributionChart()),
+          ],
+        ),
       ),
     );
   }

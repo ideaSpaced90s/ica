@@ -244,6 +244,8 @@ class ChessState {
     this.userAvatarPath = 'assets/persona/user_profile_0.png',
     this.isWaitingForSideChoice = false,
     this.isAcademyBlunderActive = false,
+    this.premoveFrom,
+    this.premoveTo,
 
   });
 
@@ -329,6 +331,8 @@ class ChessState {
   final String userAvatarPath;
   final bool isWaitingForSideChoice;
   final bool isAcademyBlunderActive;
+  final String? premoveFrom;
+  final String? premoveTo;
 
 
   bool get isChess960 => gameMode == 'chess960';
@@ -427,6 +431,8 @@ class ChessState {
     String? userAvatarPath,
     bool? isWaitingForSideChoice,
     bool? isAcademyBlunderActive,
+    Object? premoveFrom = _sentinel,
+    Object? premoveTo = _sentinel,
 
   }) {
     return ChessState(
@@ -551,6 +557,12 @@ class ChessState {
       userAvatarPath: userAvatarPath ?? this.userAvatarPath,
       isWaitingForSideChoice: isWaitingForSideChoice ?? this.isWaitingForSideChoice,
       isAcademyBlunderActive: isAcademyBlunderActive ?? this.isAcademyBlunderActive,
+      premoveFrom: identical(premoveFrom, _sentinel)
+          ? this.premoveFrom
+          : premoveFrom as String?,
+      premoveTo: identical(premoveTo, _sentinel)
+          ? this.premoveTo
+          : premoveTo as String?,
 
     );
   }
@@ -2029,7 +2041,8 @@ class ChessNotifier extends StateNotifier<ChessState> {
     }
 
     if (!_isPlayerTurn() && !state.isEngineVsEngine) {
-      debugPrint('ChessNotifier: Not player turn. Ignoring move.');
+      debugPrint('ChessNotifier: Setting pre-move from $from to $to');
+      state = state.copyWith(premoveFrom: from, premoveTo: to);
       return;
     }
 
@@ -2126,6 +2139,10 @@ class ChessNotifier extends StateNotifier<ChessState> {
     // );
 
     state = state.copyWith(isEngineThinking: state.engineReady);
+  }
+
+  void clearPremove() {
+    state = state.copyWith(premoveFrom: null, premoveTo: null);
   }
 
   void _startAnalysis({int? depth}) {
@@ -2479,38 +2496,6 @@ class ChessNotifier extends StateNotifier<ChessState> {
     });
   }
 
-  Stream<String> _typewriterStream(Stream<String> source) async* {
-    String targetText = '';
-    String currentTypedText = '';
-    bool sourceDone = false;
-
-    final subscription = source.listen(
-      (text) {
-        targetText = text;
-      },
-      onDone: () {
-        sourceDone = true;
-      },
-      onError: (e) {
-        sourceDone = true;
-      },
-    );
-
-    try {
-      while (!sourceDone || currentTypedText.length < targetText.length) {
-        if (currentTypedText.length < targetText.length) {
-          currentTypedText = targetText.substring(0, currentTypedText.length + 1);
-          yield currentTypedText;
-          await Future.delayed(const Duration(milliseconds: 10));
-        } else {
-          await Future.delayed(const Duration(milliseconds: 20));
-        }
-      }
-    } finally {
-      await subscription.cancel();
-    }
-  }
-
   void _onMoveCompleted(String lastMove) {
     _startPrecomputingRustContext(lastMove, state.game);
     if (state.clockStarted) {
@@ -2608,6 +2593,42 @@ class ChessNotifier extends StateNotifier<ChessState> {
       _soundService.playSfx(SoundEffect.check);
     } else {
       _playMoveSound();
+    }
+
+    debugPrint('ChessNotifier: _onMoveCompleted called. Player turn: ${_isPlayerTurn()}, premove: ${state.premoveFrom} -> ${state.premoveTo}');
+    if (_isPlayerTurn() &&
+        state.premoveFrom != null &&
+        state.premoveTo != null) {
+      final pFrom = state.premoveFrom!;
+      final pTo = state.premoveTo!;
+      debugPrint('ChessNotifier: Found pre-move $pFrom -> $pTo. Clearing premove fields. Game FEN: ${state.game.fen}');
+      state = state.copyWith(premoveFrom: null, premoveTo: null);
+
+      final legalMoves = state.game.generateMoves();
+      bool isLegal = false;
+      final movesList = <String>[];
+      for (final m in legalMoves) {
+        final fromAlg = chess_lib.Chess.algebraic(m.from);
+        final toAlg = chess_lib.Chess.algebraic(m.to);
+        movesList.add('$fromAlg$toAlg');
+        if (fromAlg == pFrom && toAlg == pTo) {
+          isLegal = true;
+          break;
+        }
+      }
+      debugPrint('ChessNotifier: Legal moves on the board: $movesList');
+
+      debugPrint('ChessNotifier: Pre-move legality: $isLegal');
+      if (isLegal) {
+        debugPrint('ChessNotifier: Scheduling pre-move execution in 300ms');
+        Future.delayed(const Duration(milliseconds: 300), () {
+          debugPrint('ChessNotifier: Delayed trigger: playerTurn=${_isPlayerTurn()}, disposed=$_isDisposed');
+          if (!_isDisposed && _isPlayerTurn()) {
+            debugPrint('ChessNotifier: Executing pre-move $pFrom -> $pTo');
+            makeMove(pFrom, pTo);
+          }
+        });
+      }
     }
   }
 
@@ -2820,29 +2841,10 @@ class ChessNotifier extends StateNotifier<ChessState> {
         userQuery: userQuery,
       );
 
-      int charCount = 0;
-      await for (final chunk in _typewriterStream(stream)) {
+      String finalResponse = '';
+      await for (final chunk in stream) {
         if (_isDisposed) break;
-
-        final updatedHistory = List<CommentaryEntry>.from(
-          state.commentaryHistory,
-        );
-        if (updatedHistory.isNotEmpty) {
-          updatedHistory[updatedHistory.length - 1] = updatedHistory.last
-              .copyWith(text: '$titlePrefix$chunk');
-        }
-
-        state = state.copyWith(
-          commentaryHistory: updatedHistory,
-          isCommentaryLoading: false,
-          isCommentaryStreaming: true,
-        );
-
-        charCount++;
-        if (charCount % 2 == 0) {
-          _soundService.playWriting();
-        }
-
+        finalResponse = chunk;
         if (state.academyHouseAnimations) {
           _extractMoveSuggestion(chunk);
         }
@@ -2854,7 +2856,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
           state.commentaryHistory,
         );
         if (finalHistory.isNotEmpty) {
-          var textToSet = finalHistory.last.text;
+          var textToSet = '$titlePrefix$finalResponse';
           if (isNested) {
             textToSet = '$textToSet\n\nWould you like to proceed or alter course? To alter course, use the Back button.';
           }
@@ -2866,6 +2868,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
         state = state.copyWith(
           commentaryHistory: finalHistory,
           isCommentaryStreaming: false,
+          isCommentaryLoading: false,
         );
 
         _soundService.playSfx(SoundEffect.gmchanakyaComplete);

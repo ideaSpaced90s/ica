@@ -29,6 +29,10 @@ class AppSettings {
   final int blitzElo;
   final int rapidElo;
   
+  final int? lastRatedGameTimestampMs;
+  final int recalibrationGamesRemaining;
+  final int decayIntervalsApplied;
+  
   final int totalRatedGamesCount;
   final int bulletGamesClassic;
   final int bulletGames960;
@@ -73,10 +77,13 @@ class AppSettings {
     this.incrementSeconds = 0,
     this.gameMode = 'classic',
     this.isRatedMode = true,
-    this.consolidatedRating = 1200,
-    this.bulletElo = 1200,
-    this.blitzElo = 1200,
-    this.rapidElo = 1200,
+    this.consolidatedRating = 400,
+    this.bulletElo = 400,
+    this.blitzElo = 400,
+    this.rapidElo = 400,
+    this.lastRatedGameTimestampMs,
+    this.recalibrationGamesRemaining = 0,
+    this.decayIntervalsApplied = 0,
     this.totalRatedGamesCount = 0,
     this.bulletGamesClassic = 0,
     this.bulletGames960 = 0,
@@ -145,6 +152,9 @@ class AppSettings {
     int? bulletElo,
     int? blitzElo,
     int? rapidElo,
+    int? lastRatedGameTimestampMs,
+    int? recalibrationGamesRemaining,
+    int? decayIntervalsApplied,
     int? totalRatedGamesCount,
     int? bulletGamesClassic,
     int? bulletGames960,
@@ -191,6 +201,9 @@ class AppSettings {
       bulletElo: bulletElo ?? this.bulletElo,
       blitzElo: blitzElo ?? this.blitzElo,
       rapidElo: rapidElo ?? this.rapidElo,
+      lastRatedGameTimestampMs: lastRatedGameTimestampMs ?? this.lastRatedGameTimestampMs,
+      recalibrationGamesRemaining: recalibrationGamesRemaining ?? this.recalibrationGamesRemaining,
+      decayIntervalsApplied: decayIntervalsApplied ?? this.decayIntervalsApplied,
       totalRatedGamesCount: totalRatedGamesCount ?? this.totalRatedGamesCount,
       bulletGamesClassic: bulletGamesClassic ?? this.bulletGamesClassic,
       bulletGames960: bulletGames960 ?? this.bulletGames960,
@@ -236,6 +249,9 @@ class AppSettings {
     'bulletElo': bulletElo,
     'blitzElo': blitzElo,
     'rapidElo': rapidElo,
+    'lastRatedGameTimestampMs': lastRatedGameTimestampMs,
+    'recalibrationGamesRemaining': recalibrationGamesRemaining,
+    'decayIntervalsApplied': decayIntervalsApplied,
     'totalRatedGamesCount': totalRatedGamesCount,
     'bulletGamesClassic': bulletGamesClassic,
     'bulletGames960': bulletGames960,
@@ -289,7 +305,7 @@ class AppSettings {
       bottomLevel = 'avatar_2';
     }
 
-    final legacyElo = json['userFideRating'] ?? 1200;
+    final legacyElo = json['userFideRating'] ?? 400;
     final legacyCount = json['ratedGamesCount'] ?? 0;
     final legacyStreak = json['currentWinningStreak'] ?? 0;
 
@@ -314,6 +330,9 @@ class AppSettings {
       bulletElo: json['bulletElo'] ?? legacyElo,
       blitzElo: json['blitzElo'] ?? legacyElo,
       rapidElo: json['rapidElo'] ?? legacyElo,
+      lastRatedGameTimestampMs: json['lastRatedGameTimestampMs'] as int?,
+      recalibrationGamesRemaining: json['recalibrationGamesRemaining'] ?? 0,
+      decayIntervalsApplied: json['decayIntervalsApplied'] ?? 0,
       totalRatedGamesCount: json['totalRatedGamesCount'] ?? legacyCount,
       bulletGamesClassic: json['bulletGamesClassic'] ?? 0,
       bulletGames960: json['bulletGames960'] ?? 0,

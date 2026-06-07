@@ -96,6 +96,10 @@ class BattlegroundState {
   final double rapidDominance;
   final String? activeRatedMatchId;
 
+  final int recalibrationGamesRemaining;
+  final int? lastRatedGameTimestampMs;
+  final int decayIntervalsApplied;
+
   // Cached dashboard metrics
   final ScotomaResult? cachedScotoma;
   final TacticalPlaystyleStats? cachedPlaystyle;
@@ -140,10 +144,10 @@ class BattlegroundState {
     this.premoveTo,
 
     // Rated
-    this.consolidatedRating = 1200,
-    this.bulletElo = 1200,
-    this.blitzElo = 1200,
-    this.rapidElo = 1200,
+    this.consolidatedRating = 400,
+    this.bulletElo = 400,
+    this.blitzElo = 400,
+    this.rapidElo = 400,
     this.totalRatedGamesCount = 0,
     this.bulletGamesClassic = 0,
     this.bulletGames960 = 0,
@@ -160,6 +164,11 @@ class BattlegroundState {
     this.rapidDominance = 0.0,
     this.activeRatedMatchId,
 
+    // Rated inactivity & recalibration
+    this.recalibrationGamesRemaining = 0,
+    this.lastRatedGameTimestampMs,
+    this.decayIntervalsApplied = 0,
+
     // Cached metrics
     this.cachedScotoma,
     this.cachedPlaystyle,
@@ -170,6 +179,9 @@ class BattlegroundState {
   });
 
   bool get isChess960 => gameMode == 'chess960';
+  bool get isCalibrating => totalRatedGamesCount < 10;
+  bool get isCalibrated => totalRatedGamesCount >= 10 && recalibrationGamesRemaining == 0;
+  int get calibrationGamesRemaining => math.max(0, 10 - totalRatedGamesCount);
 
   String get currentBoardFen {
     if (viewingMoveIndex == null || viewingMoveIndex! >= recentMoves.length) {
@@ -237,6 +249,10 @@ class BattlegroundState {
     double? blitzDominance,
     double? rapidDominance,
     Object? activeRatedMatchId = const Object(),
+
+    int? recalibrationGamesRemaining,
+    int? lastRatedGameTimestampMs,
+    int? decayIntervalsApplied,
 
     // Cached metrics
     ScotomaResult? cachedScotoma,
@@ -324,6 +340,10 @@ class BattlegroundState {
           ? this.activeRatedMatchId
           : activeRatedMatchId as String?,
 
+      recalibrationGamesRemaining: recalibrationGamesRemaining ?? this.recalibrationGamesRemaining,
+      lastRatedGameTimestampMs: lastRatedGameTimestampMs ?? this.lastRatedGameTimestampMs,
+      decayIntervalsApplied: decayIntervalsApplied ?? this.decayIntervalsApplied,
+
       // Cached metrics
       cachedScotoma: cachedScotoma ?? this.cachedScotoma,
       cachedPlaystyle: cachedPlaystyle ?? this.cachedPlaystyle,
@@ -398,7 +418,13 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
       blitzDominance: s.blitzDominance,
       rapidDominance: s.rapidDominance,
       activeRatedMatchId: s.activeRatedMatchId,
+      recalibrationGamesRemaining: s.recalibrationGamesRemaining,
+      lastRatedGameTimestampMs: s.lastRatedGameTimestampMs,
+      decayIntervalsApplied: s.decayIntervalsApplied,
     );
+
+    // Apply inactivity check and ELO decay before loading history
+    await _checkInactivityAndApplyDecay();
 
     // Load ledger entries
     final ledgerEntries = await _performanceLedgerRepository.listEntries();
@@ -995,6 +1021,52 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
     return 'rapid';
   }
 
+  Future<void> _checkInactivityAndApplyDecay() async {
+    final lastGameMs = state.lastRatedGameTimestampMs;
+    if (lastGameMs == null) return; // Never played a rated game, no decay.
+
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    final diffMs = nowMs - lastGameMs;
+    final double diffDays = diffMs / (1000 * 60 * 60 * 24);
+
+    if (diffDays >= 7) {
+      int newRecalGames = state.recalibrationGamesRemaining;
+      if (state.totalRatedGamesCount >= 10 && state.recalibrationGamesRemaining == 0) {
+        newRecalGames = 5;
+      }
+
+      final intervals = (diffDays / 7).floor();
+      final newIntervalsToApply = intervals - state.decayIntervalsApplied;
+
+      if (newIntervalsToApply > 0) {
+        final decayPenalty = newIntervalsToApply * 10;
+        final newConsolidated = math.max(400, state.consolidatedRating - decayPenalty);
+        final newBullet = math.max(400, state.bulletElo - decayPenalty);
+        final newBlitz = math.max(400, state.blitzElo - decayPenalty);
+        final newRapid = math.max(400, state.rapidElo - decayPenalty);
+
+        debugPrint('BattlegroundNotifier: Inactivity detected ($diffDays days). Applying ELO decay of $decayPenalty points.');
+
+        state = state.copyWith(
+          consolidatedRating: newConsolidated,
+          bulletElo: newBullet,
+          blitzElo: newBlitz,
+          rapidElo: newRapid,
+          recalibrationGamesRemaining: newRecalGames,
+          decayIntervalsApplied: intervals,
+        );
+        await _saveSettings();
+      } else {
+        if (newRecalGames != state.recalibrationGamesRemaining) {
+          state = state.copyWith(
+            recalibrationGamesRemaining: newRecalGames,
+          );
+          await _saveSettings();
+        }
+      }
+    }
+  }
+
   Future<void> _updateRating(double actualScore) async {
     final category = _getRatingCategory(
       state.baseTimeDuration,
@@ -1004,7 +1076,7 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
     final opponent =
         state.activeOpponent ?? AiAvatar.getBestMatch(state.consolidatedRating);
 
-    int currentSpecificElo = 1200;
+    int currentSpecificElo = 400;
     int currentSpecificCount = 0;
     int currentSpecificStreak = 0;
 
@@ -1022,7 +1094,9 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
       currentSpecificStreak = state.rapidStreak;
     }
 
-    final specificKFactor = currentSpecificCount < 10 ? 40 : 20;
+    final isUncalibrated = state.totalRatedGamesCount < 10 || state.recalibrationGamesRemaining > 0;
+
+    final specificKFactor = (currentSpecificCount < 10 || state.recalibrationGamesRemaining > 0) ? 40 : 20;
     final expectedSpecificScore =
         1.0 /
         (1.0 + math.pow(10.0, (opponent.rating - currentSpecificElo) / 400.0));
@@ -1040,7 +1114,7 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
         specificStreakBonus;
     final newSpecificElo = math.max(400, newSpecificEloRaw);
 
-    final consolidatedKFactor = state.totalRatedGamesCount < 10 ? 40 : 20;
+    final consolidatedKFactor = isUncalibrated ? 40 : 20;
     final expectedConsolidatedScore =
         1.0 /
         (1.0 +
@@ -1059,7 +1133,7 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
         state.consolidatedRating +
         (consolidatedKFactor * (actualScore - expectedConsolidatedScore))
             .round() +
-        consolidatedStreakBonus;
+            consolidatedStreakBonus;
     final newConsolidatedElo = math.max(400, newConsolidatedEloRaw);
 
     final currentMargin = state.game.calculateMaterialMargin(
@@ -1090,6 +1164,9 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
       consolidatedRating: newConsolidatedElo,
       totalRatedGamesCount: newTotalCount,
       totalWinningStreak: newConsolidatedStreak,
+      lastRatedGameTimestampMs: DateTime.now().millisecondsSinceEpoch,
+      decayIntervalsApplied: 0,
+      recalibrationGamesRemaining: math.max(0, state.recalibrationGamesRemaining - 1),
       bulletElo: category == 'bullet' ? newSpecificElo : state.bulletElo,
       bulletStreak: category == 'bullet'
           ? newSpecificStreak
@@ -1235,7 +1312,7 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
     );
   }
 
-  void reset({bool forcedPlayerWhite = true}) {
+  void reset({bool forcedPlayerWhite = true, bool startClockImmediate = false}) {
     _clockTimer?.cancel();
     _engineMoveTimer?.cancel();
 
@@ -1258,15 +1335,15 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
       analysis: const {},
       previousEvaluation: 0.0,
       currentEvaluation: 0.0,
-      // Immediately show thinking indicator if AI moves first
+      // Immediately show thinking indicator if AI moves first and starting immediately
       isEngineThinking:
-          aiMovesFirst && state.servicesStarted && state.engineReady,
+          startClockImmediate && aiMovesFirst && state.servicesStarted && state.engineReady,
       isPlayerWhite: forcedPlayerWhite,
       isBoardFlipped: !forcedPlayerWhite,
       whiteTimeLeft: state.baseTimeDuration,
       blackTimeLeft: state.baseTimeDuration,
-      clockStarted: true,
-      activeClockSide: _clockWhite,
+      clockStarted: startClockImmediate,
+      activeClockSide: startClockImmediate ? _clockWhite : null,
       threatenedSquares: const [],
       moveAnimation: null,
       isPaused: false,
@@ -1281,7 +1358,37 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
     );
 
     _autoSelectRatedOpponent();
+
+    if (startClockImmediate) {
+      _startClockTicker();
+      if (aiMovesFirst) {
+        unawaited(
+          ensureGameServicesStarted(analyzeCurrentPosition: true).then((_) {
+            if (!_isDisposed && state.engineReady && _isAiTurn()) {
+              state = state.copyWith(isEngineThinking: true);
+            }
+          }),
+        );
+      }
+    }
+
+    // Sound effects disabled in Battleground
+    // _soundService.playSfx(SoundEffect.uiClick);
+  }
+
+  void startGame() {
+    if (state.game.gameOver || state.isTimeOut) return;
+
+    final aiMovesFirst = !state.isPlayerWhite;
+
+    state = state.copyWith(
+      clockStarted: true,
+      activeClockSide: _clockWhite,
+      isEngineThinking: aiMovesFirst && state.servicesStarted && state.engineReady,
+    );
+
     _startClockTicker();
+
     if (aiMovesFirst) {
       unawaited(
         ensureGameServicesStarted(analyzeCurrentPosition: true).then((_) {
@@ -1291,9 +1398,6 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
         }),
       );
     }
-
-    // Sound effects disabled in Battleground
-    // _soundService.playSfx(SoundEffect.uiClick);
   }
 
   void toggleBoardOrientation() {
@@ -1430,6 +1534,9 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
       blitzDominance: state.blitzDominance,
       rapidDominance: state.rapidDominance,
       activeRatedMatchId: state.activeRatedMatchId,
+      lastRatedGameTimestampMs: state.lastRatedGameTimestampMs,
+      recalibrationGamesRemaining: state.recalibrationGamesRemaining,
+      decayIntervalsApplied: state.decayIntervalsApplied,
     );
     await _settingsRepository.saveSettings(updated);
   }
@@ -1758,10 +1865,10 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
     try {
       await _performanceLedgerRepository.clearAll();
       state = state.copyWith(
-        consolidatedRating: 1200,
-        bulletElo: 1200,
-        blitzElo: 1200,
-        rapidElo: 1200,
+        consolidatedRating: 400,
+        bulletElo: 400,
+        blitzElo: 400,
+        rapidElo: 400,
         totalRatedGamesCount: 0,
         bulletGamesClassic: 0,
         bulletGames960: 0,

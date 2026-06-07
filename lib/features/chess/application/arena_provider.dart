@@ -34,6 +34,7 @@ class _ArenaSnapshot {
   final MoveAnimationData? moveAnimation;
   final bool isPlayerWhite;
   final bool isBoardFlipped;
+  final bool isTimeOut;
 
   const _ArenaSnapshot({
     required this.fen,
@@ -49,6 +50,7 @@ class _ArenaSnapshot {
     this.moveAnimation,
     required this.isPlayerWhite,
     required this.isBoardFlipped,
+    required this.isTimeOut,
   });
 }
 
@@ -94,9 +96,11 @@ class ArenaState {
   final bool servicesStarted;
   final bool servicesStarting;
   final bool engineReady;
-  final String? startupError;
   final String? loadedGameId;
   final bool isGameOver;
+  final String? startupError;
+  final String? premoveFrom;
+  final String? premoveTo;
 
   ArenaState({
     required this.game,
@@ -140,9 +144,11 @@ class ArenaState {
     this.servicesStarted = false,
     this.servicesStarting = false,
     this.engineReady = false,
-    this.startupError,
     this.loadedGameId,
     this.isGameOver = false,
+    this.startupError,
+    this.premoveFrom,
+    this.premoveTo,
   });
 
   bool get isChess960 => gameMode == 'chess960';
@@ -212,9 +218,11 @@ class ArenaState {
     bool? servicesStarted,
     bool? servicesStarting,
     bool? engineReady,
-    Object? startupError = const Object(),
     Object? loadedGameId = const Object(),
     bool? isGameOver,
+    Object? startupError = const Object(),
+    Object? premoveFrom = const Object(),
+    Object? premoveTo = const Object(),
   }) {
     return ArenaState(
       game: game ?? this.game,
@@ -261,6 +269,8 @@ class ArenaState {
       startupError: startupError == const Object() ? this.startupError : startupError as String?,
       loadedGameId: loadedGameId == const Object() ? this.loadedGameId : loadedGameId as String?,
       isGameOver: isGameOver ?? this.isGameOver,
+      premoveFrom: premoveFrom == const Object() ? this.premoveFrom : premoveFrom as String?,
+      premoveTo: premoveTo == const Object() ? this.premoveTo : premoveTo as String?,
     );
   }
 }
@@ -371,6 +381,10 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
     if (playSound) {
       _soundService.playSfx(SoundEffect.uiClick);
     }
+  }
+
+  void clearPremove() {
+    state = state.copyWith(premoveFrom: null, premoveTo: null);
   }
 
   ChessEngineService get _engine {
@@ -725,6 +739,7 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
       moveAnimation: state.moveAnimation,
       isPlayerWhite: state.isPlayerWhite,
       isBoardFlipped: state.isBoardFlipped,
+      isTimeOut: state.isTimeOut,
     );
   }
 
@@ -756,6 +771,13 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
       isPlayerWhite: snapshot.isPlayerWhite,
       isBoardFlipped: snapshot.isBoardFlipped,
       isGameOver: restoredGame.gameOver,
+      isTimeOut: snapshot.isTimeOut,
+      isGameOverDismissed: (restoredGame.gameOver || snapshot.isTimeOut) ? state.isGameOverDismissed : false,
+    );
+
+    final isAi = _isAiTurn();
+    state = state.copyWith(
+      isEngineThinking: isAi && state.servicesStarted && state.engineReady,
     );
 
     if (state.clockStarted) {
@@ -764,7 +786,7 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
       _stopClockTimer();
     }
 
-    if (_isAiTurn()) {
+    if (isAi) {
       unawaited(ensureGameServicesStarted(analyzeCurrentPosition: true));
     }
   }
@@ -797,7 +819,11 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
       }
     }
 
-    if (!_isPlayerTurn() && !state.isEngineVsEngine) return;
+    if (!_isPlayerTurn() && !state.isEngineVsEngine) {
+      debugPrint('ArenaNotifier: Setting pre-move from $from to $to');
+      state = state.copyWith(premoveFrom: from, premoveTo: to);
+      return;
+    }
 
     if (state.isEngineVsEngine) {
       final turnColor = state.game.turn;
@@ -973,6 +999,42 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
       _soundService.playSfx(SoundEffect.check);
     } else {
       _soundService.playSfx(move?.move.captured != null ? SoundEffect.capture : SoundEffect.move);
+    }
+
+    debugPrint('ArenaNotifier: _onMoveCompleted called. Player turn: ${_isPlayerTurn()}, premove: ${state.premoveFrom} -> ${state.premoveTo}');
+    if (_isPlayerTurn() &&
+        state.premoveFrom != null &&
+        state.premoveTo != null) {
+      final pFrom = state.premoveFrom!;
+      final pTo = state.premoveTo!;
+      debugPrint('ArenaNotifier: Found pre-move $pFrom -> $pTo. Clearing premove fields. Game FEN: ${state.game.fen}');
+      state = state.copyWith(premoveFrom: null, premoveTo: null);
+
+      final legalMoves = state.game.generateMoves();
+      bool isLegal = false;
+      final movesList = <String>[];
+      for (final m in legalMoves) {
+        final fromAlg = chess_lib.Chess.algebraic(m.from);
+        final toAlg = chess_lib.Chess.algebraic(m.to);
+        movesList.add('$fromAlg$toAlg');
+        if (fromAlg == pFrom && toAlg == pTo) {
+          isLegal = true;
+          break;
+        }
+      }
+      debugPrint('ArenaNotifier: Legal moves on the board: $movesList');
+
+      debugPrint('ArenaNotifier: Pre-move legality: $isLegal');
+      if (isLegal) {
+        debugPrint('ArenaNotifier: Scheduling pre-move execution in 300ms');
+        Future.delayed(const Duration(milliseconds: 300), () {
+          debugPrint('ArenaNotifier: Delayed trigger: playerTurn=${_isPlayerTurn()}, disposed=$_isDisposed');
+          if (!_isDisposed && _isPlayerTurn()) {
+            debugPrint('ArenaNotifier: Executing pre-move $pFrom -> $pTo');
+            makeMove(pFrom, pTo);
+          }
+        });
+      }
     }
   }
 

@@ -248,6 +248,9 @@ fn get_chanakya_wisdom(worst_scotoma: &str, score: f64) -> String {
         "tunnel_vision" => {
             "You focus on one side of the board, blind to the other. The decisive blow always comes from the flank you ignore. Today, look at the whole board. Take a deep breath before every move.".to_string()
         },
+        "time_panic" => {
+            "Time pressure is a shadow that clouds your calculation, Apprentice. Under the ticking clock, your sight fails and you strike in panic. Today, train to remain calm under pressure. Speed must not sacrifice precision.".to_string()
+        },
         _ => {
             "Apprentice, your tactical vision is balanced. Now we sharpen all edges. Discipline and patience are the weapons of the master strategist. Begin today's training.".to_string()
         }
@@ -261,7 +264,11 @@ pub fn recommend_tasks_rust(
     completed_tutorials: Vec<i32>,
 ) -> ChanakyaRoutine {
     let (worst_name, worst_score) = get_worst_scotoma(&scotoma);
-    
+    let has_diagnosis = {
+        let affected_games = (worst_score * scotoma.analyzed_games as f64).round() as i32;
+        scotoma.analyzed_games >= 5 && worst_score >= 0.15 && affected_games >= 2
+    };
+
     // Arena challenge target
     let (avatar_id, avatar_name) = select_ai_avatar(elo, worst_name);
     let arena_desc = format!("Play a game in the Arena against {} (Rating: {}). Focus on maintaining structure and eliminating blindspots.", avatar_name, elo);
@@ -274,17 +281,27 @@ pub fn recommend_tasks_rust(
     };
 
     // Prescription puzzle target
-    let puzzle_axis = match worst_name {
-        "diagonal_retreats" => "dgb",
-        "horizontal_swings" => "hrz",
-        "knight_forks" => "knf",
-        "time_panic" => "tmp",
-        "material_greed" => "grd",
-        "tunnel_vision" => "tnl",
-        "pinned_pieces" => "pin",
-        _ => "ksb",
+    let puzzle_axis = if has_diagnosis {
+        match worst_name {
+            "diagonal_retreats" => "dgb",
+            "horizontal_swings" => "hrz",
+            "knight_forks" => "knf",
+            "time_panic" => "tmp",
+            "material_greed" => "grd",
+            "tunnel_vision" => "tnl",
+            "pinned_pieces" => "pin",
+            _ => "ksb",
+        }
+    } else {
+        "balanced"
     };
-    let puzzle_desc = format!("Complete 5 scotoma puzzles targeting the '{}' axis to cure visual blindness.", puzzle_axis.to_uppercase());
+
+    let puzzle_desc = if puzzle_axis == "balanced" {
+        "Complete 5 general mastery puzzles to sharpen all cognitive-visual dimensions.".to_string()
+    } else {
+        format!("Complete 5 scotoma puzzles targeting the '{}' axis to cure visual blindness.", puzzle_axis.to_uppercase())
+    };
+
     let puzzle_task = ChanakyaTask {
         title: "Tactical Prescription".to_string(),
         description: puzzle_desc,
@@ -304,7 +321,11 @@ pub fn recommend_tasks_rust(
         target_value: 1,
     };
 
-    let wisdom = get_chanakya_wisdom(worst_name, worst_score);
+    let wisdom = if has_diagnosis {
+        get_chanakya_wisdom(worst_name, worst_score)
+    } else {
+        "Apprentice, your tactical vision is balanced. Now we sharpen all edges. Discipline and patience are the weapons of the master strategist. Begin today's training.".to_string()
+    };
 
     ChanakyaRoutine {
         tasks: vec![arena_task, puzzle_task, tutorial_task],
@@ -480,5 +501,11 @@ mod tests {
         assert_eq!(summary.annotated_moves_count, 3); // three comments found
         assert_eq!(summary.worst_scotoma_axis, "knight_forks");
         assert!(summary.fallback_report.contains("GM CHANAKYA'S WEEKLY REPORT"));
+    }
+
+    #[test]
+    fn test_get_chanakya_wisdom_time_panic() {
+        let wisdom = get_chanakya_wisdom("time_panic", 0.5);
+        assert!(wisdom.contains("Time pressure is a shadow"));
     }
 }

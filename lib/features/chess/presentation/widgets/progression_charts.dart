@@ -30,8 +30,12 @@ class EloAscentChart extends ConsumerWidget {
     final rapidSpots = _getSpots(ratedSaves, 'rapid');
 
     final allSpots = [...bulletSpots, ...blitzSpots, ...rapidSpots];
-    double minYVal = 1000.0;
-    double maxYVal = 1400.0;
+    // Build a timestamp index for all rated games (sorted by timestamp)
+    // Used to map X-axis index → date label
+    final List<DateTime> allTimestamps = ratedSaves.map((e) => e.timestamp).toList();
+
+    double minYVal = 200.0;
+    double maxYVal = 700.0;
     if (allSpots.isNotEmpty) {
       final yValues = allSpots.map((spot) => spot.y).toList();
       final minVal = yValues.reduce(math.min);
@@ -77,8 +81,34 @@ class EloAscentChart extends ConsumerWidget {
               topTitles: const AxisTitles(
                 sideTitles: SideTitles(showTitles: false),
               ),
-              bottomTitles: const AxisTitles(
-                sideTitles: SideTitles(showTitles: false),
+              bottomTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 26,
+                  interval: 1,
+                  getTitlesWidget: (value, meta) {
+                    final idx = value.toInt();
+                    // Show at most 5 date labels at equally spaced intervals
+                    final maxLen = allTimestamps.length;
+                    if (maxLen == 0) return const SizedBox.shrink();
+                    final interval = math.max(1, (maxLen / 5).ceil());
+                    // Only show label at index 0 or multiples of interval
+                    if (idx < 0 || idx >= maxLen) return const SizedBox.shrink();
+                    if (idx != 0 && idx % interval != 0) return const SizedBox.shrink();
+                    final date = allTimestamps[idx];
+                    final label = DateFormat('MMM d').format(date);
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        label,
+                        style: GoogleFonts.jetBrainsMono(
+                          color: ScholarlyTheme.textMuted,
+                          fontSize: 9,
+                        ),
+                      ),
+                    );
+                  },
+                ),
               ),
               leftTitles: AxisTitles(
                 sideTitles: SideTitles(
@@ -165,7 +195,7 @@ class EloAscentChart extends ConsumerWidget {
     if (filtered.isEmpty) return [];
 
     final List<FlSpot> spots = [];
-    spots.add(const FlSpot(0, 1200));
+    spots.add(const FlSpot(0, 400));
 
     for (int i = 0; i < filtered.length; i++) {
       final snapshot = filtered[i].ratingSnapshot;
@@ -588,72 +618,89 @@ class ModeDistributionChart extends ConsumerWidget {
     final total = classic + nineSixty;
 
     if (total == 0) {
-      return Container(
-        height: 180,
-        decoration: ScholarlyTheme.modernDecoration(),
-        child: Center(
-          child: Text(
-            'No rated matches played yet.',
-            style: GoogleFonts.inter(
-              color: ScholarlyTheme.textMuted,
-              fontSize: 12,
-            ),
-            textAlign: TextAlign.center,
+      return Center(
+        child: Text(
+          'No rated matches played yet.',
+          style: GoogleFonts.inter(
+            color: ScholarlyTheme.textMuted,
+            fontSize: 12,
           ),
+          textAlign: TextAlign.center,
         ),
       );
     }
 
-    return JuicyGlassCard(
-      borderColor: const Color(0xFFEC4899), // Vibrant Hot Pink Border
-      padding: const EdgeInsets.all(12),
-      child: SizedBox(
-        height: 156,
-        child: PieChart(
-          PieChartData(
-            sectionsSpace: 6,
-            centerSpaceRadius: 35,
-            sections: [
-              PieChartSectionData(
-                color: const Color(0xFF8B5CF6), // Electric Violet
-                value: classic.toDouble(),
-                title: 'Classic\n${(classic / total * 100).toInt()}%',
-                radius: 30,
-                titleStyle: GoogleFonts.jetBrainsMono(
-                  color: Colors.white,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  shadows: [
-                    const Shadow(
-                      color: Colors.black45,
-                      blurRadius: 4,
-                      offset: Offset(0, 1.5),
-                    ),
-                  ],
+    final classicPct = total > 0 ? (classic / total * 100).toInt() : 0;
+    final nineSixtyPct = total > 0 ? (nineSixty / total * 100).toInt() : 0;
+
+    return Column(
+      children: [
+        Expanded(
+          child: PieChart(
+            PieChartData(
+              sectionsSpace: 4,
+              centerSpaceRadius: 26,
+              sections: [
+                PieChartSectionData(
+                  color: const Color(0xFF8B5CF6), // Electric Violet
+                  value: classic.toDouble(),
+                  title: '',
+                  radius: 18,
                 ),
-              ),
-              PieChartSectionData(
-                color: const Color(0xFFF59E0B), // Sunny Gold
-                value: nineSixty.toDouble(),
-                title: '960\n${(nineSixty / total * 100).toInt()}%',
-                radius: 30,
-                titleStyle: GoogleFonts.jetBrainsMono(
-                  color: Colors.white,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  shadows: [
-                    const Shadow(
-                      color: Colors.black45,
-                      blurRadius: 4,
-                      offset: Offset(0, 1.5),
-                    ),
-                  ],
+                PieChartSectionData(
+                  color: const Color(0xFFF59E0B), // Sunny Gold
+                  value: nineSixty.toDouble(),
+                  title: '',
+                  radius: 18,
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
-      ),
+        const SizedBox(height: 10),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _buildLegendItem(const Color(0xFF8B5CF6), 'Classic', '$classicPct%'),
+            const SizedBox(width: 12),
+            _buildLegendItem(const Color(0xFFF59E0B), '960', '$nineSixtyPct%'),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLegendItem(Color color, String label, String percentage) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            color: ScholarlyTheme.textPrimary,
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          percentage,
+          style: GoogleFonts.jetBrainsMono(
+            color: ScholarlyTheme.textMuted,
+            fontSize: 9.5,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -816,98 +863,125 @@ class _DominanceHeatmapState extends ConsumerState<DominanceHeatmap> {
                 ],
               ),
               const SizedBox(height: 12),
-              ...matches.map((match) {
-                final matchTime = DateFormat('jm').format(match.timestamp);
-                final modeLabel =
-                    '${match.ratingCategory.toUpperCase()} ${match.gameMode == 'chess960' ? '960' : 'Classic'}';
+              // Match grid — 2 cols on desktop, 1 col on mobile
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  Widget buildMatchRow(match) {
+                    final matchTime = DateFormat('jm').format(match.timestamp);
+                    final modeLabel =
+                        '${match.ratingCategory.toUpperCase()} ${match.gameMode == 'chess960' ? '960' : 'Classic'}';
 
-                Color outcomeColor;
-                String resultText;
-                if (match.result == 'W') {
-                  outcomeColor = const Color(0xFF10B981);
-                  resultText = 'W';
-                } else if (match.result == 'L') {
-                  outcomeColor = const Color(0xFFEF4444);
-                  resultText = 'L';
-                } else {
-                  outcomeColor = const Color(0xFF64748B);
-                  resultText = 'D';
-                }
+                    Color outcomeColor;
+                    String resultText;
+                    if (match.result == 'W') {
+                      outcomeColor = const Color(0xFF10B981);
+                      resultText = 'W';
+                    } else if (match.result == 'L') {
+                      outcomeColor = const Color(0xFFEF4444);
+                      resultText = 'L';
+                    } else {
+                      outcomeColor = const Color(0xFF64748B);
+                      resultText = 'D';
+                    }
 
-                return Container(
-                  margin: const EdgeInsets.symmetric(vertical: 4),
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 6,
-                    horizontal: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.5),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: ScholarlyTheme.panelStroke.withValues(alpha: 0.25),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 20,
-                        height: 20,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: outcomeColor.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(
-                            color: outcomeColor.withValues(alpha: 0.25),
-                            width: 1,
-                          ),
-                        ),
-                        child: Text(
-                          resultText,
-                          style: GoogleFonts.jetBrainsMono(
-                            color: outcomeColor,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 10,
-                          ),
+                    return Container(
+                      margin: const EdgeInsets.symmetric(vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 6,
+                        horizontal: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.5),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: ScholarlyTheme.panelStroke.withValues(alpha: 0.25),
                         ),
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'vs ${match.opponentName}',
-                              style: GoogleFonts.inter(
-                                color: ScholarlyTheme.textPrimary,
-                                fontSize: 11,
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 20,
+                            height: 20,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: outcomeColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: outcomeColor.withValues(alpha: 0.25),
+                                width: 1,
+                              ),
+                            ),
+                            child: Text(
+                              resultText,
+                              style: GoogleFonts.jetBrainsMono(
+                                color: outcomeColor,
                                 fontWeight: FontWeight.bold,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              '$matchTime • $modeLabel',
-                              style: GoogleFonts.inter(
-                                color: ScholarlyTheme.textMuted,
-                                fontSize: 9.5,
+                                fontSize: 10,
                               ),
                             ),
-                          ],
-                        ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'vs ${match.opponentName}',
+                                  style: GoogleFonts.inter(
+                                    color: ScholarlyTheme.textPrimary,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '$matchTime • $modeLabel',
+                                  style: GoogleFonts.inter(
+                                    color: ScholarlyTheme.textMuted,
+                                    fontSize: 9.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '${match.ratingSnapshot} ELO',
+                            style: GoogleFonts.jetBrainsMono(
+                              color: ScholarlyTheme.textPrimary,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 10.5,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '${match.ratingSnapshot} ELO',
-                        style: GoogleFonts.jetBrainsMono(
-                          color: ScholarlyTheme.textPrimary,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 10.5,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }),
+                    );
+                  }
+
+                  final isWide = constraints.maxWidth > 600;
+                  if (isWide) {
+                    // Two-column grid via Wrap
+                    final colWidth = (constraints.maxWidth - 12) / 2;
+                    return Wrap(
+                      spacing: 12,
+                      runSpacing: 0,
+                      children: matches
+                          .map<Widget>(
+                            (match) => SizedBox(
+                              width: colWidth,
+                              child: buildMatchRow(match),
+                            ),
+                          )
+                          .toList(),
+                    );
+                  }
+                  // Single column
+                  return Column(
+                    children: matches.map<Widget>(buildMatchRow).toList(),
+                  );
+                },
+              ),
             ],
           ),
         );
@@ -977,95 +1051,94 @@ class _DominanceHeatmapState extends ConsumerState<DominanceHeatmap> {
       );
     }
 
+    final double gridWidth = (24.0 * 30) + (5.0 * 29);
+
     return JuicyGlassCard(
       borderColor: const Color(0xFF10B981),
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 10x3 Grid
-          Column(
-            children: List.generate(3, (rowIndex) {
-              return Padding(
-                padding: EdgeInsets.only(bottom: rowIndex == 2 ? 0 : 6),
-                child: Row(
-                  children: List.generate(10, (colIndex) {
-                    final index = rowIndex * 10 + colIndex;
-                    final avg = dailyPointsList[index];
-                    final isSelected = selectedIdx == index;
-                    final tileColor = getTileColor(avg);
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            child: SizedBox(
+              width: gridWidth,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // 30 Days in a Single Row
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: List.generate(30, (index) {
+                      final avg = dailyPointsList[index];
+                      final isSelected = selectedIdx == index;
+                      final tileColor = getTileColor(avg);
 
-                    return Expanded(
-                      child: Padding(
-                        padding: EdgeInsets.only(right: colIndex == 9 ? 0 : 6),
-                        child: AspectRatio(
-                          aspectRatio: 1.0,
-                          child: GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _selectedTileIndex = index;
-                              });
-                            },
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: tileColor,
-                                borderRadius: BorderRadius.circular(4),
-                                border: Border.all(
-                                  color: isSelected
-                                      ? ScholarlyTheme.accentBlue
-                                      : ScholarlyTheme.panelStroke.withValues(
-                                          alpha: 0.15,
-                                        ),
-                                  width: isSelected ? 2.0 : 1.0,
-                                ),
-                                boxShadow: isSelected
-                                    ? [
-                                        BoxShadow(
-                                          color:
-                                              (avg.isNaN
-                                                      ? ScholarlyTheme
-                                                            .accentBlue
-                                                      : tileColor)
-                                                  .withValues(alpha: 0.6),
-                                          blurRadius: 8,
-                                          spreadRadius: 2,
-                                        ),
-                                      ]
-                                    : null,
-                              ),
+                      return GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _selectedTileIndex = index;
+                          });
+                        },
+                        child: Container(
+                          width: 24,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: tileColor,
+                            borderRadius: BorderRadius.circular(5),
+                            border: Border.all(
+                              color: isSelected
+                                  ? ScholarlyTheme.accentBlue
+                                  : ScholarlyTheme.panelStroke.withValues(
+                                      alpha: 0.15,
+                                    ),
+                              width: isSelected ? 2.0 : 1.0,
                             ),
+                            boxShadow: isSelected
+                                ? [
+                                    BoxShadow(
+                                      color: (avg.isNaN
+                                              ? ScholarlyTheme.accentBlue
+                                              : tileColor)
+                                          .withValues(alpha: 0.6),
+                                      blurRadius: 8,
+                                      spreadRadius: 1,
+                                    ),
+                                  ]
+                                : null,
                           ),
                         ),
-                      ),
-                    );
-                  }),
-                ),
-              );
-            }),
-          ),
-          const SizedBox(height: 8),
+                      );
+                    }),
+                  ),
+                  const SizedBox(height: 8),
 
-          // Timeline Labels
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '30 days ago',
-                style: GoogleFonts.inter(
-                  color: ScholarlyTheme.textMuted,
-                  fontSize: 9.5,
-                  fontWeight: FontWeight.bold,
-                ),
+                  // Timeline Labels
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        '30 days ago',
+                        style: GoogleFonts.inter(
+                          color: ScholarlyTheme.textMuted,
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        'Today',
+                        style: GoogleFonts.inter(
+                          color: ScholarlyTheme.textMuted,
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-              Text(
-                'Today',
-                style: GoogleFonts.inter(
-                  color: ScholarlyTheme.textMuted,
-                  fontSize: 9.5,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
+            ),
           ),
           const SizedBox(height: 12),
           Divider(

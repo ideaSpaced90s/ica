@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/scheduler.dart';
@@ -375,7 +376,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
   }
 
   Widget _buildAiBubble(CommentaryEntry entry, bool isStreaming) {
-    final bool isThinking = entry.text.isEmpty && !entry.isComplete;
+    final bool isThinking = !entry.isComplete;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -443,37 +444,18 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
                     ],
                   ),
                   child: isThinking
-                      ? Row(
+                      ? const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
+                            DottedGridLoader(),
+                            SizedBox(width: 12),
                             Text(
-                              'GM Chanakya is writing',
-                              style: GoogleFonts.fraunces(
+                              'GM Chanakya is formulating counsel...',
+                              style: TextStyle(
                                 color: ScholarlyTheme.textMuted,
                                 fontSize: 12,
                                 fontStyle: FontStyle.italic,
                               ),
-                            ),
-                            const SizedBox(width: 4),
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: List.generate(3, (index) {
-                                final isActive = _pulse >= index + 1;
-                                return AnimatedContainer(
-                                  duration: const Duration(milliseconds: 150),
-                                  margin: const EdgeInsets.symmetric(
-                                      horizontal: 1.5),
-                                  width: 4,
-                                  height: isActive ? 6 : 4,
-                                  decoration: BoxDecoration(
-                                    color: isActive
-                                        ? ScholarlyTheme.accentBlue
-                                        : ScholarlyTheme.textMuted
-                                            .withValues(alpha: 0.4),
-                                    shape: BoxShape.circle,
-                                  ),
-                                );
-                              }),
                             ),
                           ],
                         )
@@ -952,6 +934,76 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class DottedGridLoader extends StatefulWidget {
+  const DottedGridLoader({super.key});
+
+  @override
+  State<DottedGridLoader> createState() => _DottedGridLoaderState();
+}
+
+class _DottedGridLoaderState extends State<DottedGridLoader>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 30,
+      height: 30,
+      child: GridView.builder(
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3,
+          mainAxisSpacing: 3,
+          crossAxisSpacing: 3,
+        ),
+        itemCount: 9,
+        itemBuilder: (context, index) {
+          final int row = index ~/ 3;
+          final int col = index % 3;
+          final double delay = (row + col) / 4.0;
+
+          return AnimatedBuilder(
+            animation: _controller,
+            builder: (context, child) {
+              final double t = (_controller.value - delay) % 1.0;
+              final double opacity =
+                  0.15 + 0.85 * (0.5 + 0.5 * math.sin(t * 2 * math.pi));
+              final double scale =
+                  0.5 + 0.5 * (0.5 + 0.5 * math.sin(t * 2 * math.pi));
+
+              return Transform.scale(
+                scale: scale,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: ScholarlyTheme.accentBlue.withValues(alpha: opacity),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              );
+            },
+          );
+        },
       ),
     );
   }

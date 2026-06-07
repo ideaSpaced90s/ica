@@ -119,10 +119,12 @@ class _ProfileCustomizerContentState extends ConsumerState<_ProfileCustomizerCon
     return Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-      child: JuicyGlassCard(
-        borderRadius: 28,
-        padding: const EdgeInsets.all(24),
-        child: Column(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420),
+        child: JuicyGlassCard(
+          borderRadius: 28,
+          padding: const EdgeInsets.all(24),
+          child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -270,72 +272,80 @@ class _ProfileCustomizerContentState extends ConsumerState<_ProfileCustomizerCon
             // Grid of Avatars
             SizedBox(
               height: 220,
-              child: GridView.builder(
-                physics: const BouncingScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 4,
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
-                  childAspectRatio: 1.0,
-                ),
-                itemCount: _avatars.length,
-                itemBuilder: (context, index) {
-                  final av = _avatars[index];
-                  final isSelected = _selectedAvatarPath == av['path'];
-
-                  return GestureDetector(
-                    onTap: () {
-                      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                      setState(() {
-                        _selectedAvatarPath = av['path']!;
-                      });
-                    },
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        AnimatedContainer(
-                          duration: const Duration(milliseconds: 250),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: isSelected ? ScholarlyTheme.accentBlue : Colors.white.withValues(alpha: 0.5),
-                              width: isSelected ? 3.0 : 1.5,
-                            ),
-                            boxShadow: [
-                              if (isSelected)
-                                BoxShadow(
-                                  color: ScholarlyTheme.accentBlue.withValues(alpha: 0.25),
-                                  blurRadius: 8,
-                                  spreadRadius: 1,
-                                ),
-                            ],
-                          ),
-                          child: ClipOval(
-                            child: Image.asset(
-                              av['path']!,
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                        ),
-                        if (isSelected)
-                          Positioned(
-                            bottom: 0,
-                            right: 0,
-                            child: Container(
-                              padding: const EdgeInsets.all(2),
-                              decoration: const BoxDecoration(
-                                color: ScholarlyTheme.accentBlue,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.check_rounded,
-                                color: Colors.white,
-                                size: 10,
-                              ),
-                            ),
-                          ),
-                      ],
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final crossCount = constraints.maxWidth > 360 ? 6 : 5;
+                  return GridView.builder(
+                    physics: const BouncingScrollPhysics(),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: crossCount,
+                      mainAxisSpacing: 10,
+                      crossAxisSpacing: 10,
+                      childAspectRatio: 1.0,
                     ),
+                    itemCount: _avatars.length,
+                    itemBuilder: (context, index) {
+                      final av = _avatars[index];
+                      final isSelected = _selectedAvatarPath == av['path'];
+
+                      return GestureDetector(
+                        onTap: () {
+                          ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                          setState(() {
+                            _selectedAvatarPath = av['path']!;
+                          });
+                        },
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            AnimatedContainer(
+                              duration: const Duration(milliseconds: 250),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: isSelected
+                                      ? ScholarlyTheme.accentBlue
+                                      : Colors.white.withValues(alpha: 0.5),
+                                  width: isSelected ? 3.0 : 1.5,
+                                ),
+                                boxShadow: [
+                                  if (isSelected)
+                                    BoxShadow(
+                                      color: ScholarlyTheme.accentBlue
+                                          .withValues(alpha: 0.25),
+                                      blurRadius: 8,
+                                      spreadRadius: 1,
+                                    ),
+                                ],
+                              ),
+                              child: ClipOval(
+                                child: Image.asset(
+                                  av['path']!,
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                            ),
+                            if (isSelected)
+                              Positioned(
+                                bottom: 0,
+                                right: 0,
+                                child: Container(
+                                  padding: const EdgeInsets.all(2),
+                                  decoration: const BoxDecoration(
+                                    color: ScholarlyTheme.accentBlue,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.check_rounded,
+                                    color: Colors.white,
+                                    size: 10,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      );
+                    },
                   );
                 },
               ),
@@ -401,6 +411,7 @@ class _ProfileCustomizerContentState extends ConsumerState<_ProfileCustomizerCon
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

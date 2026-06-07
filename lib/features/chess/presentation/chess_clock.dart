@@ -7,10 +7,12 @@ class ChessClock extends StatefulWidget {
     super.key,
     required this.isActive,
     required this.timeLeft,
+    required this.baseTimeDuration,
   });
 
   final bool isActive;
   final Duration timeLeft;
+  final Duration baseTimeDuration;
 
   @override
   State<ChessClock> createState() => _ChessClockState();
@@ -25,7 +27,7 @@ class _ChessClockState extends State<ChessClock>
     super.initState();
     _urgencyController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 600),
+      duration: const Duration(milliseconds: 150),
     );
     _updateUrgency();
   }
@@ -37,8 +39,19 @@ class _ChessClockState extends State<ChessClock>
   }
 
   void _updateUrgency() {
-    final isUrgent = widget.isActive && widget.timeLeft.inSeconds < 60;
+    final totalMs = widget.baseTimeDuration.inMilliseconds;
+    final isUrgent = widget.isActive && (totalMs > 0
+        ? (widget.timeLeft.inMilliseconds <= totalMs * 0.1)
+        : (widget.timeLeft.inSeconds < 60));
+
     if (isUrgent) {
+      final targetDuration = const Duration(milliseconds: 150);
+      if (_urgencyController.duration != targetDuration) {
+        _urgencyController.duration = targetDuration;
+        if (_urgencyController.isAnimating) {
+          _urgencyController.repeat(reverse: true);
+        }
+      }
       if (!_urgencyController.isAnimating) {
         _urgencyController.repeat(reverse: true);
       }
@@ -60,15 +73,34 @@ class _ChessClockState extends State<ChessClock>
         widget.timeLeft.inMinutes.remainder(60).toString().padLeft(2, '0');
     final seconds =
         widget.timeLeft.inSeconds.remainder(60).toString().padLeft(2, '0');
-    final isUrgent = widget.isActive && widget.timeLeft.inSeconds < 60;
+
+    final totalMs = widget.baseTimeDuration.inMilliseconds;
+    final isLowTime = totalMs > 0
+        ? (widget.timeLeft.inMilliseconds <= totalMs * 0.1)
+        : (widget.timeLeft.inSeconds < 60);
+
+    final isUrgent = widget.isActive && isLowTime;
 
     Color baseColor;
-    if (isUrgent) {
+    if (isLowTime) {
       baseColor = const Color(0xFFFC8181); // Soft red
     } else if (widget.isActive) {
       baseColor = ScholarlyTheme.activeClock;
     } else {
       baseColor = ScholarlyTheme.inactiveClock;
+    }
+
+    String timeText;
+    if (widget.timeLeft.inMilliseconds <= 0) {
+      timeText = '0.00';
+    } else if (widget.timeLeft.inMilliseconds < 10000) {
+      final secs = widget.timeLeft.inSeconds;
+      final hundredths = ((widget.timeLeft.inMilliseconds % 1000) ~/ 10)
+          .toString()
+          .padLeft(2, '0');
+      timeText = '$secs.$hundredths';
+    } else {
+      timeText = '$minutes:$seconds';
     }
 
     return AnimatedBuilder(
@@ -83,7 +115,7 @@ class _ChessClockState extends State<ChessClock>
             color: isUrgent
                 ? Color.lerp(
                     const Color(0xFFFC8181),
-                    const Color(0xFFFF4444),
+                    const Color(0xFFFF0000),
                     pulseVal,
                   )!
                 : baseColor,
@@ -93,9 +125,9 @@ class _ChessClockState extends State<ChessClock>
             shadows: widget.isActive
                 ? [
                     Shadow(
-                      color: isUrgent
+                      color: isLowTime
                           ? const Color(0xFFFC8181).withValues(
-                              alpha: 0.5 + 0.4 * pulseVal,
+                              alpha: isUrgent ? (0.5 + 0.4 * pulseVal) : 0.5,
                             )
                           : ScholarlyTheme.accentGold.withValues(alpha: 0.35),
                       blurRadius: isUrgent ? (6 + 6 * pulseVal) : 4,
@@ -103,7 +135,7 @@ class _ChessClockState extends State<ChessClock>
                   ]
                 : null,
           ),
-          child: Text('$minutes:$seconds'),
+          child: Text(timeText),
         );
       },
     );

@@ -122,7 +122,7 @@ fn analyze_game(game: &SavedGameUci, replayed: &ReplayedGame) -> GameIncidents {
     } else {
         game.black_time_left_ms
     };
-    incidents.time_panic = player_time_left > 0 && player_time_left < 45_000;
+    incidents.time_panic = player_time_left >= 0 && player_time_left < 45_000;
 
     let num_moves = replayed.moves.len();
     let start_ply = num_moves.saturating_sub(8);

@@ -6,14 +6,18 @@ import '../../application/chess_provider.dart';
 import '../arena/themes/theme_registry.dart';
 import '../scholarly_theme.dart';
 
+import '../battleground/themes/rated_bnw_theme.dart';
+
 class CapturedPiecesInline extends ConsumerWidget {
   final List<chess_lib.Piece> pieces;
   final List<chess_lib.Piece> opponentPieces;
+  final bool useBnwTheme;
 
   const CapturedPiecesInline({
     super.key,
     required this.pieces,
     this.opponentPieces = const [],
+    this.useBnwTheme = false,
   });
 
   int _getPieceValue(chess_lib.PieceType type) {
@@ -31,9 +35,13 @@ class CapturedPiecesInline extends ConsumerWidget {
       return const SizedBox.shrink();
     }
 
-    final chessState = ref.watch(chessProvider);
-    final themeId = ThemeRegistry.resolveThemeId(chessState);
-    final theme = ThemeRegistry.getTheme(themeId);
+    final theme = useBnwTheme
+        ? ratedBnwTheme
+        : () {
+            final chessState = ref.watch(chessProvider);
+            final themeId = ThemeRegistry.resolveThemeId(chessState);
+            return ThemeRegistry.getTheme(themeId);
+          }();
 
     // Sort pieces by value
     final sortedPieces = List<chess_lib.Piece>.from(pieces)
