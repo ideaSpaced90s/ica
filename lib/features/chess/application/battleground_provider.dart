@@ -104,6 +104,7 @@ class BattlegroundState {
   final ScotomaResult? cachedScotoma;
   final TacticalPlaystyleStats? cachedPlaystyle;
   final List<OpeningRepertoireStats> cachedOpenings;
+  final MiddlegamePerformanceStats? cachedMiddlegames;
   final EndgamePerformanceStats? cachedEndgames;
   final List<double> cachedDominanceHeatmap;
   final List<PerformanceLedgerEntry> cachedLedgerEntries;
@@ -173,6 +174,7 @@ class BattlegroundState {
     this.cachedScotoma,
     this.cachedPlaystyle,
     this.cachedOpenings = const [],
+    this.cachedMiddlegames,
     this.cachedEndgames,
     this.cachedDominanceHeatmap = const [],
     this.cachedLedgerEntries = const [],
@@ -258,6 +260,7 @@ class BattlegroundState {
     ScotomaResult? cachedScotoma,
     TacticalPlaystyleStats? cachedPlaystyle,
     List<OpeningRepertoireStats>? cachedOpenings,
+    MiddlegamePerformanceStats? cachedMiddlegames,
     EndgamePerformanceStats? cachedEndgames,
     List<double>? cachedDominanceHeatmap,
     List<PerformanceLedgerEntry>? cachedLedgerEntries,
@@ -348,6 +351,7 @@ class BattlegroundState {
       cachedScotoma: cachedScotoma ?? this.cachedScotoma,
       cachedPlaystyle: cachedPlaystyle ?? this.cachedPlaystyle,
       cachedOpenings: cachedOpenings ?? this.cachedOpenings,
+      cachedMiddlegames: cachedMiddlegames ?? this.cachedMiddlegames,
       cachedEndgames: cachedEndgames ?? this.cachedEndgames,
       cachedDominanceHeatmap:
           cachedDominanceHeatmap ?? this.cachedDominanceHeatmap,
@@ -1852,10 +1856,45 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
       dominanceHeatmap.add(doms.isEmpty ? double.nan : avg);
     }
 
+    // 4.5. Middlegame calculations
+    MiddlegamePerformanceStats? middlegames;
+    if (scotoma != null) {
+      try {
+        final rawMid = analyzeMiddlegame(games: uciGames, scotoma: scotoma);
+
+        // Determine archetype and description dynamically in Dart based on playstyle metrics
+        String archetype = 'Positional';
+        String description = 'You prefer slow, strategic maneuvers, improving piece placement, and grinding down your opponent.';
+
+        if (playstyle.aggression >= 0.65) {
+          archetype = 'Attacker';
+          description = 'You launch direct attacks, look for pawn storms, and push pieces forward to target the opponent king.';
+        } else if (playstyle.intensity >= 0.65) {
+          archetype = 'Tactician';
+          description = 'You thrive in chaotic, double-edged middlegames where quick calculation and sharp shots dominate.';
+        } else if (playstyle.aggression <= 0.42) {
+          archetype = 'Defender';
+          description = 'You prioritize absolute safety, build solid defensive walls, and wait for your opponent to overreach.';
+        }
+
+        middlegames = MiddlegamePerformanceStats(
+          mpi: rawMid.mpi,
+          archetype: archetype,
+          description: description,
+          decidedPercentage: rawMid.decidedPercentage,
+          winRate: rawMid.winRate,
+          totalMiddlegames: rawMid.totalMiddlegames,
+        );
+      } catch (e) {
+        debugPrint('Failed to run Rust analyzeMiddlegame in Battleground: $e');
+      }
+    }
+
     state = state.copyWith(
       cachedScotoma: scotoma,
       cachedPlaystyle: playstyle,
       cachedOpenings: openings,
+      cachedMiddlegames: middlegames,
       cachedEndgames: endgames,
       cachedDominanceHeatmap: dominanceHeatmap,
     );
@@ -1887,6 +1926,7 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
         cachedScotoma: null,
         cachedPlaystyle: const TacticalPlaystyleStats.empty(),
         cachedOpenings: const [],
+        cachedMiddlegames: null,
         cachedEndgames: null,
         cachedDominanceHeatmap: const [],
       );

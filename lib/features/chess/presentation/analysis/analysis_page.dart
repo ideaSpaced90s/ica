@@ -123,9 +123,17 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
 
     return PopScope(
       canPop: false,
-      onPopInvokedWithResult: (bool didPop, Object? result) {
+      onPopInvokedWithResult: (bool didPop, Object? result) async {
         if (didPop) return;
-        Navigator.of(context).popUntil((route) => route.isFirst);
+        final isDirty = ref.read(studyLabProvider).isDirty;
+        if (isDirty) {
+          final shouldLeave = await _showUnsavedChangesDialog(context);
+          if (shouldLeave && context.mounted) {
+            Navigator.of(context).popUntil((route) => route.isFirst);
+          }
+        } else {
+          Navigator.of(context).popUntil((route) => route.isFirst);
+        }
       },
       child: AmbientScaffold(
         scaffoldKey: _scaffoldKey,
@@ -654,6 +662,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
   }
 
   Widget _buildActionBar(BuildContext context, StudyLabState state, StudyLabNotifier notifier) {
+    final isDirty = state.isDirty && state.nodes.isNotEmpty;
     return JuicyGlassCard(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       borderRadius: 16,
@@ -684,6 +693,39 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
                 );
               },
               tooltip: 'Game Library',
+            ),
+            // --- Direct Save Study Button ---
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                IconButton(
+                  icon: Icon(
+                    Icons.save_rounded,
+                    color: isDirty ? const Color(0xFF00E676) : ScholarlyTheme.textMuted.withValues(alpha: 0.5),
+                    size: 26,
+                  ),
+                  onPressed: isDirty
+                      ? () {
+                          ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                          _showSaveStudyDialog(context, notifier, state);
+                        }
+                      : null,
+                  tooltip: isDirty ? 'Save Study (Unsaved Changes)' : 'Save Study (No Changes)',
+                ),
+                if (isDirty)
+                  Positioned(
+                    top: 6,
+                    right: 6,
+                    child: Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFFF6B35),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+              ],
             ),
             IconButton(
               icon: const Icon(Icons.sports_esports_rounded, color: Colors.purpleAccent, size: 26),
@@ -721,6 +763,297 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
           ],
         ),
       ),
+    );
+  }
+
+  void _showSaveStudyDialog(BuildContext context, StudyLabNotifier notifier, StudyLabState state) {
+    final defaultName = (state.metadata.event.isNotEmpty &&
+            state.metadata.event != 'Study Lab Analysis')
+        ? state.metadata.event
+        : '';
+    final controller = TextEditingController(text: defaultName);
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          backgroundColor: ScholarlyTheme.panelBase,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: const BorderSide(color: ScholarlyTheme.panelStroke, width: 1.5),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF00E676).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.save_rounded, color: Color(0xFF00E676), size: 20),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Save Study',
+                style: GoogleFonts.outfit(
+                  fontWeight: FontWeight.bold,
+                  color: ScholarlyTheme.textPrimary,
+                  fontSize: 18,
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Give your study a name to save it to the library.',
+                style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 12),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: controller,
+                autofocus: true,
+                style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary),
+                decoration: InputDecoration(
+                  hintText: 'e.g. Ruy Lopez Study, Endgame Practice...',
+                  hintStyle: GoogleFonts.inter(color: ScholarlyTheme.textMuted),
+                  filled: true,
+                  fillColor: ScholarlyTheme.panelBase,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: ScholarlyTheme.panelStroke),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFF00E676), width: 1.5),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text('Cancel', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted)),
+            ),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.save_rounded, size: 16, color: Colors.white),
+              label: Text('Save', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF00E676),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: () async {
+                final name = controller.text.trim();
+                if (name.isEmpty) return;
+                Navigator.pop(ctx);
+                final success = await notifier.saveCurrentGameToLibrary(name);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        success ? 'Study "$name" saved successfully!' : 'Failed to save study. Please try again.',
+                        style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                      ),
+                      backgroundColor: success ? const Color(0xFF00E676) : Colors.redAccent,
+                    ),
+                  );
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// Shows the unsaved changes dialog. Returns true if the user chose to leave
+  /// (either by saving or discarding), false if they want to stay.
+  Future<bool> _showUnsavedChangesDialog(BuildContext context) async {
+    final notifier = ref.read(studyLabProvider.notifier);
+    final state = ref.read(studyLabProvider);
+    bool shouldLeave = false;
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        return AlertDialog(
+          backgroundColor: ScholarlyTheme.panelBase,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(color: Colors.orangeAccent.withValues(alpha: 0.6), width: 1.5),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.orangeAccent.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.warning_amber_rounded, color: Colors.orangeAccent, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Unsaved Changes',
+                  style: GoogleFonts.outfit(
+                    fontWeight: FontWeight.bold,
+                    color: ScholarlyTheme.textPrimary,
+                    fontSize: 18,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            'Your study has unsaved changes. Would you like to save before leaving?',
+            style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 13, height: 1.5),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                shouldLeave = false;
+                Navigator.pop(ctx);
+              },
+              child: Text('Cancel', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted)),
+            ),
+            TextButton(
+              onPressed: () {
+                notifier.clearDirty();
+                shouldLeave = true;
+                Navigator.pop(ctx);
+              },
+              child: Text(
+                'Discard',
+                style: GoogleFonts.inter(color: Colors.redAccent, fontWeight: FontWeight.w600),
+              ),
+            ),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.save_rounded, size: 15, color: Colors.white),
+              label: Text('Save & Leave', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF00E676),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: () {
+                Navigator.pop(ctx);
+                // Show name dialog for saving, then leave
+                _showSaveAndLeaveDialog(context, notifier, state, onSaved: () {
+                  shouldLeave = true;
+                });
+              },
+            ),
+          ],
+        );
+      },
+    );
+
+    return shouldLeave;
+  }
+
+  void _showSaveAndLeaveDialog(
+    BuildContext context,
+    StudyLabNotifier notifier,
+    StudyLabState state, {
+    required VoidCallback onSaved,
+  }) {
+    final defaultName = (state.metadata.event.isNotEmpty &&
+            state.metadata.event != 'Study Lab Analysis')
+        ? state.metadata.event
+        : '';
+    final controller = TextEditingController(text: defaultName);
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        return AlertDialog(
+          backgroundColor: ScholarlyTheme.panelBase,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: const BorderSide(color: ScholarlyTheme.panelStroke, width: 1.5),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF00E676).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.save_rounded, color: Color(0xFF00E676), size: 20),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Name Your Study',
+                style: GoogleFonts.outfit(
+                  fontWeight: FontWeight.bold,
+                  color: ScholarlyTheme.textPrimary,
+                  fontSize: 17,
+                ),
+              ),
+            ],
+          ),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary),
+            decoration: InputDecoration(
+              hintText: 'e.g. Ruy Lopez Study, Endgame Practice...',
+              hintStyle: GoogleFonts.inter(color: ScholarlyTheme.textMuted),
+              filled: true,
+              fillColor: ScholarlyTheme.panelBase,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: ScholarlyTheme.panelStroke),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFF00E676), width: 1.5),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+              },
+              child: Text('Cancel', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted)),
+            ),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.save_rounded, size: 16, color: Colors.white),
+              label: Text('Save', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF00E676),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: () async {
+                final name = controller.text.trim();
+                if (name.isEmpty) return;
+                Navigator.pop(ctx);
+                final success = await notifier.saveCurrentGameToLibrary(name);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        success ? 'Study "$name" saved!' : 'Save failed. Please try again.',
+                        style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                      ),
+                      backgroundColor: success ? const Color(0xFF00E676) : Colors.redAccent,
+                    ),
+                  );
+                }
+                if (success) onSaved();
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 

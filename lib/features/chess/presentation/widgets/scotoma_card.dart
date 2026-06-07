@@ -137,60 +137,98 @@ class ScotomaCard extends ConsumerWidget {
     }
 
     final Widget radarChart = SizedBox(
-      height: 240,
-      child: RadarChart(
-        RadarChartData(
-          dataSets: [
-            RadarDataSet(
-              fillColor: const Color(0x22EF4444),
-              borderColor: const Color(0xFFF87171),
-              entryRadius: 3.5,
-              dataEntries: values.map((val) => RadarEntry(value: val)).toList(),
+      height: 350,
+      child: Container(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: RadialGradient(
+            colors: [
+              const Color(0xFF10B981).withValues(alpha: 0.08), // Safe zone (emerald green center)
+              const Color(0xFFF59E0B).withValues(alpha: 0.07), // Caution zone (amber middle)
+              const Color(0xFFEF4444).withValues(alpha: 0.05), // Critical zone (crimson outer)
+              Colors.transparent,
+            ],
+            stops: const [0.25, 0.50, 0.90, 1.0],
+          ),
+        ),
+        padding: const EdgeInsets.all(2),
+        child: RadarChart(
+          RadarChartData(
+            titlePositionPercentageOffset: 0.15,
+            dataSets: [
+              // Actual dataset
+              RadarDataSet(
+                fillColor: const Color(0x22EF4444),
+                borderColor: const Color(0xFFF87171),
+                borderWidth: 2.5,
+                entryRadius: 4.0,
+                dataEntries: values.map((val) => RadarEntry(value: val)).toList(),
+              ),
+              // Dummy invisible dataset to lock scale at 0.6
+              RadarDataSet(
+                fillColor: Colors.transparent,
+                borderColor: Colors.transparent,
+                entryRadius: 0,
+                dataEntries: List.generate(8, (_) => const RadarEntry(value: 0.60)),
+              ),
+            ],
+            radarBackgroundColor: Colors.transparent,
+            borderData: FlBorderData(show: false),
+            radarBorderData: BorderSide(
+              color: ScholarlyTheme.panelStroke.withValues(alpha: 0.5),
+              width: 1,
             ),
-          ],
-          radarBackgroundColor: Colors.transparent,
-          borderData: FlBorderData(show: false),
-          radarBorderData: BorderSide(
-            color: ScholarlyTheme.panelStroke.withValues(alpha: 0.5),
-            width: 1,
-          ),
-          getTitle: (index, angle) {
-            final text = [
-              'DGB',
-              'HRZ',
-              'KNF',
-              'TMP',
-              'GRD',
-              'TNL',
-              'PIN',
-              'KSB',
-            ][index];
-            final isPeak = index == maxIndex && hasDiagnosis;
-            return RadarChartTitle(
-              text: '',
-              angle: angle,
-              children: [
-                TextSpan(
-                  text: text,
-                  style: GoogleFonts.jetBrainsMono(
-                    color: isPeak
-                        ? const Color(0xFFEF4444)
-                        : ScholarlyTheme.textSubtle,
-                    fontSize: isPeak ? 10.5 : 9,
-                    fontWeight: isPeak ? FontWeight.w900 : FontWeight.bold,
+            getTitle: (index, angle) {
+              final text = [
+                'DGB',
+                'HRZ',
+                'KNF',
+                'TMP',
+                'GRD',
+                'TNL',
+                'PIN',
+                'KSB',
+              ][index];
+              final isPeak = index == maxIndex && hasDiagnosis;
+              final val = values[index];
+              final percentText = '${(val * 100).toStringAsFixed(0)}%';
+              return RadarChartTitle(
+                text: '',
+                angle: 0.0, // Force titles to be straight (horizontal)
+                children: [
+                  TextSpan(
+                    text: '$text\n',
+                    style: GoogleFonts.jetBrainsMono(
+                      color: isPeak
+                          ? const Color(0xFFEF4444)
+                          : ScholarlyTheme.textPrimary,
+                      fontSize: isPeak ? 13.0 : 11.5,
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
-                ),
-              ],
-            );
-          },
-          tickCount: 3,
-          ticksTextStyle: GoogleFonts.jetBrainsMono(
-            color: ScholarlyTheme.textMuted.withValues(alpha: 0.4),
-            fontSize: 8,
-          ),
-          gridBorderData: BorderSide(
-            color: ScholarlyTheme.panelStroke.withValues(alpha: 0.3),
-            width: 1,
+                  TextSpan(
+                    text: percentText,
+                    style: GoogleFonts.jetBrainsMono(
+                      color: isPeak
+                          ? const Color(0xFFEF4444)
+                          : ScholarlyTheme.textMuted,
+                      fontSize: 10.0,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              );
+            },
+            tickCount: 3,
+            ticksTextStyle: GoogleFonts.jetBrainsMono(
+              color: ScholarlyTheme.textMuted.withValues(alpha: 0.6),
+              fontSize: 8.0,
+              fontWeight: FontWeight.bold,
+            ),
+            gridBorderData: BorderSide(
+              color: ScholarlyTheme.panelStroke.withValues(alpha: 0.4),
+              width: 1,
+            ),
           ),
         ),
       ),
@@ -332,21 +370,16 @@ class ScotomaCard extends ConsumerWidget {
         builder: (context, constraints) {
           final isWide = constraints.maxWidth >= 560;
           if (isWide) {
-            // ── Landscape / desktop: chart+diagnostic left | legend right ──
+            // ── Landscape / desktop: chart left | diagnostic + legend right ──
             return IntrinsicHeight(
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Left: chart + diagnostic
+                  // Left: chart
                   Expanded(
                     flex: 5,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        radarChart,
-                        const SizedBox(height: 16),
-                        diagnosticBox,
-                      ],
+                    child: Center(
+                      child: radarChart,
                     ),
                   ),
                   const SizedBox(width: 24),
@@ -357,12 +390,24 @@ class ScotomaCard extends ConsumerWidget {
                     thickness: 1,
                   ),
                   const SizedBox(width: 24),
-                  // Right: legend
+                  // Right: diagnostic + legend
                   Expanded(
                     flex: 4,
                     child: Padding(
                       padding: const EdgeInsets.only(top: 4),
-                      child: legendSection,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          diagnosticBox,
+                          const SizedBox(height: 20),
+                          Divider(
+                            color: ScholarlyTheme.panelStroke.withValues(alpha: 0.5),
+                            height: 1,
+                          ),
+                          const SizedBox(height: 16),
+                          legendSection,
+                        ],
+                      ),
                     ),
                   ),
                 ],

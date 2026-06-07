@@ -309,56 +309,105 @@ class TacticalRadarChart extends ConsumerWidget {
     }
 
     final Widget radarChart = SizedBox(
-      height: 240,
-      child: RadarChart(
-        RadarChartData(
-          dataSets: [
-            RadarDataSet(
-              fillColor: const Color(0x33A855F7),
-              borderColor: const Color(0xFFC084FC),
-              entryRadius: 4,
-              dataEntries: [
-                RadarEntry(value: aggression),
-                RadarEntry(value: power),
-                RadarEntry(value: versatility),
-                RadarEntry(value: intensity),
-                RadarEntry(value: speed),
-              ],
-            ),
-          ],
-          radarBackgroundColor: Colors.transparent,
-          borderData: FlBorderData(show: false),
-          radarBorderData: const BorderSide(color: Color(0xFFF3E8FF), width: 1),
-          getTitle: (index, angle) {
-            final text = ['ATK', 'POW', 'VER', 'INT', 'SPD'][index];
-            final color = [
-              const Color(0xFFEF4444),
-              const Color(0xFFF59E0B),
-              const Color(0xFF8B5CF6),
-              const Color(0xFF10B981),
-              const Color(0xFF06B6D4),
-            ][index];
-            return RadarChartTitle(
-              text: '',
-              children: [
-                TextSpan(
-                  text: text,
-                  style: GoogleFonts.outfit(
-                    color: color,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-              angle: angle,
-            );
-          },
-          tickCount: 4,
-          ticksTextStyle: GoogleFonts.jetBrainsMono(
-            color: ScholarlyTheme.textMuted,
-            fontSize: 8,
+      height: 350,
+      child: Container(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: RadialGradient(
+            colors: [
+              const Color(0xFF8B5CF6).withValues(alpha: 0.08), // Violet core glow
+              const Color(0xFF8B5CF6).withValues(alpha: 0.03),
+              Colors.transparent,
+            ],
+            stops: const [0.35, 0.75, 1.0],
           ),
-          gridBorderData: const BorderSide(color: Color(0xFFF3E8FF), width: 1),
+        ),
+        padding: const EdgeInsets.all(2),
+        child: RadarChart(
+          RadarChartData(
+            titlePositionPercentageOffset: 0.15,
+            dataSets: [
+              // 1. Reference baseline dataset
+              RadarDataSet(
+                fillColor: Colors.transparent,
+                borderColor: ScholarlyTheme.textSubtle.withValues(alpha: 0.45),
+                borderWidth: 1.5,
+                entryRadius: 0,
+                dataEntries: const [
+                  RadarEntry(value: 0.50), // ATK Aggression
+                  RadarEntry(value: 0.45), // POW Power
+                  RadarEntry(value: 0.35), // VER Versatility
+                  RadarEntry(value: 0.55), // INT Intensity
+                  RadarEntry(value: 0.60), // SPD Speed
+                ],
+              ),
+              // 2. Actual dataset
+              RadarDataSet(
+                fillColor: const Color(0x28A855F7),
+                borderColor: const Color(0xFFC084FC),
+                borderWidth: 2.5,
+                entryRadius: 4.5,
+                dataEntries: [
+                  RadarEntry(value: aggression),
+                  RadarEntry(value: power),
+                  RadarEntry(value: versatility),
+                  RadarEntry(value: intensity),
+                  RadarEntry(value: speed),
+                ],
+              ),
+              // 3. Dummy invisible dataset to lock scale at 1.0
+              RadarDataSet(
+                fillColor: Colors.transparent,
+                borderColor: Colors.transparent,
+                entryRadius: 0,
+                dataEntries: List.generate(5, (_) => const RadarEntry(value: 1.0)),
+              ),
+            ],
+            radarBackgroundColor: Colors.transparent,
+            borderData: FlBorderData(show: false),
+            radarBorderData: const BorderSide(color: Color(0xFFF3E8FF), width: 1),
+            getTitle: (index, angle) {
+              final text = ['ATK', 'POW', 'VER', 'INT', 'SPD'][index];
+              final color = [
+                const Color(0xFFEF4444),
+                const Color(0xFFF59E0B),
+                const Color(0xFF8B5CF6),
+                const Color(0xFF10B981),
+                const Color(0xFF06B6D4),
+              ][index];
+              final val = [aggression, power, versatility, intensity, speed][index];
+              final percentText = '${(val * 100).toStringAsFixed(0)}%';
+              return RadarChartTitle(
+                text: '',
+                angle: 0.0, // Force titles to be straight (horizontal)
+                children: [
+                  TextSpan(
+                    text: '$text\n',
+                    style: GoogleFonts.outfit(
+                      color: color,
+                      fontSize: 12.0,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  TextSpan(
+                    text: percentText,
+                    style: GoogleFonts.jetBrainsMono(
+                      color: ScholarlyTheme.textPrimary,
+                      fontSize: 10.0,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              );
+            },
+            tickCount: 4,
+            ticksTextStyle: GoogleFonts.jetBrainsMono(
+              color: ScholarlyTheme.textMuted.withValues(alpha: 0.6),
+              fontSize: 8.0,
+              fontWeight: FontWeight.bold,
+            ),
+            gridBorderData: const BorderSide(color: Color(0xFFF3E8FF), width: 1),
+          ),
         ),
       ),
     );
@@ -453,6 +502,42 @@ class TacticalRadarChart extends ConsumerWidget {
           'Time Speed Management',
           'Average ratio of remaining clock time upon match completion.',
           const Color(0xFF06B6D4),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Container(
+              width: 32,
+              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: ScholarlyTheme.textSubtle.withValues(alpha: 0.2),
+                  width: 1,
+                ),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                '---',
+                style: TextStyle(
+                  color: ScholarlyTheme.textSubtle.withValues(alpha: 0.6),
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Typical Master Target (Baseline)',
+                style: GoogleFonts.inter(
+                  color: ScholarlyTheme.textMuted,
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
         ),
       ],
     );

@@ -6,7 +6,8 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `get_history`, `get_templates_for_category`, `select_index_with_ring_buffer`
+// These functions are ignored because they are not marked as `pub`: `get_components_for_category`, `get_history`, `select_index_with_ring_buffer`
+// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `CommentaryComponents`
 
 void resetCommentaryHistoryRust() =>
     RustLib.instance.api.crateApiCommentaryResetCommentaryHistoryRust();

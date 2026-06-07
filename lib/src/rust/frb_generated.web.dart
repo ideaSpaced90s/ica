@@ -86,6 +86,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   double dco_decode_f_64(dynamic raw);
 
   @protected
+  GameIncidents dco_decode_game_incidents(dynamic raw);
+
+  @protected
   GameTerminationStatus dco_decode_game_termination_status(dynamic raw);
 
   @protected
@@ -120,6 +123,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<SavedGameUci> dco_decode_list_saved_game_uci(dynamic raw);
+
+  @protected
+  MiddlegameResult dco_decode_middlegame_result(dynamic raw);
 
   @protected
   String? dco_decode_opt_String(dynamic raw);
@@ -230,6 +236,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   double sse_decode_f_64(SseDeserializer deserializer);
 
   @protected
+  GameIncidents sse_decode_game_incidents(SseDeserializer deserializer);
+
+  @protected
   GameTerminationStatus sse_decode_game_termination_status(
     SseDeserializer deserializer,
   );
@@ -276,6 +285,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<SavedGameUci> sse_decode_list_saved_game_uci(
     SseDeserializer deserializer,
   );
+
+  @protected
+  MiddlegameResult sse_decode_middlegame_result(SseDeserializer deserializer);
 
   @protected
   String? sse_decode_opt_String(SseDeserializer deserializer);
@@ -409,6 +421,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_f_64(double self, SseSerializer serializer);
 
   @protected
+  void sse_encode_game_incidents(GameIncidents self, SseSerializer serializer);
+
+  @protected
   void sse_encode_game_termination_status(
     GameTerminationStatus self,
     SseSerializer serializer,
@@ -468,6 +483,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_saved_game_uci(
     List<SavedGameUci> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_middlegame_result(
+    MiddlegameResult self,
     SseSerializer serializer,
   );
 

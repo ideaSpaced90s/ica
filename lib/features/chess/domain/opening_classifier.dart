@@ -4,6 +4,11 @@ class OpeningClassifier {
     if (gameMode == 'chess960') return 'Chess 960 Variant';
     if (moves.isEmpty) return 'Unknown / Open Line';
 
+    final hasEarlyBf4 = (moves.length > 2 && moves[2] == 'Bf4') || (moves.length > 4 && moves[4] == 'Bf4');
+    if (moves.first == 'd4' && hasEarlyBf4) {
+      return 'London System';
+    }
+
     // We join the first N moves (up to 10 plies / 5 full moves)
     final limit = moves.length < 10 ? moves.length : 10;
     final prefixList = moves.sublist(0, limit);
@@ -13,6 +18,8 @@ class OpeningClassifier {
       return 'Ruy Lopez';
     } else if (pgnText.startsWith('e4 c5')) {
       return 'Sicilian Defense';
+    } else if (pgnText.startsWith('d4 d5 c4 c6')) {
+      return 'Slav Defense';
     } else if (pgnText.startsWith('d4 d5 c4')) {
       return 'Queen\'s Gambit';
     } else if (pgnText.startsWith('e4 e5 Nf3 Nc6 Bc4')) {
@@ -21,6 +28,12 @@ class OpeningClassifier {
       return 'French Defense';
     } else if (pgnText.startsWith('e4 c6')) {
       return 'Caro-Kann Defense';
+    } else if (pgnText.startsWith('d4 Nf6 c4 e6 Nc3 Bb4')) {
+      return 'Nimzo-Indian Defense';
+    } else if (pgnText.startsWith('d4 Nf6 c4 g6 Nc3 d5') || 
+               pgnText.startsWith('d4 Nf6 c4 g6 Nf3 d5') ||
+               pgnText.startsWith('d4 Nf6 c4 g6 g3 d5')) {
+      return 'Grünfeld Defense';
     } else if (pgnText.startsWith('d4 Nf6 c4 g6')) {
       return 'King\'s Indian Defense';
     } else if (pgnText.startsWith('e4 e5 Nf3 Nf6')) {
@@ -38,6 +51,18 @@ class OpeningClassifier {
       return 'Modern Defense';
     } else if (pgnText.startsWith('e4 d5')) {
       return 'Scandinavian Defense';
+    } else if (pgnText.startsWith('e4 Nf6')) {
+      return 'Alekhine\'s Defense';
+    } else if (pgnText.startsWith('d4 f5')) {
+      return 'Dutch Defense';
+    } else if (pgnText.startsWith('e4 e5 Nf3 Nc6 d4')) {
+      return 'Scotch Game';
+    } else if (pgnText.startsWith('e4 e5 f4')) {
+      return 'King\'s Gambit';
+    } else if (pgnText.startsWith('e4 e5 Nc3')) {
+      return 'Vienna Game';
+    } else if (pgnText.startsWith('e4 e5 Nf3 d6')) {
+      return 'Philidor Defense';
     } else if (pgnText.startsWith('Nf3')) {
       return 'Réti Opening';
     } else if (pgnText.startsWith('c4')) {

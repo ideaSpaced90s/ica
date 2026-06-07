@@ -6,11 +6,101 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `is_pinned`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `fmt`, `fmt`
+// These functions are ignored because they are not marked as `pub`: `analyze_game`, `chess960_initial_fens`, `expand_fen_rank`, `fen_position_signature`, `find_uci_move`, `is_endgame`, `is_pinned`, `normalize_chess960_castling_rights`, `parse_position`, `position_signature`, `recover_chess960_initial_fen`, `replay_game`, `replay_san`, `replay_uci`, `rook_file_for_castling`
+// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `ReplayedGame`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`
 
 ScotomaResult analyzeScotoma({required List<SavedGameUci> games}) =>
     RustLib.instance.api.crateApiCognitiveAnalyzeScotoma(games: games);
+
+MiddlegameResult analyzeMiddlegame({
+  required List<SavedGameUci> games,
+  required ScotomaResult scotoma,
+}) => RustLib.instance.api.crateApiCognitiveAnalyzeMiddlegame(
+  games: games,
+  scotoma: scotoma,
+);
+
+class GameIncidents {
+  final bool diagonalRetreats;
+  final bool horizontalSwings;
+  final bool knightForks;
+  final bool timePanic;
+  final bool materialGreed;
+  final bool tunnelVision;
+  final bool pinnedPieces;
+  final bool kingSafety;
+
+  const GameIncidents({
+    required this.diagonalRetreats,
+    required this.horizontalSwings,
+    required this.knightForks,
+    required this.timePanic,
+    required this.materialGreed,
+    required this.tunnelVision,
+    required this.pinnedPieces,
+    required this.kingSafety,
+  });
+
+  static Future<GameIncidents> default_() =>
+      RustLib.instance.api.crateApiCognitiveGameIncidentsDefault();
+
+  @override
+  int get hashCode =>
+      diagonalRetreats.hashCode ^
+      horizontalSwings.hashCode ^
+      knightForks.hashCode ^
+      timePanic.hashCode ^
+      materialGreed.hashCode ^
+      tunnelVision.hashCode ^
+      pinnedPieces.hashCode ^
+      kingSafety.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is GameIncidents &&
+          runtimeType == other.runtimeType &&
+          diagonalRetreats == other.diagonalRetreats &&
+          horizontalSwings == other.horizontalSwings &&
+          knightForks == other.knightForks &&
+          timePanic == other.timePanic &&
+          materialGreed == other.materialGreed &&
+          tunnelVision == other.tunnelVision &&
+          pinnedPieces == other.pinnedPieces &&
+          kingSafety == other.kingSafety;
+}
+
+class MiddlegameResult {
+  final double mpi;
+  final double decidedPercentage;
+  final double winRate;
+  final int totalMiddlegames;
+
+  const MiddlegameResult({
+    required this.mpi,
+    required this.decidedPercentage,
+    required this.winRate,
+    required this.totalMiddlegames,
+  });
+
+  @override
+  int get hashCode =>
+      mpi.hashCode ^
+      decidedPercentage.hashCode ^
+      winRate.hashCode ^
+      totalMiddlegames.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is MiddlegameResult &&
+          runtimeType == other.runtimeType &&
+          mpi == other.mpi &&
+          decidedPercentage == other.decidedPercentage &&
+          winRate == other.winRate &&
+          totalMiddlegames == other.totalMiddlegames;
+}
 
 class SavedGameUci {
   final List<String> recentMoves;

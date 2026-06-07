@@ -210,6 +210,8 @@ class StudyLabState {
   final bool isGuessingMode;
   final List<int> guessedNodes; // Mainline node indices guessed successfully
 
+  final bool isDirty; // Tracks unsaved changes in the study
+
   StudyLabState({
     this.nodes = const [],
     this.currentNodeIndex,
@@ -219,6 +221,7 @@ class StudyLabState {
     this.metadata = const GameMetadata(),
     this.isGuessingMode = false,
     this.guessedNodes = const [],
+    this.isDirty = false,
   });
 
   String get activeFen {
@@ -245,6 +248,7 @@ class StudyLabState {
     GameMetadata? metadata,
     bool? isGuessingMode,
     List<int>? guessedNodes,
+    bool? isDirty,
   }) {
     return StudyLabState(
       nodes: nodes ?? this.nodes,
@@ -259,6 +263,7 @@ class StudyLabState {
       metadata: metadata ?? this.metadata,
       isGuessingMode: isGuessingMode ?? this.isGuessingMode,
       guessedNodes: guessedNodes ?? this.guessedNodes,
+      isDirty: isDirty ?? this.isDirty,
     );
   }
 }
@@ -361,6 +366,7 @@ class StudyLabNotifier extends StateNotifier<StudyLabState> {
     state = state.copyWith(
       nodes: newNodes,
       currentNodeIndex: newNodeIdx,
+      isDirty: true,
     );
 
     _updateOpeningRecognition();
@@ -393,7 +399,7 @@ class StudyLabNotifier extends StateNotifier<StudyLabState> {
     final idx = state.currentNodeIndex!;
     final newNodes = List<StudyLabMoveNode>.from(state.nodes);
     newNodes[idx] = newNodes[idx].copyWith(comment: comment);
-    state = state.copyWith(nodes: newNodes);
+    state = state.copyWith(nodes: newNodes, isDirty: true);
   }
 
   void deleteCurrentNode() {
@@ -433,6 +439,7 @@ class StudyLabNotifier extends StateNotifier<StudyLabState> {
     state = state.copyWith(
       nodes: newNodes,
       currentNodeIndex: newCurrentIdx,
+      isDirty: true,
     );
 
     _updateOpeningRecognition();
@@ -456,6 +463,7 @@ class StudyLabNotifier extends StateNotifier<StudyLabState> {
       currentNodeIndex: null,
       startFen: chess_lib.Chess.DEFAULT_POSITION,
       isBoardFlipped: state.isBoardFlipped,
+      isDirty: false,
     );
   }
 
@@ -465,14 +473,19 @@ class StudyLabNotifier extends StateNotifier<StudyLabState> {
       currentNodeIndex: null,
       startFen: fen,
       isBoardFlipped: state.isBoardFlipped,
+      isDirty: true,
     );
+  }
+
+  void clearDirty() {
+    state = state.copyWith(isDirty: false);
   }
 
   void setAnnotation(int nodeIndex, MoveAnnotation a) {
     if (nodeIndex >= state.nodes.length) return;
     final newNodes = List<StudyLabMoveNode>.from(state.nodes);
     newNodes[nodeIndex] = newNodes[nodeIndex].copyWith(annotation: a);
-    state = state.copyWith(nodes: newNodes);
+    state = state.copyWith(nodes: newNodes, isDirty: true);
   }
 
   void addArrow(int nodeIndex, BoardArrow a) {
@@ -485,7 +498,7 @@ class StudyLabNotifier extends StateNotifier<StudyLabState> {
       currentArrows.add(a);
     }
     newNodes[nodeIndex] = newNodes[nodeIndex].copyWith(arrows: currentArrows);
-    state = state.copyWith(nodes: newNodes);
+    state = state.copyWith(nodes: newNodes, isDirty: true);
   }
 
   void addHighlight(int nodeIndex, BoardHighlight h) {
@@ -498,14 +511,14 @@ class StudyLabNotifier extends StateNotifier<StudyLabState> {
       currentHighlights.add(h);
     }
     newNodes[nodeIndex] = newNodes[nodeIndex].copyWith(highlights: currentHighlights);
-    state = state.copyWith(nodes: newNodes);
+    state = state.copyWith(nodes: newNodes, isDirty: true);
   }
 
   void clearMarkup(int nodeIndex) {
     if (nodeIndex >= state.nodes.length) return;
     final newNodes = List<StudyLabMoveNode>.from(state.nodes);
     newNodes[nodeIndex] = newNodes[nodeIndex].copyWith(arrows: const [], highlights: const []);
-    state = state.copyWith(nodes: newNodes);
+    state = state.copyWith(nodes: newNodes, isDirty: true);
   }
 
   void promoteVariation(int nodeIndex) {
@@ -524,7 +537,7 @@ class StudyLabNotifier extends StateNotifier<StudyLabState> {
 
     final newNodes = List<StudyLabMoveNode>.from(state.nodes);
     newNodes[parentIdx] = parent.copyWith(childIndices: childIndices);
-    state = state.copyWith(nodes: newNodes);
+    state = state.copyWith(nodes: newNodes, isDirty: true);
   }
 
   void setMetadata(GameMetadata m) {
@@ -711,6 +724,7 @@ class StudyLabNotifier extends StateNotifier<StudyLabState> {
       currentNodeIndex: activeNodeIndex,
       startFen: startPosition,
       isBoardFlipped: entry.isBoardFlipped,
+      isDirty: false,
     );
 
     _updateOpeningRecognition();
@@ -738,6 +752,7 @@ class StudyLabNotifier extends StateNotifier<StudyLabState> {
       commentary: record.header.opening.isNotEmpty 
           ? '${record.header.eco}: ${record.header.opening}' 
           : null,
+      isDirty: false,
     );
   }
 
@@ -864,6 +879,7 @@ class StudyLabNotifier extends StateNotifier<StudyLabState> {
       nodes: currentNodes,
       currentNodeIndex: activeNodeIndex,
       startFen: chess_lib.Chess.DEFAULT_POSITION,
+      isDirty: false,
     );
 
     _updateOpeningRecognition();
@@ -1069,7 +1085,14 @@ class StudyLabNotifier extends StateNotifier<StudyLabState> {
       index: BigInt.from(0),
     );
 
-    return rust_pgn.saveStudyToDb(dbPath: dbPath, game: record);
+    final success = rust_pgn.saveStudyToDb(dbPath: dbPath, game: record);
+    if (success) {
+      state = state.copyWith(
+        isDirty: false,
+        metadata: state.metadata.copyWith(event: gameName),
+      );
+    }
+    return success;
   }
 
   Future<List<rust_pgn.PgnGameRecord>> loadGamesFromLibrary() async {

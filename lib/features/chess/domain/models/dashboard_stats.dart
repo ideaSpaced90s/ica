@@ -64,3 +64,21 @@ class EndgamePerformanceStats {
     required this.endgameSavesCount,
   });
 }
+
+class MiddlegamePerformanceStats {
+  final double mpi;
+  final String archetype;
+  final String description;
+  final double decidedPercentage;
+  final double winRate;
+  final int totalMiddlegames;
+
+  const MiddlegamePerformanceStats({
+    required this.mpi,
+    required this.archetype,
+    required this.description,
+    required this.decidedPercentage,
+    required this.winRate,
+    required this.totalMiddlegames,
+  });
+}

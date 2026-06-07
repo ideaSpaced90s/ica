@@ -43,16 +43,16 @@ struct ReplayedGame {
     turn_colors: Vec<Color>,
 }
 
-#[derive(Default)]
-struct GameIncidents {
-    diagonal_retreats: bool,
-    horizontal_swings: bool,
-    knight_forks: bool,
-    time_panic: bool,
-    material_greed: bool,
-    tunnel_vision: bool,
-    pinned_pieces: bool,
-    king_safety: bool,
+#[derive(Default, Clone, Debug)]
+pub struct GameIncidents {
+    pub diagonal_retreats: bool,
+    pub horizontal_swings: bool,
+    pub knight_forks: bool,
+    pub time_panic: bool,
+    pub material_greed: bool,
+    pub tunnel_vision: bool,
+    pub pinned_pieces: bool,
+    pub king_safety: bool,
 }
 
 static CHESS960_RECOVERY_CACHE: OnceLock<Mutex<HashMap<String, Option<String>>>> = OnceLock::new();
@@ -514,6 +514,91 @@ fn is_pinned(board: &Board, square: Square, color: Color) -> bool {
         }
     }
     false
+}
+
+#[derive(Clone, Debug)]
+pub struct MiddlegameResult {
+    pub mpi: f64,
+    pub decided_percentage: f64,
+    pub win_rate: f64,
+    pub total_middlegames: i32,
+}
+
+#[flutter_rust_bridge::frb(sync)]
+pub fn analyze_middlegame(games: Vec<SavedGameUci>, scotoma: ScotomaResult) -> MiddlegameResult {
+    let mut total_middlegames = 0;
+    let mut decided_in_middlegame = 0;
+    let mut wins = 0;
+    let mut draws = 0;
+
+    for game in &games {
+        let replayed = match replay_game(game) {
+            Some(replayed) if !replayed.moves.is_empty() => replayed,
+            _ => continue,
+        };
+
+        if replayed.moves.len() > 20 {
+            total_middlegames += 1;
+
+            if game.result == "W" {
+                wins += 1;
+            } else if game.result == "D" {
+                draws += 1;
+            }
+
+            if let Some(final_pos) = replayed.positions.last() {
+                if !is_endgame(final_pos) {
+                    decided_in_middlegame += 1;
+                }
+            }
+        }
+    }
+
+    let scotoma_sum = scotoma.diagonal_retreats +
+        scotoma.horizontal_swings +
+        scotoma.knight_forks +
+        scotoma.material_greed +
+        scotoma.tunnel_vision +
+        scotoma.pinned_pieces +
+        scotoma.king_safety;
+    let avg_scotoma = scotoma_sum / 7.0;
+    let mpi = (98.0 - (avg_scotoma * 60.0)).clamp(50.0, 98.0);
+
+    let decided_percentage = if total_middlegames > 0 {
+        (decided_in_middlegame as f64 / total_middlegames as f64) * 100.0
+    } else {
+        0.0
+    };
+
+    let win_rate = if total_middlegames > 0 {
+        ((wins as f64 + 0.5 * draws as f64) / total_middlegames as f64) * 100.0
+    } else {
+        0.0
+    };
+
+    MiddlegameResult {
+        mpi,
+        decided_percentage,
+        win_rate,
+        total_middlegames,
+    }
+}
+
+fn is_endgame(pos: &Chess) -> bool {
+    let board = pos.board();
+    let mut non_pawn_material = 0;
+    for square in board.occupied() {
+        if let Some(piece) = board.piece_at(square) {
+            match piece.role {
+                Role::Queen => non_pawn_material += 9,
+                Role::Rook => non_pawn_material += 5,
+                Role::Bishop => non_pawn_material += 3,
+                Role::Knight => non_pawn_material += 3,
+                _ => {}
+            }
+        }
+    }
+    non_pawn_material <= 12
 }
 
 #[cfg(test)]

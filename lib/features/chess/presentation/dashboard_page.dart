@@ -10,205 +10,404 @@ import 'scholarly_theme.dart';
 import 'widgets/progression_charts.dart';
 import 'widgets/mini_board_preview.dart';
 import 'widgets/ambient_scaffold.dart';
+import 'widgets/hover_scale_effect.dart';
 import 'widgets/profile_customization_overlay.dart';
 import 'widgets/phase_analysis_widgets.dart';
 import 'widgets/scotoma_card.dart';
 import 'widgets/daily_motivational_quote.dart';
 import 'package:intl/intl.dart';
 
+// ── Tab definition ─────────────────────────────────────────────────────────────
+class _TabDef {
+  final String label;
+  final IconData icon;
+  const _TabDef(this.label, this.icon);
+}
 
-class DashboardPage extends ConsumerWidget {
+const List<_TabDef> _kDashTabs = [
+  _TabDef('STANDING', Icons.person_rounded),
+  _TabDef('30D', Icons.calendar_today_rounded),
+  _TabDef('REPERTOIRE', Icons.auto_stories_rounded),
+  _TabDef('PLAYSTYLE', Icons.radar_rounded),
+  _TabDef('SCOTOMA', Icons.visibility_off_rounded),
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+class DashboardPage extends ConsumerStatefulWidget {
   const DashboardPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DashboardPage> createState() => _DashboardPageState();
+}
+
+class _DashboardPageState extends ConsumerState<DashboardPage> {
+  int _selectedTab = 0;
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(chessProvider);
     final bgState = ref.watch(battlegroundProvider);
     final screenWidth = MediaQuery.of(context).size.width;
-    final isMobile =
-        screenWidth <
-        1100; // Increased width threshold for better desktop layout spacing
-
-    // LEFT COLUMN: Avatar, Master Standing, ELO Progression
-    final Widget leftColumn = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (isMobile) ...[
-          Center(
-            child: GestureDetector(
-              onTap: () => showProfileCustomizationOverlay(context, ref),
-              child: Container(
-                width: 140,
-                height: 140,
-                margin: const EdgeInsets.only(bottom: 24),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: ScholarlyTheme.accentBlue.withValues(alpha: 0.8),
-                    width: 4,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: ScholarlyTheme.accentBlue.withValues(alpha: 0.25),
-                      blurRadius: 24,
-                      spreadRadius: 4,
-                    ),
-                  ],
-                ),
-                child: ClipOval(
-                  child: state.userAvatarPath.startsWith('assets/')
-                      ? Image.asset(state.userAvatarPath, fit: BoxFit.cover)
-                      : Image.file(
-                          File(state.userAvatarPath),
-                          fit: BoxFit.cover,
-                        ),
-                ),
-              ),
-            ),
-          ),
-          const DailyMotivationalQuoteCard(),
-          const SizedBox(height: 20),
-          _buildMasterCard(state, bgState),
-          const SizedBox(height: 32),
-        ],
-        _buildSectionHeader('30D', icon: Icons.calendar_today_rounded),
-        const SizedBox(height: 16),
-        const DominanceHeatmap(),
-        const SizedBox(height: 32),
-        _buildSectionHeader('ELO PROGRESS', icon: Icons.show_chart_rounded),
-        const SizedBox(height: 16),
-        const SizedBox(height: 268, child: EloAscentChart()),
-      ],
-    );
-
-    // CENTER COLUMN: Arenas, Masterpieces
-    final Widget centerColumn = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionHeader('ARENAS', icon: Icons.workspace_premium_rounded),
-        const SizedBox(height: 16),
-        GridView.count(
-          crossAxisCount: isMobile ? 1 : 2,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          childAspectRatio: isMobile ? 3.0 : 2.2,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
-          children: [
-            _buildTierCard(
-              'BULLET',
-              Icons.bolt_rounded,
-              bgState.bulletElo,
-              bgState.bulletStreak,
-              bgState.bulletGamesClassic,
-              bgState.bulletGames960,
-              bgState.bulletDominance,
-            ),
-            _buildTierCard(
-              'BLITZ',
-              Icons.local_fire_department_rounded,
-              bgState.blitzElo,
-              bgState.blitzStreak,
-              bgState.blitzGamesClassic,
-              bgState.blitzGames960,
-              bgState.blitzDominance,
-            ),
-            _buildTierCard(
-              'RAPID',
-              Icons.timer_rounded,
-              bgState.rapidElo,
-              bgState.rapidStreak,
-              bgState.rapidGamesClassic,
-              bgState.rapidGames960,
-              bgState.rapidDominance,
-            ),
-            _buildGameModesCard(),
-          ],
-        ),
-        const SizedBox(height: 32),
-        _buildSectionHeader(
-          'RECENT WINS',
-          icon: Icons.workspace_premium_rounded,
-        ),
-        const SizedBox(height: 16),
-        _buildRecentMasterpieces(state),
-        const SizedBox(height: 32),
-        _buildSectionHeader('PHASE ANALYSIS', icon: Icons.insights_rounded),
-        const SizedBox(height: 16),
-        isMobile
-            ? const Column(
-                children: [
-                  OpeningRepertoireCard(),
-                  SizedBox(height: 16),
-                  EndgameTechniqueCard(),
-                ],
-              )
-            : const Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(child: OpeningRepertoireCard()),
-                  SizedBox(width: 16),
-                  Expanded(child: EndgameTechniqueCard()),
-                ],
-              ),
-      ],
-    );
-
-    // INSIGHT SECTIONS: Tactical Persona, Modes, Heatmap
-    final Widget insightSections = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionHeader('PLAYSTYLE', icon: Icons.radar_rounded),
-        const SizedBox(height: 16),
-        const TacticalRadarChart(),
-        const SizedBox(height: 32),
-        _buildSectionHeader('SCOTOMA', icon: Icons.visibility_off_rounded),
-        const SizedBox(height: 16),
-        const ScotomaCard(),
-      ],
-    );
+    final isMobile = screenWidth < 1100;
 
     return AmbientScaffold(
       blob1Color: const Color(0xFFDBEAFE),
       blob2Color: const Color(0xFFFEF3C7),
       blob3Color: const Color(0xFFF3E8FF),
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
+      body: isMobile
+          ? _buildMobileLayout(context, state, bgState)
+          : _buildDesktopLayout(context, state, bgState),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  //  MOBILE LAYOUT
+  // ══════════════════════════════════════════════════════════════════════════
+
+  Widget _buildMobileLayout(
+    BuildContext context,
+    ChessState state,
+    BattlegroundState bgState,
+  ) {
+    return Column(
+      children: [
+        Expanded(
+          child: IndexedStack(
+            index: _selectedTab,
+            children: [
+              _buildProfileTabContent(state, bgState, isMobile: true),
+              _build30DTabContent(isMobile: true),
+              _buildRepertoireTabContent(isMobile: true),
+              _buildPlaystyleTabContent(isMobile: true),
+              _buildScotomaTabContent(isMobile: true),
+            ],
+          ),
+        ),
+        _buildMobileTabBar(),
+      ],
+    );
+  }
+
+  Widget _buildMobileTabBar() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.92),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 20,
+            offset: const Offset(0, -4),
+          ),
+        ],
+        border: Border(
+          top: BorderSide(
+            color: Colors.white.withValues(alpha: 0.5),
+            width: 1.5,
+          ),
+        ),
+      ),
+      child: SafeArea(
+        top: false,
         child: Padding(
-          padding: EdgeInsets.all(isMobile ? 16.0 : 32.0),
-          child: isMobile
-              ? Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    leftColumn,
-                    const SizedBox(height: 32),
-                    centerColumn,
-                    const SizedBox(height: 32),
-                    insightSections,
-                  ],
-                )
-              : _buildDesktopBody(context, ref, state, bgState),
+          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: List.generate(_kDashTabs.length, (i) {
+              final tab = _kDashTabs[i];
+              final isSelected = _selectedTab == i;
+              return GestureDetector(
+                onTap: () => setState(() => _selectedTab = i),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeInOut,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 7,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? ScholarlyTheme.accentBlue.withValues(alpha: 0.12)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        tab.icon,
+                        color: isSelected
+                            ? ScholarlyTheme.accentBlue
+                            : ScholarlyTheme.textMuted,
+                        size: 22,
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        tab.label,
+                        style: GoogleFonts.outfit(
+                          color: isSelected
+                              ? ScholarlyTheme.accentBlue
+                              : ScholarlyTheme.textMuted,
+                          fontSize: 9,
+                          fontWeight: isSelected
+                              ? FontWeight.w800
+                              : FontWeight.w500,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }),
+          ),
         ),
       ),
     );
   }
 
-  // ── Desktop layout ────────────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════
+  //  DESKTOP LAYOUT
+  // ══════════════════════════════════════════════════════════════════════════
 
-  Widget _buildDesktopBody(
+  Widget _buildDesktopLayout(
     BuildContext context,
-    WidgetRef ref,
     ChessState state,
     BattlegroundState bgState,
   ) {
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header banner (avatar + name + metrics)
+            _buildHeaderSection(context, ref, state, bgState),
+            const SizedBox(height: 20),
+            // Horizontal pill tab strip
+            _buildDesktopTabStrip(),
+            const SizedBox(height: 28),
+            // Active tab content
+            _buildDesktopTabContent(state, bgState),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDesktopTabStrip() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(5),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.75),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: List.generate(_kDashTabs.length, (i) {
+          final tab = _kDashTabs[i];
+          final isSelected = _selectedTab == i;
+          return Expanded(
+            child: GestureDetector(
+              onTap: () => setState(() => _selectedTab = i),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeInOut,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? ScholarlyTheme.accentBlue
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(17),
+                  boxShadow: isSelected
+                      ? [
+                          BoxShadow(
+                            color: ScholarlyTheme.accentBlue
+                                .withValues(alpha: 0.32),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      tab.icon,
+                      color: isSelected
+                          ? Colors.white
+                          : ScholarlyTheme.textMuted,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      tab.label,
+                      style: GoogleFonts.outfit(
+                        color: isSelected
+                            ? Colors.white
+                            : ScholarlyTheme.textMuted,
+                        fontSize: 13,
+                        fontWeight: isSelected
+                            ? FontWeight.w700
+                            : FontWeight.w500,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  Widget _buildDesktopTabContent(ChessState state, BattlegroundState bgState) {
+    switch (_selectedTab) {
+      case 0:
+        return _buildProfileTabContent(state, bgState, isMobile: false);
+      case 1:
+        return _build30DTabContent(isMobile: false);
+      case 2:
+        return _buildRepertoireTabContent(isMobile: false);
+      case 3:
+        return _buildPlaystyleTabContent(isMobile: false);
+      case 4:
+        return _buildScotomaTabContent(isMobile: false);
+      default:
+        return const SizedBox.shrink();
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  //  TAB 1 — PROFILE
+  // ══════════════════════════════════════════════════════════════════════════
+
+  Widget _buildProfileTabContent(
+    ChessState state,
+    BattlegroundState bgState, {
+    required bool isMobile,
+  }) {
+    if (isMobile) {
+      return SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Avatar
+            Center(
+              child: GestureDetector(
+                onTap: () => showProfileCustomizationOverlay(context, ref),
+                child: Container(
+                  width: 140,
+                  height: 140,
+                  margin: const EdgeInsets.only(bottom: 24),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: ScholarlyTheme.accentBlue.withValues(alpha: 0.8),
+                      width: 4,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: ScholarlyTheme.accentBlue.withValues(alpha: 0.25),
+                        blurRadius: 24,
+                        spreadRadius: 4,
+                      ),
+                    ],
+                  ),
+                  child: ClipOval(
+                    child: state.userAvatarPath.startsWith('assets/')
+                        ? Image.asset(state.userAvatarPath, fit: BoxFit.cover)
+                        : Image.file(
+                            File(state.userAvatarPath),
+                            fit: BoxFit.cover,
+                          ),
+                  ),
+                ),
+              ),
+            ),
+            const DailyMotivationalQuoteCard(),
+            const SizedBox(height: 20),
+            _buildMasterCard(state, bgState),
+            const SizedBox(height: 32),
+            _buildSectionHeader('ARENAS', icon: Icons.workspace_premium_rounded),
+            const SizedBox(height: 16),
+            GridView.count(
+              crossAxisCount: 1,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              childAspectRatio: 3.0,
+              mainAxisSpacing: 16,
+              children: [
+                _buildTierCard(
+                  'BULLET',
+                  Icons.bolt_rounded,
+                  bgState.bulletElo,
+                  bgState.bulletStreak,
+                  bgState.bulletGamesClassic,
+                  bgState.bulletGames960,
+                  bgState.bulletDominance,
+                ),
+                _buildTierCard(
+                  'BLITZ',
+                  Icons.local_fire_department_rounded,
+                  bgState.blitzElo,
+                  bgState.blitzStreak,
+                  bgState.blitzGamesClassic,
+                  bgState.blitzGames960,
+                  bgState.blitzDominance,
+                ),
+                _buildTierCard(
+                  'RAPID',
+                  Icons.timer_rounded,
+                  bgState.rapidElo,
+                  bgState.rapidStreak,
+                  bgState.rapidGamesClassic,
+                  bgState.rapidGames960,
+                  bgState.rapidDominance,
+                ),
+                _buildGameModesCard(),
+              ],
+            ),
+            const SizedBox(height: 32),
+            _buildSectionHeader(
+              'RECENT WINS',
+              icon: Icons.workspace_premium_rounded,
+            ),
+            const SizedBox(height: 16),
+            _buildRecentMasterpieces(state),
+            const SizedBox(height: 32),
+            _buildSectionHeader('ELO PROGRESS', icon: Icons.show_chart_rounded),
+            const SizedBox(height: 16),
+            const SizedBox(height: 268, child: EloAscentChart()),
+            const SizedBox(height: 32),
+          ],
+        ),
+      );
+    }
+
+    // Desktop: header is already shown above tab strip; profile tab = arenas + recent wins
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ── Header Banner (avatar + name + metrics + game modes) ────────────
-        _buildHeaderSection(context, ref, state, bgState),
-        const SizedBox(height: 28),
-
-        // ── 3 Arena cards in a row ─────────────────────────────────────────
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -250,39 +449,147 @@ class DashboardPage extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 32),
-
-        // ── 30D Heatmap ─────────────────────────────────────────────────────
-        _buildSectionHeader('30D', icon: Icons.calendar_today_rounded),
+        _buildSectionHeader(
+          'RECENT WINS',
+          icon: Icons.workspace_premium_rounded,
+        ),
         const SizedBox(height: 16),
-        const DominanceHeatmap(),
+        _buildRecentMasterpieces(state),
         const SizedBox(height: 32),
-
-        // ── ELO Progress ───────────────────────────────────────────────────
         _buildSectionHeader('ELO PROGRESS', icon: Icons.show_chart_rounded),
         const SizedBox(height: 16),
         const SizedBox(height: 340, child: EloAscentChart()),
         const SizedBox(height: 32),
+      ],
+    );
+  }
 
-        // ── Repertoire (Openings + Endgame) ─────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════
+  //  TAB 2 — 30D
+  // ══════════════════════════════════════════════════════════════════════════
+
+  Widget _build30DTabContent({required bool isMobile}) {
+    final body = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader('30D', icon: Icons.calendar_today_rounded),
+        const SizedBox(height: 16),
+        const DominanceHeatmap(),
+        const SizedBox(height: 32),
+      ],
+    );
+
+    if (isMobile) {
+      return SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        child: body,
+      );
+    }
+    return body;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  //  TAB 3 — REPERTOIRE
+  // ══════════════════════════════════════════════════════════════════════════
+
+  Widget _buildRepertoireTabContent({required bool isMobile}) {
+    final body = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
         _buildSectionHeader('REPERTOIRE', icon: Icons.auto_stories_rounded),
         const SizedBox(height: 16),
         const RepertoireCard(),
         const SizedBox(height: 32),
+        _buildSectionHeader('PHASE ANALYSIS', icon: Icons.insights_rounded),
+        const SizedBox(height: 16),
+        isMobile
+            ? const Column(
+                children: [
+                  OpeningRepertoireCard(),
+                  SizedBox(height: 16),
+                  MiddlegamePerformanceCard(),
+                  SizedBox(height: 16),
+                  EndgameTechniqueCard(),
+                ],
+              )
+            : const Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: OpeningRepertoireCard()),
+                  SizedBox(width: 16),
+                  Expanded(child: MiddlegamePerformanceCard()),
+                  SizedBox(width: 16),
+                  Expanded(child: EndgameTechniqueCard()),
+                ],
+              ),
+        const SizedBox(height: 32),
+      ],
+    );
 
-        // ── Playstyle ───────────────────────────────────────────────────────
+    if (isMobile) {
+      return SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        child: body,
+      );
+    }
+    return body;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  //  TAB 4 — PLAYSTYLE
+  // ══════════════════════════════════════════════════════════════════════════
+
+  Widget _buildPlaystyleTabContent({required bool isMobile}) {
+    final body = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
         _buildSectionHeader('PLAYSTYLE', icon: Icons.radar_rounded),
         const SizedBox(height: 16),
         const TacticalRadarChart(),
         const SizedBox(height: 32),
+      ],
+    );
 
-        // ── Scotoma ─────────────────────────────────────────────────────────
+    if (isMobile) {
+      return SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        child: body,
+      );
+    }
+    return body;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  //  TAB 5 — SCOTOMA
+  // ══════════════════════════════════════════════════════════════════════════
+
+  Widget _buildScotomaTabContent({required bool isMobile}) {
+    final body = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
         _buildSectionHeader('SCOTOMA', icon: Icons.visibility_off_rounded),
         const SizedBox(height: 16),
         const ScotomaCard(),
         const SizedBox(height: 32),
       ],
     );
+
+    if (isMobile) {
+      return SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        child: body,
+      );
+    }
+    return body;
   }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  //  DESKTOP HEADER BANNER
+  // ══════════════════════════════════════════════════════════════════════════
 
   Widget _buildHeaderSection(
     BuildContext context,
@@ -291,7 +598,7 @@ class DashboardPage extends ConsumerWidget {
     BattlegroundState bgState,
   ) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 32),
+      margin: const EdgeInsets.only(bottom: 0),
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.4),
@@ -417,6 +724,10 @@ class DashboardPage extends ConsumerWidget {
     );
   }
 
+  // ══════════════════════════════════════════════════════════════════════════
+  //  HELPER WIDGETS (unchanged from original)
+  // ══════════════════════════════════════════════════════════════════════════
+
   Widget _buildConsolidatedEloCard(BattlegroundState bgState) {
     final Color color = ScholarlyTheme.accentBlue;
     final isCalibrated = bgState.isCalibrated;
@@ -434,105 +745,107 @@ class DashboardPage extends ConsumerWidget {
 
     return SizedBox(
       width: 200,
-      height: 208, // Match the Game Modes card height exactly
-      child: JuicyGlassCard(
-        borderRadius: 20,
-        borderColor: color,
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header: Icon + Title
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(7),
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(
-                    Icons.emoji_events_rounded,
-                    color: color,
-                    size: 18,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'CONSOLIDATED ELO',
-                    style: GoogleFonts.outfit(
-                      color: ScholarlyTheme.textPrimary,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 0.6,
+      height: 208,
+      child: HoverScaleEffect(
+        child: JuicyGlassCard(
+          borderRadius: 20,
+          borderColor: color,
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(7),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    child: Icon(
+                      Icons.emoji_events_rounded,
+                      color: color,
+                      size: 18,
+                    ),
                   ),
-                ),
-              ],
-            ),
-            const Spacer(),
-            // Large Centered Value
-            Center(
-              child: Text(
-                '${bgState.consolidatedRating}',
-                style: GoogleFonts.outfit(
-                  color: ScholarlyTheme.textPrimary,
-                  fontSize: 40,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: -0.5,
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'CONSOLIDATED ELO',
+                      style: GoogleFonts.outfit(
+                        color: ScholarlyTheme.textPrimary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.6,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              const Spacer(),
+              Center(
+                child: Text(
+                  '${bgState.consolidatedRating}',
+                  style: GoogleFonts.outfit(
+                    color: ScholarlyTheme.textPrimary,
+                    fontSize: 40,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: -0.5,
+                  ),
                 ),
               ),
-            ),
-            const Spacer(),
-            // Calibration Status Badge
-            Row(
-              children: [
-                Container(
-                  width: 6,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: isCalibrated ? const Color(0xFF22C55E) : const Color(0xFFEF4444),
+              const Spacer(),
+              Row(
+                children: [
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: isCalibrated
+                          ? const Color(0xFF22C55E)
+                          : const Color(0xFFEF4444),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 6),
+                  const SizedBox(width: 6),
+                  Text(
+                    isCalibrated ? 'Calibrated' : 'Uncalibrated',
+                    style: GoogleFonts.inter(
+                      color: isCalibrated
+                          ? const Color(0xFF22C55E)
+                          : const Color(0xFFEF4444),
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              if (!isCalibrated) ...[
+                const SizedBox(height: 3),
                 Text(
-                  isCalibrated ? 'Calibrated' : 'Uncalibrated',
+                  '($gamesRemaining matches left)',
                   style: GoogleFonts.inter(
-                    color: isCalibrated ? const Color(0xFF22C55E) : const Color(0xFFEF4444),
-                    fontSize: 11,
+                    color: const Color(0xFFF59E0B),
+                    fontSize: 9,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ],
-            ),
-            if (!isCalibrated) ...[
-              const SizedBox(height: 3),
+              const SizedBox(height: 6),
               Text(
-                '($gamesRemaining matches left)',
+                'Last game: $lastPlayedString',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: GoogleFonts.inter(
-                  color: const Color(0xFFF59E0B),
+                  color: ScholarlyTheme.textMuted,
                   fontSize: 9,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ],
-            const SizedBox(height: 6),
-            // Last game date/time label
-            Text(
-              'Last game: $lastPlayedString',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.inter(
-                color: ScholarlyTheme.textMuted,
-                fontSize: 9,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -542,72 +855,91 @@ class DashboardPage extends ConsumerWidget {
     final Color color = ScholarlyTheme.accentGold;
     return SizedBox(
       width: 200,
-      height: 208, // Match the Game Modes card height exactly
-      child: JuicyGlassCard(
-        borderRadius: 20,
-        borderColor: color,
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header: Icon + Title
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(
-                    Icons.sports_esports_rounded,
-                    color: color,
-                    size: 16,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'TOTAL MATCHES',
-                    style: GoogleFonts.outfit(
-                      color: ScholarlyTheme.textPrimary,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 0.6,
+      height: 208,
+      child: HoverScaleEffect(
+        child: JuicyGlassCard(
+          borderRadius: 20,
+          borderColor: color,
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    child: Icon(
+                      Icons.sports_esports_rounded,
+                      color: color,
+                      size: 16,
+                    ),
                   ),
-                ),
-              ],
-            ),
-            const Spacer(),
-            // Large Centered Value
-            Center(
-              child: Text(
-                '${bgState.totalRatedGamesCount}',
-                style: GoogleFonts.outfit(
-                  color: ScholarlyTheme.textPrimary,
-                  fontSize: 34,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: -0.5,
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'TOTAL MATCHES',
+                      style: GoogleFonts.outfit(
+                        color: ScholarlyTheme.textPrimary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.6,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              const Spacer(),
+              Center(
+                child: Text(
+                  '${bgState.totalRatedGamesCount}',
+                  style: GoogleFonts.outfit(
+                    color: ScholarlyTheme.textPrimary,
+                    fontSize: 34,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: -0.5,
+                  ),
                 ),
               ),
-            ),
-            const Spacer(),
-            // Breakdown rows
-            _buildMatchBreakdownRow('BULLET', bgState.bulletGamesClassic, bgState.bulletGames960, Colors.cyan),
-            const SizedBox(height: 3),
-            _buildMatchBreakdownRow('BLITZ', bgState.blitzGamesClassic, bgState.blitzGames960, Colors.orangeAccent),
-            const SizedBox(height: 3),
-            _buildMatchBreakdownRow('RAPID', bgState.rapidGamesClassic, bgState.rapidGames960, ScholarlyTheme.accentBlue),
-          ],
+              const Spacer(),
+              _buildMatchBreakdownRow(
+                'BULLET',
+                bgState.bulletGamesClassic,
+                bgState.bulletGames960,
+                Colors.cyan,
+              ),
+              const SizedBox(height: 3),
+              _buildMatchBreakdownRow(
+                'BLITZ',
+                bgState.blitzGamesClassic,
+                bgState.blitzGames960,
+                Colors.orangeAccent,
+              ),
+              const SizedBox(height: 3),
+              _buildMatchBreakdownRow(
+                'RAPID',
+                bgState.rapidGamesClassic,
+                bgState.rapidGames960,
+                ScholarlyTheme.accentBlue,
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildMatchBreakdownRow(String label, int classic, int nineSixty, Color dotColor) {
+  Widget _buildMatchBreakdownRow(
+    String label,
+    int classic,
+    int nineSixty,
+    Color dotColor,
+  ) {
     return Row(
       children: [
         Container(
@@ -640,7 +972,12 @@ class DashboardPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildMobileMatchBreakdownRow(String label, int classic, int nineSixty, Color dotColor) {
+  Widget _buildMobileMatchBreakdownRow(
+    String label,
+    int classic,
+    int nineSixty,
+    Color dotColor,
+  ) {
     return Row(
       children: [
         Container(
@@ -681,78 +1018,73 @@ class DashboardPage extends ConsumerWidget {
   }) {
     return SizedBox(
       width: 200,
-      height: 208, // Match the Game Modes card height exactly
-      child: JuicyGlassCard(
-        borderRadius: 20,
-        borderColor: color,
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header: Icon + Title
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(7),
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(
-                    icon,
-                    color: color,
-                    size: 18,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: GoogleFonts.outfit(
-                      color: ScholarlyTheme.textPrimary,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 0.6,
+      height: 208,
+      child: HoverScaleEffect(
+        child: JuicyGlassCard(
+          borderRadius: 20,
+          borderColor: color,
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(7),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    child: Icon(icon, color: color, size: 18),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: GoogleFonts.outfit(
+                        color: ScholarlyTheme.textPrimary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.6,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              const Spacer(),
+              Center(
+                child: Text(
+                  value,
+                  style: GoogleFonts.outfit(
+                    color: ScholarlyTheme.textPrimary,
+                    fontSize: 40,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: -0.5,
                   ),
                 ),
-              ],
-            ),
-            const Spacer(),
-            // Large Centered Value
-            Center(
-              child: Text(
-                value,
-                style: GoogleFonts.outfit(
-                  color: ScholarlyTheme.textPrimary,
-                  fontSize: 40,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: -0.5,
+              ),
+              const Spacer(),
+              Container(
+                height: 4,
+                width: 40,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
-            ),
-            const Spacer(),
-            // A subtle indicator bar and subtitle
-            Container(
-              height: 4,
-              width: 40,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.4),
-                borderRadius: BorderRadius.circular(2),
+              const SizedBox(height: 4),
+              Text(
+                'Live Performance',
+                style: GoogleFonts.inter(
+                  color: ScholarlyTheme.textMuted,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Live Performance',
-              style: GoogleFonts.inter(
-                color: ScholarlyTheme.textMuted,
-                fontSize: 10,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -838,7 +1170,7 @@ class DashboardPage extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-                        _buildBigStat('ELO', '${bgState.consolidatedRating}'),
+              _buildBigStat('ELO', '${bgState.consolidatedRating}'),
               _buildBigStat('MATCHES', '${bgState.totalRatedGamesCount}'),
               _buildBigStat(
                 'DOM',
@@ -846,7 +1178,6 @@ class DashboardPage extends ConsumerWidget {
               ),
             ],
           ),
-          // Calibration Status and Last Game Info
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -870,14 +1201,18 @@ class DashboardPage extends ConsumerWidget {
                           height: 6,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: bgState.isCalibrated ? const Color(0xFF22C55E) : const Color(0xFFEF4444),
+                            color: bgState.isCalibrated
+                                ? const Color(0xFF22C55E)
+                                : const Color(0xFFEF4444),
                           ),
                         ),
                         const SizedBox(width: 6),
                         Text(
                           bgState.isCalibrated ? 'CALIBRATED' : 'UNCALIBRATED',
                           style: GoogleFonts.inter(
-                            color: bgState.isCalibrated ? const Color(0xFF22C55E) : const Color(0xFFEF4444),
+                            color: bgState.isCalibrated
+                                ? const Color(0xFF22C55E)
+                                : const Color(0xFFEF4444),
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
                             letterSpacing: 0.5,
@@ -915,7 +1250,9 @@ class DashboardPage extends ConsumerWidget {
                     Text(
                       bgState.lastRatedGameTimestampMs != null
                           ? DateFormat.yMd().add_jm().format(
-                              DateTime.fromMillisecondsSinceEpoch(bgState.lastRatedGameTimestampMs!).toLocal())
+                              DateTime.fromMillisecondsSinceEpoch(
+                                bgState.lastRatedGameTimestampMs!,
+                              ).toLocal())
                           : 'Never',
                       style: GoogleFonts.jetBrainsMono(
                         color: Colors.white.withValues(alpha: 0.9),
@@ -928,11 +1265,26 @@ class DashboardPage extends ConsumerWidget {
                 const SizedBox(height: 8),
                 const Divider(color: Colors.white24, height: 1),
                 const SizedBox(height: 8),
-                _buildMobileMatchBreakdownRow('BULLET', bgState.bulletGamesClassic, bgState.bulletGames960, Colors.cyan),
+                _buildMobileMatchBreakdownRow(
+                  'BULLET',
+                  bgState.bulletGamesClassic,
+                  bgState.bulletGames960,
+                  Colors.cyan,
+                ),
                 const SizedBox(height: 4),
-                _buildMobileMatchBreakdownRow('BLITZ', bgState.blitzGamesClassic, bgState.blitzGames960, Colors.orangeAccent),
+                _buildMobileMatchBreakdownRow(
+                  'BLITZ',
+                  bgState.blitzGamesClassic,
+                  bgState.blitzGames960,
+                  Colors.orangeAccent,
+                ),
                 const SizedBox(height: 4),
-                _buildMobileMatchBreakdownRow('RAPID', bgState.rapidGamesClassic, bgState.rapidGames960, ScholarlyTheme.accentBlue),
+                _buildMobileMatchBreakdownRow(
+                  'RAPID',
+                  bgState.rapidGamesClassic,
+                  bgState.rapidGames960,
+                  ScholarlyTheme.accentBlue,
+                ),
               ],
             ),
           ),
@@ -981,109 +1333,111 @@ class DashboardPage extends ConsumerWidget {
         ? Colors.orangeAccent
         : ScholarlyTheme.accentBlue;
 
-    return JuicyGlassCard(
-      borderRadius: 20,
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          Container(
-            width: 3,
-            height: 40,
-            margin: const EdgeInsets.only(right: 12),
-            decoration: BoxDecoration(
-              color: accentColor,
-              borderRadius: BorderRadius.circular(2),
-              boxShadow: [
-                BoxShadow(
-                  color: accentColor.withValues(alpha: 0.4),
-                  blurRadius: 6,
-                ),
-              ],
+    return HoverScaleEffect(
+      child: JuicyGlassCard(
+        borderRadius: 20,
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Container(
+              width: 3,
+              height: 40,
+              margin: const EdgeInsets.only(right: 12),
+              decoration: BoxDecoration(
+                color: accentColor,
+                borderRadius: BorderRadius.circular(2),
+                boxShadow: [
+                  BoxShadow(
+                    color: accentColor.withValues(alpha: 0.4),
+                    blurRadius: 6,
+                  ),
+                ],
+              ),
             ),
-          ),
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: accentColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(14),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: accentColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(icon, color: accentColor, size: 20),
             ),
-            child: Icon(icon, color: accentColor, size: 20),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      title,
-                      style: GoogleFonts.inter(
-                        color: ScholarlyTheme.textPrimary,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    if (streak > 0)
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.local_fire_department_rounded,
-                            color: Colors.deepOrangeAccent,
-                            size: 10,
-                          ),
-                          Text(
-                            ' $streak',
-                            style: GoogleFonts.jetBrainsMono(
-                              color: Colors.deepOrangeAccent,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    Text(
-                      '$elo ELO',
-                      style: GoogleFonts.jetBrainsMono(
-                        color: accentColor,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 4,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: (dominance >= 0 ? Colors.green : Colors.red)
-                            .withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        '${dominance >= 0 ? '+' : ''}${dominance.toStringAsFixed(1)}',
-                        style: GoogleFonts.jetBrainsMono(
-                          color: dominance >= 0 ? Colors.green : Colors.red,
-                          fontSize: 10,
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        title,
+                        style: GoogleFonts.inter(
+                          color: ScholarlyTheme.textPrimary,
+                          fontSize: 12,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-              ],
+                      if (streak > 0)
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.local_fire_department_rounded,
+                              color: Colors.deepOrangeAccent,
+                              size: 10,
+                            ),
+                            Text(
+                              ' $streak',
+                              style: GoogleFonts.jetBrainsMono(
+                                color: Colors.deepOrangeAccent,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Text(
+                        '$elo ELO',
+                        style: GoogleFonts.jetBrainsMono(
+                          color: accentColor,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: (dominance >= 0 ? Colors.green : Colors.red)
+                              .withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          '${dominance >= 0 ? '+' : ''}${dominance.toStringAsFixed(1)}',
+                          style: GoogleFonts.jetBrainsMono(
+                            color: dominance >= 0 ? Colors.green : Colors.red,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1096,42 +1450,44 @@ class DashboardPage extends ConsumerWidget {
     return SizedBox(
       width: 200,
       height: 208,
-      child: JuicyGlassCard(
-        borderRadius: 20,
-        borderColor: const Color(0xFF06B6D4),
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(7),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF06B6D4).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
+      child: HoverScaleEffect(
+        child: JuicyGlassCard(
+          borderRadius: 20,
+          borderColor: const Color(0xFF06B6D4),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(7),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF06B6D4).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.pie_chart_rounded,
+                      color: Color(0xFF06B6D4),
+                      size: 18,
+                    ),
                   ),
-                  child: const Icon(
-                    Icons.pie_chart_rounded,
-                    color: Color(0xFF06B6D4),
-                    size: 18,
+                  const SizedBox(width: 10),
+                  Text(
+                    'GAME MODES',
+                    style: GoogleFonts.outfit(
+                      color: ScholarlyTheme.textPrimary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.6,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                Text(
-                  'GAME MODES',
-                  style: GoogleFonts.outfit(
-                    color: ScholarlyTheme.textPrimary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0.6,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            const Expanded(child: ModeDistributionChart()),
-          ],
+                ],
+              ),
+              const SizedBox(height: 12),
+              const Expanded(child: ModeDistributionChart()),
+            ],
+          ),
         ),
       ),
     );
@@ -1237,10 +1593,9 @@ class DashboardPage extends ConsumerWidget {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
 void exitToDashboardWithSidebar(BuildContext context, WidgetRef ref) {
-  // Ensure the widget is still mounted before accessing ref or navigating.
   if (!context.mounted) return;
-  // Use a post-frame callback to safely transition navigation.
   WidgetsBinding.instance.addPostFrameCallback((_) {
     if (!context.mounted) return;
     try {
@@ -1256,7 +1611,6 @@ void exitToDashboardWithSidebar(BuildContext context, WidgetRef ref) {
       }
       container.read(mobileNavIndexProvider.notifier).state = 0;
     } catch (_) {
-      // Fallback check if the container couldn't be obtained or widget was disposed
       if (ref.context.mounted) {
         final currentIndex = ref.read(mobileNavIndexProvider);
         if (currentIndex == 1) {
