@@ -114,7 +114,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
     final bool hasHistory = state.game.history.isNotEmpty;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
       decoration: BoxDecoration(
         color: ScholarlyTheme.backgroundStart.withValues(alpha: 0.5),
         borderRadius: const BorderRadius.only(
@@ -122,85 +122,69 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
           bottomRight: Radius.circular(16),
         ),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+      child: Row(
         children: [
-          Row(
-            children: [
-              Expanded(child: _buildPromptButton('Analyze', Icons.analytics_rounded, isBusy)),
-              const SizedBox(width: 4),
-              Expanded(child: _buildPromptButton('Why', Icons.psychology_rounded, isBusy || !hasHistory)),
-              const SizedBox(width: 4),
-              Expanded(child: _buildPromptButton('Candidates', Icons.alt_route_rounded, isBusy)),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              Expanded(child: _buildPromptButton('Tactics', Icons.flash_on_rounded, isBusy || !hasHistory)),
-              const SizedBox(width: 4),
-              Expanded(child: _buildPromptButton('Plan', Icons.explore_rounded, isBusy)),
-              const SizedBox(width: 4),
-              Expanded(child: _buildPromptButton('Defend', Icons.shield_rounded, isBusy || !hasHistory)),
-            ],
-          ),
+          Expanded(child: _buildPromptButton('Analyze', Icons.analytics_rounded, isBusy)),
+          const SizedBox(width: 4),
+          Expanded(child: _buildPromptButton('Why', Icons.psychology_rounded, isBusy || !hasHistory)),
+          const SizedBox(width: 4),
+          Expanded(child: _buildPromptButton('Candidates', Icons.alt_route_rounded, isBusy)),
+          const SizedBox(width: 4),
+          Expanded(child: _buildPromptButton('Tactics', Icons.flash_on_rounded, isBusy || !hasHistory)),
+          const SizedBox(width: 4),
+          Expanded(child: _buildPromptButton('Plan', Icons.explore_rounded, isBusy)),
+          const SizedBox(width: 4),
+          Expanded(child: _buildPromptButton('Defend', Icons.shield_rounded, isBusy || !hasHistory)),
         ],
       ),
     );
   }
 
   Widget _buildPromptButton(String label, IconData icon, bool isBusy) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: isBusy ? null : () => _handlePromptTap(label),
-        borderRadius: BorderRadius.circular(6),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-          decoration: BoxDecoration(
-            color: isBusy 
-                ? ScholarlyTheme.panelStroke.withValues(alpha: 0.2)
-                : ScholarlyTheme.panelStroke.withValues(alpha: 0.5),
-            border: Border.all(
-              color: isBusy
-                  ? ScholarlyTheme.panelStroke.withValues(alpha: 0.3)
-                  : ScholarlyTheme.accentBlue.withValues(alpha: 0.3),
-              width: 1,
-            ),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 13,
+    final tooltipMsg = _tooltips[label] ?? label;
+    return Tooltip(
+      message: tooltipMsg,
+      preferBelow: false,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: isBusy ? null : () => _handlePromptTap(label),
+          borderRadius: BorderRadius.circular(6),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+            decoration: BoxDecoration(
+              color: isBusy 
+                  ? ScholarlyTheme.panelStroke.withValues(alpha: 0.2)
+                  : ScholarlyTheme.panelStroke.withValues(alpha: 0.5),
+              border: Border.all(
                 color: isBusy
-                    ? ScholarlyTheme.textSubtle
-                    : ScholarlyTheme.accentBlue,
+                    ? ScholarlyTheme.panelStroke.withValues(alpha: 0.3)
+                    : ScholarlyTheme.accentBlue.withValues(alpha: 0.3),
+                width: 1,
               ),
-              const SizedBox(width: 4),
-              Flexible(
-                child: Text(
-                  label,
-                  style: GoogleFonts.inter(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: isBusy
-                        ? ScholarlyTheme.textSubtle
-                        : ScholarlyTheme.textPrimary,
-                  ),
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Icon(
+              icon,
+              size: 18,
+              color: isBusy
+                  ? ScholarlyTheme.textSubtle
+                  : ScholarlyTheme.accentBlue,
+            ),
           ),
         ),
       ),
     );
   }
+
+  static const Map<String, String> _tooltips = {
+    'Analyze':    'Analyze Position',
+    'Why':        'Why this move?',
+    'Candidates': 'Candidate Moves',
+    'Tactics':    'Find Tactics',
+    'Plan':       'Formulate Plan',
+    'Defend':     'Defensive Ideas',
+  };
 
   static const Map<String, String> _chipPresets = {
     'Analyze':    'Let me survey the board as it stands, Apprentice. ',
