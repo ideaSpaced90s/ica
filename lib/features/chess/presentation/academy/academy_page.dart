@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:chess/chess.dart' as chess_lib;
+import 'dart:math';
 
 import '../../application/chess_provider.dart';
 import '../scholarly_theme.dart';
@@ -159,8 +160,11 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
   Widget _buildMoveLog(BuildContext context, ChessState state, ScrollPhysics? physics) {
     final moves = state.recentMoves;
     
-    final userCapturedList = state.isPlayerWhite ? state.game.capturedByWhite : state.game.capturedByBlack;
-    final userLostList = state.isPlayerWhite ? state.game.capturedByBlack : state.game.capturedByWhite;
+    final whiteCaptures = state.game.capturedByWhite;
+    final blackCaptures = state.game.capturedByBlack;
+    
+    final userCapturedList = state.isPlayerWhite ? whiteCaptures : blackCaptures;
+    final userLostList = state.isPlayerWhite ? blackCaptures : whiteCaptures;
 
     int getPieceValue(chess_lib.PieceType type) {
       if (type == chess_lib.PieceType.PAWN) return 1;
@@ -174,87 +178,6 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
     final capturedPoints = userCapturedList.fold<int>(0, (sum, p) => sum + getPieceValue(p.type));
     final lostPoints = userLostList.fold<int>(0, (sum, p) => sum + getPieceValue(p.type));
     final netBalance = capturedPoints - lostPoints;
-    final balanceSign = netBalance > 0 ? '+' : '';
-
-    final pointsTracker = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: ScholarlyTheme.accentBlueSoft.withValues(alpha: 0.25),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: ScholarlyTheme.accentBlue.withValues(alpha: 0.15),
-          width: 1,
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              const Icon(
-                Icons.auto_awesome_rounded,
-                size: 13,
-                color: ScholarlyTheme.accentBlue,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                'Captured: +$capturedPoints pts  |  Lost: -$lostPoints pts',
-                style: GoogleFonts.inter(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: ScholarlyTheme.textPrimary,
-                ),
-              ),
-            ],
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(
-              color: netBalance >= 0 
-                  ? Colors.green.withValues(alpha: 0.1) 
-                  : Colors.redAccent.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(
-                color: netBalance >= 0 
-                    ? Colors.green.withValues(alpha: 0.25) 
-                    : Colors.redAccent.withValues(alpha: 0.25),
-                width: 1,
-              ),
-            ),
-            child: Text(
-              'NET: $balanceSign$netBalance',
-              style: GoogleFonts.jetBrainsMono(
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                color: netBalance >= 0 ? Colors.green.shade700 : Colors.redAccent.shade700,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-
-    if (moves.isEmpty) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          pointsTracker,
-          const Expanded(
-            child: Center(
-              child: Text(
-                'Log is empty.',
-                style: TextStyle(
-                  color: ScholarlyTheme.textMuted,
-                  fontSize: 13,
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
-            ),
-          ),
-        ],
-      );
-    }
 
     final List<List<String>> pairs = [];
     for (int i = 0; i < moves.length; i += 2) {
@@ -264,57 +187,517 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        pointsTracker,
-        Expanded(
-          child: ListView.builder(
-            physics: physics,
-            padding: EdgeInsets.zero,
-            itemCount: pairs.length,
-            itemBuilder: (context, index) {
-              final pair = pairs[index];
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(
-                  children: [
-                    SizedBox(
-                      width: 24,
-                      child: Text(
-                        '${index + 1}.',
-                        style: GoogleFonts.jetBrainsMono(
-                          color: ScholarlyTheme.accentBlue,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: Text(
-                        pair[0],
-                        style: GoogleFonts.inter(
-                          color: ScholarlyTheme.textPrimary,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                    if (pair.length > 1)
-                      Expanded(
-                        child: Text(
-                          pair[1],
+        // 1. FIXED: MATERIAL DOMINANCE DASHBOARD
+        JuicyGlassCard(
+          borderRadius: 16,
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'WHITE CAPTURED',
                           style: GoogleFonts.inter(
-                            color: ScholarlyTheme.textPrimary,
-                            fontSize: 12,
+                            fontSize: 8,
+                            fontWeight: FontWeight.bold,
+                            color: ScholarlyTheme.textMuted,
+                            letterSpacing: 0.5,
                           ),
                         ),
-                      )
-                    else
-                      const Expanded(child: SizedBox()),
-                  ],
+                        const SizedBox(height: 6),
+                        _buildLargeCapturedGroup(context, whiteCaptures, true),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'BLACK CAPTURED',
+                          style: GoogleFonts.inter(
+                            fontSize: 8,
+                            fontWeight: FontWeight.bold,
+                            color: ScholarlyTheme.textMuted,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        _buildLargeCapturedGroup(context, blackCaptures, false),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const Divider(height: 16, color: ScholarlyTheme.panelStroke),
+              _buildMaterialBalanceGauge(netBalance),
+            ],
+          ),
+        ),
+        
+        const SizedBox(height: 12),
+
+        // 2. FIXED: LIVE GAME ANALYTICS ROW
+        _buildAnalyticsGrid(state),
+
+        const SizedBox(height: 16),
+
+        // 3. FIXED: MOVE HISTORY TIMELINE HEADER
+        Row(
+          children: [
+            const Icon(Icons.history_edu_rounded, size: 14, color: ScholarlyTheme.accentBlue),
+            const SizedBox(width: 6),
+            Text(
+              'MOVE HISTORY TIMELINE',
+              style: GoogleFonts.inter(
+                fontSize: 9,
+                fontWeight: FontWeight.bold,
+                color: ScholarlyTheme.textMuted,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        
+        // 4. SCROLLABLE: MOVE LOG CONTAINER
+        Expanded(
+          child: moves.isEmpty
+              ? Container(
+                  alignment: Alignment.center,
+                  child: Text(
+                    'Log is empty. Start playing to log moves.',
+                    style: GoogleFonts.inter(
+                      color: ScholarlyTheme.textMuted,
+                      fontSize: 12,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                )
+              : SingleChildScrollView(
+                  physics: physics,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: ScholarlyTheme.panelStroke.withValues(alpha: 0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: Column(
+                      children: List.generate(pairs.length, (index) {
+                        final pair = pairs[index];
+                        final whiteMoveIndex = 2 * index;
+                        final blackMoveIndex = 2 * index + 1;
+                        
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                          child: Row(
+                            children: [
+                              SizedBox(
+                                width: 26,
+                                child: Text(
+                                  '${index + 1}.',
+                                  style: GoogleFonts.jetBrainsMono(
+                                    color: ScholarlyTheme.accentBlue.withValues(alpha: 0.7),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              _buildMoveChip(whiteMoveIndex, pair[0], state),
+                              const SizedBox(width: 8),
+                              if (pair.length > 1)
+                                _buildMoveChip(blackMoveIndex, pair[1], state)
+                              else
+                                const Expanded(child: SizedBox()),
+                            ],
+                          ),
+                        );
+                      }),
+                    ),
+                  ),
                 ),
+        ),
+        
+        // 5. FLOATING REVIEW PANEL AT THE BOTTOM
+        if (state.viewingMoveIndex != null) ...[
+          const SizedBox(height: 8),
+          _buildReviewNavigation(state),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildLargeCapturedGroup(BuildContext context, List<chess_lib.Piece> pieces, bool isWhiteTeam) {
+    const theme = AcademyScholarTheme();
+    
+    int getPieceValue(chess_lib.PieceType type) {
+      if (type == chess_lib.PieceType.PAWN) return 1;
+      if (type == chess_lib.PieceType.KNIGHT) return 3;
+      if (type == chess_lib.PieceType.BISHOP) return 3;
+      if (type == chess_lib.PieceType.ROOK) return 5;
+      if (type == chess_lib.PieceType.QUEEN) return 9;
+      return 0;
+    }
+
+    final sortedPieces = List<chess_lib.Piece>.from(pieces)
+      ..sort((a, b) => getPieceValue(a.type).compareTo(getPieceValue(b.type)));
+
+    if (sortedPieces.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6.0),
+        child: Text(
+          'No captures yet',
+          style: GoogleFonts.inter(
+            fontSize: 11,
+            fontStyle: FontStyle.italic,
+            color: ScholarlyTheme.textSubtle,
+          ),
+        ),
+      );
+    }
+
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: sortedPieces.map((piece) {
+        final type = piece.type.toString().toUpperCase();
+        final isWhitePiece = piece.color == chess_lib.Color.WHITE;
+        
+        final Color cardBg = isWhitePiece ? const Color(0xFF475569) : Colors.white;
+        final Color borderCol = isWhitePiece ? Colors.white.withValues(alpha: 0.3) : Colors.black.withValues(alpha: 0.12);
+
+        return Tooltip(
+          message: '${isWhitePiece ? "White" : "Black"} ${type.toLowerCase()}',
+          child: Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              color: cardBg,
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: borderCol,
+                width: 1.2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.12),
+                  blurRadius: 4,
+                  offset: const Offset(0, 1.5),
+                ),
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(3.0),
+              child: theme.buildPiece(context, type, isWhitePiece, false, 0.0),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildMaterialBalanceGauge(int netBalance) {
+    final isWhiteAhead = netBalance > 0;
+    final absBalance = netBalance.abs();
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'MATERIAL ADVANTAGE',
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: ScholarlyTheme.textMuted,
+                letterSpacing: 0.5,
+              ),
+            ),
+            Text(
+              netBalance == 0 ? 'EVEN' : '${isWhiteAhead ? "White" : "Black"} +$absBalance',
+              style: GoogleFonts.jetBrainsMono(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: netBalance == 0
+                    ? ScholarlyTheme.textMuted
+                    : isWhiteAhead
+                        ? Colors.green.shade700
+                        : Colors.redAccent.shade700,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Container(
+          height: 8,
+          decoration: BoxDecoration(
+            color: ScholarlyTheme.panelStroke.withValues(alpha: 0.3),
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(
+              color: ScholarlyTheme.panelStroke.withValues(alpha: 0.5),
+              width: 1,
+            ),
+          ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final width = constraints.maxWidth;
+              final mid = width / 2;
+              final fraction = (absBalance / 15.0).clamp(0.0, 1.0);
+              final barWidth = mid * fraction;
+              
+              return Stack(
+                children: [
+                  Positioned(
+                    left: mid - 1,
+                    top: 0,
+                    bottom: 0,
+                    child: Container(
+                      width: 2,
+                      color: ScholarlyTheme.textMuted.withValues(alpha: 0.4),
+                    ),
+                  ),
+                  if (netBalance != 0)
+                    Positioned(
+                      left: isWhiteAhead ? mid : mid - barWidth,
+                      width: barWidth,
+                      top: 0,
+                      bottom: 0,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: isWhiteAhead ? Colors.green : Colors.redAccent,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                    ),
+                ],
               );
             },
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildAnalyticsGrid(ChessState state) {
+    final moves = state.recentMoves;
+    
+    final totalCaptured = state.game.capturedByWhite.length + state.game.capturedByBlack.length;
+    final remainingPieces = 32 - totalCaptured;
+    String phase = 'Opening';
+    Color phaseColor = Colors.teal;
+    if (remainingPieces <= 10) {
+      phase = 'Endgame';
+      phaseColor = Colors.deepOrange;
+    } else if (remainingPieces <= 22) {
+      phase = 'Middlegame';
+      phaseColor = Colors.indigo;
+    }
+
+    final capturesCount = moves.where((m) => m.contains('x')).length;
+    final checksCount = moves.where((m) => m.contains('+') || m.contains('#')).length;
+
+    return Row(
+      children: [
+        Expanded(child: _buildMiniStatCard('PHASE', phase, Icons.hourglass_empty_rounded, phaseColor)),
+        const SizedBox(width: 8),
+        Expanded(child: _buildMiniStatCard('CAPTURES', '$capturesCount', Icons.gavel_rounded, Colors.purple)),
+        const SizedBox(width: 8),
+        Expanded(child: _buildMiniStatCard('CHECKS', '$checksCount', Icons.warning_amber_rounded, Colors.amber.shade800)),
+      ],
+    );
+  }
+
+  Widget _buildMiniStatCard(String title, String value, IconData icon, Color accentColor) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: ScholarlyTheme.panelStroke.withValues(alpha: 0.25),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 11, color: accentColor),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.inter(
+                    fontSize: 7,
+                    fontWeight: FontWeight.bold,
+                    color: ScholarlyTheme.textMuted,
+                    letterSpacing: 0.2,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  value,
+                  style: GoogleFonts.outfit(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: ScholarlyTheme.textPrimary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMoveChip(int moveIndex, String label, ChessState state) {
+    final int activeIndex = state.viewingMoveIndex ?? (state.recentMoves.length - 1);
+    final bool isSelected = activeIndex == moveIndex;
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          ref.read(chessProvider.notifier).jumpToMove(moveIndex);
+        },
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? ScholarlyTheme.accentBlue.withValues(alpha: 0.12)
+                  : Colors.white.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(
+                color: isSelected
+                    ? ScholarlyTheme.accentBlue.withValues(alpha: 0.4)
+                    : ScholarlyTheme.panelStroke.withValues(alpha: 0.25),
+                width: 1,
+              ),
+              boxShadow: isSelected
+                  ? [
+                      BoxShadow(
+                        color: ScholarlyTheme.accentBlue.withValues(alpha: 0.1),
+                        blurRadius: 4,
+                        offset: const Offset(0, 1),
+                      )
+                    ]
+                  : null,
+            ),
+            child: Text(
+              label,
+              style: GoogleFonts.jetBrainsMono(
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                color: isSelected ? ScholarlyTheme.accentBlue : ScholarlyTheme.textPrimary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReviewNavigation(ChessState state) {
+    final int currentIndex = state.viewingMoveIndex ?? (state.recentMoves.length - 1);
+    final bool hasPrev = currentIndex >= 0;
+    final bool hasNext = state.viewingMoveIndex != null && currentIndex < state.recentMoves.length - 1;
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: ScholarlyTheme.accentBlueSoft.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: ScholarlyTheme.accentBlue.withValues(alpha: 0.3),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Text(
+              'Reviewing Move ${currentIndex + 1}/${state.recentMoves.length}',
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: ScholarlyTheme.accentBlue,
+              ),
+            ),
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.chevron_left_rounded, size: 20),
+                color: ScholarlyTheme.accentBlue,
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                onPressed: hasPrev ? () => ref.read(chessProvider.notifier).jumpToMove(currentIndex - 1) : null,
+              ),
+              IconButton(
+                icon: const Icon(Icons.chevron_right_rounded, size: 20),
+                color: ScholarlyTheme.accentBlue,
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                onPressed: hasNext ? () => ref.read(chessProvider.notifier).jumpToMove(currentIndex + 1) : null,
+              ),
+              const SizedBox(width: 6),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: ScholarlyTheme.accentBlue,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  elevation: 0,
+                ),
+                onPressed: () => ref.read(chessProvider.notifier).jumpToMove(-1),
+                child: Text(
+                  'LIVE',
+                  style: GoogleFonts.inter(
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -325,43 +708,92 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       borderRadius: 20,
       child: Center(
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          physics: const BouncingScrollPhysics(),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _CompactActionIcon(
-                icon: Icons.add_box_rounded,
-                tooltip: 'New Game',
-                onTap: () => _handleNewGame(context, ref),
-              ),
-              const SizedBox(width: 8),
-              _CompactActionIcon(
-                icon: Icons.undo_rounded,
-                tooltip: 'Undo',
-                isEnabled: state.canUndo,
-                isBlinking: state.isAcademyBlunderActive,
-                onTap: state.canUndo ? () => notifier.undo() : null,
-              ),
-              const SizedBox(width: 8),
-              _CompactActionIcon(
-                icon: state.showLog
-                    ? Icons.chat_bubble_outline_rounded
-                    : Icons.history_edu_rounded,
-                tooltip: 'Toggle Log',
-                isActive: state.showLog,
-                onTap: () => notifier.toggleLog(),
-              ),
-            ],
-          ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _PremiumActionIcon(
+              icon: Icons.add_box_rounded,
+              tooltip: 'New Game',
+              baseColor: const Color(0xFF10B981),
+              onTap: () => _handleNewGame(context, ref),
+            ),
+            const SizedBox(width: 12),
+            _PremiumActionIcon(
+              icon: Icons.undo_rounded,
+              tooltip: 'Undo',
+              baseColor: const Color(0xFFF59E0B),
+              isEnabled: state.canUndo,
+              isBlinking: state.isAcademyBlunderActive,
+              onTap: state.canUndo ? () => notifier.undo() : null,
+            ),
+            const SizedBox(width: 12),
+            _PremiumActionIcon(
+              icon: state.showLog
+                  ? Icons.chat_bubble_outline_rounded
+                  : Icons.history_edu_rounded,
+              tooltip: 'Toggle Log',
+              baseColor: const Color(0xFF3B82F6),
+              isActive: state.showLog,
+              onTap: () => notifier.toggleLog(),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildLandscapeLayout(
+  Widget _buildVerticalActionBar(BuildContext context, ChessState state, ChessNotifier notifier) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.35),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.5),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          _PremiumActionIcon(
+            icon: Icons.add_box_rounded,
+            tooltip: 'New Game',
+            baseColor: const Color(0xFF10B981),
+            onTap: () => _handleNewGame(context, ref),
+          ),
+          const SizedBox(height: 12),
+          _PremiumActionIcon(
+            icon: Icons.undo_rounded,
+            tooltip: 'Undo',
+            baseColor: const Color(0xFFF59E0B),
+            isEnabled: state.canUndo,
+            isBlinking: state.isAcademyBlunderActive,
+            onTap: state.canUndo ? () => notifier.undo() : null,
+          ),
+          const SizedBox(height: 12),
+          _PremiumActionIcon(
+            icon: state.showLog
+                ? Icons.chat_bubble_outline_rounded
+                : Icons.history_edu_rounded,
+            tooltip: 'Toggle Log',
+            baseColor: const Color(0xFF3B82F6),
+            isActive: state.showLog,
+            onTap: () => notifier.toggleLog(),
+          ),
+        ],
+      ),
+    );
+  }  Widget _buildLandscapeLayout(
     BuildContext context,
     ChessState state,
     ChessNotifier notifier,
@@ -370,90 +802,59 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Left Column (Board and Controls)
+        // Left Column (Board and vertical action icons next to it)
         Expanded(
-          flex: 11,
+          flex: 1,
           child: Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const CircleAvatar(
-                      radius: 14,
-                      backgroundImage: AssetImage('assets/persona/gm_chanakya.png'),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'ACADEMY STUDY',
-                      style: GoogleFonts.outfit(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: ScholarlyTheme.accentGold,
-                        letterSpacing: 1.0,
+            padding: const EdgeInsets.all(24.0),
+            child: Center(
+              child: LayoutBuilder(
+                builder: (context, boardConstraints) {
+                  final double paddingValue = 16.0;
+                  final double actionWidth = 46.0;
+                  
+                  final double maxBoardWidth = boardConstraints.maxWidth - paddingValue - actionWidth;
+                  final double boardSize = max(0.0, min(maxBoardWidth, boardConstraints.maxHeight));
+                  
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: boardSize,
+                        height: boardSize,
+                        child: const AcademyBoard(alignment: Alignment.center),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                const Expanded(
-                  child: Center(
-                    child: AspectRatio(
-                      aspectRatio: 1.0,
-                      child: AcademyBoard(alignment: Alignment.center),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                _buildBottomActionBar(context, state, notifier),
-              ],
+                      SizedBox(width: paddingValue),
+                      Container(
+                        width: actionWidth,
+                        alignment: Alignment.center,
+                        child: _buildVerticalActionBar(context, state, notifier),
+                      ),
+                    ],
+                  );
+                },
+              ),
             ),
           ),
         ),
 
         // Vertical separator line
         Container(
-          width: 1.5,
-          color: ScholarlyTheme.panelStroke.withValues(alpha: 0.5),
+          width: 1.0,
+          color: ScholarlyTheme.panelStroke.withValues(alpha: 0.3),
         ),
 
-        // Right Column (Commentary & Log)
+        // Right Column (Commentary, Log)
         Expanded(
-          flex: 9,
+          flex: 1,
           child: Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.fromLTRB(12.0, 24.0, 24.0, 24.0),
             child: JuicyGlassCard(
-              borderRadius: 20,
-              padding: const EdgeInsets.all(16),
+              borderRadius: 24,
+              padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Row(
-                    children: [
-                      Icon(
-                        state.showLog ? Icons.history_edu_rounded : Icons.chat_bubble_outline_rounded,
-                        size: 18,
-                        color: ScholarlyTheme.accentBlue,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        state.showLog ? 'MOVE LOG' : 'CHANAKYA\'S COACHING',
-                        style: GoogleFonts.outfit(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                          color: ScholarlyTheme.textPrimary,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  if (state.game.capturedByWhite.isNotEmpty || state.game.capturedByBlack.isNotEmpty) ...[
-                    _CompactCapturedPiecesHeader(state: state),
-                    const SizedBox(height: 12),
-                  ],
                   Expanded(
                     child: state.showLog
                         ? _buildMoveLog(
@@ -515,7 +916,7 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
                 ),
               ),
             ),
-            if (state.game.capturedByWhite.isNotEmpty || state.game.capturedByBlack.isNotEmpty) ...[
+            if (state.showLog && (state.game.capturedByWhite.isNotEmpty || state.game.capturedByBlack.isNotEmpty)) ...[
               const SizedBox(height: 10),
               _CompactCapturedPiecesHeader(state: state),
             ],
@@ -687,10 +1088,11 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
   }
 }
 
-class _CompactActionIcon extends StatefulWidget {
-  const _CompactActionIcon({
+class _PremiumActionIcon extends StatefulWidget {
+  const _PremiumActionIcon({
     required this.icon,
     required this.onTap,
+    required this.baseColor,
     this.tooltip,
     this.isEnabled = true,
     this.isActive = false,
@@ -699,17 +1101,19 @@ class _CompactActionIcon extends StatefulWidget {
 
   final IconData icon;
   final VoidCallback? onTap;
+  final Color baseColor;
   final String? tooltip;
   final bool isEnabled;
   final bool isActive;
   final bool isBlinking;
 
   @override
-  State<_CompactActionIcon> createState() => _CompactActionIconState();
+  State<_PremiumActionIcon> createState() => _PremiumActionIconState();
 }
 
-class _CompactActionIconState extends State<_CompactActionIcon>
+class _PremiumActionIconState extends State<_PremiumActionIcon>
     with SingleTickerProviderStateMixin {
+  bool _isHovered = false;
   bool _isPressed = false;
   late AnimationController _blinkController;
   late Animation<double> _blinkAnimation;
@@ -731,7 +1135,7 @@ class _CompactActionIconState extends State<_CompactActionIcon>
   }
 
   @override
-  void didUpdateWidget(covariant _CompactActionIcon oldWidget) {
+  void didUpdateWidget(covariant _PremiumActionIcon oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.isBlinking != oldWidget.isBlinking) {
       if (widget.isBlinking) {
@@ -751,69 +1155,110 @@ class _CompactActionIconState extends State<_CompactActionIcon>
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: widget.isEnabled ? (_) => setState(() => _isPressed = true) : null,
-      onTapUp: widget.isEnabled ? (_) => setState(() => _isPressed = false) : null,
-      onTapCancel: () => setState(() => _isPressed = false),
-      onTap: widget.isEnabled ? widget.onTap : null,
-      child: AnimatedBuilder(
-        animation: _blinkAnimation,
-        builder: (context, child) {
-          final opacity = widget.isBlinking ? _blinkAnimation.value : 1.0;
+    final themeColor = widget.isBlinking ? Colors.redAccent : widget.baseColor;
 
-          final Color bgColor = widget.isBlinking
-              ? Colors.redAccent.withValues(alpha: 0.25 * opacity)
-              : ((widget.isActive || _isPressed)
-                  ? ScholarlyTheme.accentBlue.withValues(alpha: 0.25)
-                  : Colors.white.withValues(alpha: 0.2));
+    return MouseRegion(
+      onEnter: widget.isEnabled ? (_) => setState(() => _isHovered = true) : null,
+      onExit: widget.isEnabled ? (_) => setState(() => _isHovered = false) : null,
+      child: GestureDetector(
+        onTapDown: widget.isEnabled ? (_) => setState(() => _isPressed = true) : null,
+        onTapUp: widget.isEnabled ? (_) => setState(() => _isPressed = false) : null,
+        onTapCancel: () => setState(() => _isPressed = false),
+        onTap: widget.isEnabled ? widget.onTap : null,
+        child: AnimatedBuilder(
+          animation: _blinkAnimation,
+          builder: (context, child) {
+            final opacity = widget.isBlinking ? _blinkAnimation.value : 1.0;
 
-          final Color borderColor = widget.isBlinking
-              ? Colors.redAccent.withValues(alpha: 0.6 * opacity)
-              : ((widget.isActive || _isPressed)
-                  ? ScholarlyTheme.accentBlue.withValues(alpha: 0.5)
-                  : Colors.white.withValues(alpha: 0.45));
+            final Color bgColor = !widget.isEnabled
+                ? Colors.grey.withValues(alpha: 0.08)
+                : widget.isBlinking
+                    ? Colors.redAccent.withValues(alpha: 0.25 * opacity)
+                    : _isPressed
+                        ? themeColor.withValues(alpha: 0.35)
+                        : _isHovered
+                            ? themeColor.withValues(alpha: 0.22)
+                            : widget.isActive
+                                ? themeColor.withValues(alpha: 0.20)
+                                : Colors.white.withValues(alpha: 0.45);
 
-          final Color iconColor = widget.isBlinking
-              ? Colors.redAccent.withValues(alpha: 0.3 + 0.7 * opacity)
-              : (widget.isEnabled
-                  ? (widget.isActive
-                      ? ScholarlyTheme.accentBlue
-                      : ScholarlyTheme.textPrimary)
-                  : ScholarlyTheme.textSubtle);
+            final Color borderColor = !widget.isEnabled
+                ? Colors.grey.withValues(alpha: 0.20)
+                : widget.isBlinking
+                    ? Colors.redAccent.withValues(alpha: 0.6 * opacity)
+                    : _isPressed
+                        ? themeColor.withValues(alpha: 0.8)
+                        : _isHovered
+                            ? themeColor.withValues(alpha: 0.7)
+                            : widget.isActive
+                                ? themeColor.withValues(alpha: 0.6)
+                                : Colors.white.withValues(alpha: 0.7);
 
-          final container = Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: bgColor,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: borderColor,
-                width: 1.2,
+            final Color iconColor = !widget.isEnabled
+                ? ScholarlyTheme.textSubtle
+                : widget.isBlinking
+                    ? Colors.redAccent.withValues(alpha: 0.3 + 0.7 * opacity)
+                    : _isHovered || widget.isActive || _isPressed
+                        ? themeColor
+                        : themeColor.withValues(alpha: 0.85);
+
+            final double scale = _isPressed
+                ? 0.92
+                : _isHovered
+                    ? 1.12
+                    : 1.0;
+
+            final container = AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOutCubic,
+              width: 38,
+              height: 38,
+              transform: Matrix4.diagonal3Values(scale, scale, 1.0),
+              transformAlignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: bgColor,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: borderColor,
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: widget.isEnabled && (_isHovered || widget.isActive || widget.isBlinking)
+                        ? themeColor.withValues(alpha: widget.isBlinking ? 0.35 * opacity : 0.22)
+                        : Colors.black.withValues(alpha: 0.03),
+                    blurRadius: _isHovered ? 12 : 6,
+                    spreadRadius: _isHovered ? 1 : 0,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
-              boxShadow: widget.isBlinking
-                  ? [
-                      BoxShadow(
-                        color: Colors.redAccent.withValues(alpha: 0.3 * opacity),
-                        blurRadius: 8,
-                        spreadRadius: 1,
-                      )
-                    ]
-                  : null,
-            ),
-            child: Center(
-              child: Icon(
-                widget.icon,
-                size: 18,
-                color: iconColor,
+              child: Center(
+                child: Icon(
+                  widget.icon,
+                  size: 20,
+                  color: iconColor,
+                ),
               ),
-            ),
-          );
+            );
 
-          return widget.tooltip != null
-              ? Tooltip(message: widget.tooltip!, child: container)
-              : container;
-        },
+            return widget.tooltip != null
+                ? Tooltip(
+                    message: widget.tooltip!,
+                    decoration: BoxDecoration(
+                      color: ScholarlyTheme.backgroundDark.withValues(alpha: 0.9),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    textStyle: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    child: container,
+                  )
+                : container;
+          },
+        ),
       ),
     );
   }
@@ -848,19 +1293,8 @@ class _CompactCapturedPiecesHeader extends ConsumerWidget {
             ),
           ),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.auto_awesome_rounded, size: 12, color: ScholarlyTheme.accentGold),
-          const SizedBox(width: 4),
-          Text(
-            'MATERIAL',
-            style: GoogleFonts.inter(
-              fontSize: 9,
-              fontWeight: FontWeight.bold,
-              color: ScholarlyTheme.accentGold,
-              letterSpacing: 0.5,
-            ),
-          ),
-          const Spacer(),
           if (whiteCaptures.isNotEmpty)
             _InlineCapturedGroup(pieces: whiteCaptures, isWhiteTeam: true),
           if (whiteCaptures.isNotEmpty && blackCaptures.isNotEmpty)
