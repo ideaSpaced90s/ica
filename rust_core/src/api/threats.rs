@@ -141,6 +141,7 @@ pub fn analyze_tactical_threats(fen: String) -> Vec<String> {
     }
 
     // 3. Detect Hanging Friendly Pieces
+    let mut hanging_pieces = Vec::new();
     for sq in board.by_color(turn) {
         if let Some(piece) = board.piece_at(sq) {
             if piece.role != shakmaty::Role::King {
@@ -148,14 +149,23 @@ pub fn analyze_tactical_threats(fen: String) -> Vec<String> {
                 if !attackers.is_empty() {
                     let defenders = board.attacks_to(sq, turn, occupied);
                     if defenders.is_empty() {
-                        observations.push(format!(
-                            "Your {} on {} is undefended and hanging under attack by the opponent.",
-                            format_role_name(piece.role),
-                            sq.to_string()
-                        ));
+                        hanging_pieces.push(format!("{} on {}", format_role_name(piece.role), sq.to_string()));
                     }
                 }
             }
+        }
+    }
+    if !hanging_pieces.is_empty() {
+        if hanging_pieces.len() == 1 {
+            observations.push(format!(
+                "Your {} is undefended and hanging under attack.",
+                hanging_pieces[0]
+            ));
+        } else {
+            observations.push(format!(
+                "Your {} are undefended and hanging under attack.",
+                hanging_pieces.join(" and ")
+            ));
         }
     }
 

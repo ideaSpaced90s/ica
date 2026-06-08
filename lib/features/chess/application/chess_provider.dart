@@ -1082,6 +1082,8 @@ class ChessNotifier extends StateNotifier<ChessState> {
   Future<void>? _startupFuture;
   bool _isDisposed = false;
   DateTime _lastInfoUpdateTime = DateTime.fromMillisecondsSinceEpoch(0);
+  final Map<String, dynamic> _accumulatedAnalysis = {};
+  double? _accumulatedEvaluation;
 
   Future<void> ensureGameServicesStarted({
     bool analyzeCurrentPosition = false,
@@ -1181,19 +1183,11 @@ class ChessNotifier extends StateNotifier<ChessState> {
           : score / 100.0;
     }
 
-    if (parsed['type'] == 'info') {
-      final now = DateTime.now();
-      if (now.difference(_lastInfoUpdateTime).inMilliseconds < 250) {
-        return;
-      }
-      _lastInfoUpdateTime = now;
+    // Always accumulate the parsed variables to never lose PVs, depth, or evaluation
+    _accumulatedAnalysis.addAll(parsed);
+    if (newEval != null) {
+      _accumulatedEvaluation = newEval;
     }
-
-    state = state.copyWith(
-      analysis: {...state.analysis, ...parsed},
-      currentEvaluation: newEval ?? state.currentEvaluation,
-      engineReady: true,
-    );
 
     if (parsed.containsKey('multipv') && parsed.containsKey('pv')) {
       final mpv = parsed['multipv'] as int;
@@ -1203,7 +1197,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
         final candidate = CandidateMove(
           multipvIndex: mpv,
           uciMove: uciMove,
-          evaluation: newEval ?? state.currentEvaluation,
+          evaluation: newEval ?? _accumulatedEvaluation ?? state.currentEvaluation,
           fullPv: pvList,
         );
         final idx = _currentCandidates.indexWhere((c) => c.multipvIndex == mpv);
@@ -1216,6 +1210,12 @@ class ChessNotifier extends StateNotifier<ChessState> {
     }
 
     if (parsed.containsKey('bestMove')) {
+      // Bypassing throttle on bestmove since search is complete!
+      state = state.copyWith(
+        analysis: Map<String, dynamic>.from(_accumulatedAnalysis),
+        currentEvaluation: _accumulatedEvaluation ?? state.currentEvaluation,
+        engineReady: true,
+      );
       final rawBestMove = parsed['bestMove'] as String?;
       final aiTurn = _isAiTurn();
 
@@ -1323,7 +1323,23 @@ class ChessNotifier extends StateNotifier<ChessState> {
           }
         });
       }
+      return; // Bypasses the general info copyWith below!
     }
+
+    if (parsed['type'] == 'info') {
+      final now = DateTime.now();
+      if (now.difference(_lastInfoUpdateTime).inMilliseconds < 250) {
+        // Skip state copyWith but keep the data accumulated!
+        return;
+      }
+      _lastInfoUpdateTime = now;
+    }
+
+    state = state.copyWith(
+      analysis: Map<String, dynamic>.from(_accumulatedAnalysis),
+      currentEvaluation: _accumulatedEvaluation ?? state.currentEvaluation,
+      engineReady: true,
+    );
   }
 
   /// Selects the best move for the current AI persona from Stockfish's MultiPV
@@ -2149,6 +2165,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
   void _startAnalysis({int? depth}) {
     if (_isDisposed) return;
+
+    _accumulatedAnalysis.clear();
+    _accumulatedEvaluation = null;
 
     bool isBottomTurn = false;
     final fenParts = state.game.fen.split(' ');

@@ -204,25 +204,26 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
 
   static const Map<String, String> _chipPresets = {
     'Analyze':    'Let me survey the board as it stands, Apprentice. ',
-    'Why':        "Your opponent's last move was no accident, Apprentice. ",
+    'Why':        "Well, I didn't play that by accident, Apprentice. ",
     'Candidates': 'I shall lay before you the most worthy paths forward, Apprentice. ',
-    'Tactics':    'The board harbours hidden danger — let me expose it, Apprentice. ',
+    'Tactics':    'Does the board harbour hidden danger? — let me expose it, Apprentice. ',
     'Plan':       'A true master acts on a plan, not on instinct alone, Apprentice. ',
     'Defend':     'When under pressure, the wise first consolidate, Apprentice. ',
   };
 
   static const Map<String, String> _fullQuestions = {
     'Analyze':    'Chanakya, can you analyze the current board state and summarize the position?',
-    'Why':        'Why did my opponent play their last move? What are their intentions?',
-    'Candidates': 'What candidate moves do you suggest I consider from here?',
-    'Tactics':    'Are there any active tactics or tactical combinations in this position?',
-    'Plan':       'What plan or structural goals should I focus on next?',
-    'Defend':     'How should I defend my position and counter my opponent\'s active ideas?',
+    'Why':        'Why did you play that last move, Chanakya? What are your intentions?',
+    'Candidates': 'Chanakya, what candidate moves do you suggest I consider from here?',
+    'Tactics':    'Chanakya, are there any active tactics or tactical combinations in this position?',
+    'Plan':       'What plan or structural goals should I focus on next, Chanakya?',
+    'Defend':     'How should I defend my position and counter your active ideas, Chanakya?',
   };
 
   void _handlePromptTap(String label) {
     final fullQuestion = _fullQuestions[label] ?? label;
-    final preset = _chipPresets[label];
+    var preset = _chipPresets[label] ?? '';
+    preset = preset.replaceAll('Apprentice', '**${widget.state.userName}**');
     ref.read(chessProvider.notifier).sendUserQuery(fullQuestion, titlePrefix: preset);
     FocusScope.of(context).unfocus();
   }
@@ -334,12 +335,14 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
                       ),
                     ],
                   ),
-                  child: Text(
-                    entry.text,
-                    style: GoogleFonts.inter(
-                      color: ScholarlyTheme.textPrimary,
-                      fontSize: 13,
-                      height: 1.45,
+                  child: SelectionArea(
+                    child: Text(
+                      entry.text,
+                      style: GoogleFonts.inter(
+                        color: ScholarlyTheme.textPrimary,
+                        fontSize: 13,
+                        height: 1.45,
+                      ),
                     ),
                   ),
                 ),
@@ -463,29 +466,31 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text.rich(
-                              TextSpan(
-                                children: [
-                                  ..._parseAcademyRichText(entry.text, widget.state),
-                                  if (!entry.isComplete && !isStreaming)
-                                    TextSpan(
-                                      text: ' ${'.' * ((_pulse % 3) + 1)}',
-                                      style: GoogleFonts.fraunces(
-                                        color: ScholarlyTheme.accentBlue,
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
+                            SelectionArea(
+                              child: Text.rich(
+                                TextSpan(
+                                  children: [
+                                    ..._parseAcademyRichText(entry.text, widget.state),
+                                    if (!entry.isComplete && !isStreaming)
+                                      TextSpan(
+                                        text: ' ${'.' * ((_pulse % 3) + 1)}',
+                                        style: GoogleFonts.fraunces(
+                                          color: ScholarlyTheme.accentBlue,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
-                                    ),
-                                  if (isStreaming)
-                                    TextSpan(
-                                      text: _pulse % 2 == 0 ? ' ┃' : '  ',
-                                      style: GoogleFonts.fraunces(
-                                        color: ScholarlyTheme.accentBlue,
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
+                                    if (isStreaming)
+                                      TextSpan(
+                                        text: _pulse % 2 == 0 ? ' ┃' : '  ',
+                                        style: GoogleFonts.fraunces(
+                                          color: ScholarlyTheme.accentBlue,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
-                                    ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ),
                             if (widget.state.isWaitingForSideChoice &&
@@ -711,9 +716,10 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
       r'\*\*(.*?)\*\*|'
       r'\b(Apprentice|Defender of Humanity|Kingslayer|Chanakya)\b|'
       r'\b(King|Queen|Rook|Bishop|Knight|Pawn)s?\b|'
-      r'\b(Consider|Observe|Strategy|Warning|Tactics|Recommended|Crucial|Focus|Analyze|Blunder|Mistake|Inaccuracy|Brilliant|Strong|Neutral|Attack|Defend|Defense|Threat|Danger|Outpost|Pin|Fork|Check|Checkmate|Simplify|Passed Pawn|Opposition)\b|'
+      r'\b(Consider|Observe|Strategy|Warning|Tactics|Recommended|Crucial|Focus|Analyze|Blunder|Mistake|Inaccuracy|Brilliant|Strong|Neutral|Attack|Defend|Defense|Threat|Danger|Outpost|Pin|Fork|Check|Checkmate|Simplify|Passed Pawn|Opposition|Scotoma|Scotoma Report|Vulnerabilities|Arena)\b|'
       r'\b([a-h][1-8]-?[a-h][1-8]|[a-h][1-8])\b|'
-      r'\b([NBRQK]?[a-h]?[1-8]?x?[a-h][1-8](?:=[NBRQK])?[+#]?|O-O(?:-O)?)\b',
+      r'\b([NBRQK]?[a-h]?[1-8]?x?[a-h][1-8](?:=[NBRQK])?[+#]?|O-O(?:-O)?)\b|'
+      r'(\[App Icon\])',
       caseSensitive: false,
     );
 
@@ -820,15 +826,15 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
         final word = match.group(4)!;
         Color color = Colors.indigo;
         final lWord = word.toLowerCase();
-        if (lWord.contains('warning') || lWord.contains('blunder') || lWord.contains('mistake')) {
+        if (lWord.contains('warning') || lWord.contains('blunder') || lWord.contains('mistake') || lWord.contains('vulnerabilit')) {
           color = Colors.redAccent;
         } else if (lWord.contains('brilliant') || lWord.contains('strong')) {
           color = Colors.green;
         } else if (lWord.contains('inaccuracy')) {
           color = Colors.amber.shade700;
-        } else if (lWord.contains('strategy') || lWord.contains('defend') || lWord.contains('defense') || lWord.contains('simplify')) {
+        } else if (lWord.contains('strategy') || lWord.contains('defend') || lWord.contains('defense') || lWord.contains('simplify') || lWord.contains('scotoma')) {
           color = Colors.teal;
-        } else if (lWord.contains('tactics') || lWord.contains('fork') || lWord.contains('pin') || lWord.contains('threat') || lWord.contains('danger') || lWord.contains('attack')) {
+        } else if (lWord.contains('tactics') || lWord.contains('fork') || lWord.contains('pin') || lWord.contains('threat') || lWord.contains('danger') || lWord.contains('attack') || lWord.contains('arena')) {
           color = Colors.pink;
         } else if (lWord.contains('crucial') || lWord.contains('focus') || lWord.contains('check') || lWord.contains('checkmate')) {
           color = Colors.deepOrange;
@@ -848,6 +854,24 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
         // Square or Move (Notation Chips)
         final notation = match.group(0)!;
         spans.addAll(_buildSplitNotationSpans(notation, baseStyle, state));
+      } else if (match.group(7) != null) {
+        // App Icon rendering
+        spans.add(WidgetSpan(
+          alignment: PlaceholderAlignment.middle,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4.0),
+            child: Image.asset(
+              'assets/splash/appicon.png',
+              height: 16,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) => const Icon(
+                Icons.school_rounded,
+                size: 16,
+                color: ScholarlyTheme.accentBlue,
+              ),
+            ),
+          ),
+        ));
       }
 
       lastIndex = match.end;
