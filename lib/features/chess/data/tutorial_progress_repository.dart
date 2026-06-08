@@ -19,6 +19,8 @@ class TutorialProgressRepository {
   static const String _kArenaIntroSeen = 'intro_seen_arena';
   static const String _kBattlegroundIntroSeen = 'intro_seen_battleground';
   static const String _kPuzzlesIntroSeen = 'intro_seen_puzzles';
+  static const String _kAcademyIntroSeen = 'intro_seen_academy';
+  static const String _kAcademyAccessCount = 'academy_access_count';
 
   final SharedPreferences _prefs;
 
@@ -206,5 +208,21 @@ class TutorialProgressRepository {
 
   Future<void> setPuzzlesIntroSeen(bool value) async {
     await _prefs.setBool(_kPuzzlesIntroSeen, value);
+  }
+
+  bool hasSeenAcademyIntro() {
+    return _prefs.getBool(_kAcademyIntroSeen) ?? false;
+  }
+
+  Future<void> setAcademyIntroSeen(bool value) async {
+    await _prefs.setBool(_kAcademyIntroSeen, value);
+  }
+
+  int getAcademyAccessCount() {
+    return _prefs.getInt(_kAcademyAccessCount) ?? 0;
+  }
+
+  Future<void> setAcademyAccessCount(int value) async {
+    await _prefs.setInt(_kAcademyAccessCount, value);
   }
 }

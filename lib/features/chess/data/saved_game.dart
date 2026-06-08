@@ -4,24 +4,30 @@ class CommentaryEntry {
     required this.timestamp,
     this.isComplete = true,
     this.isUser = false,
+    this.associatedFen,
   });
 
   final String text;
   final DateTime timestamp;
   final bool isComplete;
   final bool isUser;
+  final String? associatedFen;
 
   CommentaryEntry copyWith({
     String? text,
     DateTime? timestamp,
     bool? isComplete,
     bool? isUser,
+    Object? associatedFen = _sentinel,
   }) {
     return CommentaryEntry(
       text: text ?? this.text,
       timestamp: timestamp ?? this.timestamp,
       isComplete: isComplete ?? this.isComplete,
       isUser: isUser ?? this.isUser,
+      associatedFen: identical(associatedFen, _sentinel)
+          ? this.associatedFen
+          : associatedFen as String?,
     );
   }
 
@@ -31,6 +37,7 @@ class CommentaryEntry {
       timestamp: DateTime.parse(json['timestamp'] as String),
       isComplete: json['isComplete'] as bool? ?? true,
       isUser: json['isUser'] as bool? ?? false,
+      associatedFen: json['associatedFen'] as String?,
     );
   }
 
@@ -40,6 +47,7 @@ class CommentaryEntry {
       'timestamp': timestamp.toIso8601String(),
       'isComplete': isComplete,
       'isUser': isUser,
+      'associatedFen': associatedFen,
     };
   }
 }

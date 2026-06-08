@@ -140,6 +140,17 @@ class MoveAnimationData {
   bool get isCastle => rookFrom != null && rookTo != null;
 }
 
+class TacticsStep {
+  final String from;
+  final String to;
+  final bool isUserMove;
+  const TacticsStep({
+    required this.from,
+    required this.to,
+    required this.isUserMove,
+  });
+}
+
 
 class ChessState {
   ChessState({
@@ -246,6 +257,14 @@ class ChessState {
     this.isAcademyBlunderActive = false,
     this.premoveFrom,
     this.premoveTo,
+    this.isTacticsModeActive = false,
+    this.tacticsBaseFen,
+    this.tacticsSequence = const [],
+    this.isTacticsPlaybackActive = false,
+    this.activeTacticIndex,
+    this.activeTacticMoves,
+    this.tacticPlaybackPosition = 0,
+    this.isBoardInChampionsTheme = false,
 
   });
 
@@ -333,6 +352,14 @@ class ChessState {
   final bool isAcademyBlunderActive;
   final String? premoveFrom;
   final String? premoveTo;
+  final bool isTacticsModeActive;
+  final String? tacticsBaseFen;
+  final List<TacticsStep> tacticsSequence;
+  final bool isTacticsPlaybackActive;
+  final int? activeTacticIndex;
+  final List<String>? activeTacticMoves;
+  final int tacticPlaybackPosition;
+  final bool isBoardInChampionsTheme;
 
 
   bool get isChess960 => gameMode == 'chess960';
@@ -433,6 +460,14 @@ class ChessState {
     bool? isAcademyBlunderActive,
     Object? premoveFrom = _sentinel,
     Object? premoveTo = _sentinel,
+    bool? isTacticsModeActive,
+    Object? tacticsBaseFen = _sentinel,
+    List<TacticsStep>? tacticsSequence,
+    bool? isTacticsPlaybackActive,
+    Object? activeTacticIndex = _sentinel,
+    Object? activeTacticMoves = _sentinel,
+    int? tacticPlaybackPosition,
+    bool? isBoardInChampionsTheme,
 
   }) {
     return ChessState(
@@ -563,6 +598,20 @@ class ChessState {
       premoveTo: identical(premoveTo, _sentinel)
           ? this.premoveTo
           : premoveTo as String?,
+      isTacticsModeActive: isTacticsModeActive ?? this.isTacticsModeActive,
+      tacticsBaseFen: identical(tacticsBaseFen, _sentinel)
+          ? this.tacticsBaseFen
+          : tacticsBaseFen as String?,
+      tacticsSequence: tacticsSequence ?? this.tacticsSequence,
+      isTacticsPlaybackActive: isTacticsPlaybackActive ?? this.isTacticsPlaybackActive,
+      activeTacticIndex: identical(activeTacticIndex, _sentinel)
+          ? this.activeTacticIndex
+          : activeTacticIndex as int?,
+      activeTacticMoves: identical(activeTacticMoves, _sentinel)
+          ? this.activeTacticMoves
+          : activeTacticMoves as List<String>?,
+      tacticPlaybackPosition: tacticPlaybackPosition ?? this.tacticPlaybackPosition,
+      isBoardInChampionsTheme: isBoardInChampionsTheme ?? this.isBoardInChampionsTheme,
 
     );
   }
@@ -1066,6 +1115,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
   Timer? _engineMoveTimer;
   Timer? _commentaryRevealTimer;
   Timer? _maxThinkingTimer;
+  Timer? _playbackTimer;
   DateTime? _engineStartTime;
   StreamSubscription<String>? _stockfishSubscription;
 
@@ -1249,7 +1299,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
           !state.isAcademyBlunderActive &&
           !state.game.gameOver &&
           !state.isPaused &&
-          state.game.history.length >= 3) {
+          state.game.history.length >= (state.isPlayerWhite ? 1 : 2)) {
         
         // Calculate evaluation delta
         final double prevEval = state.previousEvaluation;
@@ -2767,6 +2817,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
       text: query,
       timestamp: DateTime.now(),
       isUser: true,
+      associatedFen: state.currentBoardFen,
     );
 
     state = state.copyWith(
@@ -2800,6 +2851,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
       timestamp: DateTime.now(),
       isComplete: false,
       isUser: false,
+      associatedFen: state.currentBoardFen,
     );
 
     // Update state IMMEDIATELY to show "Thinking"
@@ -2861,6 +2913,8 @@ class ChessNotifier extends StateNotifier<ChessState> {
         context: context,
         previousQuality: previousQuality,
         userQuery: userQuery,
+        tacticsBaseFen: state.tacticsBaseFen,
+        tacticsSequence: state.tacticsSequence.map((s) => '${s.from}${s.to}').toList(),
       );
 
       String finalResponse = '';
@@ -3319,7 +3373,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
         CommentaryEntry(
           text: customFen != null
               ? "Ah, you bring me a position from your Study Lab! Let me examine this setup. What would you like to know or practice from here?"
-              : "Hello, ${state.userName}! Welcome to the GM Chanakya Chess School. Please select whether you wish to play Classic Chess or Chess960, and choose to play as White or Black to begin our training:",
+              : "Hello, ${state.userName}! Welcome to the [App Icon] ideaSpace Academy Chess class. I am GM Chanakya appointed to mentor and guide you through.\n\nBefore we begin, please select whether you wish to learn Classic Chess or Chess960, and choose whether to play as White or Black to begin our training.",
           timestamp: DateTime.now(),
           isComplete: true,
           isUser: false,
@@ -3378,36 +3432,60 @@ class ChessNotifier extends StateNotifier<ChessState> {
       timestamp: DateTime.now(),
       isUser: true,
       isComplete: true,
+      associatedFen: newGame.fen,
     );
 
     // 3. Prepare GM's response text
     String gmResponse = "";
     if (playAsWhite) {
-      gmResponse = "Excellent, you have chosen to play as White in $modeStr. Go ahead, make your opening move to secure the center, and I shall observe.";
+      gmResponse = "Excellent, you have chosen to play as White in $modeStr. Go ahead, make your move, and I shall respond accordingly.";
     } else {
-      gmResponse = "Excellent, you have chosen to play as Black in $modeStr. Today, I shall take the first step. Observe how I open the board to secure the center, then the path will be yours to choose.";
+      gmResponse = "Excellent, you have chosen to play as Black in $modeStr. Today, I shall take the first step now. Observe how I open the board.";
     }
 
-    final gmEntry = CommentaryEntry(
-      text: gmResponse,
+    // Add userEntry immediately
+    state = state.copyWith(
+      commentaryHistory: [...state.commentaryHistory, userEntry],
+    );
+
+    // 4. Play thinking sound & add first GM bubble as incomplete (thinking animation)
+    _soundService.playSfx(SoundEffect.gmchanakyaThinking);
+    final gmEntryThinking = CommentaryEntry(
+      text: "",
       timestamp: DateTime.now(),
       isUser: false,
-      isComplete: true,
+      isComplete: false,
+      associatedFen: newGame.fen,
     );
-
     state = state.copyWith(
-      commentaryHistory: [...state.commentaryHistory, userEntry, gmEntry],
+      commentaryHistory: [...state.commentaryHistory, gmEntryThinking],
     );
 
-    // Play complete sound
+    // Wait 1.5 seconds for the first message
+    await Future.delayed(const Duration(milliseconds: 1500));
+    if (_isDisposed) return;
+
+    // Reveal first GM message
+    final gmEntryComplete = gmEntryThinking.copyWith(
+      text: gmResponse,
+      isComplete: true,
+      timestamp: DateTime.now(),
+    );
+    final historyWithFirstGM = List<CommentaryEntry>.from(state.commentaryHistory);
+    if (historyWithFirstGM.isNotEmpty) {
+      historyWithFirstGM[historyWithFirstGM.length - 1] = gmEntryComplete;
+    }
+    state = state.copyWith(
+      commentaryHistory: historyWithFirstGM,
+    );
     _soundService.playSfx(SoundEffect.gmchanakyaComplete);
 
-    // 4. Start engine services
+    // 5. Start engine services
     await ensureGameServicesStarted(analyzeCurrentPosition: true);
     await _engine.setSkillLevel(AiAvatar.getAvatar(state.engineLevel).skillLevel,
         multiPV: 3); // Academy uses MultiPV=3
 
-    // 5. If playing as Black, the engine (White) must think/make the first move!
+    // 6. If playing as Black, the engine (White) must think/make the first move!
     if (!playAsWhite) {
       state = state.copyWith(isEngineThinking: state.engineReady);
     }
@@ -3451,6 +3529,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
   void dispose() {
     _isDisposed = true;
     _engineMoveTimer?.cancel();
+    _playbackTimer?.cancel();
     _maxThinkingTimer?.cancel();
     _stopClock();
     _cancelCommentaryReveal();
@@ -3459,6 +3538,193 @@ class ChessNotifier extends StateNotifier<ChessState> {
     _stockfishEngine.dispose();
     unawaited(_commentaryEngine.dispose());
     super.dispose();
+  }
+
+  void enterTacticsMode() {
+    _playbackTimer?.cancel();
+    state = state.copyWith(
+      isTacticsModeActive: true,
+      tacticsBaseFen: state.currentBoardFen,
+      tacticsSequence: const [],
+      isTacticsPlaybackActive: false,
+      activeTacticIndex: null,
+      activeTacticMoves: null,
+      tacticPlaybackPosition: 0,
+      isBoardInChampionsTheme: true,
+    );
+  }
+
+  void addTacticsMove(String from, String to) {
+    final nextIsUser = state.tacticsSequence.length % 2 == 0;
+    final step = TacticsStep(from: from, to: to, isUserMove: nextIsUser);
+    state = state.copyWith(
+      tacticsSequence: [...state.tacticsSequence, step],
+    );
+  }
+
+  void undoLastTacticsMove() {
+    if (state.tacticsSequence.isEmpty) return;
+    final nextSeq = List<TacticsStep>.from(state.tacticsSequence)..removeLast();
+    state = state.copyWith(
+      tacticsSequence: nextSeq,
+    );
+  }
+
+  void cancelTacticsMode() {
+    _playbackTimer?.cancel();
+    state = state.copyWith(
+      isTacticsModeActive: false,
+      tacticsBaseFen: null,
+      tacticsSequence: const [],
+      isTacticsPlaybackActive: false,
+      activeTacticIndex: null,
+      activeTacticMoves: null,
+      tacticPlaybackPosition: 0,
+      isBoardInChampionsTheme: false,
+    );
+  }
+
+  String buildTacticsQuestion() {
+    if (state.tacticsSequence.isEmpty) return "What if I play some moves?";
+    final board = chess_lib.Chess.fromFEN(state.tacticsBaseFen ?? state.currentBoardFen);
+    final List<String> parts = [];
+    for (var i = 0; i < state.tacticsSequence.length; i++) {
+      final step = state.tacticsSequence[i];
+      final from = step.from;
+      final to = step.to;
+
+      final piece = board.get(from);
+      if (piece != null) {
+        final isWhitePiece = piece.color == chess_lib.Color.WHITE;
+        final currentFen = board.fen;
+        final partsFen = currentFen.split(' ');
+        if (partsFen.length > 1) {
+          partsFen[1] = isWhitePiece ? 'w' : 'b';
+          board.load(partsFen.join(' '));
+        }
+      }
+
+      final currentPiece = board.get(from);
+      final pieceName = currentPiece != null ? _pieceNameFull(currentPiece.type) : 'piece';
+      final isCapture = board.get(to) != null;
+      
+      String phrase = '';
+      if (i == 0) {
+        phrase = isCapture 
+            ? "I capture with my $pieceName on $to"
+            : "I move my $pieceName to $to";
+      } else if (i % 2 == 0) { // User move
+        phrase = isCapture 
+            ? "then I capture on $to"
+            : "then I move my $pieceName to $to";
+      } else { // Opponent move
+        phrase = isCapture
+            ? "you respond by capturing on $to"
+            : "you respond with $pieceName to $to";
+      }
+      parts.add(phrase);
+      
+      board.move({'from': from, 'to': to});
+    }
+    
+    return "What if ${parts.join(', ')}?";
+  }
+  
+  String _pieceNameFull(chess_lib.PieceType type) {
+    switch (type) {
+      case chess_lib.PieceType.PAWN: return 'Pawn';
+      case chess_lib.PieceType.KNIGHT: return 'Knight';
+      case chess_lib.PieceType.BISHOP: return 'Bishop';
+      case chess_lib.PieceType.ROOK: return 'Rook';
+      case chess_lib.PieceType.QUEEN: return 'Queen';
+      case chess_lib.PieceType.KING: return 'King';
+    }
+    return 'piece';
+  }
+
+  Future<void> finishTacticsInput() async {
+    if (state.tacticsSequence.isEmpty) return;
+    final question = buildTacticsQuestion();
+    
+    state = state.copyWith(
+      isTacticsModeActive: false,
+    );
+    
+    await sendUserQuery('[TACTICS_QUERY] $question');
+  }
+
+  void playTactic(int index, List<String> moves) {
+    _playbackTimer?.cancel();
+    state = state.copyWith(
+      isTacticsPlaybackActive: true,
+      activeTacticIndex: index,
+      activeTacticMoves: moves,
+      tacticPlaybackPosition: 0,
+      isBoardInChampionsTheme: true,
+    );
+    
+    _startPlaybackTimer();
+  }
+
+  void _startPlaybackTimer() {
+    _playbackTimer?.cancel();
+    _playbackTimer = Timer.periodic(const Duration(milliseconds: 1500), (timer) {
+      if (state.activeTacticMoves == null || state.activeTacticMoves!.isEmpty) {
+        timer.cancel();
+        return;
+      }
+      final nextPos = state.tacticPlaybackPosition + 1;
+      if (nextPos > state.activeTacticMoves!.length) {
+        state = state.copyWith(tacticPlaybackPosition: 0);
+      } else {
+        state = state.copyWith(tacticPlaybackPosition: nextPos);
+      }
+    });
+  }
+
+  void stopTacticPlayback() {
+    _playbackTimer?.cancel();
+    _playbackTimer = null;
+    state = state.copyWith(
+      isTacticsPlaybackActive: false,
+      activeTacticIndex: null,
+      activeTacticMoves: null,
+      tacticPlaybackPosition: 0,
+      isBoardInChampionsTheme: false,
+    );
+  }
+
+  void stepTactic(int delta) {
+    _playbackTimer?.cancel();
+    if (state.activeTacticMoves == null) return;
+    final len = state.activeTacticMoves!.length;
+    var nextPos = state.tacticPlaybackPosition + delta;
+    if (nextPos < 0) nextPos = 0;
+    if (nextPos > len) nextPos = len;
+    state = state.copyWith(
+      tacticPlaybackPosition: nextPos,
+      isTacticsPlaybackActive: false,
+    );
+  }
+
+  void jumpTactic({required bool toStart}) {
+    _playbackTimer?.cancel();
+    if (state.activeTacticMoves == null) return;
+    state = state.copyWith(
+      tacticPlaybackPosition: toStart ? 0 : state.activeTacticMoves!.length,
+      isTacticsPlaybackActive: false,
+    );
+  }
+
+  void toggleTacticPlayback() {
+    if (state.isTacticsPlaybackActive) {
+      _playbackTimer?.cancel();
+      state = state.copyWith(isTacticsPlaybackActive: false);
+    } else {
+      if (state.activeTacticMoves == null) return;
+      state = state.copyWith(isTacticsPlaybackActive: true);
+      _startPlaybackTimer();
+    }
   }
 
   void _extractMoveSuggestion(String text) {

@@ -17,6 +17,7 @@ import 'api/puzzles.dart';
 import 'api/simple.dart';
 import 'api/state.dart';
 import 'api/status.dart';
+import 'api/tactics.dart';
 import 'api/threats.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -80,7 +81,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.12.0';
 
   @override
-  int get rustContentHash => -1943559097;
+  int get rustContentHash => -1991629989;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -130,6 +131,11 @@ abstract class RustLibApi extends BaseApi {
   });
 
   Future<GameIncidents> crateApiCognitiveGameIncidentsDefault();
+
+  TacticsResult crateApiTacticsGenerateTacticsAnalysis({
+    required String fen,
+    required List<String> userUciMoves,
+  });
 
   List<String> crateApiMovesGetLegalDestinations({
     required String fen,
@@ -510,6 +516,36 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "game_incidents_default", argNames: []);
 
   @override
+  TacticsResult crateApiTacticsGenerateTacticsAnalysis({
+    required String fen,
+    required List<String> userUciMoves,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(fen, serializer);
+          sse_encode_list_String(userUciMoves, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 11)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_tactics_result,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiTacticsGenerateTacticsAnalysisConstMeta,
+        argValues: [fen, userUciMoves],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTacticsGenerateTacticsAnalysisConstMeta =>
+      const TaskConstMeta(
+        debugName: "generate_tactics_analysis",
+        argNames: ["fen", "userUciMoves"],
+      );
+
+  @override
   List<String> crateApiMovesGetLegalDestinations({
     required String fen,
     required String square,
@@ -522,7 +558,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_String(fen, serializer);
           sse_encode_String(square, serializer);
           sse_encode_bool(isChess960, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 11)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 12)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_String,
@@ -557,7 +593,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 12,
+            funcId: 13,
             port: port_,
           );
         },
@@ -591,7 +627,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_String(initialFen, serializer);
           sse_encode_list_String(uciMoves, serializer);
           sse_encode_bool(isChess960, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 13)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 14)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_String,
@@ -617,7 +653,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(fen, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 14)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 15)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_String,
@@ -643,7 +679,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(name, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 15)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 16)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -670,7 +706,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(fenBefore, serializer);
           sse_encode_String(moveUci, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 16)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 17)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -698,7 +734,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 17,
+            funcId: 18,
             port: port_,
           );
         },
@@ -723,7 +759,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(dbPath, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 18)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 19)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_pgn_game_record,
@@ -749,7 +785,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(pgnText, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 19)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 20)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_pgn_game_record,
@@ -781,7 +817,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_i_32(elo, serializer);
           sse_encode_box_autoadd_scotoma_result(scotoma, serializer);
           sse_encode_list_prim_i_32_loose(completedTutorials, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 20)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 21)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_chanakya_routine,
@@ -806,7 +842,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 21)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 22)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -836,7 +872,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(dbPath, serializer);
           sse_encode_box_autoadd_pgn_game_record(game, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 22)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 23)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_bool,
@@ -874,7 +910,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 23,
+            funcId: 24,
             port: port_,
           );
         },
@@ -916,7 +952,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_i_32(halfMoveCount, serializer);
           sse_encode_f_64(evalAbs, serializer);
           sse_encode_bool(isChess960, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 24)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 25)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -972,7 +1008,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_bool(hasFork, serializer);
           sse_encode_bool(hasPin, serializer);
           sse_encode_bool(hasHanging, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 25)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 26)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -1024,7 +1060,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_String(avatarName, serializer);
           sse_encode_bool(isChess960, serializer);
           sse_encode_i_32(moveCount, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 26)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 27)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -1066,7 +1102,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_String(toStr, serializer);
           sse_encode_String(promotionStr, serializer);
           sse_encode_bool(isChess960, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 27)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 28)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_opt_String,
@@ -1343,6 +1379,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<TacticData> dco_decode_list_tactic_data(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_tactic_data).toList();
+  }
+
+  @protected
   MiddlegameResult dco_decode_middlegame_result(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -1494,6 +1536,33 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       totalRatedGames: dco_decode_i_32(arr[8]),
       analyzedGames: dco_decode_i_32(arr[9]),
       skippedGames: dco_decode_i_32(arr[10]),
+    );
+  }
+
+  @protected
+  TacticData dco_decode_tactic_data(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return TacticData(
+      name: dco_decode_String(arr[0]),
+      moves: dco_decode_list_String(arr[1]),
+      sanMoves: dco_decode_list_String(arr[2]),
+      explanation: dco_decode_String(arr[3]),
+    );
+  }
+
+  @protected
+  TacticsResult dco_decode_tactics_result(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return TacticsResult(
+      textResponse: dco_decode_String(arr[0]),
+      yourTactic: dco_decode_tactic_data(arr[1]),
+      alternatives: dco_decode_list_tactic_data(arr[2]),
     );
   }
 
@@ -1857,6 +1926,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<TacticData> sse_decode_list_tactic_data(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <TacticData>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_tactic_data(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   MiddlegameResult sse_decode_middlegame_result(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_mpi = sse_decode_f_64(deserializer);
@@ -2043,6 +2124,34 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       totalRatedGames: var_totalRatedGames,
       analyzedGames: var_analyzedGames,
       skippedGames: var_skippedGames,
+    );
+  }
+
+  @protected
+  TacticData sse_decode_tactic_data(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_name = sse_decode_String(deserializer);
+    var var_moves = sse_decode_list_String(deserializer);
+    var var_sanMoves = sse_decode_list_String(deserializer);
+    var var_explanation = sse_decode_String(deserializer);
+    return TacticData(
+      name: var_name,
+      moves: var_moves,
+      sanMoves: var_sanMoves,
+      explanation: var_explanation,
+    );
+  }
+
+  @protected
+  TacticsResult sse_decode_tactics_result(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_textResponse = sse_decode_String(deserializer);
+    var var_yourTactic = sse_decode_tactic_data(deserializer);
+    var var_alternatives = sse_decode_list_tactic_data(deserializer);
+    return TacticsResult(
+      textResponse: var_textResponse,
+      yourTactic: var_yourTactic,
+      alternatives: var_alternatives,
     );
   }
 
@@ -2367,6 +2476,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_list_tactic_data(
+    List<TacticData> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_tactic_data(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_middlegame_result(
     MiddlegameResult self,
     SseSerializer serializer,
@@ -2509,6 +2630,23 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_i_32(self.totalRatedGames, serializer);
     sse_encode_i_32(self.analyzedGames, serializer);
     sse_encode_i_32(self.skippedGames, serializer);
+  }
+
+  @protected
+  void sse_encode_tactic_data(TacticData self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.name, serializer);
+    sse_encode_list_String(self.moves, serializer);
+    sse_encode_list_String(self.sanMoves, serializer);
+    sse_encode_String(self.explanation, serializer);
+  }
+
+  @protected
+  void sse_encode_tactics_result(TacticsResult self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.textResponse, serializer);
+    sse_encode_tactic_data(self.yourTactic, serializer);
+    sse_encode_list_tactic_data(self.alternatives, serializer);
   }
 
   @protected

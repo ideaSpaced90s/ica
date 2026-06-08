@@ -61,6 +61,8 @@ class _SignInPageState extends ConsumerState<SignInPage>
     await repo.setArenaIntroSeen(false);
     await repo.setBattlegroundIntroSeen(false);
     await repo.setPuzzlesIntroSeen(false);
+    await repo.setAcademyIntroSeen(false);
+    await repo.setAcademyAccessCount(0);
 
     ref.read(showArenaIntroProvider.notifier).state = true;
     ref.read(showBattlegroundIntroProvider.notifier).state = true;
@@ -85,6 +87,8 @@ class _SignInPageState extends ConsumerState<SignInPage>
     await repo.setArenaIntroSeen(false);
     await repo.setBattlegroundIntroSeen(false);
     await repo.setPuzzlesIntroSeen(false);
+    await repo.setAcademyIntroSeen(false);
+    await repo.setAcademyAccessCount(0);
 
     ref.read(showArenaIntroProvider.notifier).state = true;
     ref.read(showBattlegroundIntroProvider.notifier).state = true;

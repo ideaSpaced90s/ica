@@ -8,7 +8,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `analyze_game`, `chess960_initial_fens`, `expand_fen_rank`, `fen_position_signature`, `find_uci_move`, `is_endgame`, `is_pinned`, `normalize_chess960_castling_rights`, `parse_position`, `position_signature`, `recover_chess960_initial_fen`, `replay_game`, `replay_san`, `replay_uci`, `rook_file_for_castling`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `ReplayedGame`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`
 
 ScotomaResult analyzeScotoma({required List<SavedGameUci> games}) =>
     RustLib.instance.api.crateApiCognitiveAnalyzeScotoma(games: games);

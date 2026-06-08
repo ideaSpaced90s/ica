@@ -38,7 +38,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.12.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1943559097;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1991629989;
 
 // Section: executor
 
@@ -372,6 +372,39 @@ fn wire__crate__api__cognitive__game_incidents_default_impl(
                     Ok(output_ok)
                 })())
             }
+        },
+    )
+}
+fn wire__crate__api__tactics__generate_tactics_analysis_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "generate_tactics_analysis",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_fen = <String>::sse_decode(&mut deserializer);
+            let api_user_uci_moves = <Vec<String>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok = Result::<_, ()>::Ok(
+                    crate::api::tactics::generate_tactics_analysis(api_fen, api_user_uci_moves),
+                )?;
+                Ok(output_ok)
+            })())
         },
     )
 }
@@ -1301,6 +1334,18 @@ impl SseDecode for Vec<crate::api::cognitive::SavedGameUci> {
     }
 }
 
+impl SseDecode for Vec<crate::api::tactics::TacticData> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::tactics::TacticData>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
 impl SseDecode for crate::api::cognitive::MiddlegameResult {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -1501,6 +1546,36 @@ impl SseDecode for crate::api::cognitive::ScotomaResult {
     }
 }
 
+impl SseDecode for crate::api::tactics::TacticData {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_name = <String>::sse_decode(deserializer);
+        let mut var_moves = <Vec<String>>::sse_decode(deserializer);
+        let mut var_sanMoves = <Vec<String>>::sse_decode(deserializer);
+        let mut var_explanation = <String>::sse_decode(deserializer);
+        return crate::api::tactics::TacticData {
+            name: var_name,
+            moves: var_moves,
+            san_moves: var_sanMoves,
+            explanation: var_explanation,
+        };
+    }
+}
+
+impl SseDecode for crate::api::tactics::TacticsResult {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_textResponse = <String>::sse_decode(deserializer);
+        let mut var_yourTactic = <crate::api::tactics::TacticData>::sse_decode(deserializer);
+        let mut var_alternatives = <Vec<crate::api::tactics::TacticData>>::sse_decode(deserializer);
+        return crate::api::tactics::TacticsResult {
+            text_response: var_textResponse,
+            your_tactic: var_yourTactic,
+            alternatives: var_alternatives,
+        };
+    }
+}
+
 impl SseDecode for u32 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -1542,9 +1617,9 @@ fn pde_ffi_dispatcher_primary_impl(
             rust_vec_len,
             data_len,
         ),
-        12 => wire__crate__api__puzzles__get_random_puzzle_impl(port, ptr, rust_vec_len, data_len),
-        17 => wire__crate__api__simple__init_app_impl(port, ptr, rust_vec_len, data_len),
-        23 => wire__crate__api__puzzles__search_puzzles_impl(port, ptr, rust_vec_len, data_len),
+        13 => wire__crate__api__puzzles__get_random_puzzle_impl(port, ptr, rust_vec_len, data_len),
+        18 => wire__crate__api__simple__init_app_impl(port, ptr, rust_vec_len, data_len),
+        24 => wire__crate__api__puzzles__search_puzzles_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -1570,30 +1645,33 @@ fn pde_ffi_dispatcher_sync_impl(
         7 => wire__crate__api__status__evaluate_game_status_impl(ptr, rust_vec_len, data_len),
         8 => wire__crate__api__context__evaluate_position_metrics_impl(ptr, rust_vec_len, data_len),
         9 => wire__crate__api__pgn_db__export_pgn_with_headers_impl(ptr, rust_vec_len, data_len),
-        11 => wire__crate__api__moves__get_legal_destinations_impl(ptr, rust_vec_len, data_len),
-        13 => wire__crate__api__history__get_san_history_impl(ptr, rust_vec_len, data_len),
-        14 => wire__crate__api__threats__get_threatened_squares_impl(ptr, rust_vec_len, data_len),
-        15 => wire__crate__api__simple__greet_impl(ptr, rust_vec_len, data_len),
-        16 => wire__crate__api__humanizer__humanize_move_rust_impl(ptr, rust_vec_len, data_len),
-        18 => wire__crate__api__pgn_db__load_studies_from_db_impl(ptr, rust_vec_len, data_len),
-        19 => wire__crate__api__pgn_db__parse_pgn_database_impl(ptr, rust_vec_len, data_len),
-        20 => wire__crate__api__assignment__recommend_tasks_rust_impl(ptr, rust_vec_len, data_len),
-        21 => wire__crate__api__commentary__reset_commentary_history_rust_impl(
+        11 => {
+            wire__crate__api__tactics__generate_tactics_analysis_impl(ptr, rust_vec_len, data_len)
+        }
+        12 => wire__crate__api__moves__get_legal_destinations_impl(ptr, rust_vec_len, data_len),
+        14 => wire__crate__api__history__get_san_history_impl(ptr, rust_vec_len, data_len),
+        15 => wire__crate__api__threats__get_threatened_squares_impl(ptr, rust_vec_len, data_len),
+        16 => wire__crate__api__simple__greet_impl(ptr, rust_vec_len, data_len),
+        17 => wire__crate__api__humanizer__humanize_move_rust_impl(ptr, rust_vec_len, data_len),
+        19 => wire__crate__api__pgn_db__load_studies_from_db_impl(ptr, rust_vec_len, data_len),
+        20 => wire__crate__api__pgn_db__parse_pgn_database_impl(ptr, rust_vec_len, data_len),
+        21 => wire__crate__api__assignment__recommend_tasks_rust_impl(ptr, rust_vec_len, data_len),
+        22 => wire__crate__api__commentary__reset_commentary_history_rust_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        22 => wire__crate__api__pgn_db__save_study_to_db_impl(ptr, rust_vec_len, data_len),
-        24 => {
+        23 => wire__crate__api__pgn_db__save_study_to_db_impl(ptr, rust_vec_len, data_len),
+        25 => {
             wire__crate__api__chanakya__select_chanakya_move_rust_impl(ptr, rust_vec_len, data_len)
         }
-        25 => wire__crate__api__commentary__select_commentary_template_rust_impl(
+        26 => wire__crate__api__commentary__select_commentary_template_rust_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        26 => wire__crate__api__persona__select_persona_move_rust_impl(ptr, rust_vec_len, data_len),
-        27 => wire__crate__api__state__validate_and_apply_move_impl(ptr, rust_vec_len, data_len),
+        27 => wire__crate__api__persona__select_persona_move_rust_impl(ptr, rust_vec_len, data_len),
+        28 => wire__crate__api__state__validate_and_apply_move_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -2009,6 +2087,51 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::cognitive::ScotomaResult>
         self
     }
 }
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::tactics::TacticData {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.name.into_into_dart().into_dart(),
+            self.moves.into_into_dart().into_dart(),
+            self.san_moves.into_into_dart().into_dart(),
+            self.explanation.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::tactics::TacticData
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::tactics::TacticData>
+    for crate::api::tactics::TacticData
+{
+    fn into_into_dart(self) -> crate::api::tactics::TacticData {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::tactics::TacticsResult {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.text_response.into_into_dart().into_dart(),
+            self.your_tactic.into_into_dart().into_dart(),
+            self.alternatives.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::tactics::TacticsResult
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::tactics::TacticsResult>
+    for crate::api::tactics::TacticsResult
+{
+    fn into_into_dart(self) -> crate::api::tactics::TacticsResult {
+        self
+    }
+}
 
 impl SseEncode for String {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -2232,6 +2355,16 @@ impl SseEncode for Vec<crate::api::cognitive::SavedGameUci> {
     }
 }
 
+impl SseEncode for Vec<crate::api::tactics::TacticData> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::tactics::TacticData>::sse_encode(item, serializer);
+        }
+    }
+}
+
 impl SseEncode for crate::api::cognitive::MiddlegameResult {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -2362,6 +2495,25 @@ impl SseEncode for crate::api::cognitive::ScotomaResult {
         <i32>::sse_encode(self.total_rated_games, serializer);
         <i32>::sse_encode(self.analyzed_games, serializer);
         <i32>::sse_encode(self.skipped_games, serializer);
+    }
+}
+
+impl SseEncode for crate::api::tactics::TacticData {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.name, serializer);
+        <Vec<String>>::sse_encode(self.moves, serializer);
+        <Vec<String>>::sse_encode(self.san_moves, serializer);
+        <String>::sse_encode(self.explanation, serializer);
+    }
+}
+
+impl SseEncode for crate::api::tactics::TacticsResult {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.text_response, serializer);
+        <crate::api::tactics::TacticData>::sse_encode(self.your_tactic, serializer);
+        <Vec<crate::api::tactics::TacticData>>::sse_encode(self.alternatives, serializer);
     }
 }
 

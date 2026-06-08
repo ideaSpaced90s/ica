@@ -17,6 +17,7 @@ import 'api/puzzles.dart';
 import 'api/simple.dart';
 import 'api/state.dart';
 import 'api/status.dart';
+import 'api/tactics.dart';
 import 'api/threats.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -123,6 +124,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<SavedGameUci> dco_decode_list_saved_game_uci(dynamic raw);
 
   @protected
+  List<TacticData> dco_decode_list_tactic_data(dynamic raw);
+
+  @protected
   MiddlegameResult dco_decode_middlegame_result(dynamic raw);
 
   @protected
@@ -157,6 +161,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ScotomaResult dco_decode_scotoma_result(dynamic raw);
+
+  @protected
+  TacticData dco_decode_tactic_data(dynamic raw);
+
+  @protected
+  TacticsResult dco_decode_tactics_result(dynamic raw);
 
   @protected
   int dco_decode_u_32(dynamic raw);
@@ -285,6 +295,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<TacticData> sse_decode_list_tactic_data(SseDeserializer deserializer);
+
+  @protected
   MiddlegameResult sse_decode_middlegame_result(SseDeserializer deserializer);
 
   @protected
@@ -321,6 +334,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ScotomaResult sse_decode_scotoma_result(SseDeserializer deserializer);
+
+  @protected
+  TacticData sse_decode_tactic_data(SseDeserializer deserializer);
+
+  @protected
+  TacticsResult sse_decode_tactics_result(SseDeserializer deserializer);
 
   @protected
   int sse_decode_u_32(SseDeserializer deserializer);
@@ -485,6 +504,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_tactic_data(
+    List<TacticData> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_middlegame_result(
     MiddlegameResult self,
     SseSerializer serializer,
@@ -534,6 +559,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_scotoma_result(ScotomaResult self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_tactic_data(TacticData self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_tactics_result(TacticsResult self, SseSerializer serializer);
 
   @protected
   void sse_encode_u_32(int self, SseSerializer serializer);

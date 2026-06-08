@@ -110,8 +110,147 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
 
   Widget _buildInput(BuildContext context) {
     final state = widget.state;
-    final bool isBusy = state.isCommentaryLoading || state.isCommentaryStreaming || state.isWaitingForSideChoice || state.isAcademyBlunderActive;
+    final bool isBusy = state.isCommentaryLoading ||
+        state.isCommentaryStreaming ||
+        state.isWaitingForSideChoice ||
+        state.isAcademyBlunderActive ||
+        state.isBoardInChampionsTheme;
     final bool hasHistory = state.game.history.isNotEmpty;
+
+    if (state.isTacticsModeActive) {
+      final moves = state.tacticsSequence;
+      final bool hasMoves = moves.isNotEmpty;
+      
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: ScholarlyTheme.backgroundStart.withValues(alpha: 0.8),
+          borderRadius: const BorderRadius.only(
+            bottomLeft: Radius.circular(16),
+            bottomRight: Radius.circular(16),
+          ),
+          border: Border(
+            top: BorderSide(color: ScholarlyTheme.panelStroke.withValues(alpha: 0.3)),
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (hasMoves) ...[
+              Container(
+                height: 36,
+                margin: const EdgeInsets.only(bottom: 8),
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: moves.length,
+                  itemBuilder: (context, index) {
+                    final step = moves[index];
+                    final isUser = step.isUserMove;
+                    final text = '${step.from}${step.to}';
+                    return Container(
+                      margin: const EdgeInsets.only(right: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: isUser
+                            ? ScholarlyTheme.accentGold.withValues(alpha: 0.15)
+                            : ScholarlyTheme.accentBlueSoft.withValues(alpha: 0.15),
+                        border: Border.all(
+                          color: isUser
+                              ? ScholarlyTheme.accentGold.withValues(alpha: 0.6)
+                              : ScholarlyTheme.accentBlueSoft.withValues(alpha: 0.6),
+                        ),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Center(
+                        child: Text(
+                          text,
+                          style: GoogleFonts.inter(
+                            color: isUser ? ScholarlyTheme.accentGold : ScholarlyTheme.accentBlueSoft,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ] else ...[
+              Container(
+                height: 36,
+                margin: const EdgeInsets.only(bottom: 8),
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Make your tactical moves on the board...',
+                  style: GoogleFonts.inter(
+                    color: ScholarlyTheme.textMuted,
+                    fontStyle: FontStyle.italic,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      ref.read(chessProvider.notifier).cancelTacticsMode();
+                    },
+                    icon: const Icon(Icons.close_rounded, size: 16),
+                    label: const Text('Cancel'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red.shade900.withValues(alpha: 0.8),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: hasMoves
+                          ? [
+                              BoxShadow(
+                                color: ScholarlyTheme.accentGold.withValues(alpha: 0.35),
+                                blurRadius: 8,
+                                spreadRadius: 1,
+                              ),
+                            ]
+                          : [],
+                    ),
+                    child: ElevatedButton.icon(
+                      onPressed: hasMoves
+                          ? () {
+                              ref.read(chessProvider.notifier).finishTacticsInput();
+                            }
+                          : null,
+                      icon: const Icon(Icons.bolt_rounded, size: 16),
+                      label: const Text('Finish'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: ScholarlyTheme.accentGold,
+                        foregroundColor: Colors.black,
+                        disabledBackgroundColor: ScholarlyTheme.panelStroke.withValues(alpha: 0.3),
+                        disabledForegroundColor: ScholarlyTheme.textMuted,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
@@ -205,6 +344,11 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
   };
 
   void _handlePromptTap(String label) {
+    if (label == 'Tactics') {
+      ref.read(chessProvider.notifier).enterTacticsMode();
+      FocusScope.of(context).unfocus();
+      return;
+    }
     final fullQuestion = _fullQuestions[label] ?? label;
     var preset = _chipPresets[label] ?? '';
     preset = preset.replaceAll('Apprentice', '**${widget.state.userName}**');
@@ -321,7 +465,9 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
                   ),
                   child: SelectionArea(
                     child: Text(
-                      entry.text,
+                      entry.text.startsWith('[TACTICS_QUERY]')
+                          ? entry.text.replaceFirst('[TACTICS_QUERY]', '').trim()
+                          : entry.text,
                       style: GoogleFonts.inter(
                         color: ScholarlyTheme.textPrimary,
                         fontSize: 13,
@@ -454,7 +600,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
                               child: Text.rich(
                                 TextSpan(
                                   children: [
-                                    ..._parseAcademyRichText(entry.text, widget.state),
+                                    ..._parseAcademyRichText(_cleanTacticsText(entry.text), widget.state),
                                     if (!entry.isComplete && !isStreaming)
                                       TextSpan(
                                         text: ' ${'.' * ((_pulse % 3) + 1)}',
@@ -477,6 +623,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
                                 ),
                               ),
                             ),
+                            _buildTacticCards(entry, widget.state),
                             if (widget.state.isWaitingForSideChoice &&
                                 widget.state.commentaryHistory.indexOf(entry) ==
                                     widget.state.commentaryHistory.length - 1) ...[
@@ -945,6 +1092,216 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
       ),
     );
   }
+
+  String _cleanTacticsText(String text) {
+    final regExp = RegExp(r'\[[A-Z_]+:\s*[^\]]*\]\r?\n?');
+    var cleaned = text.replaceAll(regExp, '');
+    final splitStr = "Consider these alternative";
+    if (cleaned.contains(splitStr)) {
+      final index = cleaned.indexOf(splitStr);
+      cleaned = cleaned.substring(0, index).trim();
+    }
+    return cleaned;
+  }
+
+  List<ExtractedTactic> _extractTactics(String text) {
+    final List<ExtractedTactic> list = [];
+    final regExp = RegExp(r'\[([A-Z_]+):\s*([^\]]*)\]');
+    for (final match in regExp.allMatches(text)) {
+      final label = match.group(1)!;
+      final movesStr = match.group(2)!.trim();
+      final moves = movesStr.isEmpty ? <String>[] : movesStr.split(' ');
+      
+      String displayName = label;
+      if (label == 'YOUR_TACTIC') {
+        displayName = 'Your Tactic';
+      } else if (label.startsWith('TACTIC_')) {
+        final parts = label.split('_');
+        if (parts.length > 1) {
+          final suffix = parts[1].toLowerCase();
+          final capitalized = suffix.isEmpty ? '' : '${suffix[0].toUpperCase()}${suffix.substring(1)}';
+          displayName = 'Tactic $capitalized';
+        }
+      }
+      
+      list.add(ExtractedTactic(label: label, displayName: displayName, moves: moves));
+    }
+    return list;
+  }
+
+  int _getTacticIndex(String label) {
+    switch (label) {
+      case 'YOUR_TACTIC': return 0;
+      case 'TACTIC_ALPHA': return 1;
+      case 'TACTIC_BETA': return 2;
+      case 'TACTIC_GAMMA': return 3;
+      case 'TACTIC_DELTA': return 4;
+      case 'TACTIC_EPSILON': return 5;
+      default: return 99;
+    }
+  }
+
+
+  Widget _buildTacticCards(CommentaryEntry entry, ChessState state) {
+    final tactics = _extractTactics(entry.text);
+    if (tactics.isEmpty) return const SizedBox.shrink();
+
+    final bool isTacticValid = entry.associatedFen == state.currentBoardFen;
+
+    // Find user's tactic
+    final userTacticIndex = tactics.indexWhere((t) => t.label == 'YOUR_TACTIC');
+    ExtractedTactic? userTactic;
+    if (userTacticIndex != -1) {
+      userTactic = tactics[userTacticIndex];
+    }
+
+    // Find alternative tactics
+    final alternatives = tactics.where((t) => t.label != 'YOUR_TACTIC').toList();
+
+    final Color userTacticColor = ScholarlyTheme.accentBlue; // Blue color
+
+    // Colors for alternatives
+    final List<Color> altColors = [
+      const Color(0xFFF59E0B), // Orange/Amber
+      const Color(0xFF10B981), // Emerald/Green
+      const Color(0xFF8B5CF6), // Purple/Violet
+      const Color(0xFFEF4444), // Rose/Red
+      const Color(0xFFEC4899), // Pink
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // 1. User's Tactic
+          if (userTactic != null) ...[
+            Align(
+              alignment: Alignment.centerLeft,
+              child: _buildTacticPill(
+                tactic: userTactic,
+                displayName: "${state.userName}'s tactic",
+                color: userTacticColor,
+                state: state,
+                isFullWidth: false,
+                isValid: isTacticValid,
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+          
+          // 2. Alternatives horizontally stacked
+          if (alternatives.isNotEmpty)
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: alternatives.asMap().entries.map((item) {
+                final idx = item.key;
+                final tactic = item.value;
+                final color = altColors[idx % altColors.length];
+                
+                // Extract short name: "Tactic Alpha" -> "ALPHA"
+                final shortName = tactic.displayName.replaceFirst('Tactic ', '').toUpperCase();
+                
+                return _buildTacticPill(
+                  tactic: tactic,
+                  displayName: shortName,
+                  color: color,
+                  state: state,
+                  isFullWidth: false,
+                  isValid: isTacticValid,
+                );
+              }).toList(),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTacticPill({
+    required ExtractedTactic tactic,
+    required String displayName,
+    required Color color,
+    required ChessState state,
+    required bool isFullWidth,
+    required bool isValid,
+  }) {
+    final index = _getTacticIndex(tactic.label);
+    final isCurrentPlaying = isValid && state.isBoardInChampionsTheme && state.activeTacticIndex == index;
+
+    final displayColor = isValid ? color : Colors.grey.shade500;
+    final bgColor = !isValid
+        ? Colors.grey.shade900.withValues(alpha: 0.05)
+        : (isCurrentPlaying ? color.withValues(alpha: 0.18) : color.withValues(alpha: 0.08));
+    final borderColor = !isValid
+        ? Colors.grey.shade400.withValues(alpha: 0.2)
+        : (isCurrentPlaying ? color : color.withValues(alpha: 0.4));
+    final textStyle = GoogleFonts.inter(
+      color: isValid ? ScholarlyTheme.textPrimary : ScholarlyTheme.textMuted,
+      fontWeight: FontWeight.bold,
+      fontSize: 10,
+      letterSpacing: 1.0,
+    );
+
+    return GestureDetector(
+      onTap: !isValid
+          ? null
+          : () {
+              if (isCurrentPlaying) {
+                ref.read(chessProvider.notifier).stopTacticPlayback();
+              } else {
+                ref.read(chessProvider.notifier).playTactic(index, tactic.moves);
+              }
+            },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: borderColor,
+            width: isCurrentPlaying ? 1.5 : 1.0,
+          ),
+          boxShadow: isCurrentPlaying
+              ? [
+                  BoxShadow(
+                    color: color.withValues(alpha: 0.25),
+                    blurRadius: 4,
+                    spreadRadius: 0.5,
+                  )
+                ]
+              : [],
+        ),
+        child: Row(
+          mainAxisSize: isFullWidth ? MainAxisSize.max : MainAxisSize.min,
+          children: [
+            Text(
+              displayName,
+              style: textStyle,
+            ),
+            if (isFullWidth) const Spacer() else const SizedBox(width: 8),
+            Icon(
+              isCurrentPlaying ? Icons.stop_rounded : Icons.play_arrow_rounded,
+              color: displayColor,
+              size: 14,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class ExtractedTactic {
+  final String label;
+  final String displayName;
+  final List<String> moves;
+
+  const ExtractedTactic({
+    required this.label,
+    required this.displayName,
+    required this.moves,
+  });
 }
 
 class DottedGridLoader extends StatefulWidget {

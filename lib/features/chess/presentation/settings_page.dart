@@ -93,6 +93,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                           await repo.setArenaIntroSeen(false);
                           await repo.setBattlegroundIntroSeen(false);
                           await repo.setPuzzlesIntroSeen(false);
+                          await repo.setAcademyIntroSeen(false);
+                          await repo.setAcademyAccessCount(0);
 
                           ref.read(showArenaIntroProvider.notifier).state = true;
                           ref.read(showBattlegroundIntroProvider.notifier).state = true;

@@ -5,9 +5,13 @@ import 'package:chess/chess.dart' as chess_lib;
 import 'dart:math';
 
 import '../../application/chess_provider.dart';
+import '../../application/tutorial_provider.dart';
+import '../../services/chess_sound_service.dart';
 import '../scholarly_theme.dart';
 import '../widgets/commentary_history.dart';
+import '../widgets/gm_chanakya_intro_overlay.dart';
 import 'academy_board.dart';
+import 'widgets/tactics_playback_controls.dart';
 import 'themes/academy_scholar_theme.dart';
 import '../widgets/ambient_scaffold.dart';
 import '../dashboard_page.dart';
@@ -25,6 +29,32 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   late final AnimationController _slideController;
   late final ScrollController _chatScrollController;
+  bool _showAcademyIntro = false;
+
+  void _checkShowAcademyIntro() {
+    final repo = ref.read(tutorialProgressRepositoryProvider);
+    final isGoogleSignedIn = repo.getIsGoogleSignedIn();
+
+    final currentCount = repo.getAcademyAccessCount();
+    final nextCount = currentCount + 1;
+    repo.setAcademyAccessCount(nextCount); // asynchronous save
+
+    final hasSeen = repo.hasSeenAcademyIntro();
+
+    if (!isGoogleSignedIn) {
+      // Guest user: show every time
+      _showAcademyIntro = true;
+    } else {
+      // Signed up user
+      if (!hasSeen) {
+        // Once after first install
+        _showAcademyIntro = true;
+      } else if (nextCount > 0 && nextCount % 10 == 0) {
+        // Once in 10 times
+        _showAcademyIntro = true;
+      }
+    }
+  }
 
   @override
   void initState() {
@@ -49,6 +79,9 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
         }
       }
     });
+
+    _checkShowAcademyIntro();
+
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await ref.read(chessProvider.notifier).initializeAcademySession();
     });
@@ -704,94 +737,136 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
   double _lerp(double start, double end, double t) => start + (end - start) * t;
 
   Widget _buildBottomActionBar(BuildContext context, ChessState state, ChessNotifier notifier) {
-    return JuicyGlassCard(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      borderRadius: 20,
-      child: Center(
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _PremiumActionIcon(
-              icon: Icons.add_box_rounded,
-              tooltip: 'New Game',
-              baseColor: const Color(0xFF10B981),
-              onTap: () => _handleNewGame(context, ref),
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 400),
+      transitionBuilder: (Widget child, Animation<double> animation) {
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0.0, 0.3),
+            end: Offset.zero,
+          ).animate(animation),
+          child: FadeTransition(
+            opacity: animation,
+            child: child,
+          ),
+        );
+      },
+      child: state.activeTacticIndex != null
+          ? const KeyedSubtree(
+              key: ValueKey('tactics_playback_bottom'),
+              child: TacticsPlaybackControls(axis: Axis.horizontal),
+            )
+          : JuicyGlassCard(
+              key: const ValueKey('normal_bottom_action_bar'),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              borderRadius: 20,
+              child: Center(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _PremiumActionIcon(
+                      icon: Icons.add_box_rounded,
+                      tooltip: 'New Game',
+                      baseColor: const Color(0xFF10B981),
+                      onTap: () => _handleNewGame(context, ref),
+                    ),
+                    const SizedBox(width: 12),
+                    _PremiumActionIcon(
+                      icon: Icons.undo_rounded,
+                      tooltip: 'Undo',
+                      baseColor: const Color(0xFFF59E0B),
+                      isEnabled: state.canUndo,
+                      isBlinking: state.isAcademyBlunderActive,
+                      onTap: state.canUndo ? () => notifier.undo() : null,
+                    ),
+                    const SizedBox(width: 12),
+                    _PremiumActionIcon(
+                      icon: state.showLog
+                          ? Icons.chat_bubble_outline_rounded
+                          : Icons.history_edu_rounded,
+                      tooltip: 'Toggle Log',
+                      baseColor: const Color(0xFF3B82F6),
+                      isActive: state.showLog,
+                      onTap: () => notifier.toggleLog(),
+                    ),
+                  ],
+                ),
+              ),
             ),
-            const SizedBox(width: 12),
-            _PremiumActionIcon(
-              icon: Icons.undo_rounded,
-              tooltip: 'Undo',
-              baseColor: const Color(0xFFF59E0B),
-              isEnabled: state.canUndo,
-              isBlinking: state.isAcademyBlunderActive,
-              onTap: state.canUndo ? () => notifier.undo() : null,
-            ),
-            const SizedBox(width: 12),
-            _PremiumActionIcon(
-              icon: state.showLog
-                  ? Icons.chat_bubble_outline_rounded
-                  : Icons.history_edu_rounded,
-              tooltip: 'Toggle Log',
-              baseColor: const Color(0xFF3B82F6),
-              isActive: state.showLog,
-              onTap: () => notifier.toggleLog(),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
   Widget _buildVerticalActionBar(BuildContext context, ChessState state, ChessNotifier notifier) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.35),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.5),
-          width: 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 400),
+      transitionBuilder: (Widget child, Animation<double> animation) {
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0.3, 0.0),
+            end: Offset.zero,
+          ).animate(animation),
+          child: FadeTransition(
+            opacity: animation,
+            child: child,
           ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          _PremiumActionIcon(
-            icon: Icons.add_box_rounded,
-            tooltip: 'New Game',
-            baseColor: const Color(0xFF10B981),
-            onTap: () => _handleNewGame(context, ref),
-          ),
-          const SizedBox(height: 12),
-          _PremiumActionIcon(
-            icon: Icons.undo_rounded,
-            tooltip: 'Undo',
-            baseColor: const Color(0xFFF59E0B),
-            isEnabled: state.canUndo,
-            isBlinking: state.isAcademyBlunderActive,
-            onTap: state.canUndo ? () => notifier.undo() : null,
-          ),
-          const SizedBox(height: 12),
-          _PremiumActionIcon(
-            icon: state.showLog
-                ? Icons.chat_bubble_outline_rounded
-                : Icons.history_edu_rounded,
-            tooltip: 'Toggle Log',
-            baseColor: const Color(0xFF3B82F6),
-            isActive: state.showLog,
-            onTap: () => notifier.toggleLog(),
-          ),
-        ],
-      ),
+        );
+      },
+      child: state.activeTacticIndex != null
+          ? const KeyedSubtree(
+              key: ValueKey('tactics_playback'),
+              child: TacticsPlaybackControls(axis: Axis.vertical),
+            )
+          : Container(
+              key: const ValueKey('normal_vertical_action_bar'),
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.35),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.5),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _PremiumActionIcon(
+                    icon: Icons.add_box_rounded,
+                    tooltip: 'New Game',
+                    baseColor: const Color(0xFF10B981),
+                    onTap: () => _handleNewGame(context, ref),
+                  ),
+                  const SizedBox(height: 12),
+                  _PremiumActionIcon(
+                    icon: Icons.undo_rounded,
+                    tooltip: 'Undo',
+                    baseColor: const Color(0xFFF59E0B),
+                    isEnabled: state.canUndo,
+                    isBlinking: state.isAcademyBlunderActive,
+                    onTap: state.canUndo ? () => notifier.undo() : null,
+                  ),
+                  const SizedBox(height: 12),
+                  _PremiumActionIcon(
+                    icon: state.showLog
+                        ? Icons.chat_bubble_outline_rounded
+                        : Icons.history_edu_rounded,
+                    tooltip: 'Toggle Log',
+                    baseColor: const Color(0xFF3B82F6),
+                    isActive: state.showLog,
+                    onTap: () => notifier.toggleLog(),
+                  ),
+                ],
+              ),
+            ),
     );
   }  Widget _buildLandscapeLayout(
     BuildContext context,
@@ -822,7 +897,39 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
                       SizedBox(
                         width: boardSize,
                         height: boardSize,
-                        child: const AcademyBoard(alignment: Alignment.center),
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            const AcademyBoard(alignment: Alignment.center),
+                            if (state.isTacticsModeActive)
+                              Positioned(
+                                top: 12,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: ScholarlyTheme.accentGold.withValues(alpha: 0.9),
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: ScholarlyTheme.accentGold.withValues(alpha: 0.35),
+                                        blurRadius: 8,
+                                        spreadRadius: 1,
+                                      ),
+                                    ],
+                                  ),
+                                  child: Text(
+                                    'TACTICS MODE',
+                                    style: GoogleFonts.inter(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 11,
+                                      letterSpacing: 1.0,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
                       SizedBox(width: paddingValue),
                       Container(
@@ -991,95 +1098,141 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
           left: false,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(0, 0, 0, 8),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final isLandscape = constraints.maxWidth > constraints.maxHeight;
-                if (isLandscape) {
-                  return _buildLandscapeLayout(context, state, notifier, constraints);
-                }
+            child: Stack(
+              children: [
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isLandscape = constraints.maxWidth > constraints.maxHeight;
+                    if (isLandscape) {
+                      return _buildLandscapeLayout(context, state, notifier, constraints);
+                    }
 
-                final totalWidth = constraints.maxWidth;
-                final totalHeight = constraints.maxHeight;
-                final boardHeight = totalWidth;
-                final remainingHeight = totalHeight - boardHeight;
+                    final totalWidth = constraints.maxWidth;
+                    final totalHeight = constraints.maxHeight;
+                    final boardHeight = totalWidth;
+                    final remainingHeight = totalHeight - boardHeight;
 
-                return AnimatedBuilder(
-                  animation: _slideController,
-                  builder: (context, child) {
-                    final factor = _slideController.value;
+                    return AnimatedBuilder(
+                      animation: _slideController,
+                      builder: (context, child) {
+                        final factor = _slideController.value;
 
-                    final bottomBarOpacity = (1.0 - factor).clamp(0.0, 1.0);
-                    final bottomBarTranslation = 120.0 * factor;
+                        final bottomBarOpacity = (1.0 - factor).clamp(0.0, 1.0);
+                        final bottomBarTranslation = 120.0 * factor;
 
-                    final collapsedTop = boardHeight + 4;
-                    // The collapsed panel occupies the space below the board except the bottom action bar.
-                    // The action bar + padding takes roughly 82px.
-                    final collapsedHeight = remainingHeight - 82;
+                        final collapsedTop = boardHeight + 4;
+                        // The collapsed panel occupies the space below the board except the bottom action bar.
+                        // The action bar + padding takes roughly 82px.
+                        final collapsedHeight = remainingHeight - 82;
 
-                    final currentTop = _lerp(collapsedTop, 0.0, factor);
-                    final currentHeight = _lerp(collapsedHeight, totalHeight, factor);
+                        final currentTop = _lerp(collapsedTop, 0.0, factor);
+                        final currentHeight = _lerp(collapsedHeight, totalHeight, factor);
 
-                    return Stack(
-                      children: [
-                        // 1. CHESSBOARD LAYER (with dynamic blur overlay)
-                        Positioned(
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          height: boardHeight,
-                          child: ClipRect(
-                            child: Stack(
-                              children: [
-                                const AcademyBoard(alignment: Alignment.topCenter),
-                                if (factor > 0.0)
-                                  Positioned.fill(
-                                    child: BackdropFilter(
-                                      filter: ImageFilter.blur(
-                                        sigmaX: 12.0 * factor,
-                                        sigmaY: 12.0 * factor,
-                                      ),
-                                      child: Container(
-                                        color: Colors.white.withValues(
-                                          alpha: 0.15 * factor,
+                        return Stack(
+                          children: [
+                            // 1. CHESSBOARD LAYER (with dynamic blur overlay)
+                            Positioned(
+                              top: 0,
+                              left: 0,
+                              right: 0,
+                              height: boardHeight,
+                              child: ClipRect(
+                                child: Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    const AcademyBoard(alignment: Alignment.topCenter),
+                                    if (state.isTacticsModeActive)
+                                      Positioned(
+                                        top: 12,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: ScholarlyTheme.accentGold.withValues(alpha: 0.9),
+                                            borderRadius: BorderRadius.circular(12),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: ScholarlyTheme.accentGold.withValues(alpha: 0.35),
+                                                blurRadius: 8,
+                                                spreadRadius: 1,
+                                              ),
+                                            ],
+                                          ),
+                                          child: Text(
+                                            'TACTICS MODE',
+                                            style: GoogleFonts.inter(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 11,
+                                              letterSpacing: 1.0,
+                                            ),
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ),
-
-                        // 2. BOTTOM ACTION BAR LAYER (fades and slides off screen)
-                        Positioned(
-                          left: 0,
-                          right: 0,
-                          bottom: 12 - bottomBarTranslation,
-                          child: Opacity(
-                            opacity: bottomBarOpacity,
-                            child: IgnorePointer(
-                              ignoring: factor > 0.5,
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                                child: _buildBottomActionBar(context, state, notifier),
+                                    if (factor > 0.0)
+                                      Positioned.fill(
+                                        child: BackdropFilter(
+                                          filter: ImageFilter.blur(
+                                            sigmaX: 12.0 * factor,
+                                            sigmaY: 12.0 * factor,
+                                          ),
+                                          child: Container(
+                                            color: Colors.white.withValues(
+                                              alpha: 0.15 * factor,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
                               ),
                             ),
-                          ),
-                        ),
 
-                        // 3. SLIDING COMMENTARY HISTORY LAYER
-                        Positioned(
-                          top: currentTop,
-                          left: 0,
-                          right: 0,
-                          height: currentHeight,
-                          child: _buildSlidingCommentaryPanel(context, state, factor),
-                        ),
-                      ],
+                            // 2. BOTTOM ACTION BAR LAYER (fades and slides off screen)
+                            Positioned(
+                              left: 0,
+                              right: 0,
+                              bottom: 12 - bottomBarTranslation,
+                              child: Opacity(
+                                opacity: bottomBarOpacity,
+                                child: IgnorePointer(
+                                  ignoring: factor > 0.5,
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                                    child: _buildBottomActionBar(context, state, notifier),
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                            // 3. SLIDING COMMENTARY HISTORY LAYER
+                            Positioned(
+                              top: currentTop,
+                              left: 0,
+                              right: 0,
+                              height: currentHeight,
+                              child: _buildSlidingCommentaryPanel(context, state, factor),
+                            ),
+                          ],
+                        );
+                      },
                     );
                   },
-                );
-              },
+                ),
+                if (_showAcademyIntro)
+                  GMChanakyaIntroOverlay(
+                    pageTitle: 'ACADEMY',
+                    text:
+                        "GoodDay, ${state.userName}: I am GM Chankya, I am here to mentor and coach you, my playing strength and style are auto-tuned to reflect your current capabilities. I adapt to your playstyle and Scotoma Report. The more rated games you play, the more precise I will become in exposing your vulnerabilities. Do not be disheartened if my strikes cut deep at times; they will gradually forge you into a stronger player wherever you were once fragile. Do not hesitate to attend these classes and face the challenges in the Arena modes.",
+                    onDismiss: () async {
+                      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                      setState(() {
+                        _showAcademyIntro = false;
+                      });
+                      final repo = ref.read(tutorialProgressRepositoryProvider);
+                      await repo.setAcademyIntroSeen(true);
+                    },
+                  ),
+              ],
             ),
           ),
         ),

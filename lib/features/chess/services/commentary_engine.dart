@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:kingslayer_chess/src/rust/api/puzzles.dart' as rust_puzzles;
 import 'package:kingslayer_chess/src/rust/api/commentary.dart' as rust_commentary;
+import 'package:kingslayer_chess/src/rust/api/tactics.dart';
 import '../data/puzzle_repository.dart';
 import '../domain/models/position_context.dart';
 
@@ -50,7 +51,28 @@ class CommentaryEngine {
     String? userQuery,
     String? structuredPrompt,
     String? userName,
+    String? tacticsBaseFen,
+    List<String>? tacticsSequence,
   }) async* {
+    final isTacticsQuery = userQuery?.startsWith('[TACTICS_QUERY]') ?? false;
+    if (isTacticsQuery) {
+      if (tacticsBaseFen == null || tacticsSequence == null) {
+        yield 'Apprentice, the tactical sequence could not be retrieved from the board.';
+        return;
+      }
+      yield 'GM Chanakya is examining the proposed variations...';
+      try {
+        final result = generateTacticsAnalysis(
+          fen: tacticsBaseFen,
+          userUciMoves: tacticsSequence,
+        );
+        yield result.textResponse;
+      } catch (e) {
+        yield 'I encountered an error calculating the tactics: $e';
+      }
+      return;
+    }
+
     final query = userQuery?.toLowerCase() ?? '';
     final isPuzzleRequest = query.contains('puzzle') || query.contains('train') || query.contains('exercise');
     if (isPuzzleRequest) {
@@ -144,7 +166,10 @@ class CommentaryEngine {
       
       String cleanMoveName(String m) {
         return m.replaceAll(RegExp(r'^(White|Black) moves '), '')
+                .replaceAll(RegExp(r'^(White|Black)\s+played '), '')
                 .replaceAll(RegExp(r'^(White|Black)\s+'), '')
+                .replaceAll(RegExp(r'^played\s+'), '')
+                .replaceAll(RegExp(r'^Move played:\s+'), '')
                 .replaceAll(RegExp(r'\.$'), '');
       }
 
@@ -176,6 +201,13 @@ class CommentaryEngine {
         }
 
         response = "Be warned: playing $lastMoveClean is a blunder, dropping the evaluation by $absoluteDiff pawns.$threatPhrase Seek a more resilient path.";
+      } else if (cleanQuery.contains('why') || cleanQuery.contains('explain') || cleanQuery.contains('reason')) {
+        final lastMoveClean = cleanMoveName(context.moveDescription);
+        response = 'I played $lastMoveClean, which is evaluated as a ${context.quality.toLowerCase()} decision. '
+            'The position stands $descEval. This aligns with my ${context.positionStyle.toLowerCase()} style, and the tactical threat level is ${context.threatLevel.toLowerCase()}. ';
+        if (context.tacticalThreats.isNotEmpty) {
+          response += 'Keep in mind these tactical details: ${context.tacticalThreats.join(" ")}';
+        }
       } else if (cleanQuery.contains('candidate') || cleanQuery.contains('move') || cleanQuery.contains('what to play') || cleanQuery.contains('what should i play') || cleanQuery.contains('suggest')) {
         if (context.candidates.isNotEmpty) {
           final buffer = StringBuffer();
@@ -210,13 +242,6 @@ class CommentaryEngine {
           response = 'A sound plan from this position would be to follow this line: $cleanedPv. This sequence maintains piece activity and coordinates our forces toward key squares.';
         } else {
           response = 'The plan here is positional. Secure control of open files, establish outposts for your knights, and ensure your pawn structure remains resilient against enemy pressure.';
-        }
-      } else if (cleanQuery.contains('why') || cleanQuery.contains('explain') || cleanQuery.contains('reason')) {
-        final lastMoveClean = cleanMoveName(context.moveDescription);
-        response = 'I played $lastMoveClean, which is evaluated as a ${context.quality.toLowerCase()} decision. '
-            'The position stands $descEval. This aligns with my ${context.positionStyle.toLowerCase()} style, and the tactical threat level is ${context.threatLevel.toLowerCase()}. ';
-        if (context.tacticalThreats.isNotEmpty) {
-          response += 'Keep in mind these tactical details: ${context.tacticalThreats.join(" ")}';
         }
       } else {
         // Fallback for general queries

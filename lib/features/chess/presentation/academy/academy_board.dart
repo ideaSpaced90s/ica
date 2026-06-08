@@ -21,6 +21,7 @@ import '../shared/animations/piece_motion_profile.dart';
 import '../shared/animations/shake_animation.dart';
 
 import 'themes/academy_scholar_theme.dart';
+import 'themes/academy_champion_theme.dart';
 
 class AcademyBoard extends ConsumerStatefulWidget {
   final AlignmentGeometry alignment;
@@ -66,44 +67,104 @@ class _AcademyBoardState extends ConsumerState<AcademyBoard>
   @override
   Widget build(BuildContext context) {
     final chessState = ref.watch(chessProvider);
-    const chessTheme = AcademyScholarTheme();
+    final targetThemeValue = chessState.isBoardInChampionsTheme ? 1.0 : 0.0;
 
-    // Use currentBoardFen for display during analysis/history viewing
-    final displayGame = ChessGame(fen: chessState.currentBoardFen);
+    String getTacticsDisplayFen() {
+      final base = chessState.tacticsBaseFen ?? chessState.currentBoardFen;
+      final board = chess_lib.Chess.fromFEN(base);
+      for (final step in chessState.tacticsSequence) {
+        final piece = board.get(step.from);
+        if (piece != null) {
+          final isWhitePiece = piece.color == chess_lib.Color.WHITE;
+          final currentFen = board.fen;
+          final parts = currentFen.split(' ');
+          if (parts.length > 1) {
+            parts[1] = isWhitePiece ? 'w' : 'b';
+            board.load(parts.join(' '));
+          }
+        }
+        board.move({'from': step.from, 'to': step.to});
+      }
+      return board.fen;
+    }
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final boardSize = min(constraints.maxWidth, constraints.maxHeight);
+    String getPlaybackDisplayFen() {
+      final base = chessState.tacticsBaseFen ?? chessState.currentBoardFen;
+      final board = chess_lib.Chess.fromFEN(base);
+      final moves = chessState.activeTacticMoves ?? [];
+      final limit = min(chessState.tacticPlaybackPosition, moves.length);
+      for (int i = 0; i < limit; i++) {
+        final uci = moves[i];
+        if (uci.length >= 4) {
+          final from = uci.substring(0, 2);
+          final to = uci.substring(2, 4);
+          final promo = uci.length > 4 ? uci.substring(4) : null;
+          final piece = board.get(from);
+          if (piece != null) {
+            final isWhitePiece = piece.color == chess_lib.Color.WHITE;
+            final currentFen = board.fen;
+            final parts = currentFen.split(' ');
+            if (parts.length > 1) {
+              parts[1] = isWhitePiece ? 'w' : 'b';
+              board.load(parts.join(' '));
+            }
+          }
+          board.move({'from': from, 'to': to, 'promotion': ?promo});
+        }
+      }
+      return board.fen;
+    }
 
-        return Align(
-          alignment: widget.alignment,
-          child: SizedBox(
-            width: boardSize,
-            height: boardSize,
-            child: Container(
-              clipBehavior: Clip.none,
-              decoration: null,
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  // 1. Background Effects (Classic has none)
-                  RepaintBoundary(
-                    child: chessTheme.buildBackground(
-                      context,
-                      ref
-                          .read(chessProvider.notifier)
-                          .isAnimationTypeEnabled('themeAmbience'),
-                    ),
-                  ),
+    final String displayFen;
+    if (chessState.activeTacticIndex != null) {
+      displayFen = getPlaybackDisplayFen();
+    } else if (chessState.isTacticsModeActive) {
+      displayFen = getTacticsDisplayFen();
+    } else {
+      displayFen = chessState.currentBoardFen;
+    }
+    final displayGame = ChessGame(fen: displayFen);
 
-                  if (chessState.game.inCheck)
-                    chessTheme.buildCheckEffect(context),
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0.0, end: targetThemeValue),
+      duration: const Duration(milliseconds: 1200),
+      curve: Curves.easeInOut,
+      builder: (context, t, child) {
+        final chessTheme = InterpolatedChessTheme(t);
 
-                  if (chessState.academyHouseAnimations)
-                    const AcademyPaperOverlay(),
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final boardSize = min(constraints.maxWidth, constraints.maxHeight);
 
-                  RepaintBoundary(
-                    child: GridView.builder(
+            return Align(
+              alignment: widget.alignment,
+              child: SizedBox(
+                width: boardSize,
+                height: boardSize,
+                child: Container(
+                  clipBehavior: Clip.none,
+                  decoration: null,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      // 1. Background Effects (Classic has none)
+                      RepaintBoundary(
+                        child: chessTheme.buildBackground(
+                          context,
+                          ref
+                              .read(chessProvider.notifier)
+                              .isAnimationTypeEnabled('themeAmbience'),
+                        ),
+                      ),
+
+                      if (chessState.game.inCheck && !chessState.isTacticsModeActive && chessState.activeTacticIndex == null)
+                        chessTheme.buildCheckEffect(context),
+
+                      if (chessState.academyHouseAnimations)
+                        const AcademyPaperOverlay(),
+
+                      RepaintBoundary(
+                        child: GridView.builder(
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 8,
@@ -142,6 +203,20 @@ class _AcademyBoardState extends ConsumerState<AcademyBoard>
                             chessState.premoveFrom == squareName ||
                             chessState.premoveTo == squareName;
 
+                        TacticsStep? lastStepForSquare;
+                        if (chessState.isTacticsModeActive) {
+                          for (final step in chessState.tacticsSequence) {
+                            if (step.from == squareName || step.to == squareName) {
+                              lastStepForSquare = step;
+                            }
+                          }
+                        }
+                        final isPlaybackHighlight = chessState.activeTacticIndex != null &&
+                            chessState.activeTacticMoves != null &&
+                            chessState.tacticPlaybackPosition > 0 &&
+                            (chessState.activeTacticMoves![chessState.tacticPlaybackPosition - 1].substring(0, 2) == squareName ||
+                                chessState.activeTacticMoves![chessState.tacticPlaybackPosition - 1].substring(2, 4) == squareName);
+
                         chess_lib.Piece? piece;
                         bool isGhostPiece = false;
                         if (chessState.premoveFrom != null && chessState.premoveTo != null) {
@@ -159,12 +234,17 @@ class _AcademyBoardState extends ConsumerState<AcademyBoard>
 
                         return DragTarget<String>(
                           onWillAcceptWithDetails: (details) {
+                            if (chessState.activeTacticIndex != null) return false;
                             return _legalTargets.contains(squareName);
                           },
                           onAcceptWithDetails: (details) {
-                            ref
-                                .read(chessProvider.notifier)
-                                .makeMove(details.data, squareName);
+                            if (chessState.isTacticsModeActive) {
+                              ref.read(chessProvider.notifier).addTacticsMove(details.data, squareName);
+                            } else {
+                              ref
+                                  .read(chessProvider.notifier)
+                                  .makeMove(details.data, squareName);
+                            }
                             setState(() {
                               _dropSquare = squareName;
                             });
@@ -318,6 +398,31 @@ class _AcademyBoardState extends ConsumerState<AcademyBoard>
                                                     );
                                               },
                                             ),
+                                          if (lastStepForSquare != null)
+                                            Container(
+                                              decoration: BoxDecoration(
+                                                color: (lastStepForSquare.isUserMove
+                                                        ? ScholarlyTheme.accentGold
+                                                        : ScholarlyTheme.accentBlueSoft)
+                                                    .withValues(alpha: 0.22),
+                                                border: Border.all(
+                                                  color: lastStepForSquare.isUserMove
+                                                      ? ScholarlyTheme.accentGold
+                                                      : ScholarlyTheme.accentBlueSoft,
+                                                  width: 2.0,
+                                                ),
+                                              ),
+                                            ),
+                                          if (isPlaybackHighlight)
+                                            Container(
+                                              decoration: BoxDecoration(
+                                                color: ScholarlyTheme.accentGold.withValues(alpha: 0.24),
+                                                border: Border.all(
+                                                  color: ScholarlyTheme.accentGold,
+                                                  width: 2.5,
+                                                ),
+                                              ),
+                                            ),
                                           if (isSuggestedFrom ||
                                               isSuggestedTo)
                                             Container(
@@ -397,7 +502,8 @@ class _AcademyBoardState extends ConsumerState<AcademyBoard>
                                                   final localPiece = piece;
                                                   final pieceExists = localPiece != null;
                                                   final isPlayerPiece = localPiece != null && !isGhostPiece &&
-                                                      ((localPiece.color == chess_lib.Color.WHITE) == chessState.isPlayerWhite);
+                                                      chessState.activeTacticIndex == null &&
+                                                      (chessState.isTacticsModeActive || ((localPiece.color == chess_lib.Color.WHITE) == chessState.isPlayerWhite));
 
                                                   Widget pieceWidget = ChessPieceWidget(
                                                     squareName: isGhostPiece ? chessState.premoveFrom! : squareName,
@@ -569,9 +675,26 @@ class _AcademyBoardState extends ConsumerState<AcademyBoard>
         );
       },
     );
-  }
+  },
+);
+}
 
   List<String> _getLegalTargetsForSquare(String squareName, ChessGame game, ChessState chessState) {
+    if (chessState.isTacticsModeActive) {
+      final piece = game.getPiece(squareName);
+      if (piece == null) return const [];
+      final pieceIsWhite = piece.color == chess_lib.Color.WHITE;
+      try {
+        final fenParts = game.fen.split(' ');
+        if (fenParts.length > 1) {
+          fenParts[1] = pieceIsWhite ? 'w' : 'b';
+          final tempGame = ChessGame(fen: fenParts.join(' '));
+          return tempGame.legalDestinations(squareName);
+        }
+      } catch (_) {}
+      return game.legalDestinations(squareName);
+    }
+
     final isWhiteTurn = game.turn == chess_lib.Color.WHITE;
     final isPlayerTurn = chessState.isPlayerWhite == isWhiteTurn;
     if (isPlayerTurn) {
@@ -605,7 +728,32 @@ class _AcademyBoardState extends ConsumerState<AcademyBoard>
     final haptics = ref.read(chessHapticsServiceProvider);
     haptics.selection();
     final chessState = ref.read(chessProvider);
-    final displayGame = ChessGame(fen: chessState.currentBoardFen);
+
+    if (chessState.activeTacticIndex != null) return;
+
+    String getTacticsDisplayFen() {
+      final base = chessState.tacticsBaseFen ?? chessState.currentBoardFen;
+      final board = chess_lib.Chess.fromFEN(base);
+      for (final step in chessState.tacticsSequence) {
+        final piece = board.get(step.from);
+        if (piece != null) {
+          final isWhitePiece = piece.color == chess_lib.Color.WHITE;
+          final currentFen = board.fen;
+          final parts = currentFen.split(' ');
+          if (parts.length > 1) {
+            parts[1] = isWhitePiece ? 'w' : 'b';
+            board.load(parts.join(' '));
+          }
+        }
+        board.move({'from': step.from, 'to': step.to});
+      }
+      return board.fen;
+    }
+
+    final String displayFen = chessState.isTacticsModeActive
+        ? getTacticsDisplayFen()
+        : chessState.currentBoardFen;
+    final displayGame = ChessGame(fen: displayFen);
 
     // Tap ripple on every tap (gated by animations setting)
     if (ref.read(chessProvider.notifier).isAnimationTypeEnabled('feedback')) {
@@ -614,7 +762,11 @@ class _AcademyBoardState extends ConsumerState<AcademyBoard>
 
     if (_selectedSquare != null && _legalTargets.contains(squareName)) {
       if (chessState.isWaitingForSideChoice) return;
-      ref.read(chessProvider.notifier).makeMove(_selectedSquare!, squareName);
+      if (chessState.isTacticsModeActive) {
+        ref.read(chessProvider.notifier).addTacticsMove(_selectedSquare!, squareName);
+      } else {
+        ref.read(chessProvider.notifier).makeMove(_selectedSquare!, squareName);
+      }
       _clearSelection();
       return;
     }
@@ -629,6 +781,15 @@ class _AcademyBoardState extends ConsumerState<AcademyBoard>
 
   void _handlePieceSelection(String squareName, ChessGame displayGame) {
     final chessState = ref.read(chessProvider);
+    if (chessState.isTacticsModeActive) {
+      setState(() {
+        _selectedSquare = squareName;
+        _legalTargets = _getLegalTargetsForSquare(squareName, displayGame, chessState);
+      });
+      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.pieceSelect);
+      return;
+    }
+
     final piece = displayGame.getPiece(squareName);
     if (piece == null) {
       _clearSelection();
@@ -1098,4 +1259,94 @@ class AcademyArrowPainter extends CustomPainter {
       oldDelegate.progress != progress ||
       oldDelegate.from != from ||
       oldDelegate.to != to;
+}
+
+class InterpolatedChessTheme extends ChessTheme {
+  final double t;
+  final AcademyScholarTheme scholar;
+  final AcademyChampionTheme champion;
+
+  InterpolatedChessTheme(this.t)
+      : scholar = const AcademyScholarTheme(),
+        champion = const AcademyChampionTheme(),
+        super(id: 'interpolated', name: 'Interpolated');
+
+  @override
+  Color get lightSquare => Color.lerp(scholar.lightSquare, champion.lightSquare, t)!;
+
+  @override
+  Color get darkSquare => Color.lerp(scholar.darkSquare, champion.darkSquare, t)!;
+
+  @override
+  Color get lightCoordinateColor => Color.lerp(scholar.lightCoordinateColor, champion.lightCoordinateColor, t)!;
+
+  @override
+  Color get darkCoordinateColor => Color.lerp(scholar.darkCoordinateColor, champion.darkCoordinateColor, t)!;
+
+  @override
+  Color get frameColor => Color.lerp(scholar.frameColor, champion.frameColor, t)!;
+
+  @override
+  Widget buildBackground(BuildContext context, bool animationsEnabled) {
+    return scholar.buildBackground(context, animationsEnabled);
+  }
+
+  @override
+  Widget buildCheckEffect(BuildContext context) {
+    return champion.buildCheckEffect(context);
+  }
+
+  @override
+  CustomPainter? getSquarePainter(bool isLight, double animationValue) => null;
+
+  @override
+  Widget buildPiece(
+    BuildContext context,
+    String type,
+    bool isWhite,
+    bool isHighlighted,
+    double animationValue,
+  ) {
+    if (t == 0.0) {
+      return scholar.buildPiece(context, type, isWhite, isHighlighted, animationValue);
+    }
+    if (t == 1.0) {
+      return champion.buildPiece(context, type, isWhite, isHighlighted, animationValue);
+    }
+    return Stack(
+      children: [
+        Opacity(
+          opacity: (1.0 - t).clamp(0.0, 1.0),
+          child: scholar.buildPiece(context, type, isWhite, isHighlighted, animationValue),
+        ),
+        Opacity(
+          opacity: t.clamp(0.0, 1.0),
+          child: champion.buildPiece(context, type, isWhite, isHighlighted, animationValue),
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget buildMoveHint(BuildContext context, bool isEnemy) {
+    return scholar.buildMoveHint(context, isEnemy);
+  }
+
+  @override
+  Widget buildSelectionRing(BuildContext context) {
+    return scholar.buildSelectionRing(context);
+  }
+
+  @override
+  Widget buildLastMoveHighlight(BuildContext context, double opacity) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Color.lerp(
+          const Color(0xFF0056B3),
+          const Color(0xFFFFD700),
+          t,
+        )!.withValues(alpha: opacity),
+      ),
+    );
+  }
 }
