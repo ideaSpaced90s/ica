@@ -12,6 +12,7 @@ import '../widgets/commentary_history.dart';
 import '../widgets/gm_chanakya_intro_overlay.dart';
 import 'academy_board.dart';
 import 'widgets/tactics_playback_controls.dart';
+import 'widgets/academy_pendulum_indicator.dart';
 import 'themes/academy_scholar_theme.dart';
 import '../widgets/ambient_scaffold.dart';
 import '../dashboard_page.dart';
@@ -737,6 +738,7 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
   double _lerp(double start, double end, double t) => start + (end - start) * t;
 
   Widget _buildBottomActionBar(BuildContext context, ChessState state, ChessNotifier notifier) {
+    final isPlayerTurn = state.isPlayerWhite == (state.game.turn == chess_lib.Color.WHITE);
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 400),
       transitionBuilder: (Widget child, Animation<double> animation) {
@@ -756,48 +758,64 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
               key: ValueKey('tactics_playback_bottom'),
               child: TacticsPlaybackControls(axis: Axis.horizontal),
             )
-          : JuicyGlassCard(
-              key: const ValueKey('normal_bottom_action_bar'),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              borderRadius: 20,
-              child: Center(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _PremiumActionIcon(
-                      icon: Icons.add_box_rounded,
-                      tooltip: 'New Game',
-                      baseColor: const Color(0xFF10B981),
-                      onTap: () => _handleNewGame(context, ref),
-                    ),
-                    const SizedBox(width: 12),
-                    _PremiumActionIcon(
-                      icon: Icons.undo_rounded,
-                      tooltip: 'Undo',
-                      baseColor: const Color(0xFFF59E0B),
-                      isEnabled: state.canUndo,
-                      isBlinking: state.isAcademyBlunderActive,
-                      onTap: state.canUndo ? () => notifier.undo() : null,
-                    ),
-                    const SizedBox(width: 12),
-                    _PremiumActionIcon(
-                      icon: state.showLog
-                          ? Icons.chat_bubble_outline_rounded
-                          : Icons.history_edu_rounded,
-                      tooltip: 'Toggle Log',
-                      baseColor: const Color(0xFF3B82F6),
-                      isActive: state.showLog,
-                      onTap: () => notifier.toggleLog(),
-                    ),
-                  ],
+          : Column(
+              key: const ValueKey('normal_bottom_action_bar_with_pendulums'),
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AcademyPendulumIndicator(
+                  isActive: !state.game.gameOver && !isPlayerTurn,
+                  isChanakya: true,
                 ),
-              ),
+                const SizedBox(height: 8),
+                JuicyGlassCard(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  borderRadius: 20,
+                  child: Center(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _PremiumActionIcon(
+                          icon: Icons.add_box_rounded,
+                          tooltip: 'New Game',
+                          baseColor: const Color(0xFF10B981),
+                          onTap: () => _handleNewGame(context, ref),
+                        ),
+                        const SizedBox(width: 12),
+                        _PremiumActionIcon(
+                          icon: Icons.undo_rounded,
+                          tooltip: 'Undo',
+                          baseColor: const Color(0xFFF59E0B),
+                          isEnabled: state.canUndo,
+                          isBlinking: state.isAcademyBlunderActive,
+                          onTap: state.canUndo ? () => notifier.undo() : null,
+                        ),
+                        const SizedBox(width: 12),
+                        _PremiumActionIcon(
+                          icon: state.showLog
+                              ? Icons.chat_bubble_outline_rounded
+                              : Icons.history_edu_rounded,
+                          tooltip: 'Toggle Log',
+                          baseColor: const Color(0xFF3B82F6),
+                          isActive: state.showLog,
+                          onTap: () => notifier.toggleLog(),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                AcademyPendulumIndicator(
+                  isActive: !state.game.gameOver && isPlayerTurn,
+                  isChanakya: false,
+                ),
+              ],
             ),
     );
   }
 
   Widget _buildVerticalActionBar(BuildContext context, ChessState state, ChessNotifier notifier) {
+    final isPlayerTurn = state.isPlayerWhite == (state.game.turn == chess_lib.Color.WHITE);
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 400),
       transitionBuilder: (Widget child, Animation<double> animation) {
@@ -839,6 +857,11 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
                 mainAxisSize: MainAxisSize.min,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
+                  AcademyPendulumIndicator(
+                    isActive: !state.game.gameOver && !isPlayerTurn,
+                    isChanakya: true,
+                  ),
+                  const SizedBox(height: 12),
                   _PremiumActionIcon(
                     icon: Icons.add_box_rounded,
                     tooltip: 'New Game',
@@ -863,6 +886,11 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
                     baseColor: const Color(0xFF3B82F6),
                     isActive: state.showLog,
                     onTap: () => notifier.toggleLog(),
+                  ),
+                  const SizedBox(height: 12),
+                  AcademyPendulumIndicator(
+                    isActive: !state.game.gameOver && isPlayerTurn,
+                    isChanakya: false,
                   ),
                 ],
               ),
