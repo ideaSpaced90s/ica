@@ -325,13 +325,49 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
     'Defend':     'Defensive Ideas',
   };
 
-  static const Map<String, String> _chipPresets = {
-    'Analyze':    'Let me survey the board as it stands, Apprentice. ',
-    'Why':        "Well, I didn't play that by accident, Apprentice. ",
-    'Candidates': 'I shall lay before you the most worthy paths forward, Apprentice. ',
-    'Tactics':    'Does the board harbour hidden danger? — let me expose it, Apprentice. ',
-    'Plan':       'A true master acts on a plan, not on instinct alone, Apprentice. ',
-    'Defend':     'When under pressure, the wise first consolidate, Apprentice. ',
+  static const Map<String, List<String>> _chipPresets = {
+    'Analyze': [
+      'Let me survey the board as it stands, Apprentice. ',
+      'Let us examine the coordinate grid and piece activity, Apprentice. ',
+      'I shall cast my eye across the 64 squares, Apprentice. ',
+      'Analyzing the layout of the battleground, Apprentice. ',
+      'Let us look at the structure and piece alignments, Apprentice. ',
+    ],
+    'Why': [
+      "Well, I didn't play that by accident, Apprentice. ",
+      "Every move carries an intention, Apprentice. ",
+      "A move is not just a change of square — it is a statement, Apprentice. ",
+      "Let me explain the reasoning behind my choice, Apprentice. ",
+      "You question the logic? Let me clarify it for you, Apprentice. ",
+    ],
+    'Candidates': [
+      'I shall lay before you the most worthy paths forward, Apprentice. ',
+      'Consider these candidate options, Apprentice. ',
+      'The position offers a few promising avenues, Apprentice. ',
+      'Here are the moves that command our attention, Apprentice. ',
+      'Let us list the candidate continuations, Apprentice. ',
+    ],
+    'Tactics': [
+      'Does the board harbour hidden danger? — let me expose it, Apprentice. ',
+      'Tactics are the teeth of strategy. Let us look closer, Apprentice. ',
+      'Let us see if there are any immediate tactical opportunities, Apprentice. ',
+      'A sharp eye finds the hidden alignments and pins, Apprentice. ',
+      'Scanning the position for threats and combinations, Apprentice. ',
+    ],
+    'Plan': [
+      'A true master acts on a plan, not on instinct alone, Apprentice. ',
+      'Without a plan, we are merely moving pieces, Apprentice. ',
+      'Every strategic position requires a long-term goal, Apprentice. ',
+      'Let us formulate a coherent strategy for this layout, Apprentice. ',
+      'A plan gives direction to our tactical ideas, Apprentice. ',
+    ],
+    'Defend': [
+      'When under pressure, the wise first consolidate, Apprentice. ',
+      'A good shield is as valuable as a sharp sword, Apprentice. ',
+      'First, we must secure our own weaknesses, Apprentice. ',
+      'Let us look at how to reinforce our structure, Apprentice. ',
+      'Defense is an art of patience and resilience, Apprentice. ',
+    ],
   };
 
   static const Map<String, String> _fullQuestions = {
@@ -350,7 +386,11 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
       return;
     }
     final fullQuestion = _fullQuestions[label] ?? label;
-    var preset = _chipPresets[label] ?? '';
+    final presets = _chipPresets[label];
+    String preset = '';
+    if (presets != null && presets.isNotEmpty) {
+      preset = presets[math.Random().nextInt(presets.length)];
+    }
     preset = preset.replaceAll('Apprentice', '**${widget.state.userName}**');
     ref.read(chessProvider.notifier).sendUserQuery(fullQuestion, titlePrefix: preset);
     FocusScope.of(context).unfocus();

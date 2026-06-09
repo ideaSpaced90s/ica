@@ -617,6 +617,67 @@ class ChessState {
   }
 }
 
+String _pickWelcomeMessage() {
+  const welcomePool = [
+    "Welcome to the Academy, Apprentice. I am GM Chanakya. Place your pieces on the board or ask me for strategic counsel, and we shall prepare for the coming trials against the machine collective.",
+    "A true master acts on plan, not on instinct. I am GM Chanakya, and this Academy is where instincts are replaced by understanding. Make your first move — and let the study begin.",
+    "Every champion was once a student who refused to stop learning. Welcome, Apprentice. I am GM Chanakya. Describe your weakness, and I will build your prescription.",
+    "The board remembers nothing — but your mind must remember everything. I am GM Chanakya. In this Academy, we train the mind to see what the eye misses. Begin.",
+    "Strategy without preparation is merely improvisation. I am GM Chanakya. This chamber is where we turn your reactive play into disciplined mastery. The pieces await.",
+    "Chanakya once said: know your enemy and know yourself. I know the engine collective — now let us uncover your blind spots. Place your first move, Apprentice.",
+    "The difference between a good player and a great one is not talent — it is the willingness to identify and correct weakness. Welcome to the Academy. I am GM Chanakya. Let us find yours.",
+    "Defeat is only permanent if you learn nothing from it. I am GM Chanakya. Tell me where the board has betrayed you, and I shall design your cure. Begin, Apprentice.",
+  ];
+  return welcomePool[math.Random().nextInt(welcomePool.length)];
+}
+
+String _pickAcademySessionGreeting(String userName) {
+  final pool = [
+    "Hello, $userName! Welcome to the ideaSpace Academy Chess class. I am GM Chanakya appointed to mentor and guide you through.\n\nBefore we begin, please select whether you wish to learn Classic Chess or Chess960, and choose whether to play as White or Black to begin our training.",
+    "A true master acts on plan, not on instinct. Welcome, $userName. I am GM Chanakya. First, tell me: do you wish to fight in Classic Chess or Chess960? And shall you command the White or Black pieces today?",
+    "The board awaits, $userName. I am GM Chanakya — your guide, your critic, and your strategist. Select your game mode and your color. Then we begin the work of making you a better player.",
+    "Every session begins with a choice, $userName. I am GM Chanakya. Choose Classic or Chess960, choose your color — and the lesson will follow from there. Let us not delay.",
+    "Discipline separates the champion from the player who simply plays. Welcome, $userName. I am GM Chanakya. Select your mode and color, and we shall get to work immediately.",
+    "The engine collective does not rest — and neither do we. Welcome, $userName. I am GM Chanakya. Choose your battleground: Classic or Chess960. Choose your color. The work begins now.",
+    "What you learn today, you will feel in your hands tomorrow at the board. Welcome, $userName. I am GM Chanakya. Declare your game mode and color so our session may begin.",
+    "In the Academy, there are no shortcuts — only sharpened sight. Welcome, $userName. I am GM Chanakya. Choose Classic Chess or Chess960, select your color, and let the training begin.",
+  ];
+  return pool[math.Random().nextInt(pool.length)];
+}
+
+String _pickCustomFenGreeting() {
+  const pool = [
+    "Ah, you bring me a position from your Study Lab! Let me examine this setup. What would you like to know or practice from here?",
+    "Interesting. You have brought a custom position to the Academy. I have examined the board. Ask me what you wish to understand about this arrangement.",
+    "A study position — excellent initiative, Apprentice. I have already begun analyzing this setup. What aspect of this position would you like to explore?",
+    "You bring an outside position into the Academy — a sign of a curious mind. The board is loaded and I am ready. What shall we investigate here?",
+    "This position carries its own story. I can see it. Now tell me, Apprentice — what do you wish to learn from this specific arrangement of pieces?",
+  ];
+  return pool[math.Random().nextInt(pool.length)];
+}
+
+String _pickSideChoiceResponseWhite(String modeStr) {
+  final pool = [
+    "Excellent, you have chosen to play as White in $modeStr. Go ahead, make your move, and I shall respond accordingly.",
+    "White it is, in $modeStr. The initiative is yours — use it wisely. The first move sets the tone for everything that follows.",
+    "You command the White pieces in $modeStr. The opening move belongs to you. Choose it with intention, not habit.",
+    "Playing White in $modeStr — a fine choice. Remember, with the first move comes the obligation of initiative. Do not waste it. Make your move.",
+    "White in $modeStr. The center awaits your claim. I shall respond to everything you play with full precision. Begin.",
+  ];
+  return pool[math.Random().nextInt(pool.length)];
+}
+
+String _pickSideChoiceResponseBlack(String modeStr) {
+  final pool = [
+    "Excellent, you have chosen to play as Black in $modeStr. Today, I shall take the first step now. Observe how I open the board.",
+    "Black it is, in $modeStr. I will open as White now. Watch carefully — there is a lesson in every move I make.",
+    "You take the Black pieces in $modeStr. A reactive challenge awaits you. I shall now make the first move — analyze it before you respond.",
+    "Playing Black in $modeStr — a test of your defensive instincts and counter-striking ability. I move first. Watch, then respond with precision.",
+    "Black in $modeStr. I admire the choice — Black must earn every half-point. I will now open the game. Let the struggle begin.",
+  ];
+  return pool[math.Random().nextInt(pool.length)];
+}
+
 class ChessNotifier extends StateNotifier<ChessState> {
   final Ref ref;
 
@@ -635,7 +696,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
           game: ChessGame(),
           commentaryHistory: [
             CommentaryEntry(
-              text: "Welcome to the Academy, Apprentice. I am GM Chanakya. Place your pieces on the board or ask me for strategic counsel, and we shall prepare for the coming trials against the machine collective.",
+              text: _pickWelcomeMessage(),
               timestamp: DateTime.now(),
               isComplete: true,
               isUser: false,
@@ -3372,8 +3433,8 @@ class ChessNotifier extends StateNotifier<ChessState> {
       commentaryHistory: [
         CommentaryEntry(
           text: customFen != null
-              ? "Ah, you bring me a position from your Study Lab! Let me examine this setup. What would you like to know or practice from here?"
-              : "Hello, ${state.userName}! Welcome to the [App Icon] ideaSpace Academy Chess class. I am GM Chanakya appointed to mentor and guide you through.\n\nBefore we begin, please select whether you wish to learn Classic Chess or Chess960, and choose whether to play as White or Black to begin our training.",
+              ? _pickCustomFenGreeting()
+              : _pickAcademySessionGreeting(state.userName),
           timestamp: DateTime.now(),
           isComplete: true,
           isUser: false,
@@ -3438,9 +3499,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
     // 3. Prepare GM's response text
     String gmResponse = "";
     if (playAsWhite) {
-      gmResponse = "Excellent, you have chosen to play as White in $modeStr. Go ahead, make your move, and I shall respond accordingly.";
+      gmResponse = _pickSideChoiceResponseWhite(modeStr);
     } else {
-      gmResponse = "Excellent, you have chosen to play as Black in $modeStr. Today, I shall take the first step now. Observe how I open the board.";
+      gmResponse = _pickSideChoiceResponseBlack(modeStr);
     }
 
     // Add userEntry immediately

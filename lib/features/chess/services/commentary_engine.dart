@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:kingslayer_chess/src/rust/api/puzzles.dart' as rust_puzzles;
 import 'package:kingslayer_chess/src/rust/api/commentary.dart' as rust_commentary;
@@ -13,6 +14,11 @@ class CommentaryEngine {
   String? lastError;
   String? systemInstruction;
   void Function(rust_puzzles.Puzzle puzzle)? onPuzzleLoaded;
+
+  final Random _rng = Random();
+
+  /// Picks a random string from a list.
+  String _pick(List<String> pool) => pool[_rng.nextInt(pool.length)];
 
   Future<void> initialize() async {
     isInitialized = true;
@@ -41,6 +47,158 @@ class CommentaryEngine {
     return 'piece';
   }
 
+  // ── Chip-query response pools ────────────────────────────────────────────
+
+  static const _tacticsLoaders = [
+    'GM Chanakya is examining the proposed variations...',
+    'Calculating the tactical ramifications of your sequence...',
+    'Running the lines through the engine — a moment, Apprentice...',
+    'Decoding the geometry of your tactical idea...',
+  ];
+
+  static const _puzzleLoaders = [
+    'GM Chanakya is consulting the puzzle archives...',
+    'Searching the training vaults for a fitting exercise...',
+    'Retrieving a prescription from the tactical library...',
+    'The archives are being searched. A fitting puzzle shall emerge.',
+  ];
+
+  static const _openingFallbacks = [
+    'The board is in its pristine, starting state. Both armies stand ready. Establish your presence in the center, develop your forces, and prepare for the struggle ahead.',
+    'An untouched board — a canvas of infinite possibility. Claim the center first, mobilize your minor pieces, and castle your king before the real battle begins.',
+    'This is the moment before the storm. Every great chess battle started here. Your plan: control the center, develop with purpose, and make your king safe.',
+    'The starting position holds no secrets — only principles. Center control, piece development, king safety. These three pillars define the opening.',
+    'The armies have not yet committed. A thousand roads lie ahead. The wisest travelers take the central highway: 1.e4 or 1.d4 to stake your claim.',
+  ];
+
+  static const _openingWhyResponses = [
+    'No moves have been made yet. The board is silent. Make your first move, and I shall explain the strategic ideas behind it.',
+    'There is nothing to explain yet, Apprentice. The position is virgin. Move your pieces, and the story of the game will begin.',
+    'The "why" becomes clear once the first moves are played. An empty board has no strategic narrative — only potential.',
+    'Ask me "why" after the first move, and I will give you a complete strategic rationale. For now, the board speaks only of possibility.',
+  ];
+
+  static const _openingCandidateResponses = [
+    'At the very beginning of the game, the classic candidates are 1.e4 or 1.d4 to seize control of the center, or 1.Nf3 or 1.c4 for a more hypermodern approach. The choice of battleground is yours.',
+    'On the starting position, the strongest candidates are the central pawns: 1.e4 (Open game) and 1.d4 (Closed game). Alternatively, 1.Nf3 keeps options flexible. Choose your opening identity.',
+    'Before the first pawn moves, your candidate list is vast. The most principled: 1.e4, 1.d4, 1.c4, 1.Nf3. Each defines a completely different strategic universe. I would begin with the center.',
+    'The candidate moves on move one are the great openings of chess history. 1.e4 demands a fight. 1.d4 invites positional subtlety. 1.c4 the English, 1.Nf3 the hypermodern. The board is yours.',
+  ];
+
+  static const _openingTacticsResponses = [
+    'There are no tactical complications on a fresh board. Tactics arise from positional tension and structural imbalances. Let us first develop our pieces.',
+    'Tactics begin where development ends. On the starting position, there are no threats — only principles. Develop first; the tactics will come.',
+    'An empty board holds no tactical puzzles. Tactics are born from complexity. Move your pieces into the center and create the conditions for tactical sharpness.',
+    'There is nothing to calculate here — no pins, no forks, no back-rank weaknesses. That is the purpose of the opening: to create the conditions where tactics become decisive.',
+  ];
+
+  static const _openingPlanResponses = [
+    'In the starting position, your plan should be fundamental: stake a claim in the center, develop your minor pieces toward active squares, castle your king to safety, and connect your rooks.',
+    'The plan for every opening is the same at its core: control the center with pawns or pieces, develop all minor pieces, castle, and activate your rooks on open files.',
+    'Your strategic plan begins with three pillars: center, development, king safety. After that, identify the pawn structures that define the opening system and build your plan around them.',
+    'On the starting position, the plan is classical: 1.e4 or 1.d4 to grab the center, Nf3 and Bc4/Bb5/Bf4 to develop, O-O to castle, Re1 to connect. Simple, powerful, timeless.',
+  ];
+
+  static const _openingDefendResponses = [
+    'There is nothing to defend against yet. The threat is non-existent. Use this peace to seize the initiative.',
+    'On the starting position, every piece is defended and no weakness exists. Defense begins when you allow the opponent to create threats. Start by creating your own.',
+    'No defense is needed when no attack has been launched. Play actively — develop your pieces and control the center before worrying about defending anything.',
+    'The best defense is a good offense, Apprentice. On the starting board, focus on development and central control. A well-developed army defends itself.',
+  ];
+
+  // ── Active game query pools ──────────────────────────────────────────────
+
+  static const _blunderOpeners = [
+    'Be warned:',
+    'This requires urgent attention:',
+    'A critical error has occurred —',
+    'Apprentice, heed this warning:',
+    'The evaluation collapsed because:',
+  ];
+
+  static const _whyOpeners = [
+    'The reasoning behind that move:',
+    'Allow me to illuminate the strategic thinking:',
+    'The logic is as follows:',
+    'Here is what the position demanded:',
+    'Let me decode the strategy for you:',
+    'The idea behind that decision:',
+    'A strategic explanation:',
+    'The positional rationale is clear:',
+  ];
+
+  static const _candidateIntros = [
+    'The candidate moves for this position are:\n\n',
+    'Here are the strongest moves available in this position:\n\n',
+    'Allow me to present the key candidates:\n\n',
+    'The engine identifies these as the principal moves:\n\n',
+    'Your candidate moves, ranked by priority:\n\n',
+    'The strategic options available to you:\n\n',
+  ];
+
+  static const _candidateSingleBestOpeners = [
+    'My recommended candidate in this position is',
+    'The engine\'s strongest suggestion here is',
+    'Above all other moves, I would recommend',
+    'In this position, the most principled choice is',
+    'After deep calculation, the strongest move is',
+  ];
+
+  static const _candidateFallbacks = [
+    'The board state is complex, and the engine calculation is still maturing. I suggest developing your least active piece or securing your king\'s safety.',
+    'This is a deeply complex position. No single move stands out decisively. Improve your worst-placed piece and keep the king safe while the engine ponders.',
+    'The position is in flux — the engine has not converged on a decisive line. In the meantime, focus on piece coordination and avoid creating new weaknesses.',
+    'Complex positions sometimes defy a single best move. Develop your least active piece, control key squares, and let the situation clarify itself.',
+  ];
+
+  static const _tacticsNoThreats = [
+    'I detect no immediate tactical threats or hanging material in the current position. Use this stability to improve your positions and advance your strategic goals.',
+    'The position is tactically quiet for now. No hanging pieces, no immediate combinations. This is the time to execute your long-term strategic plan.',
+    'No tactical alarm bells are ringing in this position. The equilibrium holds. Use this calm to improve your piece coordination before creating new tensions.',
+    'Tactically, the position is stable. No pins, forks, or back-rank issues are present. This is a purely positional moment — improve your worst-placed piece.',
+    'The engine detects no tactical fireworks here. A peaceful moment in a complex game. Use it wisely: identify your strategic plan and execute one move at a time.',
+  ];
+
+  static const _tacticsThreatsOpeners = [
+    'Remain vigilant. The board presents these tactical threats:',
+    'Caution, Apprentice. The following tactical dangers are present:',
+    'The position is sharp. These are the active threats you must address:',
+    'Your attention is required here. The tactical threats are real:',
+    'Calculate carefully before moving. The following dangers lurk in the position:',
+    'Tactical alertness is essential. Here are the threats on the board:',
+  ];
+
+  static const _planOpeners = [
+    'A sound plan from this position would be to follow this line:',
+    'The strategic continuation that impresses me most is:',
+    'Based on the position\'s demands, I would recommend this sequence:',
+    'The principled plan here unfolds as follows:',
+    'The engine\'s preferred strategic line from this position:',
+  ];
+
+  static const _planFallbacks = [
+    'The plan here is positional. Secure control of open files, establish outposts for your knights, and ensure your pawn structure remains resilient against enemy pressure.',
+    'In positions like this, the plan is structural: find the weak squares in the opponent\'s camp, route your pieces toward them, and create long-term pressure.',
+    'The strategic blueprint is clear: identify the most active square available to your worst-placed piece and maneuver it there in as few moves as possible.',
+    'Your plan must be built around the pawn structure. Find the weaknesses — yours and the opponent\'s — and orient all pieces toward exploiting them.',
+  ];
+
+  static const _generalFallbackConnectors = [
+    'The strongest candidate to consider is',
+    'I would direct your attention to',
+    'The most principled move here is',
+    'Engine evaluation points strongly to',
+  ];
+
+  static const _generalNoThreatClosers = [
+    'The position is tactically secure for now.',
+    'No tactical threats are present — consolidate and improve.',
+    'The board is calm. Plan your strategic goals.',
+    'No immediate danger. Use this moment to improve piece activity.',
+  ];
+
+  // ────────────────────────────────────────────────────────────────────────
+
   /// Generates commentary using the deterministic Rust Engine and Dart parameter replacement
   Stream<String> generateCommentaryStream({
     String? player,
@@ -60,7 +218,7 @@ class CommentaryEngine {
         yield 'Apprentice, the tactical sequence could not be retrieved from the board.';
         return;
       }
-      yield 'GM Chanakya is examining the proposed variations...';
+      yield _pick(_tacticsLoaders);
       try {
         final result = generateTacticsAnalysis(
           fen: tacticsBaseFen,
@@ -76,7 +234,7 @@ class CommentaryEngine {
     final query = userQuery?.toLowerCase() ?? '';
     final isPuzzleRequest = query.contains('puzzle') || query.contains('train') || query.contains('exercise');
     if (isPuzzleRequest) {
-      yield 'GM Chanakya is consulting the puzzle archives...';
+      yield _pick(_puzzleLoaders);
       
       final repo = PuzzleRepository();
       rust_puzzles.Puzzle? selectedPuzzle;
@@ -138,21 +296,20 @@ class CommentaryEngine {
     }
 
     if (context.move == 'Opening') {
-      final query = userQuery?.trim().toLowerCase() ?? '';
+      final q = userQuery?.trim().toLowerCase() ?? '';
       String response = '';
-      if (query.contains('why')) {
-        response = 'No moves have been made yet. The board is silent. Make your first move, and I shall explain the strategic ideas behind it.';
-      } else if (query.contains('candidates')) {
-        response = 'At the very beginning of the game, the classic candidates are 1.e4 or 1.d4 to seize control of the center, or 1.Nf3 or 1.c4 for a more hypermodern approach. The choice of battleground is yours.';
-      } else if (query.contains('tactics')) {
-        response = 'There are no tactical complications on a fresh board. Tactics arise from positional tension and structural imbalances. Let us first develop our pieces.';
-      } else if (query.contains('plan')) {
-        response = 'In the starting position, your plan should be fundamental: stake a claim in the center, develop your minor pieces toward active squares, castle your king to safety, and connect your rooks.';
-      } else if (query.contains('defend')) {
-        response = 'There is nothing to defend against yet. The threat is non-existent. Use this peace to seize the initiative.';
+      if (q.contains('why')) {
+        response = _pick(_openingWhyResponses);
+      } else if (q.contains('candidates')) {
+        response = _pick(_openingCandidateResponses);
+      } else if (q.contains('tactics')) {
+        response = _pick(_openingTacticsResponses);
+      } else if (q.contains('plan')) {
+        response = _pick(_openingPlanResponses);
+      } else if (q.contains('defend')) {
+        response = _pick(_openingDefendResponses);
       } else {
-        // Default to Analyze
-        response = 'The board is in its pristine, starting state. Both armies stand ready. Establish your presence in the center, develop your forces, and prepare for the struggle ahead.';
+        response = _pick(_openingFallbacks);
       }
 
       yield response;
@@ -200,18 +357,20 @@ class CommentaryEngine {
           threatPhrase = " It disrupts your positional harmony and weakens your coordination.";
         }
 
-        response = "Be warned: playing $lastMoveClean is a blunder, dropping the evaluation by $absoluteDiff pawns.$threatPhrase Seek a more resilient path.";
+        final opener = _pick(_blunderOpeners);
+        response = "$opener playing $lastMoveClean is a blunder, dropping the evaluation by $absoluteDiff pawns.$threatPhrase Seek a more resilient path.";
       } else if (cleanQuery.contains('why') || cleanQuery.contains('explain') || cleanQuery.contains('reason')) {
         final lastMoveClean = cleanMoveName(context.moveDescription);
-        response = 'I played $lastMoveClean, which is evaluated as a ${context.quality.toLowerCase()} decision. '
+        final opener = _pick(_whyOpeners);
+        response = '$opener I played $lastMoveClean, evaluated as a ${context.quality.toLowerCase()} decision. '
             'The position stands $descEval. This aligns with my ${context.positionStyle.toLowerCase()} style, and the tactical threat level is ${context.threatLevel.toLowerCase()}. ';
         if (context.tacticalThreats.isNotEmpty) {
-          response += 'Keep in mind these tactical details: ${context.tacticalThreats.join(" ")}';
+          response += 'Key tactical details: ${context.tacticalThreats.join(" ")}';
         }
       } else if (cleanQuery.contains('candidate') || cleanQuery.contains('move') || cleanQuery.contains('what to play') || cleanQuery.contains('what should i play') || cleanQuery.contains('suggest')) {
         if (context.candidates.isNotEmpty) {
           final buffer = StringBuffer();
-          buffer.write('The candidate moves for this position are:\n\n');
+          buffer.write(_pick(_candidateIntros));
           for (var i = 0; i < context.candidates.length; i++) {
             final c = context.candidates[i];
             final cleanedMove = cleanMoveName(c.uciMove);
@@ -225,23 +384,26 @@ class CommentaryEngine {
           response = buffer.toString();
         } else if (context.bestMove != null) {
           final cleanedBest = cleanMoveName(context.bestMove!);
-          response = 'My recommended candidate in this position is $cleanedBest. The engine evaluates the balance as $descEval. Maintain your coordination and seek activity.';
+          final opener = _pick(_candidateSingleBestOpeners);
+          response = '$opener $cleanedBest. The engine evaluates the balance as $descEval. Maintain your coordination and seek activity.';
         } else {
-          response = 'The board state is complex, and the engine calculation is still maturing. I suggest developing your least active piece or securing your king\'s safety.';
+          response = _pick(_candidateFallbacks);
         }
       } else if (cleanQuery.contains('tactics') || cleanQuery.contains('threat') || cleanQuery.contains('danger') || cleanQuery.contains('defend')) {
         if (context.tacticalThreats.isNotEmpty) {
           final threatsStr = context.tacticalThreats.join(' ');
-          response = 'Remain vigilant. The board presents these tactical threats: $threatsStr Calculate carefully before making your choice; I hardly overlook slip-ups.';
+          final opener = _pick(_tacticsThreatsOpeners);
+          response = '$opener $threatsStr Calculate carefully before making your choice; I hardly overlook slip-ups.';
         } else {
-          response = 'I detect no immediate tactical threats or hanging material in the current position. Use this stability to improve your positions and advance your strategic goals.';
+          response = _pick(_tacticsNoThreats);
         }
       } else if (cleanQuery.contains('plan') || cleanQuery.contains('continuation') || cleanQuery.contains('idea') || cleanQuery.contains('strategy')) {
         if (context.pvLine.isNotEmpty) {
           final cleanedPv = context.pvLine.take(4).map(cleanMoveName).join(' → ');
-          response = 'A sound plan from this position would be to follow this line: $cleanedPv. This sequence maintains piece activity and coordinates our forces toward key squares.';
+          final opener = _pick(_planOpeners);
+          response = '$opener $cleanedPv. This sequence maintains piece activity and coordinates our forces toward key squares.';
         } else {
-          response = 'The plan here is positional. Secure control of open files, establish outposts for your knights, and ensure your pawn structure remains resilient against enemy pressure.';
+          response = _pick(_planFallbacks);
         }
       } else {
         // Fallback for general queries
@@ -249,12 +411,13 @@ class CommentaryEngine {
         buffer.write('The position stands $descEval. ');
         if (context.bestMove != null) {
           final cleanedBest = cleanMoveName(context.bestMove!);
-          buffer.write('The strongest candidate to consider is $cleanedBest. ');
+          final connector = _pick(_generalFallbackConnectors);
+          buffer.write('$connector $cleanedBest. ');
         }
         if (context.tacticalThreats.isNotEmpty) {
           buffer.write('Keep in mind these active threats: ${context.tacticalThreats.join(" ")}');
         } else {
-          buffer.write('The position is tactically secure for now.');
+          buffer.write(_pick(_generalNoThreatClosers));
         }
         response = buffer.toString();
       }
