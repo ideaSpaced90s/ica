@@ -135,6 +135,7 @@ abstract class RustLibApi extends BaseApi {
   TacticsResult crateApiTacticsGenerateTacticsAnalysis({
     required String fen,
     required List<String> userUciMoves,
+    required List<StockfishTacticLine> engineAlternatives,
   });
 
   List<String> crateApiMovesGetLegalDestinations({
@@ -519,6 +520,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TacticsResult crateApiTacticsGenerateTacticsAnalysis({
     required String fen,
     required List<String> userUciMoves,
+    required List<StockfishTacticLine> engineAlternatives,
   }) {
     return handler.executeSync(
       SyncTask(
@@ -526,6 +528,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(fen, serializer);
           sse_encode_list_String(userUciMoves, serializer);
+          sse_encode_list_stockfish_tactic_line(engineAlternatives, serializer);
           return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 11)!;
         },
         codec: SseCodec(
@@ -533,7 +536,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeErrorData: null,
         ),
         constMeta: kCrateApiTacticsGenerateTacticsAnalysisConstMeta,
-        argValues: [fen, userUciMoves],
+        argValues: [fen, userUciMoves, engineAlternatives],
         apiImpl: this,
       ),
     );
@@ -542,7 +545,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiTacticsGenerateTacticsAnalysisConstMeta =>
       const TaskConstMeta(
         debugName: "generate_tactics_analysis",
-        argNames: ["fen", "userUciMoves"],
+        argNames: ["fen", "userUciMoves", "engineAlternatives"],
       );
 
   @override
@@ -1379,6 +1382,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<StockfishTacticLine> dco_decode_list_stockfish_tactic_line(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_stockfish_tactic_line)
+        .toList();
+  }
+
+  @protected
   List<TacticData> dco_decode_list_tactic_data(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_tactic_data).toList();
@@ -1536,6 +1547,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       totalRatedGames: dco_decode_i_32(arr[8]),
       analyzedGames: dco_decode_i_32(arr[9]),
       skippedGames: dco_decode_i_32(arr[10]),
+    );
+  }
+
+  @protected
+  StockfishTacticLine dco_decode_stockfish_tactic_line(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return StockfishTacticLine(
+      moveUci: dco_decode_String(arr[0]),
+      evaluation: dco_decode_f_64(arr[1]),
+      pv: dco_decode_list_String(arr[2]),
     );
   }
 
@@ -1926,6 +1950,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<StockfishTacticLine> sse_decode_list_stockfish_tactic_line(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <StockfishTacticLine>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_stockfish_tactic_line(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   List<TacticData> sse_decode_list_tactic_data(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -2124,6 +2162,21 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       totalRatedGames: var_totalRatedGames,
       analyzedGames: var_analyzedGames,
       skippedGames: var_skippedGames,
+    );
+  }
+
+  @protected
+  StockfishTacticLine sse_decode_stockfish_tactic_line(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_moveUci = sse_decode_String(deserializer);
+    var var_evaluation = sse_decode_f_64(deserializer);
+    var var_pv = sse_decode_list_String(deserializer);
+    return StockfishTacticLine(
+      moveUci: var_moveUci,
+      evaluation: var_evaluation,
+      pv: var_pv,
     );
   }
 
@@ -2476,6 +2529,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_list_stockfish_tactic_line(
+    List<StockfishTacticLine> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_stockfish_tactic_line(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_tactic_data(
     List<TacticData> self,
     SseSerializer serializer,
@@ -2630,6 +2695,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_i_32(self.totalRatedGames, serializer);
     sse_encode_i_32(self.analyzedGames, serializer);
     sse_encode_i_32(self.skippedGames, serializer);
+  }
+
+  @protected
+  void sse_encode_stockfish_tactic_line(
+    StockfishTacticLine self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.moveUci, serializer);
+    sse_encode_f_64(self.evaluation, serializer);
+    sse_encode_list_String(self.pv, serializer);
   }
 
   @protected

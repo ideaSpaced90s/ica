@@ -8,6 +8,13 @@ pub struct TacticData {
     pub explanation: String,
 }
 
+#[derive(Clone, Debug)]
+pub struct StockfishTacticLine {
+    pub move_uci: String,
+    pub evaluation: f64,
+    pub pv: Vec<String>,
+}
+
 #[derive(Debug)]
 pub struct TacticsResult {
     pub text_response: String, // Clean prose with embedded [YOUR_TACTIC: ...] tags
@@ -127,7 +134,11 @@ fn to_uci(m: &Move) -> String {
 }
 
 #[flutter_rust_bridge::frb(sync)]
-pub fn generate_tactics_analysis(fen: String, user_uci_moves: Vec<String>) -> TacticsResult {
+pub fn generate_tactics_analysis(
+    fen: String,
+    user_uci_moves: Vec<String>,
+    engine_alternatives: Vec<StockfishTacticLine>,
+) -> TacticsResult {
     let setup = match fen.parse::<Fen>() {
         Ok(f) => f,
         Err(_) => {
@@ -225,88 +236,147 @@ pub fn generate_tactics_analysis(fen: String, user_uci_moves: Vec<String>) -> Ta
 
     // 2. Generate Alternatives
     let mut alternatives = Vec::new();
-    let mut legal_starts: Vec<Move> = pos.legal_moves().into_iter().collect();
-    
-    // Sort legal starts by evaluate_move
-    legal_starts.sort_by_key(|m| -evaluate_move(&pos, m));
-
     let names = vec!["Tactic Alpha", "Tactic Beta", "Tactic Gamma", "Tactic Delta", "Tactic Epsilon"];
-
     let user_first_move_uci = user_uci_moves.first();
 
-    for m1 in legal_starts {
-        if alternatives.len() >= limit {
-            break;
-        }
-
-        let m1_uci = to_uci(&m1);
-        
-        // Let's make sure the first move is different from the user's first move if possible,
-        // so that we show fresh tactical options.
-        if let Some(user_first) = user_first_move_uci {
-            if &m1_uci == user_first && pos.legal_moves().len() > 1 && alternatives.len() == 0 {
-                // If it's the only move, we must generate it. But if there are alternatives,
-                // skip user's first move for the first alternative card.
+    if !engine_alternatives.is_empty() {
+        for alt_line in &engine_alternatives {
+            if alternatives.len() >= limit {
+                break;
+            }
+            if alt_line.pv.is_empty() {
                 continue;
             }
-        }
 
-        // Build sequence of length up to 4
-        let mut sim_pos = pos.clone();
-        let mut seq_moves = vec![m1_uci.clone()];
-        let mut seq_san = vec![San::from_move(&sim_pos, &m1).to_string()];
-        
-        sim_pos.play_unchecked(&m1);
-
-        // Turn 2 (Opponent response)
-        if !sim_pos.is_game_over() {
-            let mut opp_moves: Vec<Move> = sim_pos.legal_moves().into_iter().collect();
-            if !opp_moves.is_empty() {
-                opp_moves.sort_by_key(|m| -evaluate_move(&sim_pos, m));
-                let m2 = opp_moves[0].clone();
-                seq_moves.push(to_uci(&m2));
-                seq_san.push(San::from_move(&sim_pos, &m2).to_string());
-                sim_pos.play_unchecked(&m2);
+            let m1_uci = &alt_line.pv[0];
+            // Skip user's first move for the first alternative card if there are choices
+            if let Some(user_first) = user_first_move_uci {
+                if m1_uci == user_first && pos.legal_moves().len() > 1 && alternatives.is_empty() {
+                    continue;
+                }
             }
-        }
 
-        // Turn 3 (Player second move)
-        if !sim_pos.is_game_over() {
-            let mut play_moves: Vec<Move> = sim_pos.legal_moves().into_iter().collect();
-            if !play_moves.is_empty() {
-                play_moves.sort_by_key(|m| -evaluate_move(&sim_pos, m));
-                let m3 = play_moves[0].clone();
-                seq_moves.push(to_uci(&m3));
-                seq_san.push(San::from_move(&sim_pos, &m3).to_string());
-                sim_pos.play_unchecked(&m3);
+            let mut sim_pos = pos.clone();
+            let mut seq_moves = Vec::new();
+            let mut seq_san = Vec::new();
+            let mut valid = true;
+
+            for uci in &alt_line.pv {
+                if let Some(m) = parse_uci_to_move(&sim_pos, uci) {
+                    seq_san.push(San::from_move(&sim_pos, &m).to_string());
+                    seq_moves.push(uci.clone());
+                    sim_pos.play_unchecked(&m);
+                } else {
+                    valid = false;
+                    break;
+                }
             }
-        }
 
-        // Turn 4 (Opponent second response)
-        if !sim_pos.is_game_over() {
-            let mut opp_moves: Vec<Move> = sim_pos.legal_moves().into_iter().collect();
-            if !opp_moves.is_empty() {
-                opp_moves.sort_by_key(|m| -evaluate_move(&sim_pos, m));
-                let m4 = opp_moves[0].clone();
-                seq_moves.push(to_uci(&m4));
-                seq_san.push(San::from_move(&sim_pos, &m4).to_string());
-                sim_pos.play_unchecked(&m4);
+            if !valid || seq_moves.is_empty() {
+                continue;
             }
+
+            let name = names[alternatives.len()].to_string();
+            let eval_desc = if alt_line.evaluation.abs() > 10.0 {
+                if alt_line.evaluation > 0.0 { "decisive advantage".to_string() } else { "decisive disadvantage".to_string() }
+            } else {
+                format!("{:.2} pawns", alt_line.evaluation)
+            };
+
+            let explanation = format!(
+                "Stockfish identifies this line as a critical tactical path (evaluated at {}). A solid continuation path involves {}.",
+                eval_desc,
+                if seq_san.len() > 2 { seq_san[2].clone() } else { "rapid piece development".to_string() }
+            );
+
+            alternatives.push(TacticData {
+                name,
+                moves: seq_moves,
+                san_moves: seq_san,
+                explanation,
+            });
         }
+    }
 
-        let name = names[alternatives.len()].to_string();
-        let explanation = format!(
-            "Initiating with {} creates distinct imbalances. A solid continuation path involves {}.",
-            seq_san.first().unwrap_or(&"".to_string()),
-            if seq_san.len() > 2 { seq_san[2].clone() } else { "rapid piece development".to_string() }
-        );
+    if alternatives.is_empty() {
+        let mut legal_starts: Vec<Move> = pos.legal_moves().into_iter().collect();
+        // Sort legal starts by evaluate_move
+        legal_starts.sort_by_key(|m| -evaluate_move(&pos, m));
 
-        alternatives.push(TacticData {
-            name,
-            moves: seq_moves,
-            san_moves: seq_san,
-            explanation,
-        });
+        for m1 in legal_starts {
+            if alternatives.len() >= limit {
+                break;
+            }
+
+            let m1_uci = to_uci(&m1);
+            
+            // Let's make sure the first move is different from the user's first move if possible,
+            // so that we show fresh tactical options.
+            if let Some(user_first) = user_first_move_uci {
+                if &m1_uci == user_first && pos.legal_moves().len() > 1 && alternatives.len() == 0 {
+                    // If it's the only move, we must generate it. But if there are alternatives,
+                    // skip user's first move for the first alternative card.
+                    continue;
+                }
+            }
+
+            // Build sequence of length up to 4
+            let mut sim_pos = pos.clone();
+            let mut seq_moves = vec![m1_uci.clone()];
+            let mut seq_san = vec![San::from_move(&sim_pos, &m1).to_string()];
+            
+            sim_pos.play_unchecked(&m1);
+
+            // Turn 2 (Opponent response)
+            if !sim_pos.is_game_over() {
+                let mut opp_moves: Vec<Move> = sim_pos.legal_moves().into_iter().collect();
+                if !opp_moves.is_empty() {
+                    opp_moves.sort_by_key(|m| -evaluate_move(&sim_pos, m));
+                    let m2 = opp_moves[0].clone();
+                    seq_moves.push(to_uci(&m2));
+                    seq_san.push(San::from_move(&sim_pos, &m2).to_string());
+                    sim_pos.play_unchecked(&m2);
+                }
+            }
+
+            // Turn 3 (Player second move)
+            if !sim_pos.is_game_over() {
+                let mut play_moves: Vec<Move> = sim_pos.legal_moves().into_iter().collect();
+                if !play_moves.is_empty() {
+                    play_moves.sort_by_key(|m| -evaluate_move(&sim_pos, m));
+                    let m3 = play_moves[0].clone();
+                    seq_moves.push(to_uci(&m3));
+                    seq_san.push(San::from_move(&sim_pos, &m3).to_string());
+                    sim_pos.play_unchecked(&m3);
+                }
+            }
+
+            // Turn 4 (Opponent second response)
+            if !sim_pos.is_game_over() {
+                let mut opp_moves: Vec<Move> = sim_pos.legal_moves().into_iter().collect();
+                if !opp_moves.is_empty() {
+                    opp_moves.sort_by_key(|m| -evaluate_move(&sim_pos, m));
+                    let m4 = opp_moves[0].clone();
+                    seq_moves.push(to_uci(&m4));
+                    seq_san.push(San::from_move(&sim_pos, &m4).to_string());
+                    sim_pos.play_unchecked(&m4);
+                }
+            }
+
+            let name = names[alternatives.len()].to_string();
+            let explanation = format!(
+                "Initiating with {} creates distinct imbalances. A solid continuation path involves {}.",
+                seq_san.first().unwrap_or(&"".to_string()),
+                if seq_san.len() > 2 { seq_san[2].clone() } else { "rapid piece development".to_string() }
+            );
+
+            alternatives.push(TacticData {
+                name,
+                moves: seq_moves,
+                san_moves: seq_san,
+                explanation,
+            });
+        }
     }
 
     // 3. Build Chanakya text response containing the hidden tags

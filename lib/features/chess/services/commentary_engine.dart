@@ -6,6 +6,7 @@ import 'package:kingslayer_chess/src/rust/api/commentary.dart' as rust_commentar
 import 'package:kingslayer_chess/src/rust/api/tactics.dart';
 import '../data/puzzle_repository.dart';
 import '../domain/models/position_context.dart';
+import '../domain/models/candidate_move.dart';
 
 class CommentaryEngine {
   bool isInitialized = true;
@@ -211,6 +212,7 @@ class CommentaryEngine {
     String? userName,
     String? tacticsBaseFen,
     List<String>? tacticsSequence,
+    List<CandidateMove>? tacticsCandidates,
   }) async* {
     final isTacticsQuery = userQuery?.startsWith('[TACTICS_QUERY]') ?? false;
     if (isTacticsQuery) {
@@ -220,9 +222,16 @@ class CommentaryEngine {
       }
       yield _pick(_tacticsLoaders);
       try {
+        final engineAlternatives = (tacticsCandidates ?? []).map((c) => StockfishTacticLine(
+          moveUci: c.uciMove,
+          evaluation: c.evaluation,
+          pv: c.fullPv,
+        )).toList();
+
         final result = generateTacticsAnalysis(
           fen: tacticsBaseFen,
           userUciMoves: tacticsSequence,
+          engineAlternatives: engineAlternatives,
         );
         yield result.textResponse;
       } catch (e) {
@@ -362,10 +371,16 @@ class CommentaryEngine {
       } else if (cleanQuery.contains('why') || cleanQuery.contains('explain') || cleanQuery.contains('reason')) {
         final lastMoveClean = cleanMoveName(context.moveDescription);
         final opener = _pick(_whyOpeners);
-        response = '$opener I played $lastMoveClean, evaluated as a ${context.quality.toLowerCase()} decision. '
-            'The position stands $descEval. This aligns with my ${context.positionStyle.toLowerCase()} style, and the tactical threat level is ${context.threatLevel.toLowerCase()}. ';
-        if (context.tacticalThreats.isNotEmpty) {
-          response += 'Key tactical details: ${context.tacticalThreats.join(" ")}';
+        if (context.pvLine.isNotEmpty) {
+          final continuation = context.pvLine.take(3).map(cleanMoveName).join(' → ');
+          response = '$opener I played $lastMoveClean, which I evaluate as a ${context.quality.toLowerCase()} decision. '
+              'The position stands $descEval. By playing this, we align our pieces for the continuation: **$continuation**.';
+        } else {
+          response = '$opener I played $lastMoveClean, evaluated as a ${context.quality.toLowerCase()} decision. '
+              'The position stands $descEval. This aligns with my ${context.positionStyle.toLowerCase()} style, and the tactical threat level is ${context.threatLevel.toLowerCase()}. ';
+          if (context.tacticalThreats.isNotEmpty) {
+            response += 'Key tactical details: ${context.tacticalThreats.join(" ")}';
+          }
         }
       } else if (cleanQuery.contains('candidate') || cleanQuery.contains('move') || cleanQuery.contains('what to play') || cleanQuery.contains('what should i play') || cleanQuery.contains('suggest')) {
         if (context.candidates.isNotEmpty) {
@@ -390,18 +405,37 @@ class CommentaryEngine {
           response = _pick(_candidateFallbacks);
         }
       } else if (cleanQuery.contains('tactics') || cleanQuery.contains('threat') || cleanQuery.contains('danger') || cleanQuery.contains('defend')) {
+        final buffer = StringBuffer();
         if (context.tacticalThreats.isNotEmpty) {
-          final threatsStr = context.tacticalThreats.join(' ');
           final opener = _pick(_tacticsThreatsOpeners);
-          response = '$opener $threatsStr Calculate carefully before making your choice; I hardly overlook slip-ups.';
+          buffer.write('$opener ${context.tacticalThreats.join(" ")} ');
         } else {
-          response = _pick(_tacticsNoThreats);
+          buffer.write('${_pick(_tacticsNoThreats)} ');
         }
+        
+        if (context.candidates.isNotEmpty) {
+          final bestDef = context.candidates.first;
+          final defMoveName = cleanMoveName(bestDef.uciMove);
+          buffer.write('To maintain coordination, the most principled defense is **$defMoveName**. ');
+          if (bestDef.fullPv.length > 1) {
+            final continuation = bestDef.fullPv.take(4).map(cleanMoveName).join(' → ');
+            buffer.write('A detailed continuation of defense moves is: **$continuation**.');
+          }
+        } else {
+          buffer.write('Focus on maintaining your structural harmony and piece activity.');
+        }
+        response = buffer.toString();
       } else if (cleanQuery.contains('plan') || cleanQuery.contains('continuation') || cleanQuery.contains('idea') || cleanQuery.contains('strategy')) {
         if (context.pvLine.isNotEmpty) {
-          final cleanedPv = context.pvLine.take(4).map(cleanMoveName).join(' → ');
           final opener = _pick(_planOpeners);
-          response = '$opener $cleanedPv. This sequence maintains piece activity and coordinates our forces toward key squares.';
+          if (context.pvLine.length >= 2) {
+            final p1 = cleanMoveName(context.pvLine[0]);
+            final p2 = cleanMoveName(context.pvLine[1]);
+            response = '$opener My analysis suggests continuing with **$p1** and then **$p2** to build piece activity and secure positional strengths.';
+          } else {
+            final cleanedPv = context.pvLine.take(4).map(cleanMoveName).join(' → ');
+            response = '$opener **$cleanedPv**. This sequence maintains piece activity and coordinates our forces toward key squares.';
+          }
         } else {
           response = _pick(_planFallbacks);
         }

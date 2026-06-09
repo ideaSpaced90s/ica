@@ -917,6 +917,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
     final List<InlineSpan> spans = [];
     final regExp = RegExp(
       r'\*\*(.*?)\*\*|'
+      r'\b((?:King|Queen|Rook|Bishop|Knight|Pawn)\s+to\s+[a-h][1-8])\b|'
       r'\b(Apprentice|Defender of Humanity|Kingslayer|Chanakya)\b|'
       r'\b(King|Queen|Rook|Bishop|Knight|Pawn)s?\b|'
       r'\b(Consider|Observe|Strategy|Warning|Tactics|Recommended|Crucial|Focus|Analyze|Blunder|Mistake|Inaccuracy|Brilliant|Strong|Neutral|Attack|Defend|Defense|Threat|Danger|Outpost|Pin|Fork|Check|Checkmate|Simplify|Passed Pawn|Opposition|Scotoma|Scotoma Report|Vulnerabilities|Arena)\b|'
@@ -982,18 +983,15 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
         } else if (moveRegex.hasMatch(content)) {
           spans.addAll(_buildSplitNotationSpans(content, baseStyle, state, fullText, isBubbleActive: isBubbleActive));
         } else {
-          spans.add(TextSpan(
-            text: content,
-            style: baseStyle.copyWith(
-              fontWeight: state.academyHouseBoldEmphasis
-                  ? FontWeight.w800
-                  : FontWeight.bold,
-            ),
-          ));
+          spans.addAll(_parseBoldContent(content, baseStyle, state, fullText, isBubbleActive: isBubbleActive));
         }
       } else if (match.group(2) != null) {
+        // Descriptive moves like "Pawn to g3" -> NEW!
+        final notation = match.group(2)!;
+        spans.addAll(_buildSplitNotationSpans(notation, baseStyle, state, fullText, isBubbleActive: isBubbleActive));
+      } else if (match.group(3) != null) {
         // Personas/Titles
-        final name = match.group(2)!;
+        final name = match.group(3)!;
         Color color = ScholarlyTheme.accentBlue;
         if (name.toLowerCase().contains('apprentice')) {
           color = const Color(0xFFD4AF37); // Academy Gold
@@ -1009,7 +1007,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
             fontWeight: FontWeight.bold,
           ),
         ));
-      } else if (match.group(3) != null) {
+      } else if (match.group(4) != null) {
         // Piece Name
         spans.add(TextSpan(
           text: match.group(0),
@@ -1024,9 +1022,9 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
               ref.read(chessProvider.notifier).triggerAcademyAnimation();
             },
         ));
-      } else if (match.group(4) != null) {
+      } else if (match.group(5) != null) {
         // Instructions/Keywords
-        final word = match.group(4)!;
+        final word = match.group(5)!;
         Color color = Colors.indigo;
         final lWord = word.toLowerCase();
         if (lWord.contains('warning') || lWord.contains('blunder') || lWord.contains('mistake') || lWord.contains('vulnerabilit')) {
@@ -1053,11 +1051,11 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
             fontStyle: FontStyle.italic,
           ),
         ));
-      } else if (match.group(5) != null || match.group(6) != null) {
+      } else if (match.group(6) != null || match.group(7) != null) {
         // Square or Move (Notation Chips)
         final notation = match.group(0)!;
         spans.addAll(_buildSplitNotationSpans(notation, baseStyle, state, fullText, isBubbleActive: isBubbleActive));
-      } else if (match.group(7) != null) {
+      } else if (match.group(8) != null) {
         // App Icon rendering
         spans.add(WidgetSpan(
           alignment: PlaceholderAlignment.middle,
@@ -1084,6 +1082,63 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
       spans.add(TextSpan(
         text: text.substring(lastIndex),
         style: baseStyle,
+      ));
+    }
+
+    return spans;
+  }
+
+  List<InlineSpan> _parseBoldContent(
+    String content,
+    TextStyle baseStyle,
+    ChessState state,
+    String fullText, {
+    required bool isBubbleActive,
+  }) {
+    final List<InlineSpan> spans = [];
+    final boldStyle = baseStyle.copyWith(
+      fontWeight: state.academyHouseBoldEmphasis
+          ? FontWeight.w800
+          : FontWeight.bold,
+    );
+
+    final innerRegExp = RegExp(
+      r'\b((?:King|Queen|Rook|Bishop|Knight|Pawn)\s+to\s+[a-h][1-8])\b|'
+      r'\b([a-h][1-8]-?[a-h][1-8]|[a-h][1-8]|[NBRQK]?[a-h]?[1-8]?x?[a-h][1-8](?:=[NBRQK])?[+#]?|O-O(?:-O)?)\b|'
+      r'(\s*(?:->|→)\s*)',
+      caseSensitive: false,
+    );
+
+    int lastIndex = 0;
+    for (final match in innerRegExp.allMatches(content)) {
+      if (match.start > lastIndex) {
+        spans.add(TextSpan(
+          text: content.substring(lastIndex, match.start),
+          style: boldStyle,
+        ));
+      }
+
+      if (match.group(1) != null) {
+        final notation = match.group(1)!;
+        spans.addAll(_buildSplitNotationSpans(notation, baseStyle, state, fullText, isBubbleActive: isBubbleActive));
+      } else if (match.group(2) != null) {
+        final notation = match.group(2)!;
+        spans.addAll(_buildSplitNotationSpans(notation, baseStyle, state, fullText, isBubbleActive: isBubbleActive));
+      } else if (match.group(3) != null) {
+        final arrow = match.group(3)!;
+        spans.add(TextSpan(
+          text: arrow,
+          style: boldStyle,
+        ));
+      }
+
+      lastIndex = match.end;
+    }
+
+    if (lastIndex < content.length) {
+      spans.add(TextSpan(
+        text: content.substring(lastIndex),
+        style: boldStyle,
       ));
     }
 
@@ -1159,8 +1214,8 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
           onTap: (targetSquare == null || !isBubbleActive)
               ? null
               : () {
-                  ref.read(chessProvider.notifier).glowSquare(targetSquare);
-                  ref.read(chessProvider.notifier).showSuggestionForSquare(targetSquare, fullText);
+                  ref.read(chessProvider.notifier).glowSquare(label);
+                  ref.read(chessProvider.notifier).showSuggestionForSquare(label, fullText);
                 },
           child: Container(
             margin: const EdgeInsets.symmetric(horizontal: 2),

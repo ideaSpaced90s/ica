@@ -124,6 +124,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<SavedGameUci> dco_decode_list_saved_game_uci(dynamic raw);
 
   @protected
+  List<StockfishTacticLine> dco_decode_list_stockfish_tactic_line(dynamic raw);
+
+  @protected
   List<TacticData> dco_decode_list_tactic_data(dynamic raw);
 
   @protected
@@ -161,6 +164,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ScotomaResult dco_decode_scotoma_result(dynamic raw);
+
+  @protected
+  StockfishTacticLine dco_decode_stockfish_tactic_line(dynamic raw);
 
   @protected
   TacticData dco_decode_tactic_data(dynamic raw);
@@ -295,6 +301,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<StockfishTacticLine> sse_decode_list_stockfish_tactic_line(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<TacticData> sse_decode_list_tactic_data(SseDeserializer deserializer);
 
   @protected
@@ -334,6 +345,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ScotomaResult sse_decode_scotoma_result(SseDeserializer deserializer);
+
+  @protected
+  StockfishTacticLine sse_decode_stockfish_tactic_line(
+    SseDeserializer deserializer,
+  );
 
   @protected
   TacticData sse_decode_tactic_data(SseDeserializer deserializer);
@@ -504,6 +520,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_stockfish_tactic_line(
+    List<StockfishTacticLine> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_tactic_data(
     List<TacticData> self,
     SseSerializer serializer,
@@ -559,6 +581,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_scotoma_result(ScotomaResult self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_stockfish_tactic_line(
+    StockfishTacticLine self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_tactic_data(TacticData self, SseSerializer serializer);

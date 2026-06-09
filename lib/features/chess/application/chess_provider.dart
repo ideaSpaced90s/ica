@@ -1180,6 +1180,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
   Timer? _playbackTimer;
   DateTime? _engineStartTime;
   StreamSubscription<String>? _stockfishSubscription;
+  Completer<void>? _queryAnalysisCompleter;
 
   Future<void> _cancelEngineSubscriptions() async {
     await _stockfishSubscription?.cancel();
@@ -1322,6 +1323,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
     }
 
     if (parsed.containsKey('bestMove')) {
+      if (_queryAnalysisCompleter != null && !_queryAnalysisCompleter!.isCompleted) {
+        _queryAnalysisCompleter!.complete();
+      }
       // Bypassing throttle on bestmove since search is complete!
       state = state.copyWith(
         analysis: Map<String, dynamic>.from(_accumulatedAnalysis),
@@ -2275,6 +2279,53 @@ class ChessNotifier extends StateNotifier<ChessState> {
     state = state.copyWith(premoveFrom: null, premoveTo: null);
   }
 
+  Future<void> _restorePlayingEngineSettings() async {
+    if (state.isAcademyActive) {
+      final bgState = ref.read(battlegroundProvider);
+      final userElo = bgState.consolidatedRating;
+      const chanakyaEloGap = 200;
+      final targetElo = (userElo + chanakyaEloGap).clamp(400, 3200);
+      final chanakyaAvatar = AiAvatar.getBestMatch(targetElo);
+      await _engine.setSkillLevel(chanakyaAvatar.skillLevel, multiPV: 3);
+    } else {
+      final avatar = AiAvatar.getAvatar(state.engineLevel);
+      final multiPV = (avatar.name == 'King' || avatar.name == 'Kingslayer') ? 1 : 4;
+      await _engine.setSkillLevel(avatar.skillLevel, multiPV: multiPV);
+    }
+  }
+
+  Future<void> _runQueryAnalysisAtFullDepth(String fen) async {
+    await ensureGameServicesStarted();
+    if (!state.engineReady) return;
+
+    // 1. Maximize settings
+    await _engine.sendCommand('stop');
+    await _engine.setSkillLevel(20, multiPV: 4);
+
+    // 2. Clear caches
+    _currentCandidates.clear();
+    _accumulatedAnalysis.clear();
+    _accumulatedEvaluation = null;
+
+    _queryAnalysisCompleter = Completer<void>();
+
+    // 3. Start deep search (depth 22)
+    await _engine.analyzePosition(fen, depth: 22);
+
+    // 4. Wait for bestmove or 10s timeout
+    await _queryAnalysisCompleter!.future.timeout(
+      const Duration(seconds: 10),
+      onTimeout: () {
+        debugPrint('GM Chanakya query analysis timed out, proceeding.');
+      },
+    );
+
+    _queryAnalysisCompleter = null;
+
+    // 5. Restore regular playing Elo settings
+    await _restorePlayingEngineSettings();
+  }
+
   void _startAnalysis({int? depth}) {
     if (_isDisposed) return;
 
@@ -2939,6 +2990,13 @@ class ChessNotifier extends StateNotifier<ChessState> {
         await Future.delayed(const Duration(milliseconds: 500));
       }
 
+      if (userQuery != null) {
+        final targetFen = (userQuery.startsWith('[TACTICS_QUERY]') && state.tacticsBaseFen != null)
+            ? state.tacticsBaseFen!
+            : state.currentBoardFen;
+        await _runQueryAnalysisAtFullDepth(targetFen);
+      }
+
       PositionContext? context;
       try {
         final bestMove = state.analysis['bestMove'] as String?;
@@ -2981,6 +3039,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
         userQuery: userQuery,
         tacticsBaseFen: state.tacticsBaseFen,
         tacticsSequence: state.tacticsSequence.map((s) => '${s.from}${s.to}').toList(),
+        tacticsCandidates: List.from(_currentCandidates),
       );
 
       String finalResponse = '';
@@ -3904,10 +3963,10 @@ class ChessNotifier extends StateNotifier<ChessState> {
     );
   }
 
-  void showSuggestionForSquare(String targetSquare, String text) {
+  void showSuggestionForSquare(String targetSquareOrLabel, String text) {
     if (!state.isAcademyActive) return;
 
-    final move = _resolveMoveFromText(targetSquare, text);
+    final move = _resolveMoveFromText(targetSquareOrLabel, text);
     if (move != null) {
       final from = chess_lib.Chess.algebraic(move.from);
       final to = chess_lib.Chess.algebraic(move.to);
@@ -3940,11 +3999,33 @@ class ChessNotifier extends StateNotifier<ChessState> {
     }
   }
 
-  chess_lib.Move? _resolveMoveFromText(String targetSquare, String text) {
+  chess_lib.Move? _resolveMoveFromText(String targetSquareOrLabel, String text) {
+    final targetSquare = targetSquareOrLabel.length >= 2
+        ? targetSquareOrLabel.substring(targetSquareOrLabel.length - 2).toLowerCase()
+        : targetSquareOrLabel.toLowerCase();
+
     final legalMoves = state.game.generateMoves();
     final matchingMoves = legalMoves.where((m) => chess_lib.Chess.algebraic(m.to) == targetSquare).toList();
     if (matchingMoves.isEmpty) return null;
     if (matchingMoves.length == 1) return matchingMoves.first;
+
+    // Disambiguate using the specific label content if possible
+    final lowerLabel = targetSquareOrLabel.toLowerCase();
+    for (final move in matchingMoves) {
+      final pieceType = move.piece;
+      String pieceKeyword = '';
+      switch (pieceType) {
+        case chess_lib.PieceType.PAWN: pieceKeyword = 'pawn'; break;
+        case chess_lib.PieceType.KNIGHT: pieceKeyword = 'knight'; break;
+        case chess_lib.PieceType.BISHOP: pieceKeyword = 'bishop'; break;
+        case chess_lib.PieceType.ROOK: pieceKeyword = 'rook'; break;
+        case chess_lib.PieceType.QUEEN: pieceKeyword = 'queen'; break;
+        case chess_lib.PieceType.KING: pieceKeyword = 'king'; break;
+      }
+      if (lowerLabel.contains(pieceKeyword) && lowerLabel.length > 2) {
+        return move;
+      }
+    }
 
     final lines = text.split('\n');
     String contextLine = '';
@@ -3977,7 +4058,10 @@ class ChessNotifier extends StateNotifier<ChessState> {
     return matchingMoves.first;
   }
 
-  void glowSquare(String square) {
+  void glowSquare(String squareOrLabel) {
+    final square = squareOrLabel.length >= 2
+        ? squareOrLabel.substring(squareOrLabel.length - 2).toLowerCase()
+        : squareOrLabel.toLowerCase();
     state = state.copyWith(glowingSquare: square);
     Timer(const Duration(milliseconds: 1000), () {
       if (!_isDisposed && state.glowingSquare == square) {
