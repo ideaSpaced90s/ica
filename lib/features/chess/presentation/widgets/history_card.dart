@@ -38,7 +38,11 @@ class _HistoryCardState extends State<HistoryCard> {
         ? widget.game.id.substring(0, 4)
         : widget.game.id;
     final String title;
-    if (widget.game.isRatedMode) {
+    if (widget.game.isAcademyActive) {
+      title = (widget.game.customName != null && widget.game.customName!.isNotEmpty)
+          ? widget.game.customName!
+          : 'Academy Game $shortId';
+    } else if (widget.game.isRatedMode) {
       title = (widget.game.customName != null && widget.game.customName!.isNotEmpty)
           ? widget.game.customName!
           : 'Rated Game $shortId';
@@ -61,12 +65,16 @@ class _HistoryCardState extends State<HistoryCard> {
       child: JuicyGlassCard(
         padding: EdgeInsets.zero,
         borderRadius: 16,
-        backgroundColor: widget.game.isRatedMode
-            ? ScholarlyTheme.realGold.withValues(alpha: 0.08)
-            : const Color(0xFF0D9488).withValues(alpha: 0.08),
-        borderColor: widget.game.isRatedMode
-            ? ScholarlyTheme.realGold.withValues(alpha: 0.25)
-            : const Color(0xFF0D9488).withValues(alpha: 0.25),
+        backgroundColor: widget.game.isAcademyActive
+            ? ScholarlyTheme.accentBlue.withValues(alpha: 0.08)
+            : widget.game.isRatedMode
+                ? ScholarlyTheme.realGold.withValues(alpha: 0.08)
+                : const Color(0xFF0D9488).withValues(alpha: 0.08),
+        borderColor: widget.game.isAcademyActive
+            ? ScholarlyTheme.accentBlue.withValues(alpha: 0.25)
+            : widget.game.isRatedMode
+                ? ScholarlyTheme.realGold.withValues(alpha: 0.25)
+                : const Color(0xFF0D9488).withValues(alpha: 0.25),
         child: Row(
           children: [
             Expanded(
@@ -146,7 +154,10 @@ class _HistoryCardState extends State<HistoryCard> {
                                   'B',
                                   Duration(milliseconds: widget.game.blackTimeLeftMs),
                                 ),
-                                _buildModeBadge(widget.game.isRatedMode),
+                                if (widget.game.isAcademyActive)
+                                  _buildAcademyBadge()
+                                else
+                                  _buildModeBadge(widget.game.isRatedMode),
                                 if (widget.game.result != null)
                                   _buildResultBadge(widget.game.result!),
                                 if (widget.game.isLockedForAnalysis)
@@ -164,14 +175,14 @@ class _HistoryCardState extends State<HistoryCard> {
             // Only star button on the right side - completely outside the InkWell
             GestureDetector(
               behavior: HitTestBehavior.opaque,
-              onTap: widget.onToggleFavorite,
+              onTap: widget.game.isAcademyActive ? null : widget.onToggleFavorite,
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
                 child: Icon(
-                  widget.game.isFavorite
+                  (widget.game.isAcademyActive || widget.game.isFavorite)
                       ? Icons.star_rounded
                       : Icons.star_outline_rounded,
-                  color: widget.game.isFavorite
+                  color: (widget.game.isAcademyActive || widget.game.isFavorite)
                       ? ScholarlyTheme.accentYellow
                       : ScholarlyTheme.textMuted,
                   size: 24,
@@ -201,6 +212,38 @@ class _HistoryCardState extends State<HistoryCard> {
           fontSize: 9,
           fontWeight: FontWeight.bold,
         ),
+      ),
+    );
+  }
+
+  Widget _buildAcademyBadge() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: ScholarlyTheme.accentBlue.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(
+          color: ScholarlyTheme.accentBlue,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.school_rounded,
+            size: 10,
+            color: ScholarlyTheme.accentBlue,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            'ACADEMY',
+            style: GoogleFonts.jetBrainsMono(
+              color: ScholarlyTheme.accentBlue,
+              fontSize: 9,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
       ),
     );
   }

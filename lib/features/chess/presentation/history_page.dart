@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../application/chess_provider.dart';
 import '../application/arena_provider.dart';
+import '../application/study_lab_provider.dart';
 import '../services/chess_sound_service.dart';
 import 'scholarly_theme.dart';
 import 'widgets/history_card.dart';
@@ -17,7 +18,7 @@ import 'dashboard_page.dart';
 import 'mobile_navigation_shell.dart';
 
 enum HistoryFilterType { all, favorites }
-enum HistorySubFilter { none, arena, battleground }
+enum HistorySubFilter { none, arena, battleground, academy }
 
 class HistoryPage extends ConsumerStatefulWidget {
   const HistoryPage({super.key});
@@ -112,15 +113,19 @@ class _HistoryPageState extends ConsumerState<HistoryPage> with SingleTickerProv
     if (_currentFilter == HistoryFilterType.favorites) {
       filteredSaves = filteredSaves.where((s) => s.isFavorite).toList();
       if (_favoritesSubFilter == HistorySubFilter.arena) {
-        filteredSaves = filteredSaves.where((s) => !s.isRatedMode).toList();
+        filteredSaves = filteredSaves.where((s) => !s.isRatedMode && !s.isAcademyActive).toList();
       } else if (_favoritesSubFilter == HistorySubFilter.battleground) {
         filteredSaves = filteredSaves.where((s) => s.isRatedMode).toList();
+      } else if (_favoritesSubFilter == HistorySubFilter.academy) {
+        filteredSaves = filteredSaves.where((s) => s.isAcademyActive).toList();
       }
     } else {
       if (_allSubFilter == HistorySubFilter.arena) {
-        filteredSaves = filteredSaves.where((s) => !s.isRatedMode).toList();
+        filteredSaves = filteredSaves.where((s) => !s.isRatedMode && !s.isAcademyActive).toList();
       } else if (_allSubFilter == HistorySubFilter.battleground) {
         filteredSaves = filteredSaves.where((s) => s.isRatedMode).toList();
+      } else if (_allSubFilter == HistorySubFilter.academy) {
+        filteredSaves = filteredSaves.where((s) => s.isAcademyActive).toList();
       }
     }
 
@@ -221,6 +226,9 @@ class _HistoryPageState extends ConsumerState<HistoryPage> with SingleTickerProv
                                           } else if (_allSubFilter == HistorySubFilter.battleground) {
                                             label = 'BATTLEGROUND';
                                             activeColor = ScholarlyTheme.realGold;
+                                          } else if (_allSubFilter == HistorySubFilter.academy) {
+                                            label = 'ACADEMY';
+                                            activeColor = ScholarlyTheme.accentBlue;
                                           }
                                           return _buildTabButton(
                                             label: label,
@@ -251,6 +259,9 @@ class _HistoryPageState extends ConsumerState<HistoryPage> with SingleTickerProv
                                           } else if (_favoritesSubFilter == HistorySubFilter.battleground) {
                                             label = 'BATTLEGROUND';
                                             activeColor = ScholarlyTheme.realGold;
+                                          } else if (_favoritesSubFilter == HistorySubFilter.academy) {
+                                            label = 'ACADEMY';
+                                            activeColor = ScholarlyTheme.accentBlue;
                                           }
                                           return _buildTabButton(
                                             label: label,
@@ -352,17 +363,22 @@ class _HistoryPageState extends ConsumerState<HistoryPage> with SingleTickerProv
                                         return;
                                       }
                                       ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                                      if (game.isAcademyActive) {
+                                        ref.read(studyLabProvider.notifier).loadGameEntry(game);
+                                        ref.read(mobileNavIndexProvider.notifier).state = 5;
+                                        return;
+                                      }
                                       _showArenaOptions(context, game, notifier);
                                     },
-                                    onDelete: () {
+                                    onDelete: game.isAcademyActive ? () {} : () {
                                       ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
                                       notifier.deleteSavedGame(game.id);
                                     },
-                                    onToggleFavorite: () {
+                                    onToggleFavorite: game.isAcademyActive ? () {} : () {
                                       ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
                                       notifier.toggleFavorite(game.id);
                                     },
-                                    onRename: (newName) {
+                                    onRename: game.isAcademyActive ? (_) {} : (newName) {
                                       ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
                                       notifier.renameSavedGame(
                                         game.id,
@@ -532,6 +548,23 @@ class _HistoryPageState extends ConsumerState<HistoryPage> with SingleTickerProv
               const SizedBox(width: 8),
               Text(
                 'Battleground (Rated)',
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w500,
+                  color: ScholarlyTheme.textPrimary,
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: HistorySubFilter.academy,
+          child: Row(
+            children: [
+              const Icon(Icons.school_rounded, size: 18, color: ScholarlyTheme.accentBlue),
+              const SizedBox(width: 8),
+              Text(
+                'Academy (Learned)',
                 style: GoogleFonts.inter(
                   fontWeight: FontWeight.w500,
                   color: ScholarlyTheme.textPrimary,

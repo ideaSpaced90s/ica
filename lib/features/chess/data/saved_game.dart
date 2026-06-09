@@ -5,6 +5,7 @@ class CommentaryEntry {
     this.isComplete = true,
     this.isUser = false,
     this.associatedFen,
+    this.savedGameId,
   });
 
   final String text;
@@ -12,6 +13,7 @@ class CommentaryEntry {
   final bool isComplete;
   final bool isUser;
   final String? associatedFen;
+  final String? savedGameId;
 
   CommentaryEntry copyWith({
     String? text,
@@ -19,6 +21,7 @@ class CommentaryEntry {
     bool? isComplete,
     bool? isUser,
     Object? associatedFen = _sentinel,
+    Object? savedGameId = _sentinel,
   }) {
     return CommentaryEntry(
       text: text ?? this.text,
@@ -28,6 +31,9 @@ class CommentaryEntry {
       associatedFen: identical(associatedFen, _sentinel)
           ? this.associatedFen
           : associatedFen as String?,
+      savedGameId: identical(savedGameId, _sentinel)
+          ? this.savedGameId
+          : savedGameId as String?,
     );
   }
 
@@ -38,6 +44,7 @@ class CommentaryEntry {
       isComplete: json['isComplete'] as bool? ?? true,
       isUser: json['isUser'] as bool? ?? false,
       associatedFen: json['associatedFen'] as String?,
+      savedGameId: json['savedGameId'] as String?,
     );
   }
 
@@ -48,6 +55,7 @@ class CommentaryEntry {
       'isComplete': isComplete,
       'isUser': isUser,
       'associatedFen': associatedFen,
+      'savedGameId': savedGameId,
     };
   }
 }

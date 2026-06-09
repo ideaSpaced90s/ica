@@ -6,9 +6,11 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../application/chess_provider.dart';
+import '../../application/study_lab_provider.dart';
 import '../../data/saved_game.dart';
 import '../../services/chess_sound_service.dart';
 import '../scholarly_theme.dart';
+import '../mobile_navigation_shell.dart';
 
 class CommentaryHistory extends ConsumerStatefulWidget {
   const CommentaryHistory({super.key, required this.state, this.physics, this.controller});
@@ -112,7 +114,8 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
         state.isCommentaryStreaming ||
         state.isWaitingForSideChoice ||
         state.isAcademyBlunderActive ||
-        state.isBoardInChampionsTheme;
+        state.isBoardInChampionsTheme ||
+        state.game.gameOver;
     final bool hasHistory = state.game.history.isNotEmpty;
 
     if (state.isTacticsModeActive) {
@@ -673,6 +676,10 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
                               const SizedBox(height: 12),
                               _buildContinueButton(),
                             ],
+                            if (entry.savedGameId != null) ...[
+                              const SizedBox(height: 12),
+                              _buildAnalyzeButton(entry.savedGameId!),
+                            ],
                           ],
                         ),
                 ),
@@ -716,6 +723,60 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
               const SizedBox(width: 4),
               Text(
                 'CONTINUE',
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAnalyzeButton(String savedGameId) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+          try {
+            final game = ref.read(chessProvider).savedGames
+                .firstWhere((g) => g.id == savedGameId);
+            ref.read(studyLabProvider.notifier).loadGameEntry(game);
+            ref.read(mobileNavIndexProvider.notifier).state = 5;
+          } catch (e) {
+            debugPrint('Failed to load Academy game for analysis: $e');
+          }
+        },
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+          decoration: BoxDecoration(
+            color: ScholarlyTheme.accentBlue,
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: [
+              BoxShadow(
+                color: ScholarlyTheme.accentBlue.withValues(alpha: 0.3),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.analytics_rounded,
+                color: Colors.white,
+                size: 16,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'ANALYZE GAME',
                 style: GoogleFonts.inter(
                   fontSize: 11,
                   fontWeight: FontWeight.bold,

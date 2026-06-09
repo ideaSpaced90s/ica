@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'dart:async';
 import 'package:chess/chess.dart' as chess_lib;
+import 'package:intl/intl.dart';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -1586,14 +1587,14 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
       // Preserve custom name and favorite flags if updating an existing game
       String? customName;
-      bool isFavorite = false;
+      bool isFavorite = state.isAcademyActive;
       if (isUpdate) {
         final existing = state.savedGames
             .where((s) => s.id == targetId)
             .firstOrNull;
         if (existing != null) {
           customName = existing.customName;
-          isFavorite = existing.isFavorite;
+          isFavorite = state.isAcademyActive ? true : existing.isFavorite;
         }
       }
 
@@ -2722,6 +2723,10 @@ class ChessNotifier extends StateNotifier<ChessState> {
           _soundService.playSfx(SoundEffect.defeat);
         }
       }
+
+      if (state.isAcademyActive) {
+        unawaited(_handleAcademyGameOver());
+      }
     } else if (state.game.inCheck) {
       _soundService.playSfx(SoundEffect.check);
     } else {
@@ -3575,6 +3580,68 @@ class ChessNotifier extends StateNotifier<ChessState> {
       isNested: true,
       titlePrefix: titlePrefix,
     );
+  }
+
+  Future<void> _handleAcademyGameOver() async {
+    // 1. Play thinking sound
+    _soundService.playSfx(SoundEffect.gmchanakyaThinking);
+
+    // 2. Determine game result
+    String result = 'D'; // Draw default
+    if (state.game.gameOver) {
+      if (state.game.inCheckmate) {
+        final lastMover = _playerWhoJustMoved();
+        final winnerIsWhite = lastMover == 'White';
+        result = (winnerIsWhite == state.isPlayerWhite) ? 'W' : 'L';
+      }
+    }
+
+    // 3. Count blunders from commentary history
+    final blunderCount = state.commentaryHistory.where((entry) =>
+      !entry.isUser && entry.text.toLowerCase().contains('blunder')
+    ).length;
+
+    // 4. Construct the GM Chanakya 3-sentence closing summary
+    String text = '';
+    if (result == 'W') {
+      text = "Congratulations, Apprentice! You navigated the battleground with tactical precision and secured a well-deserved victory. "
+             "Your moves aligned beautifully with the principles of central control and piece activity, leaving the opponent without counterplay. "
+             "A proud day for the Academy—keep this sharp focus as you proceed to your next training session.";
+    } else if (result == 'L') {
+      text = "The battle is concluded, Apprentice, and the victory slipped away due to critical lapses in calculation. "
+             "Specifically, you committed $blunderCount major blunder${blunderCount == 1 ? '' : 's'} where the evaluation collapsed, allowing the opponent to exploit tactical vulnerabilities. "
+             "Do not despair; every mistake is a lessons-in-waiting—tap the Analyze button below to study the critical transitions.";
+    } else {
+      text = "The struggle ends in a peaceful resolution, Apprentice, after a balanced contest of equal forces. "
+             "Both sides respected positional prophylaxis, preventing any fatal structural breakthroughs or tactical combinations. "
+             "A draw shows resilience and patience—let us load the game into the workspace to review where the win might have been missed.";
+    }
+
+    // 5. Automatically save the game in archive and favorite it
+    final dateStr = DateFormat('MMM dd, yyyy').format(DateTime.now());
+    final savedGame = await saveCurrentGame(
+      resultOverride: result,
+      customNameOverride: "Academy Game - $dateStr",
+    );
+    final savedGameId = savedGame?.id;
+
+    // 6. Append the game over commentary entry to history with the savedGameId
+    final finalEntry = CommentaryEntry(
+      text: text,
+      timestamp: DateTime.now(),
+      isComplete: true,
+      isUser: false,
+      associatedFen: state.currentBoardFen,
+      savedGameId: savedGameId,
+    );
+
+    state = state.copyWith(
+      commentaryHistory: [...state.commentaryHistory, finalEntry],
+      isCommentaryLoading: false,
+      isCommentaryStreaming: false,
+    );
+
+    _soundService.playSfx(SoundEffect.gmchanakyaComplete);
   }
 
   Future<void> shutdown() async {
