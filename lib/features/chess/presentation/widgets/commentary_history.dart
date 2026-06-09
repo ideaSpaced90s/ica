@@ -25,7 +25,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
   late final Ticker _ticker;
   int _pulse = 0;
   late final ScrollController _scrollController;
-  String _selectedMode = 'classic';
+  String? _selectedMode;
 
 
   @override
@@ -503,27 +503,16 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
                   ),
                 ),
                 const SizedBox(height: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: ScholarlyTheme.accentBlueSoft.withValues(alpha: 0.35),
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(16),
-                      bottomLeft: Radius.circular(16),
-                      bottomRight: Radius.circular(16),
-                    ),
-                    border: Border.all(
-                      color: ScholarlyTheme.accentBlue.withValues(alpha: 0.25),
-                      width: 1,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.02),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
+                _ChatBubbleHoverWrapper(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    bottomLeft: Radius.circular(16),
+                    bottomRight: Radius.circular(16),
                   ),
+                  baseBgColor: ScholarlyTheme.accentBlueSoft.withValues(alpha: 0.35),
+                  baseBorderColor: ScholarlyTheme.accentBlue.withValues(alpha: 0.25),
+                  hoverBorderColor: ScholarlyTheme.accentBlue,
+                  isUser: true,
                   child: Text(
                     entry.text.startsWith('[TACTICS_QUERY]')
                         ? entry.text.replaceFirst('[TACTICS_QUERY]', '').trim()
@@ -611,30 +600,16 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
                   ),
                 ),
                 const SizedBox(height: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 10,
+                _ChatBubbleHoverWrapper(
+                  borderRadius: const BorderRadius.only(
+                    topRight: Radius.circular(16),
+                    bottomLeft: Radius.circular(16),
+                    bottomRight: Radius.circular(16),
                   ),
-                  decoration: BoxDecoration(
-                    color: ScholarlyTheme.backgroundStart,
-                    borderRadius: const BorderRadius.only(
-                      topRight: Radius.circular(16),
-                      bottomLeft: Radius.circular(16),
-                      bottomRight: Radius.circular(16),
-                    ),
-                    border: Border.all(
-                      color: ScholarlyTheme.panelStroke.withValues(alpha: 0.6),
-                      width: 1.2,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.02),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
+                  baseBgColor: ScholarlyTheme.backgroundStart,
+                  baseBorderColor: ScholarlyTheme.panelStroke.withValues(alpha: 0.6),
+                  hoverBorderColor: ScholarlyTheme.accentGold,
+                  isUser: false,
                   child: isThinking
                       ? const Row(
                           mainAxisSize: MainAxisSize.min,
@@ -689,28 +664,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
                             if (widget.state.isWaitingForSideChoice &&
                                 widget.state.commentaryHistory.indexOf(entry) ==
                                     widget.state.commentaryHistory.length - 1) ...[
-                              const SizedBox(height: 12),
-                              _buildModeTabs(),
-                              const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: _buildSideSelectionButton(
-                                      context: context,
-                                      label: "WHITE",
-                                      isWhite: true,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: _buildSideSelectionButton(
-                                      context: context,
-                                      label: "BLACK",
-                                      isWhite: false,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                              _buildJuicyInitialChoices(),
                             ],
                             if (widget.state.isAcademyBlunderActive &&
                                 entry.isComplete &&
@@ -776,130 +730,120 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
     );
   }
 
-  Widget _buildModeTabs() {
-    return Container(
-      padding: const EdgeInsets.all(2),
-      decoration: BoxDecoration(
-        color: ScholarlyTheme.panelStroke.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: ScholarlyTheme.panelStroke.withValues(alpha: 0.5),
-          width: 1,
+  Widget _buildJuicyInitialChoices() {
+    final bool modeSelected = _selectedMode != null;
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12.0),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: ScholarlyTheme.panelStroke.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: ScholarlyTheme.panelStroke.withValues(alpha: 0.4),
+              width: 1.2,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildJuicyIconCircle(
+                icon: Icons.grid_on_rounded,
+                label: 'Classic',
+                isSelected: _selectedMode == 'classic',
+                onTap: () {
+                  setState(() {
+                    _selectedMode = 'classic';
+                  });
+                  ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                },
+                color: ScholarlyTheme.accentBlue,
+              ),
+              const SizedBox(width: 16),
+              _buildJuicyIconCircle(
+                icon: Icons.shuffle_rounded,
+                label: 'Chess 960',
+                isSelected: _selectedMode == 'chess960',
+                onTap: () {
+                  setState(() {
+                    _selectedMode = 'chess960';
+                  });
+                  ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                },
+                color: Colors.purple,
+              ),
+              Container(
+                height: 40,
+                width: 1.5,
+                margin: const EdgeInsets.symmetric(horizontal: 20),
+                color: ScholarlyTheme.panelStroke.withValues(alpha: 0.8),
+              ),
+              _buildJuicyIconCircle(
+                icon: Icons.brightness_high_rounded,
+                label: 'Play White',
+                isSelected: false,
+                isDisabled: !modeSelected,
+                onTap: () {
+                  if (modeSelected) {
+                    ref.read(chessProvider.notifier).selectAcademySide(true, gameMode: _selectedMode!);
+                  }
+                },
+                color: const Color(0xFFF59E0B),
+              ),
+              const SizedBox(width: 16),
+              _buildJuicyIconCircle(
+                icon: Icons.nightlight_round,
+                label: 'Play Black',
+                isSelected: false,
+                isDisabled: !modeSelected,
+                onTap: () {
+                  if (modeSelected) {
+                    ref.read(chessProvider.notifier).selectAcademySide(false, gameMode: _selectedMode!);
+                  }
+                },
+                color: Colors.grey.shade900,
+              ),
+            ],
+          ),
         ),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: _buildModeTabButton(
-              label: 'CLASSIC',
-              isActive: _selectedMode == 'classic',
-              onTap: () {
-                setState(() {
-                  _selectedMode = 'classic';
-                });
-                ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-              },
-            ),
-          ),
-          Expanded(
-            child: _buildModeTabButton(
-              label: 'CHESS 960',
-              isActive: _selectedMode == 'chess960',
-              onTap: () {
-                setState(() {
-                  _selectedMode = 'chess960';
-                });
-                ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-              },
-            ),
-          ),
-        ],
       ),
     );
   }
 
-  Widget _buildModeTabButton({
+  Widget _buildJuicyIconCircle({
+    required IconData icon,
     required String label,
-    required bool isActive,
     required VoidCallback onTap,
+    required Color color,
+    bool isSelected = false,
+    bool isDisabled = false,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        decoration: BoxDecoration(
-          color: isActive ? ScholarlyTheme.accentBlue : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-          boxShadow: isActive
-              ? [
-                  BoxShadow(
-                    color: ScholarlyTheme.accentBlue.withValues(alpha: 0.3),
-                    blurRadius: 4,
-                    offset: const Offset(0, 1),
-                  ),
-                ]
-              : null,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _JuicyCircleButton(
+          icon: icon,
+          onTap: onTap,
+          color: color,
+          isSelected: isSelected,
+          isDisabled: isDisabled,
         ),
-        child: Text(
+        const SizedBox(height: 6),
+        Text(
           label,
           style: GoogleFonts.inter(
             fontSize: 10,
             fontWeight: FontWeight.bold,
-            color: isActive ? Colors.white : ScholarlyTheme.textMuted,
-            letterSpacing: 0.5,
-          ),
-          textAlign: TextAlign.center,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSideSelectionButton({
-    required BuildContext context,
-    required String label,
-    required bool isWhite,
-  }) {
-    final activeColor = isWhite ? Colors.white : Colors.grey.shade900;
-    final textColor = isWhite ? Colors.black87 : Colors.white;
-    final strokeColor = isWhite ? const Color(0xFFD4AF37) : ScholarlyTheme.accentBlue;
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () {
-          ref.read(chessProvider.notifier).selectAcademySide(isWhite, gameMode: _selectedMode);
-        },
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-          decoration: BoxDecoration(
-            color: activeColor,
-            border: Border.all(
-              color: strokeColor,
-              width: 1.5,
-            ),
-            borderRadius: BorderRadius.circular(8),
-            boxShadow: [
-              BoxShadow(
-                color: strokeColor.withValues(alpha: 0.25),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Text(
-            label,
-            style: GoogleFonts.inter(
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              color: textColor,
-              letterSpacing: 0.5,
-            ),
-            textAlign: TextAlign.center,
+            color: isDisabled
+                ? ScholarlyTheme.textMuted.withValues(alpha: 0.5)
+                : (isSelected ? color : ScholarlyTheme.textPrimary),
+            letterSpacing: 0.2,
           ),
         ),
-      ),
+      ],
     );
   }
 
@@ -1461,6 +1405,181 @@ class _DottedGridLoaderState extends State<DottedGridLoader>
             },
           );
         },
+      ),
+    );
+  }
+}
+
+class _ChatBubbleHoverWrapper extends StatefulWidget {
+  final Widget child;
+  final BorderRadius borderRadius;
+  final Color baseBgColor;
+  final Color baseBorderColor;
+  final Color hoverBorderColor;
+  final bool isUser;
+
+  const _ChatBubbleHoverWrapper({
+    required this.child,
+    required this.borderRadius,
+    required this.baseBgColor,
+    required this.baseBorderColor,
+    required this.hoverBorderColor,
+    required this.isUser,
+  });
+
+  @override
+  State<_ChatBubbleHoverWrapper> createState() => _ChatBubbleHoverWrapperState();
+}
+
+class _ChatBubbleHoverWrapperState extends State<_ChatBubbleHoverWrapper> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final scale = _isHovered ? 1.015 : 1.0;
+    final borderColor = _isHovered ? widget.hoverBorderColor : widget.baseBorderColor;
+    final borderAlpha = _isHovered ? 0.8 : 1.0;
+    
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: AnimatedScale(
+        scale: scale,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOutCubic,
+        alignment: widget.isUser ? Alignment.centerRight : Alignment.centerLeft,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOutCubic,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: widget.baseBgColor,
+            borderRadius: widget.borderRadius,
+            border: Border.all(
+              color: borderColor.withValues(alpha: borderAlpha),
+              width: _isHovered ? 1.5 : 1.0,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: _isHovered
+                    ? widget.hoverBorderColor.withValues(alpha: 0.15)
+                    : Colors.black.withValues(alpha: 0.02),
+                blurRadius: _isHovered ? 12 : 6,
+                offset: _isHovered ? const Offset(0, 4) : const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: widget.child,
+        ),
+      ),
+    );
+  }
+}
+
+class _JuicyCircleButton extends StatefulWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  final Color color;
+  final bool isSelected;
+  final bool isDisabled;
+
+  const _JuicyCircleButton({
+    required this.icon,
+    required this.onTap,
+    required this.color,
+    required this.isSelected,
+    required this.isDisabled,
+  });
+
+  @override
+  State<_JuicyCircleButton> createState() => _JuicyCircleButtonState();
+}
+
+class _JuicyCircleButtonState extends State<_JuicyCircleButton> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool disabled = widget.isDisabled;
+    final bool selected = widget.isSelected;
+    
+    Color btnColor;
+    Color iconColor;
+
+    if (disabled) {
+      btnColor = ScholarlyTheme.panelStroke.withValues(alpha: 0.3);
+      iconColor = ScholarlyTheme.textMuted.withValues(alpha: 0.4);
+    } else if (selected) {
+      btnColor = widget.color;
+      iconColor = Colors.white;
+    } else {
+      btnColor = Colors.white;
+      iconColor = widget.color;
+    }
+
+    final double scale = disabled ? 1.0 : (_isHovered ? 1.15 : (selected ? 1.05 : 1.0));
+
+    return MouseRegion(
+      cursor: disabled ? SystemMouseCursors.basic : SystemMouseCursors.click,
+      onEnter: (_) {
+        if (!disabled) setState(() => _isHovered = true);
+      },
+      onExit: (_) {
+        if (!disabled) setState(() => _isHovered = false);
+      },
+      child: GestureDetector(
+        onTap: disabled ? null : widget.onTap,
+        child: AnimatedScale(
+          scale: scale,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOutBack,
+          alignment: Alignment.center,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOutBack,
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: btnColor,
+              border: Border.all(
+                color: selected
+                    ? Colors.white
+                    : (disabled
+                        ? ScholarlyTheme.panelStroke.withValues(alpha: 0.2)
+                        : widget.color.withValues(alpha: 0.4)),
+                width: selected ? 2.5 : 1.5,
+              ),
+              boxShadow: [
+                if (selected)
+                  BoxShadow(
+                    color: widget.color.withValues(alpha: 0.4),
+                    blurRadius: 10,
+                    spreadRadius: 1,
+                    offset: const Offset(0, 3),
+                  )
+                else if (_isHovered && !disabled)
+                  BoxShadow(
+                    color: widget.color.withValues(alpha: 0.2),
+                    blurRadius: 8,
+                    spreadRadius: 0,
+                    offset: const Offset(0, 2),
+                  )
+                else
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
+                  ),
+              ],
+            ),
+            child: Icon(
+              widget.icon,
+              color: iconColor,
+              size: 22,
+            ),
+          ),
+        ),
       ),
     );
   }
