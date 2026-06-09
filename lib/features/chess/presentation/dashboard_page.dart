@@ -1585,6 +1585,8 @@ void exitToDashboardWithSidebar(BuildContext context, WidgetRef ref) {
             !arenaState.isPaused) {
           container.read(arenaProvider.notifier).togglePause();
         }
+      } else if (currentIndex == 3) {
+        container.read(chessProvider.notifier).initializeAcademySession();
       }
       container.read(mobileNavIndexProvider.notifier).state = 0;
     } catch (_) {
@@ -1597,6 +1599,8 @@ void exitToDashboardWithSidebar(BuildContext context, WidgetRef ref) {
               !arenaState.isPaused) {
             ref.read(arenaProvider.notifier).togglePause();
           }
+        } else if (currentIndex == 3) {
+          ref.read(chessProvider.notifier).initializeAcademySession();
         }
         ref.read(mobileNavIndexProvider.notifier).state = 0;
       }

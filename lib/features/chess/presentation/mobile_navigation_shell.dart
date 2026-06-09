@@ -147,7 +147,10 @@ class MobileNavigationShell extends ConsumerWidget {
                   final confirm = await showAcademyExitDialog(context, hasActiveMatch: true);
                   if (confirm == true) {
                     if (context.mounted) {
-                      exitToDashboardWithSidebar(context, ref);
+                      await ref.read(chessProvider.notifier).initializeAcademySession();
+                      if (context.mounted) {
+                        exitToDashboardWithSidebar(context, ref);
+                      }
                     }
                   }
                 } else if (currentIndex == 5) {
@@ -691,6 +694,11 @@ class _MobileSidebarDrawer extends ConsumerWidget {
       if (arenaState.recentMoves.isNotEmpty && !arenaState.game.gameOver && !arenaState.isPaused) {
         ref.read(arenaProvider.notifier).togglePause();
       }
+    }
+
+    // If navigating away from the Academy tab, reset the academy session so a new class starts when they return
+    if (currentIndex == 3 && index != 3) {
+      ref.read(chessProvider.notifier).initializeAcademySession();
     }
 
     // If navigating away from the Analysis tab, check for unsaved changes

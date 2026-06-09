@@ -103,6 +103,8 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
 
     if (confirm == true) {
       if (!mounted) return;
+      await ref.read(chessProvider.notifier).initializeAcademySession();
+      if (!mounted) return;
       exitToDashboardWithSidebar(context, ref);
     }
   }
@@ -1587,7 +1589,7 @@ Future<bool?> showAcademyExitDialog(BuildContext context, {required bool hasActi
           const SizedBox(height: 12),
           Text(
             hasActiveMatch
-                ? 'Are you sure you wish to leave the Academy?\n\nIf you leave the current match without finishing, it will not be counted in your attendance.'
+                ? 'If you leave the current match without finishing, it will not be counted in your attendance.'
                 : 'Do you want to exit the academy study environment and return to the main app interface?',
             style: GoogleFonts.inter(
               color: ScholarlyTheme.textPrimary,
