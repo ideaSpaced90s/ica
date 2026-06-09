@@ -95,11 +95,9 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Expanded(
-          child: SelectionArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              child: _buildContent(state, history),
-            ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            child: _buildContent(state, history),
           ),
         ),
         const Divider(height: 1, color: ScholarlyTheme.panelStroke),
@@ -263,20 +261,43 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
       ),
       child: Row(
         children: [
-          Expanded(child: _buildPromptButton('Analyze', Icons.analytics_rounded, isBusy)),
+          Expanded(child: _buildPromptButton('Analyze', Icons.analytics_rounded, isBusy || _hasPromptBeenRaised('Analyze'))),
           const SizedBox(width: 4),
-          Expanded(child: _buildPromptButton('Why', Icons.psychology_rounded, isBusy || !hasHistory)),
+          Expanded(child: _buildPromptButton('Why', Icons.psychology_rounded, isBusy || !hasHistory || _hasPromptBeenRaised('Why'))),
           const SizedBox(width: 4),
-          Expanded(child: _buildPromptButton('Candidates', Icons.alt_route_rounded, isBusy)),
+          Expanded(child: _buildPromptButton('Candidates', Icons.alt_route_rounded, isBusy || _hasPromptBeenRaised('Candidates'))),
           const SizedBox(width: 4),
-          Expanded(child: _buildPromptButton('Tactics', Icons.flash_on_rounded, isBusy || !hasHistory)),
+          Expanded(child: _buildPromptButton('Tactics', Icons.flash_on_rounded, isBusy || !hasHistory || _hasPromptBeenRaised('Tactics'))),
           const SizedBox(width: 4),
-          Expanded(child: _buildPromptButton('Plan', Icons.explore_rounded, isBusy)),
+          Expanded(child: _buildPromptButton('Plan', Icons.explore_rounded, isBusy || _hasPromptBeenRaised('Plan'))),
           const SizedBox(width: 4),
-          Expanded(child: _buildPromptButton('Defend', Icons.shield_rounded, isBusy || !hasHistory)),
+          Expanded(child: _buildPromptButton('Defend', Icons.shield_rounded, isBusy || !hasHistory || _hasPromptBeenRaised('Defend'))),
         ],
       ),
     );
+  }
+
+  bool _hasPromptBeenRaised(String label) {
+    final state = widget.state;
+    if (label == 'Tactics') {
+      for (final entry in state.commentaryHistory) {
+        if (entry.isUser &&
+            entry.associatedFen == state.currentBoardFen &&
+            entry.text.startsWith('[TACTICS_QUERY]')) {
+          return true;
+        }
+      }
+      return false;
+    }
+    final fullQuestion = _fullQuestions[label] ?? label;
+    for (final entry in state.commentaryHistory) {
+      if (entry.isUser &&
+          entry.associatedFen == state.currentBoardFen &&
+          entry.text == fullQuestion) {
+        return true;
+      }
+    }
+    return false;
   }
 
   Widget _buildPromptButton(String label, IconData icon, bool isBusy) {
@@ -503,16 +524,14 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
                       ),
                     ],
                   ),
-                  child: SelectionArea(
-                    child: Text(
-                      entry.text.startsWith('[TACTICS_QUERY]')
-                          ? entry.text.replaceFirst('[TACTICS_QUERY]', '').trim()
-                          : entry.text,
-                      style: GoogleFonts.inter(
-                        color: ScholarlyTheme.textPrimary,
-                        fontSize: 13,
-                        height: 1.45,
-                      ),
+                  child: Text(
+                    entry.text.startsWith('[TACTICS_QUERY]')
+                        ? entry.text.replaceFirst('[TACTICS_QUERY]', '').trim()
+                        : entry.text,
+                    style: GoogleFonts.inter(
+                      color: ScholarlyTheme.textPrimary,
+                      fontSize: 13,
+                      height: 1.45,
                     ),
                   ),
                 ),
@@ -636,31 +655,34 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            SelectionArea(
-                              child: Text.rich(
-                                TextSpan(
-                                  children: [
-                                    ..._parseAcademyRichText(_cleanTacticsText(entry.text), widget.state),
-                                    if (!entry.isComplete && !isStreaming)
-                                      TextSpan(
-                                        text: ' ${'.' * ((_pulse % 3) + 1)}',
-                                        style: GoogleFonts.fraunces(
-                                          color: ScholarlyTheme.accentBlue,
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                            Text.rich(
+                              TextSpan(
+                                children: [
+                                  ..._parseAcademyRichText(
+                                    _cleanTacticsText(entry.text),
+                                    widget.state,
+                                    entry.text,
+                                    isBubbleActive: entry.associatedFen == widget.state.currentBoardFen,
+                                  ),
+                                  if (!entry.isComplete && !isStreaming)
+                                    TextSpan(
+                                      text: ' ${'.' * ((_pulse % 3) + 1)}',
+                                      style: GoogleFonts.fraunces(
+                                        color: ScholarlyTheme.accentBlue,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
                                       ),
-                                    if (isStreaming)
-                                      TextSpan(
-                                        text: _pulse % 2 == 0 ? ' ┃' : '  ',
-                                        style: GoogleFonts.fraunces(
-                                          color: ScholarlyTheme.accentBlue,
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                                    ),
+                                  if (isStreaming)
+                                    TextSpan(
+                                      text: _pulse % 2 == 0 ? ' ┃' : '  ',
+                                      style: GoogleFonts.fraunces(
+                                        color: ScholarlyTheme.accentBlue,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
                                       ),
-                                  ],
-                                ),
+                                    ),
+                                ],
                               ),
                             ),
                             _buildTacticCards(entry, widget.state),
@@ -881,7 +903,12 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
     );
   }
 
-  List<InlineSpan> _parseAcademyRichText(String text, ChessState state) {
+  List<InlineSpan> _parseAcademyRichText(
+    String text,
+    ChessState state,
+    String fullText, {
+    required bool isBubbleActive,
+  }) {
     final List<InlineSpan> spans = [];
     final regExp = RegExp(
       r'\*\*(.*?)\*\*|'
@@ -946,9 +973,9 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
           ));
 
           // 3. Move notation in red and boxed
-          spans.addAll(_buildSplitNotationSpans(moveNotation, baseStyle, state, isRed: true));
+          spans.addAll(_buildSplitNotationSpans(moveNotation, baseStyle, state, fullText, isBubbleActive: isBubbleActive, isRed: true));
         } else if (moveRegex.hasMatch(content)) {
-          spans.addAll(_buildSplitNotationSpans(content, baseStyle, state));
+          spans.addAll(_buildSplitNotationSpans(content, baseStyle, state, fullText, isBubbleActive: isBubbleActive));
         } else {
           spans.add(TextSpan(
             text: content,
@@ -1024,7 +1051,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
       } else if (match.group(5) != null || match.group(6) != null) {
         // Square or Move (Notation Chips)
         final notation = match.group(0)!;
-        spans.addAll(_buildSplitNotationSpans(notation, baseStyle, state));
+        spans.addAll(_buildSplitNotationSpans(notation, baseStyle, state, fullText, isBubbleActive: isBubbleActive));
       } else if (match.group(7) != null) {
         // App Icon rendering
         spans.add(WidgetSpan(
@@ -1061,16 +1088,20 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
   List<InlineSpan> _buildSplitNotationSpans(
     String notation,
     TextStyle baseStyle,
-    ChessState state, {
+    ChessState state,
+    String fullText, {
+    required bool isBubbleActive,
     bool isRed = false,
   }) {
     final List<InlineSpan> spans = [];
-    final themeColor = isRed ? Colors.redAccent : ScholarlyTheme.accentBlue;
+    final themeColor = isRed
+        ? Colors.redAccent
+        : (isBubbleActive ? ScholarlyTheme.accentBlue : Colors.grey.shade600);
 
     if (notation.contains('-')) {
       final parts = notation.split('-');
       // First square chip
-      spans.add(_buildSingleNotationChip(parts[0], parts[0], state, isRed: isRed));
+      spans.add(_buildSingleNotationChip(parts[0], parts[0], state, fullText, isBubbleActive: isBubbleActive, isRed: isRed));
       // Hyphen
       spans.add(TextSpan(
         text: '-',
@@ -1080,7 +1111,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
         ),
       ));
       // Second square chip (targets the actual destination square)
-      spans.add(_buildSingleNotationChip(parts[1], parts[1], state, isRed: isRed));
+      spans.add(_buildSingleNotationChip(parts[1], parts[1], state, fullText, isBubbleActive: isBubbleActive, isRed: isRed));
     } else {
       // Single notation chip
       String? targetSquare;
@@ -1088,7 +1119,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
       if (squareMatches.isNotEmpty) {
         targetSquare = squareMatches.last.group(0);
       }
-      spans.add(_buildSingleNotationChip(notation, targetSquare, state, isRed: isRed));
+      spans.add(_buildSingleNotationChip(notation, targetSquare, state, fullText, isBubbleActive: isBubbleActive, isRed: isRed));
     }
     return spans;
   }
@@ -1096,36 +1127,54 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
   WidgetSpan _buildSingleNotationChip(
     String label,
     String? targetSquare,
-    ChessState state, {
+    ChessState state,
+    String fullText, {
+    required bool isBubbleActive,
     bool isRed = false,
   }) {
-    final themeColor = isRed ? Colors.redAccent : ScholarlyTheme.accentBlue;
+    final themeColor = isRed
+        ? Colors.redAccent
+        : (isBubbleActive ? ScholarlyTheme.accentBlue : Colors.grey.shade600);
+
+    final Color chipBgColor = isBubbleActive
+        ? themeColor.withValues(alpha: 0.1)
+        : Colors.white.withValues(alpha: 0.05);
+    final Color chipBorderColor = isBubbleActive
+        ? themeColor.withValues(alpha: 0.3)
+        : Colors.grey.withValues(alpha: 0.2);
+    final Color chipTextColor = isBubbleActive
+        ? themeColor
+        : ScholarlyTheme.textMuted.withValues(alpha: 0.6);
+
     return WidgetSpan(
       alignment: PlaceholderAlignment.middle,
-      child: GestureDetector(
-        onTap: targetSquare == null
-            ? null
-            : () {
-                ref.read(chessProvider.notifier).glowSquare(targetSquare);
-                ref.read(chessProvider.notifier).triggerAcademyAnimation();
-              },
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 2),
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-          decoration: BoxDecoration(
-            color: themeColor.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(4),
-            border: Border.all(
-              color: themeColor.withValues(alpha: 0.3),
-              width: 1,
+      child: MouseRegion(
+        cursor: (targetSquare == null || !isBubbleActive) ? SystemMouseCursors.basic : SystemMouseCursors.click,
+        child: GestureDetector(
+          onTap: (targetSquare == null || !isBubbleActive)
+              ? null
+              : () {
+                  ref.read(chessProvider.notifier).glowSquare(targetSquare);
+                  ref.read(chessProvider.notifier).showSuggestionForSquare(targetSquare, fullText);
+                },
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+            decoration: BoxDecoration(
+              color: chipBgColor,
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(
+                color: chipBorderColor,
+                width: 1,
+              ),
             ),
-          ),
-          child: Text(
-            label,
-            style: GoogleFonts.firaCode(
-              color: themeColor,
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
+            child: Text(
+              label,
+              style: GoogleFonts.firaCode(
+                color: chipTextColor,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ),
@@ -1283,17 +1332,19 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
       letterSpacing: 1.0,
     );
 
-    return GestureDetector(
-      onTap: !isValid
-          ? null
-          : () {
-              if (isCurrentPlaying) {
-                ref.read(chessProvider.notifier).stopTacticPlayback();
-              } else {
-                ref.read(chessProvider.notifier).playTactic(index, tactic.moves);
-              }
-            },
-      child: Container(
+    return MouseRegion(
+      cursor: isValid ? SystemMouseCursors.click : SystemMouseCursors.forbidden,
+      child: GestureDetector(
+        onTap: !isValid
+            ? null
+            : () {
+                if (isCurrentPlaying) {
+                  ref.read(chessProvider.notifier).stopTacticPlayback();
+                } else {
+                  ref.read(chessProvider.notifier).playTactic(index, tactic.moves);
+                }
+              },
+        child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
           color: bgColor,
@@ -1328,8 +1379,9 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 class ExtractedTactic {

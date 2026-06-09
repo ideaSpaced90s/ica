@@ -1,6 +1,5 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:chess/chess.dart' as chess_lib;
@@ -665,6 +664,7 @@ class _AcademyBoardState extends ConsumerState<AcademyBoard>
                       boardSize: boardSize,
                       isFlipped: chessState.isBoardFlipped,
                       trigger: chessState.academyAnimationTrigger,
+                      theme: chessTheme,
                     ),
 
                   PromotionOverlay(theme: chessTheme),
@@ -1029,6 +1029,7 @@ class AcademySuggestionOverlay extends StatefulWidget {
   final double boardSize;
   final bool isFlipped;
   final int trigger;
+  final ChessTheme theme;
 
   const AcademySuggestionOverlay({
     super.key,
@@ -1036,6 +1037,7 @@ class AcademySuggestionOverlay extends StatefulWidget {
     required this.boardSize,
     required this.isFlipped,
     required this.trigger,
+    required this.theme,
   });
 
   @override
@@ -1054,7 +1056,7 @@ class _AcademySuggestionOverlayState extends State<AcademySuggestionOverlay>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 1800),
     );
     _animation =
         CurvedAnimation(parent: _controller, curve: Curves.easeInOutCubic);
@@ -1065,10 +1067,7 @@ class _AcademySuggestionOverlayState extends State<AcademySuggestionOverlay>
     setState(() => _isVisible = true);
     _controller.reset();
     _controller.forward().then((_) {
-      // Auto-vanish the whole overlay after a short delay
-      Future.delayed(const Duration(milliseconds: 1500), () {
-        if (mounted) setState(() => _isVisible = false);
-      });
+      if (mounted) setState(() => _isVisible = false);
     });
   }
 
@@ -1103,59 +1102,104 @@ class _AcademySuggestionOverlayState extends State<AcademySuggestionOverlay>
     final fromPos = getPos(widget.data.from);
     final toPos = getPos(widget.data.to);
 
+    final String pieceCode = widget.data.pieceCode;
+    final bool isWhite = pieceCode.startsWith('w');
+    final String pieceType = pieceCode.substring(1);
+
     return IgnorePointer(
       child: Stack(
         children: [
           // 1. Animated Scholarly Arrow
-          CustomPaint(
-            size: Size(widget.boardSize, widget.boardSize),
-            painter: AcademyArrowPainter(
-              from: fromPos + Offset(squareSize / 2, squareSize / 2),
-              to: toPos + Offset(squareSize / 2, squareSize / 2),
-              progress: _animation.value,
-            ),
-          ),
-
-          // 2. Gliding Ghost Piece
           AnimatedBuilder(
             animation: _animation,
             builder: (context, child) {
-              // Quadratic Bezier path for ghost piece (matching the arrow)
+              final t = _animation.value;
+
+              // Arrow progress draws from 0.0 to 0.4
+              final arrowProgress = (t / 0.4).clamp(0.0, 1.0);
+
+              // Arrow opacity is solid, and fades out from 0.8 to 1.0
+              double arrowOpacity = 1.0;
+              if (t > 0.8) {
+                arrowOpacity = ((1.0 - t) / 0.2).clamp(0.0, 1.0);
+              }
+
+              return CustomPaint(
+                size: Size(widget.boardSize, widget.boardSize),
+                painter: AcademyArrowPainter(
+                  from: fromPos + Offset(squareSize / 2, squareSize / 2),
+                  to: toPos + Offset(squareSize / 2, squareSize / 2),
+                  progress: arrowProgress,
+                  opacity: arrowOpacity,
+                ),
+              );
+            },
+          ),
+
+          // 2. Gliding & Settling Piece
+          AnimatedBuilder(
+            animation: _animation,
+            builder: (context, child) {
+              final t = _animation.value;
+
+              double glideProgress = (t / 0.4).clamp(0.0, 1.0);
+              double curveValue = Curves.easeInOut.transform(glideProgress);
+
+              // Quadratic Bezier path matching the arrow arc
               final p0 = fromPos;
               final p2 = toPos;
               final p1 = Offset(
                 (p0.dx + p2.dx) / 2,
-                (p0.dy + p2.dy) / 2 - 30, // Arc matching AcademyArrowPainter
+                (p0.dy + p2.dy) / 2 - 35, // arc height
               );
 
-              final t = _animation.value;
               final currentPos = Offset(
-                (1 - t) * (1 - t) * p0.dx +
-                    2 * (1 - t) * t * p1.dx +
-                    t * t * p2.dx,
-                (1 - t) * (1 - t) * p0.dy +
-                    2 * (1 - t) * t * p1.dy +
-                    t * t * p2.dy,
+                (1 - curveValue) * (1 - curveValue) * p0.dx +
+                    2 * (1 - curveValue) * curveValue * p1.dx +
+                    curveValue * curveValue * p2.dx,
+                (1 - curveValue) * (1 - curveValue) * p0.dy +
+                    2 * (1 - curveValue) * curveValue * p1.dy +
+                    curveValue * curveValue * p2.dy,
               );
 
-              // Fade in at start, fade out at end (to reveal stationary ghost)
-              double opacity = 0.4;
-              if (t < 0.2) opacity = (t / 0.2) * 0.4;
-              if (t > 0.8) opacity = 0.4 - ((t - 0.8) / 0.2) * 0.4;
+              double opacity = 0.95;
+              double scale = 1.0;
+
+              if (t <= 0.4) {
+                // Glide: lift and descend
+                scale = 1.0 + 0.15 * sin(glideProgress * pi);
+              } else if (t <= 0.8) {
+                // Settle: small bounce when landing
+                final settleProgress = (t - 0.4) / 0.4;
+                if (settleProgress <= 0.35) {
+                  final tSettle = settleProgress / 0.35;
+                  scale = 1.0 + 0.08 * sin(tSettle * pi);
+                }
+              } else {
+                // Fade out: shrink and fade
+                final fadeProgress = (t - 0.8) / 0.2;
+                opacity = 0.95 * (1.0 - fadeProgress);
+                scale = 1.0 - 0.08 * fadeProgress;
+              }
 
               return Positioned(
                 left: currentPos.dx,
                 top: currentPos.dy,
                 child: Opacity(
-                  opacity: opacity,
-                  child: Container(
-                    width: squareSize,
-                    height: squareSize,
-                    padding: const EdgeInsets.all(4),
-                    child: Center(
-                      child: SvgPicture.asset(
-                        'assets/pieces/classic_svg/${widget.data.pieceCode}.svg',
-                        fit: BoxFit.contain,
+                  opacity: opacity.clamp(0.0, 1.0),
+                  child: Transform.scale(
+                    scale: scale,
+                    child: SizedBox(
+                      width: squareSize,
+                      height: squareSize,
+                      child: Center(
+                        child: widget.theme.buildPiece(
+                          context,
+                          pieceType,
+                          isWhite,
+                          false,
+                          0.0,
+                        ),
                       ),
                     ),
                   ),
@@ -1173,22 +1217,18 @@ class AcademyArrowPainter extends CustomPainter {
   final Offset from;
   final Offset to;
   final double progress;
+  final double opacity;
 
   AcademyArrowPainter({
     required this.from,
     required this.to,
     required this.progress,
+    required this.opacity,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (progress <= 0) return;
-
-    final paint = Paint()
-      ..color = ScholarlyTheme.accentBlue.withValues(alpha: 0.4)
-      ..strokeWidth = 4
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
+    if (progress <= 0 || opacity <= 0) return;
 
     final controlPoint = Offset(
       (from.dx + to.dx) / 2,
@@ -1196,10 +1236,7 @@ class AcademyArrowPainter extends CustomPainter {
     );
 
     final path = Path()..moveTo(from.dx, from.dy);
-
-    // Draw the path up to the current progress
     if (progress < 1.0) {
-      // Approximate quadratic bezier for animation
       for (double t = 0; t <= progress; t += 0.01) {
         final x = (1 - t) * (1 - t) * from.dx +
             2 * (1 - t) * t * controlPoint.dx +
@@ -1213,25 +1250,38 @@ class AcademyArrowPainter extends CustomPainter {
       path.quadraticBezierTo(controlPoint.dx, controlPoint.dy, to.dx, to.dy);
     }
 
+    // 1. Shadow glow (dark green)
+    final shadowPaint = Paint()
+      ..color = const Color(0xFF15803D).withValues(alpha: 0.25 * opacity)
+      ..strokeWidth = 9.0
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+    canvas.drawPath(path, shadowPaint);
+
+    // 2. Vibrant green main path
+    final paint = Paint()
+      ..color = const Color(0xFF22C55E).withValues(alpha: 0.85 * opacity)
+      ..strokeWidth = 5.5
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
     canvas.drawPath(path, paint);
 
-    // Arrowhead (only show if progress > 0.8)
+    // 3. Arrowhead
     if (progress > 0.8) {
       final t = progress;
       final headOpacity = (t - 0.8) / 0.2;
 
       final paintHead = Paint()
-        ..color = ScholarlyTheme.accentBlue.withValues(alpha: 0.4 * headOpacity)
+        ..color = const Color(0xFF22C55E).withValues(alpha: 0.85 * opacity * headOpacity)
         ..style = PaintingStyle.fill;
 
-      // Current direction at the tip of the path
       final dx = 2 * (1 - t) * (controlPoint.dx - from.dx) +
           2 * t * (to.dx - controlPoint.dx);
       final dy = 2 * (1 - t) * (controlPoint.dy - from.dy) +
           2 * t * (to.dy - controlPoint.dy);
       final angle = Offset(dx, dy).direction;
 
-      const arrowSize = 12.0;
+      const arrowSize = 14.0;
       final currentTo = Offset(
         (1 - t) * (1 - t) * from.dx +
             2 * (1 - t) * t * controlPoint.dx +
@@ -1257,6 +1307,7 @@ class AcademyArrowPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant AcademyArrowPainter oldDelegate) =>
       oldDelegate.progress != progress ||
+      oldDelegate.opacity != opacity ||
       oldDelegate.from != from ||
       oldDelegate.to != to;
 }

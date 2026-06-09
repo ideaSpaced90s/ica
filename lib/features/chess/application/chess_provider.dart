@@ -3837,6 +3837,79 @@ class ChessNotifier extends StateNotifier<ChessState> {
     );
   }
 
+  void showSuggestionForSquare(String targetSquare, String text) {
+    if (!state.isAcademyActive) return;
+
+    final move = _resolveMoveFromText(targetSquare, text);
+    if (move != null) {
+      final from = chess_lib.Chess.algebraic(move.from);
+      final to = chess_lib.Chess.algebraic(move.to);
+      final colorPrefix = move.color == chess_lib.Color.WHITE ? 'w' : 'b';
+      String pieceChar = 'P';
+      switch (move.piece) {
+        case chess_lib.PieceType.PAWN: pieceChar = 'P'; break;
+        case chess_lib.PieceType.KNIGHT: pieceChar = 'N'; break;
+        case chess_lib.PieceType.BISHOP: pieceChar = 'B'; break;
+        case chess_lib.PieceType.ROOK: pieceChar = 'R'; break;
+        case chess_lib.PieceType.QUEEN: pieceChar = 'Q'; break;
+        case chess_lib.PieceType.KING: pieceChar = 'K'; break;
+      }
+      final pieceCode = '$colorPrefix$pieceChar';
+
+      state = state.copyWith(
+        chanakyaSuggestion: MoveAnimationData(
+          from: from,
+          to: to,
+          pieceCode: pieceCode,
+          isCapture: move.captured != null,
+        ),
+        academyAnimationTrigger: state.academyAnimationTrigger + 1,
+      );
+    } else {
+      state = state.copyWith(
+        chanakyaSuggestion: null,
+        academyAnimationTrigger: state.academyAnimationTrigger + 1,
+      );
+    }
+  }
+
+  chess_lib.Move? _resolveMoveFromText(String targetSquare, String text) {
+    final legalMoves = state.game.generateMoves();
+    final matchingMoves = legalMoves.where((m) => chess_lib.Chess.algebraic(m.to) == targetSquare).toList();
+    if (matchingMoves.isEmpty) return null;
+    if (matchingMoves.length == 1) return matchingMoves.first;
+
+    final lines = text.split('\n');
+    String contextLine = '';
+    for (final line in lines) {
+      if (line.contains(targetSquare)) {
+        contextLine = line;
+        break;
+      }
+    }
+
+    if (contextLine.isNotEmpty) {
+      final lowerContext = contextLine.toLowerCase();
+      for (final move in matchingMoves) {
+        final pieceType = move.piece;
+        String pieceKeyword = '';
+        switch (pieceType) {
+          case chess_lib.PieceType.PAWN: pieceKeyword = 'pawn'; break;
+          case chess_lib.PieceType.KNIGHT: pieceKeyword = 'knight'; break;
+          case chess_lib.PieceType.BISHOP: pieceKeyword = 'bishop'; break;
+          case chess_lib.PieceType.ROOK: pieceKeyword = 'rook'; break;
+          case chess_lib.PieceType.QUEEN: pieceKeyword = 'queen'; break;
+          case chess_lib.PieceType.KING: pieceKeyword = 'king'; break;
+        }
+        if (lowerContext.contains(pieceKeyword)) {
+          return move;
+        }
+      }
+    }
+
+    return matchingMoves.first;
+  }
+
   void glowSquare(String square) {
     state = state.copyWith(glowingSquare: square);
     Timer(const Duration(milliseconds: 1000), () {
