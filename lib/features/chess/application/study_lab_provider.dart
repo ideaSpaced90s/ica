@@ -689,7 +689,10 @@ class StudyLabNotifier extends StateNotifier<StudyLabState> {
     return tokens;
   }
 
-  void loadGameEntry(SavedGameEntry entry) {
+  void loadGameEntry(
+    SavedGameEntry entry, {
+    List<CommentaryEntry>? chanakyaCommentary,
+  }) {
     final startPosition = entry.initialFen ?? chess_lib.Chess.DEFAULT_POSITION;
     final localChess = chess_lib.Chess.fromFEN(startPosition);
     final List<StudyLabMoveNode> currentNodes = [];
@@ -727,6 +730,22 @@ class StudyLabNotifier extends StateNotifier<StudyLabState> {
       activeNodeIndex = newNodeIndex;
     }
 
+    if (chanakyaCommentary != null) {
+      for (var i = 0; i < currentNodes.length; i++) {
+        final nodeFen = _normalizeFenForComparison(currentNodes[i].fen);
+        final matchingEntries = chanakyaCommentary
+            .where((e) => !e.isUser && e.associatedFen != null && _normalizeFenForComparison(e.associatedFen!) == nodeFen)
+            .toList();
+        if (matchingEntries.isNotEmpty) {
+          final combinedText = matchingEntries.map((e) => e.text).join(' ').toLowerCase();
+          final ann = _detectAnnotation(combinedText);
+          if (ann != MoveAnnotation.none) {
+            currentNodes[i] = currentNodes[i].copyWith(annotation: ann);
+          }
+        }
+      }
+    }
+
     state = StudyLabState(
       nodes: currentNodes,
       currentNodeIndex: activeNodeIndex,
@@ -736,6 +755,36 @@ class StudyLabNotifier extends StateNotifier<StudyLabState> {
     );
 
     _updateOpeningRecognition();
+  }
+
+  String _normalizeFenForComparison(String fen) {
+    final parts = fen.trim().split(RegExp(r'\s+'));
+    if (parts.length >= 4) {
+      return parts.sublist(0, 4).join(' ');
+    }
+    return fen;
+  }
+
+  MoveAnnotation _detectAnnotation(String lowerText) {
+    if (lowerText.contains('blunder') || lowerText.contains('terrible') || lowerText.contains('catastrophic')) {
+      return MoveAnnotation.blunder;
+    }
+    if (lowerText.contains('brilliant') || lowerText.contains('stunning') || lowerText.contains('masterful') || lowerText.contains('exceptional')) {
+      return MoveAnnotation.brilliant;
+    }
+    if (lowerText.contains('mistake') || lowerText.contains('inaccuracy') || lowerText.contains('error') || lowerText.contains('loses')) {
+      return MoveAnnotation.mistake;
+    }
+    if (lowerText.contains('excellent') || lowerText.contains('strong') || lowerText.contains('best') || lowerText.contains('precise') || lowerText.contains('correct')) {
+      return MoveAnnotation.good;
+    }
+    if (lowerText.contains('dubious') || lowerText.contains('questionable') || lowerText.contains('risky') || lowerText.contains('suspect')) {
+      return MoveAnnotation.dubious;
+    }
+    if (lowerText.contains('interesting') || lowerText.contains('creative') || lowerText.contains('provocative') || lowerText.contains('gambit')) {
+      return MoveAnnotation.interesting;
+    }
+    return MoveAnnotation.none;
   }
 
   // Load a single game record (usually selected from a multi-game PGN picker)

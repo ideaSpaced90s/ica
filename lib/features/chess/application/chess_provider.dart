@@ -3676,6 +3676,8 @@ class ChessNotifier extends StateNotifier<ChessState> {
              "A draw shows resilience and patience—let us load the game into the workspace to review where the win might have been missed.";
     }
 
+    text += '\n\nTap **ANALYZE GAME** below — I have annotated each critical move for your study.';
+
     // 5. Automatically save the game in archive and favorite it
     final dateStr = DateFormat('MMM dd, yyyy').format(DateTime.now());
     final savedGame = await saveCurrentGame(
@@ -3968,26 +3970,12 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
     final move = _resolveMoveFromText(targetSquareOrLabel, text);
     if (move != null) {
-      final from = chess_lib.Chess.algebraic(move.from);
-      final to = chess_lib.Chess.algebraic(move.to);
-      final colorPrefix = move.color == chess_lib.Color.WHITE ? 'w' : 'b';
-      String pieceChar = 'P';
-      switch (move.piece) {
-        case chess_lib.PieceType.PAWN: pieceChar = 'P'; break;
-        case chess_lib.PieceType.KNIGHT: pieceChar = 'N'; break;
-        case chess_lib.PieceType.BISHOP: pieceChar = 'B'; break;
-        case chess_lib.PieceType.ROOK: pieceChar = 'R'; break;
-        case chess_lib.PieceType.QUEEN: pieceChar = 'Q'; break;
-        case chess_lib.PieceType.KING: pieceChar = 'K'; break;
-      }
-      final pieceCode = '$colorPrefix$pieceChar';
-
       state = state.copyWith(
         chanakyaSuggestion: MoveAnimationData(
-          from: from,
-          to: to,
-          pieceCode: pieceCode,
-          isCapture: move.captured != null,
+          from: move.from,
+          to: move.to,
+          pieceCode: move.pieceCode,
+          isCapture: move.isCapture,
         ),
         academyAnimationTrigger: state.academyAnimationTrigger + 1,
       );
@@ -3999,45 +3987,131 @@ class ChessNotifier extends StateNotifier<ChessState> {
     }
   }
 
-  chess_lib.Move? _resolveMoveFromText(String targetSquareOrLabel, String text) {
+  ResolvedMove _toResolvedMove(chess_lib.Move move) {
+    final from = chess_lib.Chess.algebraic(move.from);
+    final to = chess_lib.Chess.algebraic(move.to);
+    final colorPrefix = move.color == chess_lib.Color.WHITE ? 'w' : 'b';
+    String pieceChar = 'P';
+    switch (move.piece) {
+      case chess_lib.PieceType.PAWN: pieceChar = 'P'; break;
+      case chess_lib.PieceType.KNIGHT: pieceChar = 'N'; break;
+      case chess_lib.PieceType.BISHOP: pieceChar = 'B'; break;
+      case chess_lib.PieceType.ROOK: pieceChar = 'R'; break;
+      case chess_lib.PieceType.QUEEN: pieceChar = 'Q'; break;
+      case chess_lib.PieceType.KING: pieceChar = 'K'; break;
+    }
+    return ResolvedMove(
+      from: from,
+      to: to,
+      pieceCode: '$colorPrefix$pieceChar',
+      isCapture: move.captured != null,
+    );
+  }
+
+  ResolvedMove? _resolveMoveFromText(String targetSquareOrLabel, String text) {
+    final cleanLabel = targetSquareOrLabel.trim();
+    final uciRegex = RegExp(r'^([a-h][1-8])([a-h][1-8])([qrbnQRBN])?$', caseSensitive: false);
+    final uciMatch = uciRegex.firstMatch(cleanLabel);
+
+    if (uciMatch != null) {
+      final fromSquare = uciMatch.group(1)!.toLowerCase();
+      final toSquare = uciMatch.group(2)!.toLowerCase();
+      final promo = uciMatch.group(3)?.toLowerCase() ?? '';
+
+      // Check current legal moves first
+      final legalMoves = state.game.generateMoves();
+      for (final m in legalMoves) {
+        if (chess_lib.Chess.algebraic(m.from) == fromSquare && chess_lib.Chess.algebraic(m.to) == toSquare) {
+          if (promo.isNotEmpty) {
+            String promoChar = '';
+            switch (m.promotion) {
+              case chess_lib.PieceType.KNIGHT: promoChar = 'n'; break;
+              case chess_lib.PieceType.BISHOP: promoChar = 'b'; break;
+              case chess_lib.PieceType.ROOK: promoChar = 'r'; break;
+              case chess_lib.PieceType.QUEEN: promoChar = 'q'; break;
+              default: promoChar = '';
+            }
+            if (promoChar == promo) return _toResolvedMove(m);
+          } else {
+            return _toResolvedMove(m);
+          }
+        }
+      }
+
+      // If not legal in current position, check PV lines of candidates using lightweight piece simulation
+      final Map<String, chess_lib.Piece> boardPieces = {};
+      for (final sq in chess_lib.Chess.SQUARES.keys) {
+        final p = state.game.getPiece(sq);
+        if (p != null) {
+          boardPieces[sq] = p;
+        }
+      }
+
+      for (final c in _currentCandidates) {
+        if (c.fullPv.isEmpty) continue;
+        final Map<String, chess_lib.Piece> currentPieces = Map.from(boardPieces);
+        for (final uci in c.fullPv) {
+          if (uci.length < 4) break;
+          final f = uci.substring(0, 2);
+          final t = uci.substring(2, 4);
+          final p = uci.length > 4 ? uci.substring(4) : '';
+
+          final movingPiece = currentPieces[f];
+          final capturedPiece = currentPieces[t];
+
+          if (movingPiece == null) break;
+
+          chess_lib.Piece simulatedPiece = movingPiece;
+          if (p.isNotEmpty) {
+            chess_lib.PieceType promoType;
+            switch (p.toLowerCase()) {
+              case 'n': promoType = chess_lib.PieceType.KNIGHT; break;
+              case 'b': promoType = chess_lib.PieceType.BISHOP; break;
+              case 'r': promoType = chess_lib.PieceType.ROOK; break;
+              case 'q': promoType = chess_lib.PieceType.QUEEN; break;
+              default: promoType = movingPiece.type;
+            }
+            simulatedPiece = chess_lib.Piece(promoType, movingPiece.color);
+          }
+
+          // If this move matches the exact from/to of the clicked chip, return it!
+          if (f == fromSquare && t == toSquare) {
+            final colorPrefix = movingPiece.color == chess_lib.Color.WHITE ? 'w' : 'b';
+            String pieceChar = 'P';
+            switch (movingPiece.type) {
+              case chess_lib.PieceType.PAWN: pieceChar = 'P'; break;
+              case chess_lib.PieceType.KNIGHT: pieceChar = 'N'; break;
+              case chess_lib.PieceType.BISHOP: pieceChar = 'B'; break;
+              case chess_lib.PieceType.ROOK: pieceChar = 'R'; break;
+              case chess_lib.PieceType.QUEEN: pieceChar = 'Q'; break;
+              case chess_lib.PieceType.KING: pieceChar = 'K'; break;
+            }
+            return ResolvedMove(
+              from: f,
+              to: t,
+              pieceCode: '$colorPrefix$pieceChar',
+              isCapture: capturedPiece != null,
+            );
+          }
+
+          currentPieces.remove(f);
+          currentPieces[t] = simulatedPiece;
+        }
+      }
+    }
+
     final targetSquare = targetSquareOrLabel.length >= 2
         ? targetSquareOrLabel.substring(targetSquareOrLabel.length - 2).toLowerCase()
         : targetSquareOrLabel.toLowerCase();
 
     final legalMoves = state.game.generateMoves();
     final matchingMoves = legalMoves.where((m) => chess_lib.Chess.algebraic(m.to) == targetSquare).toList();
-    if (matchingMoves.isEmpty) return null;
-    if (matchingMoves.length == 1) return matchingMoves.first;
+    
+    if (matchingMoves.isNotEmpty) {
+      if (matchingMoves.length == 1) return _toResolvedMove(matchingMoves.first);
 
-    // Disambiguate using the specific label content if possible
-    final lowerLabel = targetSquareOrLabel.toLowerCase();
-    for (final move in matchingMoves) {
-      final pieceType = move.piece;
-      String pieceKeyword = '';
-      switch (pieceType) {
-        case chess_lib.PieceType.PAWN: pieceKeyword = 'pawn'; break;
-        case chess_lib.PieceType.KNIGHT: pieceKeyword = 'knight'; break;
-        case chess_lib.PieceType.BISHOP: pieceKeyword = 'bishop'; break;
-        case chess_lib.PieceType.ROOK: pieceKeyword = 'rook'; break;
-        case chess_lib.PieceType.QUEEN: pieceKeyword = 'queen'; break;
-        case chess_lib.PieceType.KING: pieceKeyword = 'king'; break;
-      }
-      if (lowerLabel.contains(pieceKeyword) && lowerLabel.length > 2) {
-        return move;
-      }
-    }
-
-    final lines = text.split('\n');
-    String contextLine = '';
-    for (final line in lines) {
-      if (line.contains(targetSquare)) {
-        contextLine = line;
-        break;
-      }
-    }
-
-    if (contextLine.isNotEmpty) {
-      final lowerContext = contextLine.toLowerCase();
+      // Disambiguate using the specific label content if possible
+      final lowerLabel = targetSquareOrLabel.toLowerCase();
       for (final move in matchingMoves) {
         final pieceType = move.piece;
         String pieceKeyword = '';
@@ -4049,13 +4123,158 @@ class ChessNotifier extends StateNotifier<ChessState> {
           case chess_lib.PieceType.QUEEN: pieceKeyword = 'queen'; break;
           case chess_lib.PieceType.KING: pieceKeyword = 'king'; break;
         }
-        if (lowerContext.contains(pieceKeyword)) {
-          return move;
+        if (lowerLabel.contains(pieceKeyword) && lowerLabel.length > 2) {
+          return _toResolvedMove(move);
         }
+      }
+
+      final lines = text.split('\n');
+      String contextLine = '';
+      for (final line in lines) {
+        if (line.contains(targetSquare)) {
+          contextLine = line;
+          break;
+        }
+      }
+
+      if (contextLine.isNotEmpty) {
+        final lowerContext = contextLine.toLowerCase();
+        for (final move in matchingMoves) {
+          final pieceType = move.piece;
+          String pieceKeyword = '';
+          switch (pieceType) {
+            case chess_lib.PieceType.PAWN: pieceKeyword = 'pawn'; break;
+            case chess_lib.PieceType.KNIGHT: pieceKeyword = 'knight'; break;
+            case chess_lib.PieceType.BISHOP: pieceKeyword = 'bishop'; break;
+            case chess_lib.PieceType.ROOK: pieceKeyword = 'rook'; break;
+            case chess_lib.PieceType.QUEEN: pieceKeyword = 'queen'; break;
+            case chess_lib.PieceType.KING: pieceKeyword = 'king'; break;
+          }
+          if (lowerContext.contains(pieceKeyword)) {
+            return _toResolvedMove(move);
+          }
+        }
+      }
+
+      return _toResolvedMove(matchingMoves.first);
+    }
+
+    // If no matching legal moves in the current position, search in the PV lines of candidate moves!
+    final List<ResolvedMove> pvMatchingMoves = [];
+    final Map<String, chess_lib.Piece> boardPieces = {};
+    for (final sq in chess_lib.Chess.SQUARES.keys) {
+      final p = state.game.getPiece(sq);
+      if (p != null) {
+        boardPieces[sq] = p;
       }
     }
 
-    return matchingMoves.first;
+    for (final c in _currentCandidates) {
+      if (c.fullPv.isEmpty) continue;
+      final Map<String, chess_lib.Piece> currentPieces = Map.from(boardPieces);
+      for (final uci in c.fullPv) {
+        if (uci.length < 4) break;
+        final f = uci.substring(0, 2);
+        final t = uci.substring(2, 4);
+        final p = uci.length > 4 ? uci.substring(4) : '';
+
+        final movingPiece = currentPieces[f];
+        final capturedPiece = currentPieces[t];
+
+        if (movingPiece == null) break;
+
+        chess_lib.Piece simulatedPiece = movingPiece;
+        if (p.isNotEmpty) {
+          chess_lib.PieceType promoType;
+          switch (p.toLowerCase()) {
+            case 'n': promoType = chess_lib.PieceType.KNIGHT; break;
+            case 'b': promoType = chess_lib.PieceType.BISHOP; break;
+            case 'r': promoType = chess_lib.PieceType.ROOK; break;
+            case 'q': promoType = chess_lib.PieceType.QUEEN; break;
+            default: promoType = movingPiece.type;
+          }
+          simulatedPiece = chess_lib.Piece(promoType, movingPiece.color);
+        }
+
+        if (t == targetSquare) {
+          final colorPrefix = movingPiece.color == chess_lib.Color.WHITE ? 'w' : 'b';
+          String pieceChar = 'P';
+          switch (movingPiece.type) {
+            case chess_lib.PieceType.PAWN: pieceChar = 'P'; break;
+            case chess_lib.PieceType.KNIGHT: pieceChar = 'N'; break;
+            case chess_lib.PieceType.BISHOP: pieceChar = 'B'; break;
+            case chess_lib.PieceType.ROOK: pieceChar = 'R'; break;
+            case chess_lib.PieceType.QUEEN: pieceChar = 'Q'; break;
+            case chess_lib.PieceType.KING: pieceChar = 'K'; break;
+          }
+          final match = ResolvedMove(
+            from: f,
+            to: t,
+            pieceCode: '$colorPrefix$pieceChar',
+            isCapture: capturedPiece != null,
+          );
+          pvMatchingMoves.add(match);
+        }
+
+        currentPieces.remove(f);
+        currentPieces[t] = simulatedPiece;
+      }
+    }
+
+    if (pvMatchingMoves.isNotEmpty) {
+      if (pvMatchingMoves.length == 1) return pvMatchingMoves.first;
+
+      // Disambiguate using context text
+      final lines = text.split('\n');
+      String contextLine = '';
+      for (final line in lines) {
+        if (line.contains(targetSquare)) {
+          contextLine = line;
+          break;
+        }
+      }
+
+      if (contextLine.isNotEmpty) {
+        final lowerContext = contextLine.toLowerCase();
+        for (final move in pvMatchingMoves) {
+          // Find the moving piece type keyword
+          String pieceKeyword = '';
+          final pieceChar = move.pieceCode[1];
+          switch (pieceChar) {
+            case 'P': pieceKeyword = 'pawn'; break;
+            case 'N': pieceKeyword = 'knight'; break;
+            case 'B': pieceKeyword = 'bishop'; break;
+            case 'R': pieceKeyword = 'rook'; break;
+            case 'Q': pieceKeyword = 'queen'; break;
+            case 'K': pieceKeyword = 'king'; break;
+          }
+          final isWhitePiece = move.pieceCode.startsWith('w');
+          final colorKeyword = isWhitePiece ? 'white' : 'black';
+
+          if (lowerContext.contains(pieceKeyword) && lowerContext.contains(colorKeyword)) {
+            return move;
+          }
+        }
+        for (final move in pvMatchingMoves) {
+          String pieceKeyword = '';
+          final pieceChar = move.pieceCode[1];
+          switch (pieceChar) {
+            case 'P': pieceKeyword = 'pawn'; break;
+            case 'N': pieceKeyword = 'knight'; break;
+            case 'B': pieceKeyword = 'bishop'; break;
+            case 'R': pieceKeyword = 'rook'; break;
+            case 'Q': pieceKeyword = 'queen'; break;
+            case 'K': pieceKeyword = 'king'; break;
+          }
+          if (lowerContext.contains(pieceKeyword)) {
+            return move;
+          }
+        }
+      }
+      return pvMatchingMoves.first;
+    }
+
+    return null;
   }
 
   void glowSquare(String squareOrLabel) {
@@ -4077,6 +4296,20 @@ final chessSoundServiceProvider = Provider((ref) {
   ref.onDispose(() => service.dispose());
   return service;
 });
+
+class ResolvedMove {
+  final String from;
+  final String to;
+  final String pieceCode;
+  final bool isCapture;
+
+  ResolvedMove({
+    required this.from,
+    required this.to,
+    required this.pieceCode,
+    required this.isCapture,
+  });
+}
 final chessHapticsServiceProvider = Provider((ref) => ChessHapticsService());
 final commentaryEngineProvider = Provider((ref) => CommentaryEngine());
 final savedGameRepositoryProvider = Provider((ref) => SavedGameRepository());

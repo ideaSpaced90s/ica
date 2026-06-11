@@ -88,10 +88,10 @@ class ChapterSelectScreen extends ConsumerWidget {
       color: Color(0xFF6B21A8),
     ),
     _ChapterGroup(
-      title: 'Mastery & Graduation',
-      subtitle: 'Knight & Bishop mate, Steinitz majority, Graduation Match',
+      title: 'Mastery',
+      subtitle: 'Knight & Bishop mate, Steinitz majority',
       start: 51,
-      end: 53,
+      end: 52,
       icon: Icons.emoji_events_rounded,
       color: Color(0xFF9F1239),
     ),
@@ -390,9 +390,7 @@ class ChapterSelectScreen extends ConsumerWidget {
                 (context, index) {
                   final lesson = lessons[index];
                   final isTarget = isOnboarding && lesson.chapterId == targetChapter;
-                  final isUnlocked = isOnboarding
-                      ? isTarget
-                      : unlockedChapters.contains(lesson.chapterId);
+                  final isUnlocked = true;
                   final isCompleted = completedChapters.contains(lesson.chapterId);
 
                   return PulsingGlowWrapper(
@@ -636,10 +634,9 @@ class _ChapterCard extends StatelessWidget {
       case 48: return Icons.align_horizontal_left_rounded; // Alekhine's Gun
       case 49: return Icons.auto_awesome_rounded;     // Saavedra Study
       case 50: return Icons.people_outline_rounded;   // Two Bishops Mate
-      // GROUP 9 — Mastery & Graduation (51–53)
+      // GROUP 9 — Mastery (51–52)
       case 51: return Icons.extension_rounded;        // Knight & Bishop Mate
       case 52: return Icons.groups_rounded;           // Steinitz's Majority
-      case 53: return Icons.school_rounded;           // Graduation Match
       default: return Icons.help_outline_rounded;
     }
   }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -22,6 +23,34 @@ class AnalysisPage extends ConsumerStatefulWidget {
 
 class _AnalysisPageState extends ConsumerState<AnalysisPage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  bool _isAutoPlaying = false;
+  Timer? _autoPlayTimer;
+
+  @override
+  void dispose() {
+    _autoPlayTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startAutoPlay(StudyLabNotifier notifier) {
+    _autoPlayTimer?.cancel();
+    setState(() => _isAutoPlaying = true);
+    _autoPlayTimer = Timer.periodic(const Duration(milliseconds: 1500), (_) {
+      final state = ref.read(studyLabProvider);
+      if (!state.canRedo) {
+        _stopAutoPlay();
+        return;
+      }
+      notifier.redo();
+      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
+    });
+  }
+
+  void _stopAutoPlay() {
+    _autoPlayTimer?.cancel();
+    if (mounted) setState(() => _isAutoPlaying = false);
+  }
 
   @override
   void initState() {
@@ -393,6 +422,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
                       activeColor: const Color(0xFF29B6F6), // Vibrant Cyan/Blue
                       onTap: state.currentNodeIndex != null
                           ? () {
+                              _stopAutoPlay();
                               notifier.selectNode(null);
                               ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
                             }
@@ -404,6 +434,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
                       activeColor: const Color(0xFF69F0AE), // Vibrant Green
                       onTap: state.canUndo
                           ? () {
+                              _stopAutoPlay();
                               notifier.undo();
                               ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
                             }
@@ -415,6 +446,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
                       activeColor: const Color(0xFF69F0AE), // Vibrant Green
                       onTap: state.canRedo
                           ? () {
+                              _stopAutoPlay();
                               notifier.redo();
                               ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
                             }
@@ -426,6 +458,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
                       activeColor: const Color(0xFF29B6F6), // Vibrant Cyan/Blue
                       onTap: state.canRedo
                           ? () {
+                              _stopAutoPlay();
                               int? current = state.currentNodeIndex;
                               while (true) {
                                 final children = current == null
@@ -460,6 +493,35 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
                             }
                           : null,
                       child: const Icon(Icons.refresh_rounded),
+                    ),
+                    Container(width: 1.5, height: 24, color: ScholarlyTheme.panelStroke.withValues(alpha: 0.5)),
+                    _CompactBoxButton(
+                      tooltip: _isAutoPlaying ? 'Pause' : 'Play Through',
+                      activeColor: const Color(0xFF69F0AE), // Green
+                      isActive: _isAutoPlaying,
+                      onTap: state.nodes.isNotEmpty
+                          ? () {
+                              if (_isAutoPlaying) {
+                                _stopAutoPlay();
+                              } else {
+                                _startAutoPlay(notifier);
+                              }
+                              ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiToggle);
+                            }
+                          : null,
+                      child: Icon(_isAutoPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded),
+                    ),
+                    _CompactBoxButton(
+                      tooltip: 'Stop',
+                      activeColor: const Color(0xFFFF5252),
+                      onTap: (_isAutoPlaying || state.currentNodeIndex != null)
+                          ? () {
+                              _stopAutoPlay();
+                              notifier.selectNode(null);
+                              ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
+                            }
+                          : null,
+                      child: const Icon(Icons.stop_rounded),
                     ),
                   ],
                 ),
@@ -522,17 +584,17 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
   Color _getChipColor(MoveAnnotation a) {
     switch (a) {
       case MoveAnnotation.brilliant:
-        return const Color(0xFF00E5FF); // Cyan
+        return const Color(0xFF00BCD4);
       case MoveAnnotation.good:
-        return const Color(0xFF00E676); // Green
+        return const Color(0xFF00C853);
       case MoveAnnotation.interesting:
-        return const Color(0xFF7C4DFF); // Purple/Blue
+        return const Color(0xFF9C27B0);
       case MoveAnnotation.dubious:
-        return const Color(0xFFFFEA00); // Yellow
+        return const Color(0xFFFF6F00);
       case MoveAnnotation.mistake:
-        return const Color(0xFFFF9100); // Orange
+        return const Color(0xFFE53935);
       case MoveAnnotation.blunder:
-        return const Color(0xFFFF1744); // Red
+        return const Color(0xFFD50000);
       case MoveAnnotation.none:
         return Colors.grey;
     }

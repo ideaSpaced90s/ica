@@ -744,9 +744,14 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
         onTap: () {
           ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
           try {
-            final game = ref.read(chessProvider).savedGames
+            final chessState = ref.read(chessProvider);
+            final game = chessState.savedGames
                 .firstWhere((g) => g.id == savedGameId);
-            ref.read(studyLabProvider.notifier).loadGameEntry(game);
+            final commentary = chessState.commentaryHistory;
+            ref.read(studyLabProvider.notifier).loadGameEntry(
+              game,
+              chanakyaCommentary: commentary,
+            );
             ref.read(mobileNavIndexProvider.notifier).state = 5;
           } catch (e) {
             debugPrint('Failed to load Academy game for analysis: $e');

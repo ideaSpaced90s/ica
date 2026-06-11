@@ -392,7 +392,7 @@ class CommentaryEngine {
             buffer.write('${i + 1}. $cleanedMove\n');
             if (c.fullPv.length > 1) {
               final cleanedPv = c.fullPv.skip(1).take(3).map(cleanMoveName).join(' → ');
-              buffer.write('   Continuation: $cleanedPv\n');
+              buffer.write('   => $cleanedPv\n');
             }
           }
           buffer.write('\nFocus on maintaining structural harmony while executing these paths.');
@@ -419,7 +419,7 @@ class CommentaryEngine {
           buffer.write('To maintain coordination, the most principled defense is **$defMoveName**. ');
           if (bestDef.fullPv.length > 1) {
             final continuation = bestDef.fullPv.take(4).map(cleanMoveName).join(' → ');
-            buffer.write('A detailed continuation of defense moves is: **$continuation**.');
+            buffer.write('=> **$continuation**');
           }
         } else {
           buffer.write('Focus on maintaining your structural harmony and piece activity.');
@@ -431,7 +431,7 @@ class CommentaryEngine {
           if (context.pvLine.length >= 2) {
             final p1 = cleanMoveName(context.pvLine[0]);
             final p2 = cleanMoveName(context.pvLine[1]);
-            response = '$opener My analysis suggests continuing with **$p1** and then **$p2** to build piece activity and secure positional strengths.';
+            response = '$opener My analysis suggests continuing with **$p1**, and you may then proceed with **$p2** to build your piece activity and secure positional strengths.';
           } else {
             final cleanedPv = context.pvLine.take(4).map(cleanMoveName).join(' → ');
             response = '$opener **$cleanedPv**. This sequence maintains piece activity and coordinates our forces toward key squares.';

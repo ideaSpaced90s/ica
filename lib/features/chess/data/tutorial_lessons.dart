@@ -2997,20 +2997,6 @@ class TutorialLessonsDatabase {
         ),
       ],
     ),
-
-    // Chapter 53: Graduation Match (old 23)
-    TutorialLesson(
-      chapterId: 53,
-      title: 'Graduation Match',
-      setupFen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
-      steps: [
-        TutorialStep(
-          type: TutorialStepType.dialogue,
-          dialogue: "The final trial. Demonstrate everything I have taught you. This is your graduation.",
-          mentorMood: MentorMood.celebration,
-        ),
-      ],
-    ),
   ];
 
   static TutorialLesson getLesson(int chapterId) {
