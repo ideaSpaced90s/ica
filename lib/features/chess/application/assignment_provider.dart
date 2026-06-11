@@ -5,6 +5,10 @@ import '../data/assignment_repository.dart';
 import 'battleground_provider.dart';
 import 'puzzles_provider.dart';
 import 'tutorial_provider.dart';
+import 'historical_cinema_provider.dart';
+import '../data/historical_cinema_repository.dart';
+import '../data/tutorial_lessons.dart';
+import '../domain/models/tutorial_lesson.dart';
 import 'package:kingslayer_chess/src/rust/api/assignment.dart'
     as rust_assignment;
 import 'package:kingslayer_chess/src/rust/api/cognitive.dart' as rust_cognitive;
@@ -113,13 +117,37 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
         }
       }
     });
+
+    // Listen to historical cinema provider
+    ref.listen(historicalCinemaProvider, (previous, next) {
+      if (state.isCalibrated) {
+        final archiveTaskIndex = state.dailyTasks.indexWhere(
+          (t) => t.taskType == DailyTaskType.historicalArchive,
+        );
+        if (archiveTaskIndex != -1) {
+          final task = state.dailyTasks[archiveTaskIndex];
+          if (!task.isCompleted) {
+            final activeGame = next.activeGame;
+            if (activeGame != null && activeGame.id.toString() == task.targetId) {
+              if (next.currentMoveIndex >= task.targetValue) {
+                _markTaskCompleted(archiveTaskIndex);
+              }
+            }
+          }
+        }
+      }
+    });
   }
 
   void _markTaskCompleted(int index) {
     final updated = List<DailyTask>.from(state.dailyTasks);
     updated[index] = updated[index].copyWith(isCompleted: true);
-    state = state.copyWith(dailyTasks: updated);
+    state = state.copyWith(dailyTasks: updated, newlyCompletedTaskIndex: index);
     _saveState();
+  }
+
+  void clearCompletionAnimation() {
+    state = state.copyWith(newlyCompletedTaskIndex: -1);
   }
 
   void _unlockCalibration(int baselineRating) {
@@ -161,6 +189,11 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
         );
       }
 
+      // Rolling window reset for cinema ids: clear if history log exceeds 30
+      if (updatedHistory.length >= 30) {
+        state = state.copyWith(assignedCinemaIds: {});
+      }
+
       // 2. Generate new tasks
       final bgState = ref.read(battlegroundProvider);
 
@@ -171,6 +204,14 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
           wisdomMessage:
               "Apprentice, complete 10 rated games to calibrate your strength. Only then can I structure your daily training.",
           dailyTasks: [
+            const DailyTask(
+              title: "DAILY ROLL CALL",
+              description: "Report to the Chess Academy for today's training.",
+              taskType: DailyTaskType.attendance,
+              targetId: "daily_checkin",
+              targetValue: 1,
+              isCompleted: false,
+            ),
             DailyTask(
               title: "Calibrate Strength",
               description:
@@ -249,29 +290,95 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
       );
     }
 
-    // Map tasks
-    final dailyTasks = routine.tasks.map((t) {
-      DailyTaskType type = DailyTaskType.arena;
-      switch (t.taskType) {
-        case rust_assignment.ChanakyaTaskType.arena:
-          type = DailyTaskType.arena;
-          break;
-        case rust_assignment.ChanakyaTaskType.puzzle:
-          type = DailyTaskType.puzzle;
-          break;
-        case rust_assignment.ChanakyaTaskType.tutorial:
-          type = DailyTaskType.tutorial;
-          break;
-      }
-      return DailyTask(
-        title: t.title,
-        description: t.description,
-        taskType: type,
-        targetId: t.targetId,
-        targetValue: t.targetValue,
+    // 1. Arena Task
+    final arenaRoutineTask = routine.tasks.firstWhere(
+      (t) => t.taskType == rust_assignment.ChanakyaTaskType.arena,
+      orElse: () => const rust_assignment.ChanakyaTask(
+        title: "Arena Combat",
+        description: "Play against a mock avatar",
+        taskType: rust_assignment.ChanakyaTaskType.arena,
+        targetId: "avatar_0",
+        targetValue: 1,
+      ),
+    );
+    final arenaTask = DailyTask(
+      title: arenaRoutineTask.title,
+      description: arenaRoutineTask.description,
+      taskType: DailyTaskType.arena,
+      targetId: arenaRoutineTask.targetId,
+      targetValue: arenaRoutineTask.targetValue,
+      isCompleted: false,
+    );
+
+    // 2. Puzzle Task
+    final puzzleRoutineTask = routine.tasks.firstWhere(
+      (t) => t.taskType == rust_assignment.ChanakyaTaskType.puzzle,
+      orElse: () => const rust_assignment.ChanakyaTask(
+        title: "Tactical Prescription",
+        description: "Solve 3 scotoma puzzles",
+        taskType: rust_assignment.ChanakyaTaskType.puzzle,
+        targetId: "ksb",
+        targetValue: 3,
+      ),
+    );
+    final puzzleTask = DailyTask(
+      title: puzzleRoutineTask.title,
+      description: "Solve 3 scotoma-targeted puzzles on axis '${puzzleRoutineTask.targetId}'.",
+      taskType: DailyTaskType.puzzle,
+      targetId: puzzleRoutineTask.targetId,
+      targetValue: 3, // Force target value to 3
+      isCompleted: false,
+    );
+
+    // 3. Tutorial Task
+    final chapterId = _pickTutorialChapter(elo, tutorialState.progress.completedChapters.toList());
+    final chapterTitle = _getChapterTitle(chapterId);
+    final tutorialTask = DailyTask(
+      title: "ACADEMY SYLLABUS",
+      description: "Complete Chapter $chapterId: '$chapterTitle'. Focus on piece coordinate precision and fundamental technique.",
+      taskType: DailyTaskType.tutorial,
+      targetId: chapterId.toString(),
+      targetValue: 1,
+      isCompleted: false,
+    );
+
+    // 4. Historical Archive Task
+    final worstAxis = _getWorstScotomaAxis(scotomaInput);
+    final cinemaRepo = HistoricalCinemaRepository();
+    final cinemaGame = await cinemaRepo.pickGameForScotoma(worstAxis, state.assignedCinemaIds);
+    DailyTask cinemaTask;
+    int cinemaGameId = -1;
+    if (cinemaGame != null) {
+      cinemaGameId = cinemaGame.id;
+      cinemaTask = DailyTask(
+        title: "HISTORICAL ARCHIVE: ${cinemaGame.event}",
+        description: "${cinemaGame.white} vs ${cinemaGame.black} (${cinemaGame.year}) — ${cinemaGame.educationalTheme}. Open in Analysis to study.",
+        taskType: DailyTaskType.historicalArchive,
+        targetId: cinemaGame.id.toString(),
+        targetValue: 5, // 5 moves navigated to count as "studied"
         isCompleted: false,
       );
-    }).toList();
+    } else {
+      cinemaTask = const DailyTask(
+        title: "HISTORICAL ARCHIVE",
+        description: "Open any historical master game in Analysis to study and analyze key patterns.",
+        taskType: DailyTaskType.historicalArchive,
+        targetId: "-1",
+        targetValue: 5,
+        isCompleted: false,
+      );
+    }
+
+    final attendanceTask = const DailyTask(
+      title: "DAILY ROLL CALL",
+      description: "Report to the Chess Academy for today's training.",
+      taskType: DailyTaskType.attendance,
+      targetId: "daily_checkin",
+      targetValue: 1,
+      isCompleted: false,
+    );
+
+    final dailyTasks = [attendanceTask, arenaTask, puzzleTask, tutorialTask, cinemaTask];
 
     final isRevision =
         state.goalDeadline != null &&
@@ -285,16 +392,16 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
         (t) => t.taskType == DailyTaskType.tutorial,
       );
       if (tutorialIndex != -1) {
-        final worstAxis = _getWorstScotomaAxis(scotomaInput);
-        final chapterId = _mapScotomaToBasicChapter(worstAxis);
-        final chapterTitle = _getChapterTitleText(chapterId);
+        final revWorstAxis = _getWorstScotomaAxis(scotomaInput);
+        final revChapterId = _mapScotomaToBasicChapter(revWorstAxis);
+        final revChapterTitle = _getChapterTitle(revChapterId);
 
         dailyTasks[tutorialIndex] = DailyTask(
           title: "Basic Revision",
           description:
-              "Your target deadline has passed and your ELO is below target. GM Chanakya demands you revise Chapter $chapterId: '$chapterTitle'.",
+              "Your target deadline has passed and your ELO is below target. GM Chanakya demands you revise Chapter $revChapterId: '$revChapterTitle'.",
           taskType: DailyTaskType.tutorial,
-          targetId: chapterId.toString(),
+          targetId: revChapterId.toString(),
           targetValue: 1,
           isCompleted: false,
         );
@@ -303,7 +410,57 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
           "Apprentice, your target deadline has passed but you remain below the target ELO of ${state.goalElo}. I have revised your syllabus to focus on basic moves revision. Repetition is the mother of wisdom.";
     }
 
-    state = state.copyWith(dailyTasks: dailyTasks, wisdomMessage: wisdom);
+    final updatedCinemaIds = Set<int>.from(state.assignedCinemaIds);
+    if (cinemaGameId != -1) {
+      updatedCinemaIds.add(cinemaGameId);
+    }
+
+    state = state.copyWith(
+      dailyTasks: dailyTasks,
+      wisdomMessage: wisdom,
+      assignedCinemaIds: updatedCinemaIds,
+    );
+  }
+
+  int _getTierStart(int elo) {
+    if (elo < 600) return 1;
+    if (elo < 900) return 13;
+    if (elo < 1100) return 29;
+    if (elo < 1400) return 41;
+    return 51;
+  }
+
+  int _getTierEnd(int elo) {
+    if (elo < 600) return 12;
+    if (elo < 900) return 28;
+    if (elo < 1100) return 40;
+    if (elo < 1400) return 50;
+    return 55;
+  }
+
+  int _pickTutorialChapter(int elo, List<int> completedChapters) {
+    final completedSet = completedChapters.toSet();
+    final start = _getTierStart(elo);
+    final end = _getTierEnd(elo);
+    for (int c = start; c <= end; c++) {
+      if (!completedSet.contains(c)) return c;
+    }
+    // Spill into next tier if all current tier is done
+    if (end < 55) {
+      for (int c = end + 1; c <= 55; c++) {
+        if (!completedSet.contains(c)) return c;
+      }
+    }
+    // All 55 done — loop back to tier start for revision
+    return start;
+  }
+
+  String _getChapterTitle(int chapterId) {
+    final lesson = TutorialLessonsDatabase.lessons.firstWhere(
+      (l) => l.chapterId == chapterId,
+      orElse: () => const TutorialLesson(chapterId: -1, title: 'Basic Moves', setupFen: '', steps: []),
+    );
+    return lesson.title;
   }
 
   String _getWorstScotomaAxis(rust_cognitive.ScotomaResult scotoma) {
@@ -359,31 +516,6 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
         return 2; // Coordinates & Tiles
       default:
         return 1; // Board Introduction
-    }
-  }
-
-  String _getChapterTitleText(int chap) {
-    switch (chap) {
-      case 1:
-        return "Board Introduction";
-      case 2:
-        return "Coordinates & Tiles";
-      case 3:
-        return "Pawn Movement";
-      case 4:
-        return "Rook Movement";
-      case 5:
-        return "Bishop Movement";
-      case 6:
-        return "Knight Movement";
-      case 7:
-        return "Queen Movement";
-      case 8:
-        return "King Movement";
-      case 9:
-        return "Capturing Pieces";
-      default:
-        return "Basic Moves";
     }
   }
 
@@ -444,6 +576,16 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
     } catch (e) {
       state = state.copyWith(weeklyReport: "Failed to generate review: $e");
       await _saveState();
+    }
+  }
+
+  void checkInAttendance() {
+    if (state.dailyTasks.isEmpty) return;
+    final index = state.dailyTasks.indexWhere(
+      (t) => t.taskType == DailyTaskType.attendance,
+    );
+    if (index != -1 && !state.dailyTasks[index].isCompleted) {
+      _markTaskCompleted(index);
     }
   }
 

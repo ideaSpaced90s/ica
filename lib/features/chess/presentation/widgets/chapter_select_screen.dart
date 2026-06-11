@@ -23,6 +23,7 @@ import '../../application/historical_cinema_provider.dart';
 import '../academy/historical_cinema_page.dart';
 
 final tutorialTabProvider = StateProvider<int>((ref) => 0); // 0 = Lessons, 1 = History
+final historicalSubTabProvider = StateProvider<int>((ref) => 0); // 0 = Tactics, 1 = Positional, 2 = Dynamic, 3 = Endgame
 
 class ChapterSelectScreen extends ConsumerWidget {
   const ChapterSelectScreen({super.key, required this.onSelectChapter});
@@ -489,6 +490,128 @@ class ChapterSelectScreen extends ConsumerWidget {
     );
   }
 
+  static const List<Map<String, dynamic>> _historicalTabs = [
+    {
+      'title': 'Tactics & Attack',
+      'icon': Icons.local_fire_department_rounded,
+      'color': Color(0xFFE11D48),
+    },
+    {
+      'title': 'Positional & Strategy',
+      'icon': Icons.security_rounded,
+      'color': ScholarlyTheme.accentBlue,
+    },
+    {
+      'title': 'Dynamic & Defense',
+      'icon': Icons.bolt_rounded,
+      'color': Color(0xFF7C3AED),
+    },
+    {
+      'title': 'Endgame & Specialty',
+      'icon': Icons.workspace_premium_rounded,
+      'color': ScholarlyTheme.realGold,
+    },
+  ];
+
+  int _getTabForCategory(String category) {
+    final catLower = category.toLowerCase();
+    if (catLower.contains("cat_tactical") ||
+        catLower.contains("horizons") ||
+        catLower.contains("horisons") ||
+        catLower.contains("cat_sacrifice") ||
+        catLower.contains("sacrifice") ||
+        catLower.contains("cat_initiative") ||
+        catLower.contains("initiative")) {
+      return 0; // Tactics & Attack
+    } else if (catLower.contains("cat_positional") ||
+        catLower.contains("fortress") ||
+        catLower.contains("cat_closed_systems") ||
+        catLower.contains("closed") ||
+        catLower.contains("cat_pawn") ||
+        catLower.contains("pawn") ||
+        catLower.contains("cat_bishop") ||
+        catLower.contains("bishop")) {
+      return 1; // Positional & Strategy
+    } else if (catLower.contains("cat_dynamic") ||
+        catLower.contains("counterstrike") ||
+        catLower.contains("cat_sicilian") ||
+        catLower.contains("sicilian") ||
+        catLower.contains("cat_defensive") ||
+        catLower.contains("escape")) {
+      return 2; // Dynamic & Defense
+    } else {
+      return 3; // Endgame & Specialty
+    }
+  }
+
+  Widget _buildSubTabBar(BuildContext context, WidgetRef ref, int activeSubTab) {
+    return SizedBox(
+      height: 48,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+        itemCount: _historicalTabs.length,
+        itemBuilder: (context, index) {
+          final tab = _historicalTabs[index];
+          final title = tab['title'] as String;
+          final icon = tab['icon'] as IconData;
+          final color = tab['color'] as Color;
+          final isActive = activeSubTab == index;
+
+          return Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: GestureDetector(
+              onTap: () {
+                ref.read(chessSoundServiceProvider).playSfx(SoundEffect.click);
+                ref.read(historicalSubTabProvider.notifier).state = index;
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: isActive ? color.withValues(alpha: 0.12) : Colors.white.withValues(alpha: 0.6),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: isActive ? color.withValues(alpha: 0.4) : ScholarlyTheme.panelStroke.withValues(alpha: 0.6),
+                    width: isActive ? 1.5 : 1.0,
+                  ),
+                  boxShadow: isActive
+                      ? [
+                          BoxShadow(
+                            color: color.withValues(alpha: 0.08),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          )
+                        ]
+                      : null,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      icon,
+                      size: 16,
+                      color: isActive ? color : ScholarlyTheme.textMuted,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      title,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: isActive ? FontWeight.bold : FontWeight.w600,
+                        color: isActive ? color : ScholarlyTheme.textMuted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   List<Widget> _buildHistoricalCinemaSection(WidgetRef ref, BuildContext context) {
     final state = ref.watch(historicalCinemaProvider);
     if (state.isLoading) {
@@ -518,6 +641,7 @@ class ChapterSelectScreen extends ConsumerWidget {
     }
 
     final List<Widget> slivers = [];
+    final activeSubTab = ref.watch(historicalSubTabProvider);
 
     // Header for the entire Historical Cinema section
     slivers.add(
@@ -552,9 +676,47 @@ class ChapterSelectScreen extends ConsumerWidget {
       ),
     );
 
-    // Render each category
-    final categories = grouped.keys.toList()..sort();
+    // Sub-tab selection bar
+    slivers.add(
+      SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 16.0),
+          child: _buildSubTabBar(context, ref, activeSubTab),
+        ),
+      ),
+    );
+
+    // Render each category in a structured order
+    final categoryOrder = [
+      'cat_tactical',
+      'cat_positional',
+      'cat_dynamic',
+      'cat_endgame',
+      'cat_sacrifice',
+      'cat_hypermodern',
+      'cat_closed_systems',
+      'cat_sicilian_clashes',
+      'cat_initiative',
+      'cat_pawn_dynamics',
+      'cat_bishop_pair',
+      'cat_defensive_saves',
+    ];
+
+    final categories = grouped.keys.toList()
+      ..sort((a, b) {
+        int idxA = categoryOrder.indexWhere((key) => a.toLowerCase().contains(key));
+        int idxB = categoryOrder.indexWhere((key) => b.toLowerCase().contains(key));
+        if (idxA == -1) idxA = 999;
+        if (idxB == -1) idxB = 999;
+        return idxA.compareTo(idxB);
+      });
+
     for (final category in categories) {
+      // Filter categories to only match the active sub-tab
+      if (_getTabForCategory(category) != activeSubTab) {
+        continue;
+      }
+
       final catGames = grouped[category]!;
       
       // Determine subgroup colors and icons
@@ -563,26 +725,67 @@ class ChapterSelectScreen extends ConsumerWidget {
       String title = category;
       String subtitle = "Historical masterpieces of strategy";
 
-      if (category.contains("Category 1") || category.toLowerCase().contains("horisons") || category.toLowerCase().contains("horizons")) {
+      final catLower = category.toLowerCase();
+      if (catLower.contains("cat_tactical") || catLower.contains("horizons") || catLower.contains("horisons")) {
         icon = Icons.grid_on_rounded;
         color = const Color(0xFF059669); // Emerald
         title = "Open Horizons & Gambits";
         subtitle = "Attacking lines, piece sacrifices, and tactical calculations";
-      } else if (category.contains("Category 2") || category.toLowerCase().contains("fortress")) {
+      } else if (catLower.contains("cat_positional") || catLower.contains("fortress")) {
         icon = Icons.security_rounded;
         color = ScholarlyTheme.accentBlue;
         title = "The Iron Fortress";
         subtitle = "Prophylaxis, pawn structures, and positional suffocation";
-      } else if (category.contains("Category 3") || category.toLowerCase().contains("counterstrike")) {
+      } else if (catLower.contains("cat_dynamic") || catLower.contains("counterstrike")) {
         icon = Icons.bolt_rounded;
         color = const Color(0xFF7C3AED); // Purple
         title = "The Counterstrike Collection";
         subtitle = "Sharp defense turning into instant attack and dynamics";
-      } else if (category.contains("Category 4") || category.toLowerCase().contains("endgame")) {
+      } else if (catLower.contains("cat_endgame") || catLower.contains("endgame")) {
         icon = Icons.workspace_premium_rounded;
         color = ScholarlyTheme.realGold;
         title = "The Endgame Squeeze";
         subtitle = "Technical conversions, king activity, and promotion races";
+      } else if (catLower.contains("cat_sacrifice") || catLower.contains("sacrifice")) {
+        icon = Icons.local_fire_department_rounded;
+        color = const Color(0xFFE11D48); // Rose
+        title = "The Art of the Sacrifice";
+        subtitle = "Direct piece sacrifices, king hunts, and mating combinations";
+      } else if (catLower.contains("cat_hypermodern") || catLower.contains("hypermodern")) {
+        icon = Icons.radar_rounded;
+        color = const Color(0xFF0D9488); // Teal
+        title = "Hypermodern Masterpieces";
+        subtitle = "Flank control, fianchetto setups, and indirect center pressure";
+      } else if (catLower.contains("cat_closed_systems") || catLower.contains("closed")) {
+        icon = Icons.lock_rounded;
+        color = const Color(0xFF4F46E5); // Indigo
+        title = "Queen's Gambit & Closed Stratagems";
+        subtitle = "Pawn structures, minority attacks, and tension in closed files";
+      } else if (catLower.contains("cat_sicilian") || catLower.contains("sicilian")) {
+        icon = Icons.offline_bolt_rounded;
+        color = const Color(0xFFEA580C); // Orange
+        title = "Razor-Sharp Sicilians";
+        subtitle = "Asymmetrical tactical battles and opposite-side castling storms";
+      } else if (catLower.contains("cat_initiative") || catLower.contains("initiative")) {
+        icon = Icons.trending_up_rounded;
+        color = const Color(0xFF2563EB); // Blue
+        title = "Mastering the Initiative";
+        subtitle = "Energetic play, continuous threats, and restricting the defender";
+      } else if (catLower.contains("cat_pawn") || catLower.contains("pawn")) {
+        icon = Icons.grain_rounded;
+        color = const Color(0xFF65A30D); // Lime
+        title = "Pawn Structure Dynamics";
+        subtitle = "Carlsbad pawn chains, isolated pawns, and passed pawn advances";
+      } else if (catLower.contains("cat_bishop") || catLower.contains("bishop")) {
+        icon = Icons.layers_rounded;
+        color = const Color(0xFF7C3AED); // Violet
+        title = "The Power of the Bishop Pair";
+        subtitle = "Long-range domination, knight restriction, and diagonal control";
+      } else if (catLower.contains("cat_defensive") || catLower.contains("escape")) {
+        icon = Icons.shield_rounded;
+        color = const Color(0xFF475569); // Slate
+        title = "The Art of the Escape";
+        subtitle = "Miraculous swindles, constructing fortresses, and saving the game";
       }
 
       final fakeGroup = _ChapterGroup(

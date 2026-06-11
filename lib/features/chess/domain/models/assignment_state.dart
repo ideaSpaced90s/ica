@@ -2,6 +2,8 @@ enum DailyTaskType {
   arena,
   puzzle,
   tutorial,
+  historicalArchive,
+  attendance,
 }
 
 class DailyTask {
@@ -76,6 +78,8 @@ class AssignmentState {
   final String? submittedGameId;
   final String? weeklyReport;
   final String wisdomMessage;
+  final int newlyCompletedTaskIndex;
+  final Set<int> assignedCinemaIds;
 
   const AssignmentState({
     this.calibrationGamesPlayed = 0,
@@ -90,6 +94,8 @@ class AssignmentState {
     this.submittedGameId,
     this.weeklyReport,
     this.wisdomMessage = '',
+    this.newlyCompletedTaskIndex = -1,
+    this.assignedCinemaIds = const {},
   });
 
   AssignmentState copyWith({
@@ -105,6 +111,8 @@ class AssignmentState {
     String? submittedGameId,
     String? weeklyReport,
     String? wisdomMessage,
+    int? newlyCompletedTaskIndex,
+    Set<int>? assignedCinemaIds,
   }) {
     return AssignmentState(
       calibrationGamesPlayed: calibrationGamesPlayed ?? this.calibrationGamesPlayed,
@@ -119,6 +127,8 @@ class AssignmentState {
       submittedGameId: submittedGameId ?? this.submittedGameId,
       weeklyReport: weeklyReport ?? this.weeklyReport,
       wisdomMessage: wisdomMessage ?? this.wisdomMessage,
+      newlyCompletedTaskIndex: newlyCompletedTaskIndex ?? this.newlyCompletedTaskIndex,
+      assignedCinemaIds: assignedCinemaIds ?? this.assignedCinemaIds,
     );
   }
 
@@ -135,6 +145,8 @@ class AssignmentState {
     'submittedGameId': submittedGameId,
     'weeklyReport': weeklyReport,
     'wisdomMessage': wisdomMessage,
+    'newlyCompletedTaskIndex': newlyCompletedTaskIndex,
+    'assignedCinemaIds': assignedCinemaIds.toList(),
   };
 
   factory AssignmentState.fromJson(Map<String, dynamic> json) {
@@ -153,6 +165,8 @@ class AssignmentState {
       submittedGameId: json['submittedGameId'] as String?,
       weeklyReport: json['weeklyReport'] as String?,
       wisdomMessage: json['wisdomMessage'] as String? ?? '',
+      newlyCompletedTaskIndex: json['newlyCompletedTaskIndex'] as int? ?? -1,
+      assignedCinemaIds: Set<int>.from(json['assignedCinemaIds'] as List<dynamic>? ?? []),
     );
   }
 }

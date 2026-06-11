@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -5,9 +6,8 @@ import 'package:intl/intl.dart';
 import '../../application/assignment_provider.dart';
 import '../../domain/models/assignment_state.dart';
 import '../../application/battleground_provider.dart';
-import '../../application/puzzles_provider.dart';
-import '../../application/tutorial_provider.dart';
 import '../../application/study_lab_provider.dart';
+import '../widgets/animated_check_widget.dart';
 import '../mobile_navigation_shell.dart';
 import '../widgets/ambient_scaffold.dart';
 import '../scholarly_theme.dart';
@@ -45,6 +45,12 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
     final bgState = ref.watch(battlegroundProvider);
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 900;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.read(assignmentProvider.notifier).checkInAttendance();
+      }
+    });
 
     ref.listen<int>(mobileNavIndexProvider, (previous, current) {
       if (current != 11) {
@@ -116,6 +122,18 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
                   _showChanakyaIntro = false;
                 });
               },
+            )
+          else if (state.newlyCompletedTaskIndex >= 0)
+            Positioned(
+              bottom: 24,
+              left: 24,
+              right: 24,
+              child: JuicyCompletionBanner(
+                task: state.dailyTasks[state.newlyCompletedTaskIndex],
+                onDismiss: () {
+                  ref.read(assignmentProvider.notifier).clearCompletionAnimation();
+                },
+              ),
             ),
         ],
       ),
@@ -126,36 +144,69 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
   // TAB 1: APPRENTICE DESK (DAILY CHECKLIST)
   // ────────────────────────────────────────────────────────────────────────────
   Widget _buildDeskTab(BuildContext context, AssignmentState state, BattlegroundState bgState, bool isMobile) {
-    return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // GM Chanakya Lore Greeting Card
-          if (state.isCalibrated) ...[
-            _buildChanakyaGreeting(state),
-            const SizedBox(height: 20),
-          ],
-
-          if (state.isCalibrated &&
-              state.goalDeadline != null &&
-              DateTime.now().isAfter(state.goalDeadline!) &&
-              bgState.consolidatedRating < state.goalElo) ...[
-            _buildRevisionWarningCard(state),
-            const SizedBox(height: 20),
-          ],
-
-          // Daily Progress Calendar Strip
-          _buildCalendarStrip(state),
-          const SizedBox(height: 24),
-
-          // Header
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
+    if (isMobile) {
+      return SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (state.isCalibrated) ...[
+              _buildChanakyaGreeting(state),
+              const SizedBox(height: 20),
+            ],
+            if (state.isCalibrated &&
+                state.goalDeadline != null &&
+                DateTime.now().isAfter(state.goalDeadline!) &&
+                bgState.consolidatedRating < state.goalElo) ...[
+              _buildRevisionWarningCard(state),
+              const SizedBox(height: 20),
+            ],
+            _buildCalendarStrip(state),
+            const SizedBox(height: 16),
+            if (state.isCalibrated) ...[
+              _buildStreakCard(state),
+              const SizedBox(height: 20),
+            ],
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  "TODAY'S TRAINING",
+                  style: GoogleFonts.outfit(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: ScholarlyTheme.textPrimary,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                if (state.isCalibrated)
+                  TextButton.icon(
+                    icon: const Icon(Icons.refresh_rounded, size: 16),
+                    label: Text("Reset", style: GoogleFonts.inter(fontSize: 11)),
+                    onPressed: () {
+                      ref.read(assignmentProvider.notifier).forceResetDaily();
+                    },
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (!state.isCalibrated)
+              _buildCalibrationCard(state, bgState)
+            else ...[
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: state.dailyTasks.length,
+                separatorBuilder: (context, index) => const SizedBox(height: 12),
+                itemBuilder: (context, index) {
+                  final task = state.dailyTasks[index];
+                  return _buildTaskCard(context, task, index, state);
+                },
+              ),
+              const SizedBox(height: 24),
               Text(
-                "TODAY'S TRAINING",
+                "WEEKLY TRAINING GOAL",
                 style: GoogleFonts.outfit(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -163,35 +214,107 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
                   letterSpacing: 0.5,
                 ),
               ),
-              if (state.isCalibrated)
-                TextButton.icon(
-                  icon: const Icon(Icons.refresh_rounded, size: 16),
-                  label: Text("Reset", style: GoogleFonts.inter(fontSize: 11)),
-                  onPressed: () {
-                    ref.read(assignmentProvider.notifier).forceResetDaily();
-                  },
-                ),
+              const SizedBox(height: 12),
+              _buildWeeklyGoalCard(context, state),
             ],
-          ),
-          const SizedBox(height: 12),
-
-          // Tasks List / Calibration Progress
-          if (!state.isCalibrated)
-            _buildCalibrationCard(state, bgState)
-          else
-            ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: state.dailyTasks.length,
-              separatorBuilder: (context, index) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                final task = state.dailyTasks[index];
-                return _buildTaskCard(context, task, index);
-              },
+          ],
+        ),
+      );
+    } else {
+      // Desktop Layout (screenWidth >= 900)
+      return SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.all(24),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Left Column (Tasks and Greetings)
+            Expanded(
+              flex: 6,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (state.isCalibrated) ...[
+                    _buildChanakyaGreeting(state),
+                    const SizedBox(height: 20),
+                  ],
+                  if (state.isCalibrated &&
+                      state.goalDeadline != null &&
+                      DateTime.now().isAfter(state.goalDeadline!) &&
+                      bgState.consolidatedRating < state.goalElo) ...[
+                    _buildRevisionWarningCard(state),
+                    const SizedBox(height: 20),
+                  ],
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "TODAY'S TRAINING",
+                        style: GoogleFonts.outfit(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: ScholarlyTheme.textPrimary,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      if (state.isCalibrated)
+                        TextButton.icon(
+                          icon: const Icon(Icons.refresh_rounded, size: 16),
+                          label: Text("Reset", style: GoogleFonts.inter(fontSize: 11)),
+                          onPressed: () {
+                            ref.read(assignmentProvider.notifier).forceResetDaily();
+                          },
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  if (!state.isCalibrated)
+                    _buildCalibrationCard(state, bgState)
+                  else ...[
+                    ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: state.dailyTasks.length,
+                      separatorBuilder: (context, index) => const SizedBox(height: 12),
+                      itemBuilder: (context, index) {
+                        final task = state.dailyTasks[index];
+                        return _buildTaskCard(context, task, index, state);
+                      },
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      "WEEKLY TRAINING GOAL",
+                      style: GoogleFonts.outfit(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: ScholarlyTheme.textPrimary,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    _buildWeeklyGoalCard(context, state),
+                  ],
+                ],
+              ),
             ),
-        ],
-      ),
-    );
+            const SizedBox(width: 24),
+            // Right Column (Attendance Ledger & Streak Card)
+            Expanded(
+              flex: 4,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildCalendarStrip(state),
+                  const SizedBox(height: 16),
+                  if (state.isCalibrated)
+                    _buildStreakCard(state),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   Widget _buildChanakyaGreeting(AssignmentState state) {
@@ -278,19 +401,31 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
                 final dateKey = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
                 final isToday = date.year == today.year && date.month == today.month && date.day == today.day;
                 
-                bool? completed;
+                // For today: show green checkmark if all done, amber "?" if in progress,
+                // never a red cross (the day isn't finished yet).
+                // For past days: read from the persistent history log.
+                bool? pastCompleted;
+                bool todayAllDone = false;
                 if (isToday) {
-                  completed = state.dailyTasks.isNotEmpty && state.dailyTasks.every((t) => t.isCompleted);
+                  todayAllDone = state.dailyTasks.isNotEmpty && state.dailyTasks.every((t) => t.isCompleted);
                 } else {
-                  completed = state.historyLog[dateKey];
+                  pastCompleted = state.historyLog[dateKey];
                 }
 
                 Widget icon;
-                if (completed == true) {
+                if (isToday) {
+                  if (todayAllDone) {
+                    icon = const Icon(Icons.check_circle_rounded, color: Colors.green, size: 18);
+                  } else {
+                    // Day is still live — show a pending "?" in amber
+                    icon = const Icon(Icons.help_outline_rounded, color: Colors.amber, size: 18);
+                  }
+                } else if (pastCompleted == true) {
                   icon = const Icon(Icons.check_circle_rounded, color: Colors.green, size: 18);
-                } else if (completed == false) {
+                } else if (pastCompleted == false) {
                   icon = const Icon(Icons.cancel_rounded, color: Colors.redAccent, size: 18);
                 } else {
+                  // Future date or no record — empty circle
                   icon = Container(
                     width: 16,
                     height: 16,
@@ -394,10 +529,14 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
     );
   }
 
-  Widget _buildTaskCard(BuildContext context, DailyTask task, int index) {
+  Widget _buildTaskCard(BuildContext context, DailyTask task, int index, AssignmentState state) {
     IconData icon = Icons.assignment_rounded;
     Color color = Colors.blue;
     switch (task.taskType) {
+      case DailyTaskType.attendance:
+        icon = Icons.how_to_reg_rounded;
+        color = const Color(0xFF10B981);
+        break;
       case DailyTaskType.arena:
         icon = Icons.sports_esports_rounded;
         color = Colors.cyan;
@@ -410,72 +549,108 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
         icon = Icons.menu_book_rounded;
         color = Colors.purpleAccent;
         break;
+      case DailyTaskType.historicalArchive:
+        icon = Icons.history_edu_rounded;
+        color = ScholarlyTheme.accentGold;
+        break;
     }
 
-    return JuicyGlassCard(
-      padding: const EdgeInsets.all(16),
-      borderRadius: 16,
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
+    final bool justCompleted = state.newlyCompletedTaskIndex == index;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 400),
+      decoration: BoxDecoration(
+        border: task.isCompleted
+            ? Border.all(color: Colors.green.withValues(alpha: 0.3), width: 1.5)
+            : null,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: JuicyGlassCard(
+        padding: const EdgeInsets.all(16),
+        borderRadius: 16,
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 24),
             ),
-            child: Icon(icon, color: color, size: 24),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  task.title.toUpperCase(),
-                  style: GoogleFonts.outfit(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: ScholarlyTheme.textPrimary,
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    task.title.toUpperCase(),
+                    style: GoogleFonts.outfit(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: ScholarlyTheme.textPrimary,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  task.description,
-                  style: GoogleFonts.inter(fontSize: 11, color: ScholarlyTheme.textMuted),
-                ),
-              ],
+                  const SizedBox(height: 4),
+                  Text(
+                    task.description,
+                    style: GoogleFonts.inter(fontSize: 11, color: ScholarlyTheme.textMuted),
+                  ),
+                  if (!task.isCompleted) _buildHintChip(task),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
-          if (task.isCompleted)
-            const Icon(Icons.check_circle_rounded, color: Colors.green, size: 28)
-          else
-            IconButton(
-              icon: const Icon(Icons.arrow_circle_right_rounded, color: ScholarlyTheme.accentBlue, size: 30),
-              onPressed: () => _handleTaskAction(task),
+            const SizedBox(width: 12),
+            AnimatedCheckWidget(
+              isCompleted: task.isCompleted,
+              animate: justCompleted,
+              size: 30,
             ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  void _handleTaskAction(DailyTask task) {
+  Widget _buildHintChip(DailyTask task) {
+    String text = "";
     switch (task.taskType) {
+      case DailyTaskType.attendance:
+        text = "Completed automatically upon entering the Assignment Desk.";
+        break;
       case DailyTaskType.arena:
-        ref.read(mobileNavIndexProvider.notifier).state = 1; // Arena tab
+        text = "Go to Arena tab — win recorded automatically";
         break;
       case DailyTaskType.puzzle:
-        ref.read(puzzlesProvider.notifier).startPrescriptionMode();
-        ref.read(mobileNavIndexProvider.notifier).state = 4; // Puzzles tab
+        text = "Go to Puzzles tab — solve 3 puzzles on target axis";
         break;
       case DailyTaskType.tutorial:
-        final chapterId = int.tryParse(task.targetId);
-        if (chapterId != null) {
-          ref.read(tutorialProvider.notifier).loadChapter(chapterId);
-        }
-        ref.read(mobileNavIndexProvider.notifier).state = 7; // Tutorial tab
+        text = "Go to Academy — complete the prescribed chapter";
+        break;
+      case DailyTaskType.historicalArchive:
+        text = "Go to Academy → Historical Cinema — watch at least 5 moves";
         break;
     }
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 8.0),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: ScholarlyTheme.panelStroke.withValues(alpha: 0.3),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Text(
+          text,
+          style: GoogleFonts.inter(
+            fontSize: 9.5,
+            fontWeight: FontWeight.w600,
+            fontStyle: FontStyle.italic,
+            color: ScholarlyTheme.textMuted,
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildRevisionWarningCard(AssignmentState state) {
@@ -932,6 +1107,296 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
               color: isSelected ? ScholarlyTheme.accentBlue : ScholarlyTheme.textPrimary,
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWeeklyGoalCard(BuildContext context, AssignmentState state) {
+    return JuicyGlassCard(
+      padding: const EdgeInsets.all(16),
+      borderRadius: 16,
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: ScholarlyTheme.accentBlue.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.school_rounded, color: ScholarlyTheme.accentBlue, size: 24),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "ATTEND ACADEMIC CLASS",
+                  style: GoogleFonts.outfit(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: ScholarlyTheme.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  "Submit an annotated game from your Library for GM Chanakya's Weekly Master Review.",
+                  style: GoogleFonts.inter(fontSize: 11, color: ScholarlyTheme.textMuted),
+                ),
+                if (!state.weeklyReviewSubmitted)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: ScholarlyTheme.panelStroke.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        "Go to Review tab to submit your annotated game",
+                        style: GoogleFonts.inter(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w600,
+                          fontStyle: FontStyle.italic,
+                          color: ScholarlyTheme.textMuted,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          AnimatedCheckWidget(
+            isCompleted: state.weeklyReviewSubmitted,
+            animate: false,
+            size: 30,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStreakCard(AssignmentState state) {
+    int streak = _calculateStreak(state);
+
+    return JuicyGlassCard(
+      padding: const EdgeInsets.all(16),
+      borderRadius: 16,
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.orange.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.local_fire_department_rounded,
+              color: Colors.orangeAccent,
+              size: 28,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "CURRENT DAILY STREAK",
+                  style: GoogleFonts.outfit(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    color: ScholarlyTheme.textMuted,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  "$streak ${streak == 1 ? 'Day' : 'Days'}",
+                  style: GoogleFonts.outfit(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: ScholarlyTheme.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  streak > 0 
+                      ? "Keep the fire burning, Apprentice!"
+                      : "Start your streak today!",
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: ScholarlyTheme.textMuted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  int _calculateStreak(AssignmentState state) {
+    int streak = 0;
+    final today = DateTime.now();
+    final todayCompleted = state.dailyTasks.isNotEmpty && state.dailyTasks.every((t) => t.isCompleted);
+
+    DateTime checkDate;
+    if (todayCompleted) {
+      streak = 1;
+      checkDate = today.subtract(const Duration(days: 1));
+    } else {
+      checkDate = today.subtract(const Duration(days: 1));
+    }
+
+    while (true) {
+      final key = "${checkDate.year}-${checkDate.month.toString().padLeft(2, '0')}-${checkDate.day.toString().padLeft(2, '0')}";
+      if (state.historyLog[key] == true) {
+        streak++;
+        checkDate = checkDate.subtract(const Duration(days: 1));
+      } else {
+        break;
+      }
+    }
+    return streak;
+  }
+}
+
+class JuicyCompletionBanner extends StatefulWidget {
+  final DailyTask task;
+  final VoidCallback onDismiss;
+
+  const JuicyCompletionBanner({
+    super.key,
+    required this.task,
+    required this.onDismiss,
+  });
+
+  @override
+  State<JuicyCompletionBanner> createState() => _JuicyCompletionBannerState();
+}
+
+class _JuicyCompletionBannerState extends State<JuicyCompletionBanner>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _slideController;
+  late Animation<Offset> _offsetAnimation;
+  Timer? _dismissTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _slideController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+
+    _offsetAnimation = Tween<Offset>(
+      begin: const Offset(0.0, 1.5),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _slideController,
+      curve: Curves.easeOutCubic,
+    ));
+
+    _slideController.forward();
+
+    _dismissTimer = Timer(const Duration(milliseconds: 2900), () {
+      if (mounted) {
+        _slideController.reverse().then((_) {
+          widget.onDismiss();
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _dismissTimer?.cancel();
+    _slideController.dispose();
+    super.dispose();
+  }
+
+  String _getChanakyaQuote(DailyTaskType type) {
+    switch (type) {
+      case DailyTaskType.attendance:
+        return "Punctuality and presence are the first steps to master-level discipline.";
+      case DailyTaskType.arena:
+        return "Combat experience is the forge of all theory.";
+      case DailyTaskType.puzzle:
+        return "Each tactical pattern burned into memory is a weapon forged.";
+      case DailyTaskType.tutorial:
+        return "Knowledge built layer by layer — this is how champions are made.";
+      case DailyTaskType.historicalArchive:
+        return "You have studied the masters. Now let their wisdom flow through your play.";
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final quote = _getChanakyaQuote(widget.task.taskType);
+
+    return SlideTransition(
+      position: _offsetAnimation,
+      child: JuicyGlassCard(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        borderRadius: 20,
+        borderColor: Colors.green.withValues(alpha: 0.4),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: const BoxDecoration(
+                color: Colors.green,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.check_circle_outline_rounded,
+                color: Colors.white,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    "TASK COMPLETED!",
+                    style: GoogleFonts.outfit(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.greenAccent,
+                      letterSpacing: 1.0,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    widget.task.title.toUpperCase(),
+                    style: GoogleFonts.outfit(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: ScholarlyTheme.textPrimary,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '"$quote"',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontStyle: FontStyle.italic,
+                      color: ScholarlyTheme.textMuted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
