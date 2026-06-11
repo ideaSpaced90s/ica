@@ -17,6 +17,13 @@ import '../scholarly_theme.dart';
 import 'ambient_scaffold.dart';
 import 'game_controls.dart';
 
+// Historical Cinema Imports
+import '../../domain/models/historical_game.dart';
+import '../../application/historical_cinema_provider.dart';
+import '../academy/historical_cinema_page.dart';
+
+final tutorialTabProvider = StateProvider<int>((ref) => 0); // 0 = Lessons, 1 = History
+
 class ChapterSelectScreen extends ConsumerWidget {
   const ChapterSelectScreen({super.key, required this.onSelectChapter});
 
@@ -313,6 +320,7 @@ class ChapterSelectScreen extends ConsumerWidget {
     final isOnboarding = ref.watch(isOnboardingProvider);
     final targetChapter = ref.watch(onboardingTargetChapterProvider);
     final targetLesson = TutorialLessonsDatabase.getLesson(targetChapter);
+    final activeTab = ref.watch(tutorialTabProvider);
 
     return AmbientScaffold(
       scaffoldKey: scaffoldKey,
@@ -332,32 +340,302 @@ class ChapterSelectScreen extends ConsumerWidget {
                 targetLesson: targetLesson,
               ),
             ),
-            if (isOnboarding)
+            if (!isOnboarding)
+              SliverToBoxAdapter(
+                child: _buildTabBar(context, ref, activeTab),
+              ),
+            if (isOnboarding) ...[
               SliverToBoxAdapter(
                 child: _buildOnboardingAdvisor(
                   ref: ref,
                   targetLesson: targetLesson,
                 ),
               ),
-            for (final group in _groups)
-              ..._buildChapterGroup(
-                ref: ref,
-                group: group,
-                lessons: lessons
-                    .where((lesson) => lesson.chapterId >= group.start && lesson.chapterId <= group.end)
-                    .toList(),
-                isOnboarding: isOnboarding,
-                targetChapter: targetChapter,
-                completedChapters: progress.completedChapters,
-                unlockedChapters: progress.unlockedChapters,
-                stars: progress.stars,
-                activeChapter: progress.activeChapterIndex,
-              ),
+              for (final group in _groups)
+                ..._buildChapterGroup(
+                  ref: ref,
+                  group: group,
+                  lessons: lessons
+                      .where((lesson) => lesson.chapterId >= group.start && lesson.chapterId <= group.end)
+                      .toList(),
+                  isOnboarding: isOnboarding,
+                  targetChapter: targetChapter,
+                  completedChapters: progress.completedChapters,
+                  unlockedChapters: progress.unlockedChapters,
+                  stars: progress.stars,
+                  activeChapter: progress.activeChapterIndex,
+                ),
+            ] else if (activeTab == 0) ...[
+              for (final group in _groups)
+                ..._buildChapterGroup(
+                  ref: ref,
+                  group: group,
+                  lessons: lessons
+                      .where((lesson) => lesson.chapterId >= group.start && lesson.chapterId <= group.end)
+                      .toList(),
+                  isOnboarding: isOnboarding,
+                  targetChapter: targetChapter,
+                  completedChapters: progress.completedChapters,
+                  unlockedChapters: progress.unlockedChapters,
+                  stars: progress.stars,
+                  activeChapter: progress.activeChapterIndex,
+                ),
+            ] else ...[
+              ..._buildHistoricalCinemaSection(ref, context),
+            ],
             const SliverToBoxAdapter(child: SizedBox(height: 28)),
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildTabBar(BuildContext context, WidgetRef ref, int activeTab) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+      child: Container(
+        height: 46,
+        padding: const EdgeInsets.all(3),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.65),
+          borderRadius: BorderRadius.circular(23),
+          border: Border.all(
+            color: ScholarlyTheme.panelStroke.withValues(alpha: 0.4),
+          ),
+        ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final double width = constraints.maxWidth;
+            final double indicatorWidth = width / 2;
+
+            return Stack(
+              children: [
+                // Selection indicator background
+                AnimatedAlign(
+                  alignment: activeTab == 0 ? Alignment.centerLeft : Alignment.centerRight,
+                  duration: const Duration(milliseconds: 240),
+                  curve: Curves.easeOutCubic,
+                  child: Container(
+                    width: indicatorWidth,
+                    height: double.infinity,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          ScholarlyTheme.accentBlue,
+                          ScholarlyTheme.accentBlue.withValues(alpha: 0.85),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: ScholarlyTheme.accentBlue.withValues(alpha: 0.22),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                // Tab Buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () {
+                          ref.read(chessSoundServiceProvider).playSfx(SoundEffect.click);
+                          ref.read(tutorialTabProvider.notifier).state = 0;
+                        },
+                        child: Center(
+                          child: Text(
+                            "Interactive Training",
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: activeTab == 0 ? Colors.white : ScholarlyTheme.textMuted,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () {
+                          ref.read(chessSoundServiceProvider).playSfx(SoundEffect.click);
+                          ref.read(tutorialTabProvider.notifier).state = 1;
+                        },
+                        child: Center(
+                          child: Text(
+                            "Historical Archives",
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: activeTab == 1 ? Colors.white : ScholarlyTheme.textMuted,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _buildHistoricalCinemaSection(WidgetRef ref, BuildContext context) {
+    final state = ref.watch(historicalCinemaProvider);
+    if (state.isLoading) {
+      return [
+        const SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.all(32.0),
+            child: Center(
+              child: CircularProgressIndicator(
+                color: ScholarlyTheme.accentBlue,
+              ),
+            ),
+          ),
+        ),
+      ];
+    }
+
+    final games = state.games;
+    if (games.isEmpty) {
+      return [];
+    }
+
+    // Group games by category
+    final Map<String, List<HistoricalGame>> grouped = {};
+    for (final game in games) {
+      grouped.putIfAbsent(game.category, () => []).add(game);
+    }
+
+    final List<Widget> slivers = [];
+
+    // Header for the entire Historical Cinema section
+    slivers.add(
+      SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Divider(height: 1, thickness: 1),
+              const SizedBox(height: 24),
+              Text(
+                'Historical Archive',
+                style: GoogleFonts.outfit(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  color: ScholarlyTheme.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Learn legendary games played in human history, annotated by GM Chanakya.',
+                style: GoogleFonts.inter(
+                  color: ScholarlyTheme.textMuted,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    // Render each category
+    final categories = grouped.keys.toList()..sort();
+    for (final category in categories) {
+      final catGames = grouped[category]!;
+      
+      // Determine subgroup colors and icons
+      IconData icon = Icons.movie_filter_rounded;
+      Color color = ScholarlyTheme.accentBlue;
+      String title = category;
+      String subtitle = "Historical masterpieces of strategy";
+
+      if (category.contains("Category 1") || category.toLowerCase().contains("horisons") || category.toLowerCase().contains("horizons")) {
+        icon = Icons.grid_on_rounded;
+        color = const Color(0xFF059669); // Emerald
+        title = "Open Horizons & Gambits";
+        subtitle = "Attacking lines, piece sacrifices, and tactical calculations";
+      } else if (category.contains("Category 2") || category.toLowerCase().contains("fortress")) {
+        icon = Icons.security_rounded;
+        color = ScholarlyTheme.accentBlue;
+        title = "The Iron Fortress";
+        subtitle = "Prophylaxis, pawn structures, and positional suffocation";
+      } else if (category.contains("Category 3") || category.toLowerCase().contains("counterstrike")) {
+        icon = Icons.bolt_rounded;
+        color = const Color(0xFF7C3AED); // Purple
+        title = "The Counterstrike Collection";
+        subtitle = "Sharp defense turning into instant attack and dynamics";
+      } else if (category.contains("Category 4") || category.toLowerCase().contains("endgame")) {
+        icon = Icons.workspace_premium_rounded;
+        color = ScholarlyTheme.realGold;
+        title = "The Endgame Squeeze";
+        subtitle = "Technical conversions, king activity, and promotion races";
+      }
+
+      final fakeGroup = _ChapterGroup(
+        title: title,
+        subtitle: subtitle,
+        start: 0,
+        end: 0,
+        icon: icon,
+        color: color,
+      );
+
+      slivers.add(SliverToBoxAdapter(child: _GroupHeader(group: fakeGroup)));
+      
+      slivers.add(
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 20),
+          sliver: SliverLayoutBuilder(
+            builder: (context, constraints) {
+              final width = constraints.crossAxisExtent;
+              final crossAxisCount = width >= 700 ? 3 : (width >= 480 ? 2 : 1);
+              return SliverGrid(
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossAxisCount,
+                  mainAxisExtent: 96,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
+                ),
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    final game = catGames[index];
+                    return _HistoricalGameCard(
+                      game: game,
+                      groupColor: color,
+                      onTap: () {
+                        ref.read(historicalCinemaProvider.notifier).selectGame(game);
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const HistoricalCinemaPage(),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                  childCount: catGames.length,
+                ),
+              );
+            },
+          ),
+        ),
+      );
+    }
+
+    return slivers;
   }
 
   List<Widget> _buildChapterGroup({
@@ -866,6 +1144,112 @@ class _PulsingGlowWrapperState extends State<PulsingGlowWrapper>
         );
       },
       child: widget.child,
+    );
+  }
+}
+
+class _HistoricalGameCard extends StatelessWidget {
+  const _HistoricalGameCard({
+    required this.game,
+    required this.groupColor,
+    required this.onTap,
+  });
+
+  final HistoricalGame game;
+  final Color groupColor;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+        child: Material(
+          color: Colors.white.withValues(alpha: 0.92),
+          child: InkWell(
+            onTap: onTap,
+            child: Container(
+              padding: const EdgeInsets.all(11),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: ScholarlyTheme.panelStroke.withValues(alpha: 0.72),
+                  width: 1.0,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: groupColor.withValues(alpha: 0.10),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.play_arrow_rounded,
+                      size: 20,
+                      color: groupColor,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          '${game.white} vs. ${game.black}',
+                          style: GoogleFonts.inter(
+                            color: ScholarlyTheme.textPrimary,
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w800,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          '${game.event} (${game.year})',
+                          style: GoogleFonts.inter(
+                            color: ScholarlyTheme.textMuted,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          game.educationalTheme,
+                          style: GoogleFonts.inter(
+                            color: groupColor,
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w700,
+                            fontStyle: FontStyle.italic,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '#${game.id}',
+                    style: GoogleFonts.inter(
+                      color: ScholarlyTheme.textSubtle.withValues(alpha: 0.5),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
