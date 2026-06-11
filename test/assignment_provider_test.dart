@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kingslayer_chess/features/chess/domain/models/assignment_state.dart';
 import 'package:kingslayer_chess/features/chess/domain/models/tutorial_progress.dart';
@@ -8,6 +9,8 @@ import 'package:kingslayer_chess/features/chess/application/battleground_provide
 import 'package:kingslayer_chess/features/chess/application/puzzles_provider.dart';
 import 'package:kingslayer_chess/features/chess/application/tutorial_provider.dart';
 import 'package:kingslayer_chess/features/chess/data/prescription_puzzle_repository.dart';
+import 'package:kingslayer_chess/features/chess/application/store_provider.dart';
+import 'package:kingslayer_chess/features/chess/application/chess_provider.dart';
 import 'package:kingslayer_chess/src/rust/api/cognitive.dart' as rust_cognitive;
 
 class FakeAssignmentRepository implements AssignmentRepository {
@@ -88,7 +91,85 @@ class FakeTutorialNotifier extends StateNotifier<TutorialState> implements Tutor
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+class FakeRef extends Fake implements Ref {
+  final Ref _realRef;
+  FakeRef(this._realRef);
+
+  @override
+  T read<T>(ProviderListenable<T> provider) {
+    try {
+      return _realRef.read(provider);
+    } catch (e) {
+      if (T == ChessState || (provider as dynamic) == chessProvider) {
+        return FakeChessState() as T;
+      }
+      if (T == ChessNotifier || (provider as dynamic) == chessProvider.notifier) {
+        return FakeChessNotifier(FakeChessState()) as T;
+      }
+      rethrow;
+    }
+  }
+}
+
+class FakeChessState extends Fake implements ChessState {
+  @override
+  final String engineLevel;
+  @override
+  final String bottomAvatarId;
+
+  FakeChessState({
+    this.engineLevel = 'avatar_6',
+    this.bottomAvatarId = 'avatar_6',
+  });
+}
+
+class FakeChessNotifier extends StateNotifier<ChessState> implements ChessNotifier {
+  FakeChessNotifier(super.state);
+
+  @override
+  Future<void> setEngineLevel(String level) async {}
+
+  @override
+  Future<void> setBottomAvatarId(String id) async {}
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class FakeStoreNotifier extends StoreNotifier {
+  bool _allowStateSet = false;
+
+  FakeStoreNotifier(Ref ref, StoreState initialState) : super(FakeRef(ref)) {
+    _allowStateSet = true;
+    state = initialState;
+    _allowStateSet = false;
+  }
+
+  @override
+  set state(StoreState value) {
+    if (!mounted) return;
+    if (_allowStateSet) {
+      super.state = value;
+    }
+  }
+
+  void updateState(StoreState newState) {
+    _allowStateSet = true;
+    state = newState;
+    _allowStateSet = false;
+  }
+}
+
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockMethodCallHandler(
+    const MethodChannel('plugins.flutter.io/path_provider'),
+    (MethodCall methodCall) async {
+      return '.';
+    },
+  );
+
   group('DailyTask and AssignmentState Model Tests', () {
     test('DailyTask toJson and fromJson match', () {
       const task = DailyTask(
@@ -161,6 +242,23 @@ void main() {
     late FakePuzzlesNotifier fakePuzzles;
     late FakeTutorialNotifier fakeTutorial;
 
+    StoreState createMockStoreState({bool isPremium = true}) {
+      return StoreState(
+        goldBalance: 1000,
+        isPremium: isPremium,
+        joinedFreeDate: DateTime.now(),
+        purchasedAvatars: {},
+        purchasedBoardThemes: {},
+        freeTierUsage: FreeTierUsage(
+          dateKey: '',
+          ratedGamesPlayed: 0,
+          arenaGamesPlayed: 0,
+          chipPromptsUsed: 0,
+          puzzlesSolved: 0,
+        ),
+      );
+    }
+
     setUp(() {
       fakeRepository = FakeAssignmentRepository();
       fakeBattleground = FakeBattlegroundNotifier(FakeBattlegroundState(
@@ -175,16 +273,25 @@ void main() {
       ));
     });
 
-    test('Initializes with default calibration state', () async {
+    ProviderContainer createContainer({bool isPremium = true}) {
       final container = ProviderContainer(
         overrides: [
           assignmentRepositoryProvider.overrideWithValue(fakeRepository),
           battlegroundProvider.overrideWith((ref) => fakeBattleground),
           puzzlesProvider.overrideWith((ref) => fakePuzzles),
           tutorialProvider.overrideWith((ref) => fakeTutorial),
+          chessProvider.overrideWith((ref) => FakeChessNotifier(FakeChessState())),
+          storeProvider.overrideWith((ref) {
+            return FakeStoreNotifier(ref, createMockStoreState(isPremium: isPremium));
+          }),
         ],
       );
       addTearDown(container.dispose);
+      return container;
+    }
+
+    test('Initializes with default calibration state', () async {
+      final container = createContainer(isPremium: true);
 
       // Trigger and wait for initialization
       container.read(assignmentProvider);
@@ -197,15 +304,7 @@ void main() {
     });
 
     test('setupGoal sets new target rating', () async {
-      final container = ProviderContainer(
-        overrides: [
-          assignmentRepositoryProvider.overrideWithValue(fakeRepository),
-          battlegroundProvider.overrideWith((ref) => fakeBattleground),
-          puzzlesProvider.overrideWith((ref) => fakePuzzles),
-          tutorialProvider.overrideWith((ref) => fakeTutorial),
-        ],
-      );
-      addTearDown(container.dispose);
+      final container = createContainer(isPremium: true);
 
       // Wait for notifier initialization first
       final notifier = container.read(assignmentProvider.notifier);
@@ -220,15 +319,7 @@ void main() {
     });
 
     test('resetAssignmentProgress clears all progress', () async {
-      final container = ProviderContainer(
-        overrides: [
-          assignmentRepositoryProvider.overrideWithValue(fakeRepository),
-          battlegroundProvider.overrideWith((ref) => fakeBattleground),
-          puzzlesProvider.overrideWith((ref) => fakePuzzles),
-          tutorialProvider.overrideWith((ref) => fakeTutorial),
-        ],
-      );
-      addTearDown(container.dispose);
+      final container = createContainer(isPremium: true);
 
       final notifier = container.read(assignmentProvider.notifier);
       await Future.delayed(const Duration(milliseconds: 20));
@@ -247,15 +338,7 @@ void main() {
     });
 
     test('Revision mode triggers basic moves tutorial when goal deadline expires with low ELO', () async {
-      final container = ProviderContainer(
-        overrides: [
-          assignmentRepositoryProvider.overrideWithValue(fakeRepository),
-          battlegroundProvider.overrideWith((ref) => fakeBattleground),
-          puzzlesProvider.overrideWith((ref) => fakePuzzles),
-          tutorialProvider.overrideWith((ref) => fakeTutorial),
-        ],
-      );
-      addTearDown(container.dispose);
+      final container = createContainer(isPremium: true);
 
       final notifier = container.read(assignmentProvider.notifier);
       await Future.delayed(const Duration(milliseconds: 20));
@@ -278,15 +361,7 @@ void main() {
     });
 
     test('Triggers calibration when totalRatedGamesCount reaches 10 via listener', () async {
-      final container = ProviderContainer(
-        overrides: [
-          assignmentRepositoryProvider.overrideWithValue(fakeRepository),
-          battlegroundProvider.overrideWith((ref) => fakeBattleground),
-          puzzlesProvider.overrideWith((ref) => fakePuzzles),
-          tutorialProvider.overrideWith((ref) => fakeTutorial),
-        ],
-      );
-      addTearDown(container.dispose);
+      final container = createContainer(isPremium: true);
 
       // Trigger initialization
       container.read(assignmentProvider);
@@ -316,15 +391,13 @@ void main() {
         totalRatedGamesCount: 10,
       ));
 
-      final container = ProviderContainer(
-        overrides: [
-          assignmentRepositoryProvider.overrideWithValue(fakeRepository),
-          battlegroundProvider.overrideWith((ref) => fakeBattleground),
-          puzzlesProvider.overrideWith((ref) => fakePuzzles),
-          tutorialProvider.overrideWith((ref) => fakeTutorial),
-        ],
+      // Set repository saved state to mimic 10 calibration games played
+      fakeRepository.savedState = AssignmentState(
+        calibrationGamesPlayed: 10,
+        lastResetDate: DateTime.now().subtract(const Duration(days: 1)),
       );
-      addTearDown(container.dispose);
+
+      final container = createContainer(isPremium: true);
 
       // Trigger initialization
       container.read(assignmentProvider);
@@ -334,6 +407,29 @@ void main() {
       expect(state.isCalibrated, isTrue);
       expect(state.startElo, 1400);
       expect(state.goalElo, 1550);
+    });
+
+    test('Does not trigger calibration if user is free', () async {
+      final container = createContainer(isPremium: false);
+
+      // Trigger initialization
+      container.read(assignmentProvider);
+      await Future.delayed(const Duration(milliseconds: 20));
+
+      expect(container.read(assignmentProvider).isCalibrated, isFalse);
+
+      // Simulate reaching 10 games played on Battleground
+      fakeBattleground.updateState(FakeBattlegroundState(
+        consolidatedRating: 1350,
+        totalRatedGamesCount: 10,
+      ));
+
+      // Wait for listener to process
+      await Future.delayed(const Duration(milliseconds: 10));
+
+      final state = container.read(assignmentProvider);
+      // Should remain uncalibrated since they are a free user
+      expect(state.isCalibrated, isFalse);
     });
   });
 }

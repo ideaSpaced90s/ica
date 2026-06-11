@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../application/chess_provider.dart';
+import '../../application/store_provider.dart';
 import '../../services/chess_sound_service.dart';
 import '../scholarly_theme.dart';
+import '../mobile_navigation_shell.dart';
 import 'themes/theme_registry.dart';
 import '../shared/themes/chess_theme.dart';
 import '../widgets/ambient_scaffold.dart';
@@ -177,8 +179,14 @@ class ChessboardThemesPage extends ConsumerWidget {
     return GestureDetector(
       onTap: () {
         ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-        notifier.setBoardTheme(theme.id);
-        Navigator.of(context).popUntil((route) => route.isFirst);
+        
+        final isOwned = ref.read(storeProvider.notifier).isBoardThemePurchased(theme.id);
+        if (isOwned) {
+          notifier.setBoardTheme(theme.id);
+          Navigator.of(context).popUntil((route) => route.isFirst);
+        } else {
+          _showGoToStoreDialog(context, ref, theme.name);
+        }
       },
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -275,6 +283,46 @@ class ChessboardThemesPage extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+
+  void _showGoToStoreDialog(BuildContext context, WidgetRef ref, String themeName) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text(
+            'Theme Locked',
+            style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary),
+          ),
+          content: Text(
+            'The "$themeName" theme is a premium customization. You can purchase it or unlock all premium themes in the Store.',
+            style: GoogleFonts.inter(fontSize: 13, color: ScholarlyTheme.textPrimary, height: 1.4),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                ref.read(mobileNavIndexProvider.notifier).state = 10; // Switch to Store tab
+                Navigator.of(context).popUntil((route) => route.isFirst);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: ScholarlyTheme.accentBlue,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: Text('Go to Store', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
     );
   }
 }

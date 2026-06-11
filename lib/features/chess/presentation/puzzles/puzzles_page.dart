@@ -14,8 +14,10 @@ import 'dart:ui';
 import '../../application/onboarding_provider.dart';
 import '../../application/chess_provider.dart';
 import '../../application/tutorial_provider.dart';
+import '../../application/store_provider.dart';
 import '../../services/chess_sound_service.dart';
 import '../widgets/gm_chanakya_intro_overlay.dart';
+import '../widgets/premium_limit_sheet.dart';
 
 class PuzzlesPage extends ConsumerStatefulWidget {
   const PuzzlesPage({super.key});
@@ -36,6 +38,11 @@ class _PuzzlesPageState extends ConsumerState<PuzzlesPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final currentIndex = ref.read(mobileNavIndexProvider);
       if (currentIndex == 4 && !ref.read(puzzlesProvider).isPuzzleMode) {
+        if (!_checkPuzzleLimitAndUpsell(context, ref)) {
+          ref.read(mobileNavIndexProvider.notifier).state = 0; // Redirect to Home
+          return;
+        }
+        ref.read(storeProvider.notifier).recordPuzzle();
         await ref.read(puzzlesProvider.notifier).startPrescriptionMode(silent: true);
       }
     });
@@ -214,6 +221,8 @@ class _PuzzlesPageState extends ConsumerState<PuzzlesPage> {
                                     ref.read(mobileNavIndexProvider.notifier).state = 1; // Back to Arena
                                   }
                                 } else {
+                                  if (!_checkPuzzleLimitAndUpsell(context, ref)) return;
+                                  ref.read(storeProvider.notifier).recordPuzzle();
                                   notifier.nextPrescriptionPuzzle(silent: true);
                                 }
                               },
@@ -389,6 +398,8 @@ class _PuzzlesPageState extends ConsumerState<PuzzlesPage> {
                                           ref.read(mobileNavIndexProvider.notifier).state = 1; // Back to Arena
                                         }
                                       } else {
+                                        if (!_checkPuzzleLimitAndUpsell(context, ref)) return;
+                                        ref.read(storeProvider.notifier).recordPuzzle();
                                         notifier.nextPrescriptionPuzzle(silent: true);
                                       }
                                     },
@@ -454,6 +465,11 @@ class _PuzzlesPageState extends ConsumerState<PuzzlesPage> {
 
     ref.listen<int>(mobileNavIndexProvider, (previous, current) {
       if (current == 4 && !ref.read(puzzlesProvider).isPuzzleMode) {
+        if (!_checkPuzzleLimitAndUpsell(context, ref)) {
+          ref.read(mobileNavIndexProvider.notifier).state = 0; // Redirect to Home
+          return;
+        }
+        ref.read(storeProvider.notifier).recordPuzzle();
         ref.read(puzzlesProvider.notifier).startPrescriptionMode(silent: true);
       }
     });
@@ -522,6 +538,19 @@ class _PuzzlesPageState extends ConsumerState<PuzzlesPage> {
         ),
       ),
     );
+  }
+
+  bool _checkPuzzleLimitAndUpsell(BuildContext context, WidgetRef ref) {
+    final storeNotifier = ref.read(storeProvider.notifier);
+    if (!storeNotifier.canSolvePuzzle()) {
+      PremiumLimitSheet.show(
+        context,
+        'Daily Puzzle Limit Reached',
+        'You have solved/attempted your 3 free Puzzles for today. Upgrade to unlock unlimited puzzles.',
+      );
+      return false;
+    }
+    return true;
   }
 }
 

@@ -4,9 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../application/battleground_provider.dart';
+import '../../application/store_provider.dart';
 import '../mobile_navigation_shell.dart';
 import '../scholarly_theme.dart';
 import '../widgets/game_controls.dart';
+import '../widgets/premium_limit_sheet.dart';
 import 'battleground_board.dart';
 import '../../domain/models/ai_avatar.dart';
 import '../widgets/opponent_avatar_indicator.dart';
@@ -524,6 +526,7 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
               if (isMatchActive) {
                 final resigned = await _showRatedNewGameDialog(context);
                 if (resigned == true) {
+                  if (context.mounted && !_checkRatedLimitAndUpsell(context, ref)) return;
                   await ref.read(battlegroundProvider.notifier).resignRatedGame();
                   if (context.mounted) {
                     await _showModeSelectionDialog(context);
@@ -534,6 +537,7 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
                   }
                 }
               } else {
+                if (!_checkRatedLimitAndUpsell(context, ref)) return;
                 await _showModeSelectionDialog(context);
                 if (context.mounted) {
                   await _showTimeArenaSelectionDialog(context);
@@ -669,6 +673,7 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
                               ),
                               child: FilledButton(
                                 onPressed: () {
+                                  if (!_checkRatedLimitAndUpsell(context, ref)) return;
                                   setState(() {
                                     _hasTriggeredConfetti = false;
                                     _hasShownRatedCaution = false;
@@ -789,11 +794,25 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
     }
   }
 
+  bool _checkRatedLimitAndUpsell(BuildContext context, WidgetRef ref) {
+    final storeNotifier = ref.read(storeProvider.notifier);
+    if (!storeNotifier.canPlayRatedGame()) {
+      PremiumLimitSheet.show(
+        context,
+        'Daily Rated Game Limit Reached',
+        'You have played your 1 free Rated/Battleground game for today. Upgrade to unlock unlimited games.',
+      );
+      return false;
+    }
+    return true;
+  }
+
   void _startNewGame() {
     if (mounted) {
       setState(() {
         _isCountdownActive = false;
       });
+      ref.read(storeProvider.notifier).recordRatedGame();
       ref.read(battlegroundProvider.notifier).startGame();
     }
   }

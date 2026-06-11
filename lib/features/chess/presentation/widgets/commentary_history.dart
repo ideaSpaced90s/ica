@@ -6,11 +6,13 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../application/chess_provider.dart';
+import '../../application/store_provider.dart';
 import '../../application/study_lab_provider.dart';
 import '../../data/saved_game.dart';
 import '../../services/chess_sound_service.dart';
 import '../scholarly_theme.dart';
 import '../mobile_navigation_shell.dart';
+import 'premium_limit_sheet.dart';
 
 class CommentaryHistory extends ConsumerStatefulWidget {
   const CommentaryHistory({super.key, required this.state, this.physics, this.controller});
@@ -404,6 +406,18 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
   };
 
   void _handlePromptTap(String label) {
+    final storeNotifier = ref.read(storeProvider.notifier);
+    if (!storeNotifier.canUseChipPrompt()) {
+      PremiumLimitSheet.show(
+        context,
+        'Daily AI Coach Limit Reached',
+        'You have used your 5 free AI coaching prompts for today. Upgrade to unlock unlimited coaching.',
+      );
+      return;
+    }
+
+    storeNotifier.recordChipPrompt();
+
     if (label == 'Tactics') {
       ref.read(chessProvider.notifier).enterTacticsMode();
       FocusScope.of(context).unfocus();

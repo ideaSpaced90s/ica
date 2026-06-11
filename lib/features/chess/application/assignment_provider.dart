@@ -9,6 +9,7 @@ import 'historical_cinema_provider.dart';
 import '../data/historical_cinema_repository.dart';
 import '../data/tutorial_lessons.dart';
 import '../domain/models/tutorial_lesson.dart';
+import 'store_provider.dart';
 import 'package:kingslayer_chess/src/rust/api/assignment.dart'
     as rust_assignment;
 import 'package:kingslayer_chess/src/rust/api/cognitive.dart' as rust_cognitive;
@@ -41,9 +42,12 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
   }
 
   void _checkInitialCalibration() {
+    final isPremium = ref.read(storeProvider).isPremium;
+    if (!isPremium) return;
+
     if (!state.isCalibrated) {
-      final bgState = ref.read(battlegroundProvider);
-      if (bgState.totalRatedGamesCount >= 10) {
+      if (state.calibrationGamesPlayed >= 10) {
+        final bgState = ref.read(battlegroundProvider);
         _unlockCalibration(bgState.consolidatedRating);
         _saveState();
       }
@@ -51,13 +55,27 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
   }
 
   void _setupListeners() {
+    // Listen to store provider for premium status changes
+    ref.listen(storeProvider, (previous, next) {
+      if (next.isPremium && !(previous?.isPremium ?? false)) {
+        // User just subscribed to premium!
+        _checkInitialCalibration();
+        checkDailyReset();
+      }
+    });
+
     // Listen to battleground provider
     ref.listen(battlegroundProvider, (previous, next) {
+      final isPremium = ref.read(storeProvider).isPremium;
+      if (!isPremium) return; // Skip if not premium
+
       if (!state.isCalibrated) {
         final currentPlayed = next.totalRatedGamesCount;
-        if (currentPlayed != previous?.totalRatedGamesCount) {
-          state = state.copyWith(calibrationGamesPlayed: currentPlayed);
-          if (currentPlayed >= 10) {
+        final prevPlayed = previous?.totalRatedGamesCount ?? 0;
+        if (currentPlayed > prevPlayed) {
+          final newCount = state.calibrationGamesPlayed + (currentPlayed - prevPlayed);
+          state = state.copyWith(calibrationGamesPlayed: newCount);
+          if (newCount >= 10) {
             // Unlocked calibration!
             _unlockCalibration(next.consolidatedRating);
           }
@@ -81,6 +99,9 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
 
     // Listen to puzzles provider
     ref.listen(puzzlesProvider, (previous, next) {
+      final isPremium = ref.read(storeProvider).isPremium;
+      if (!isPremium) return; // Skip if not premium
+
       if (state.isCalibrated) {
         final puzzleTaskIndex = state.dailyTasks.indexWhere(
           (t) => t.taskType == DailyTaskType.puzzle,
@@ -100,6 +121,9 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
 
     // Listen to tutorial provider
     ref.listen(tutorialProvider, (previous, next) {
+      final isPremium = ref.read(storeProvider).isPremium;
+      if (!isPremium) return; // Skip if not premium
+
       if (state.isCalibrated) {
         final tutorialTaskIndex = state.dailyTasks.indexWhere(
           (t) => t.taskType == DailyTaskType.tutorial,
@@ -120,6 +144,9 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
 
     // Listen to historical cinema provider
     ref.listen(historicalCinemaProvider, (previous, next) {
+      final isPremium = ref.read(storeProvider).isPremium;
+      if (!isPremium) return; // Skip if not premium
+
       if (state.isCalibrated) {
         final archiveTaskIndex = state.dailyTasks.indexWhere(
           (t) => t.taskType == DailyTaskType.historicalArchive,
@@ -198,9 +225,10 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
       final bgState = ref.read(battlegroundProvider);
 
       if (!state.isCalibrated) {
+        final isPremium = ref.read(storeProvider).isPremium;
         // Calibration Mode Tasks
         state = state.copyWith(
-          calibrationGamesPlayed: bgState.totalRatedGamesCount,
+          calibrationGamesPlayed: isPremium ? state.calibrationGamesPlayed : 0,
           wisdomMessage:
               "Apprentice, complete 10 rated games to calibrate your strength. Only then can I structure your daily training.",
           dailyTasks: [
@@ -219,7 +247,7 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
               taskType: DailyTaskType.arena,
               targetId: "calibration",
               targetValue: 10,
-              isCompleted: bgState.totalRatedGamesCount >= 10,
+              isCompleted: isPremium && state.calibrationGamesPlayed >= 10,
             ),
           ],
         );

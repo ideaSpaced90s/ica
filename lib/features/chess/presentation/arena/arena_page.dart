@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../application/chess_provider.dart';
 import '../../application/arena_provider.dart';
+import '../../application/store_provider.dart';
 import '../../services/chess_sound_service.dart';
 import '../scholarly_theme.dart';
 import '../widgets/game_controls.dart';
@@ -19,6 +20,7 @@ import '../widgets/evaluation_bar.dart';
 import '../widgets/user_avatar_indicator.dart';
 import '../widgets/ambient_flow_backdrop.dart';
 import '../widgets/classic_windows_tabs.dart';
+import '../widgets/premium_limit_sheet.dart';
 import '../dashboard_page.dart';
 import 'arena_settings_page.dart';
 import '../../application/onboarding_provider.dart';
@@ -903,10 +905,12 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                           ),
                           child: FilledButton(
                             onPressed: () async {
+                              if (!_checkArenaLimitAndUpsell(context, ref)) return;
                               setState(() {
                                 _hasTriggeredConfetti = false;
                               });
                               await ref.read(arenaProvider.notifier).saveCurrentGame();
+                              ref.read(storeProvider.notifier).recordArenaGame();
                               ref.read(arenaProvider.notifier).reset();
                             },
                             style: FilledButton.styleFrom(
@@ -1200,7 +1204,9 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                         height: 58,
                         child: OutlinedButton(
                           onPressed: () async {
+                            if (!_checkArenaLimitAndUpsell(context, ref)) return;
                             await ref.read(arenaProvider.notifier).saveCurrentGame();
+                            ref.read(storeProvider.notifier).recordArenaGame();
                             ref.read(arenaProvider.notifier).reset();
                           },
                           style: OutlinedButton.styleFrom(
@@ -1379,7 +1385,22 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
   }
 
 
+  bool _checkArenaLimitAndUpsell(BuildContext context, WidgetRef ref) {
+    final storeNotifier = ref.read(storeProvider.notifier);
+    if (!storeNotifier.canPlayArenaGame()) {
+      PremiumLimitSheet.show(
+        context,
+        'Daily Arena Game Limit Reached',
+        'You have played your 3 free Arena games for today. Upgrade to unlock unlimited games.',
+      );
+      return false;
+    }
+    return true;
+  }
+
   Future<void> _handleNewGame(BuildContext context, WidgetRef ref) async {
+    if (!_checkArenaLimitAndUpsell(context, ref)) return;
+
     if (ref.read(arenaProvider).recentMoves.isNotEmpty) {
       final confirm = await showDialog<bool>(
         context: context,
@@ -1395,6 +1416,7 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
       );
       if (confirm != true) return;
     }
+    ref.read(storeProvider.notifier).recordArenaGame();
     ref.read(arenaProvider.notifier).reset();
     if (context.mounted) {
       ScaffoldMessenger.of(context).clearSnackBars();

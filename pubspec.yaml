@@ -58,6 +58,7 @@ dependencies:
   archive: ^4.0.9
   video_player_win: ^3.2.2
   lottie: ^3.1.2
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:

@@ -6,6 +6,61 @@ import 'package:path_provider/path_provider.dart';
 
 import 'chess_provider.dart';
 
+String _getCurrentDateKey() {
+  final now = DateTime.now();
+  return "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+}
+
+class FreeTierUsage {
+  final String dateKey;
+  final int ratedGamesPlayed;
+  final int arenaGamesPlayed;
+  final int chipPromptsUsed;
+  final int puzzlesSolved;
+
+  FreeTierUsage({
+    required this.dateKey,
+    required this.ratedGamesPlayed,
+    required this.arenaGamesPlayed,
+    required this.chipPromptsUsed,
+    required this.puzzlesSolved,
+  });
+
+  FreeTierUsage copyWith({
+    String? dateKey,
+    int? ratedGamesPlayed,
+    int? arenaGamesPlayed,
+    int? chipPromptsUsed,
+    int? puzzlesSolved,
+  }) {
+    return FreeTierUsage(
+      dateKey: dateKey ?? this.dateKey,
+      ratedGamesPlayed: ratedGamesPlayed ?? this.ratedGamesPlayed,
+      arenaGamesPlayed: arenaGamesPlayed ?? this.arenaGamesPlayed,
+      chipPromptsUsed: chipPromptsUsed ?? this.chipPromptsUsed,
+      puzzlesSolved: puzzlesSolved ?? this.puzzlesSolved,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'dateKey': dateKey,
+        'ratedGamesPlayed': ratedGamesPlayed,
+        'arenaGamesPlayed': arenaGamesPlayed,
+        'chipPromptsUsed': chipPromptsUsed,
+        'puzzlesSolved': puzzlesSolved,
+      };
+
+  factory FreeTierUsage.fromJson(Map<String, dynamic> json) {
+    return FreeTierUsage(
+      dateKey: json['dateKey'] ?? '',
+      ratedGamesPlayed: json['ratedGamesPlayed'] ?? 0,
+      arenaGamesPlayed: json['arenaGamesPlayed'] ?? 0,
+      chipPromptsUsed: json['chipPromptsUsed'] ?? 0,
+      puzzlesSolved: json['puzzlesSolved'] ?? 0,
+    );
+  }
+}
+
 class StoreState {
   final int goldBalance;
   final bool isPremium;
@@ -13,7 +68,9 @@ class StoreState {
   final DateTime? joinedPremiumDate;
   final DateTime? subscriptionTill;
   final Map<String, DateTime> purchasedAvatars; // avatarId -> expiry DateTime
-  final String? subscriptionPlan; // 'monthly', 'quarterly', 'yearly', or null
+  final String? subscriptionPlan; // 'monthly', 'sixmonth', 'yearly', or null
+  final Set<String> purchasedBoardThemes;
+  final FreeTierUsage freeTierUsage;
 
   StoreState({
     required this.goldBalance,
@@ -23,6 +80,8 @@ class StoreState {
     this.subscriptionTill,
     required this.purchasedAvatars,
     this.subscriptionPlan,
+    required this.purchasedBoardThemes,
+    required this.freeTierUsage,
   });
 
   StoreState copyWith({
@@ -33,6 +92,8 @@ class StoreState {
     DateTime? subscriptionTill,
     Map<String, DateTime>? purchasedAvatars,
     String? subscriptionPlan,
+    Set<String>? purchasedBoardThemes,
+    FreeTierUsage? freeTierUsage,
   }) {
     return StoreState(
       goldBalance: goldBalance ?? this.goldBalance,
@@ -42,6 +103,8 @@ class StoreState {
       subscriptionTill: subscriptionTill ?? this.subscriptionTill,
       purchasedAvatars: purchasedAvatars ?? this.purchasedAvatars,
       subscriptionPlan: subscriptionPlan ?? this.subscriptionPlan,
+      purchasedBoardThemes: purchasedBoardThemes ?? this.purchasedBoardThemes,
+      freeTierUsage: freeTierUsage ?? this.freeTierUsage,
     );
   }
 
@@ -53,9 +116,12 @@ class StoreState {
         'subscriptionTill': subscriptionTill?.toIso8601String(),
         'purchasedAvatars': purchasedAvatars.map((k, v) => MapEntry(k, v.toIso8601String())),
         'subscriptionPlan': subscriptionPlan,
+        'purchasedBoardThemes': purchasedBoardThemes.toList(),
+        'freeTierUsage': freeTierUsage.toJson(),
       };
 
   factory StoreState.fromJson(Map<String, dynamic> json) {
+    final todayStr = _getCurrentDateKey();
     return StoreState(
       goldBalance: json['goldBalance'] ?? 1000,
       isPremium: json['isPremium'] ?? false,
@@ -69,6 +135,19 @@ class StoreState {
           ) ??
           {},
       subscriptionPlan: json['subscriptionPlan'],
+      purchasedBoardThemes: (json['purchasedBoardThemes'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toSet() ??
+          {},
+      freeTierUsage: json['freeTierUsage'] != null
+          ? FreeTierUsage.fromJson(Map<String, dynamic>.from(json['freeTierUsage']))
+          : FreeTierUsage(
+              dateKey: todayStr,
+              ratedGamesPlayed: 0,
+              arenaGamesPlayed: 0,
+              chipPromptsUsed: 0,
+              puzzlesSolved: 0,
+            ),
     );
   }
 }
@@ -78,35 +157,36 @@ class StoreRepository {
 
   Future<StoreState> loadStore() async {
     final file = await _getFile();
+    final todayStr = _getCurrentDateKey();
+    final defaultState = StoreState(
+      goldBalance: 1000,
+      isPremium: false,
+      joinedFreeDate: DateTime.now().subtract(const Duration(days: 15)),
+      purchasedAvatars: {},
+      purchasedBoardThemes: {},
+      freeTierUsage: FreeTierUsage(
+        dateKey: todayStr,
+        ratedGamesPlayed: 0,
+        arenaGamesPlayed: 0,
+        chipPromptsUsed: 0,
+        puzzlesSolved: 0,
+      ),
+    );
+
     if (!await file.exists()) {
-      return StoreState(
-        goldBalance: 1000,
-        isPremium: false,
-        joinedFreeDate: DateTime.now().subtract(const Duration(days: 15)),
-        purchasedAvatars: {},
-      );
+      return defaultState;
     }
 
     try {
       final raw = await file.readAsString();
       if (raw.trim().isEmpty) {
-        return StoreState(
-          goldBalance: 1000,
-          isPremium: false,
-          joinedFreeDate: DateTime.now().subtract(const Duration(days: 15)),
-          purchasedAvatars: {},
-        );
+        return defaultState;
       }
 
       final decoded = jsonDecode(raw);
       return StoreState.fromJson(Map<String, dynamic>.from(decoded));
     } catch (e) {
-      return StoreState(
-        goldBalance: 1000,
-        isPremium: false,
-        joinedFreeDate: DateTime.now().subtract(const Duration(days: 15)),
-        purchasedAvatars: {},
-      );
+      return defaultState;
     }
   }
 
@@ -136,12 +216,21 @@ class StoreNotifier extends StateNotifier<StoreState> {
           isPremium: false,
           joinedFreeDate: DateTime.now().subtract(const Duration(days: 15)),
           purchasedAvatars: {},
+          purchasedBoardThemes: {},
+          freeTierUsage: FreeTierUsage(
+            dateKey: _getCurrentDateKey(),
+            ratedGamesPlayed: 0,
+            arenaGamesPlayed: 0,
+            chipPromptsUsed: 0,
+            puzzlesSolved: 0,
+          ),
         )) {
     _loadStoreData();
   }
 
   Future<void> _loadStoreData() async {
     final loaded = await _repository.loadStore();
+    if (!mounted) return;
     state = loaded;
     _checkExpirationsAndSync();
   }
@@ -166,13 +255,13 @@ class StoreNotifier extends StateNotifier<StoreState> {
     return false;
   }
 
-  // Buy or renew subscription via simulation (USD-based)
+  // Buy or renew subscription via simulation (USD or INR based)
   void simulateUSDSubscription(String plan) {
     final now = DateTime.now();
     DateTime newExpiry;
     int days = 30;
-    if (plan == 'quarterly') {
-      days = 90;
+    if (plan == 'sixmonth') {
+      days = 180;
     } else if (plan == 'yearly') {
       days = 365;
     }
@@ -201,8 +290,6 @@ class StoreNotifier extends StateNotifier<StoreState> {
     );
     _saveStoreData();
   }
-
-
 
   // Buy or renew an AI Opponent Avatar
   bool purchaseOrRenewAvatar(String avatarId, int price) {
@@ -233,8 +320,104 @@ class StoreNotifier extends StateNotifier<StoreState> {
     return true;
   }
 
+  // Board theme ownership checking
+  bool isBoardThemePurchased(String themeId) {
+    if (state.isPremium) return true;
+    
+    // Free themes
+    const freeThemes = {'classic', 'scholar', 'vector_wood', 'theme3', 'sprite_fairytale'};
+    if (freeThemes.contains(themeId)) return true;
+
+    // Purchased premium themes
+    return state.purchasedBoardThemes.contains(themeId);
+  }
+
+  // Purchase a board theme (simulated)
+  void purchaseBoardTheme(String themeId) {
+    final updatedThemes = Set<String>.from(state.purchasedBoardThemes);
+    updatedThemes.add(themeId);
+    state = state.copyWith(purchasedBoardThemes: updatedThemes);
+    _saveStoreData();
+  }
+
+  // Free tier daily limit reset & check methods
+  FreeTierUsage _getUpdatedUsage() {
+    final today = _getCurrentDateKey();
+    if (state.freeTierUsage.dateKey != today) {
+      return FreeTierUsage(
+        dateKey: today,
+        ratedGamesPlayed: 0,
+        arenaGamesPlayed: 0,
+        chipPromptsUsed: 0,
+        puzzlesSolved: 0,
+      );
+    }
+    return state.freeTierUsage;
+  }
+
+  bool canPlayRatedGame() {
+    if (state.isPremium) return true;
+    final usage = _getUpdatedUsage();
+    return usage.ratedGamesPlayed < 1;
+  }
+
+  void recordRatedGame() {
+    if (state.isPremium) return;
+    final usage = _getUpdatedUsage();
+    state = state.copyWith(
+      freeTierUsage: usage.copyWith(ratedGamesPlayed: usage.ratedGamesPlayed + 1),
+    );
+    _saveStoreData();
+  }
+
+  bool canPlayArenaGame() {
+    if (state.isPremium) return true;
+    final usage = _getUpdatedUsage();
+    return usage.arenaGamesPlayed < 3;
+  }
+
+  void recordArenaGame() {
+    if (state.isPremium) return;
+    final usage = _getUpdatedUsage();
+    state = state.copyWith(
+      freeTierUsage: usage.copyWith(arenaGamesPlayed: usage.arenaGamesPlayed + 1),
+    );
+    _saveStoreData();
+  }
+
+  bool canUseChipPrompt() {
+    if (state.isPremium) return true;
+    final usage = _getUpdatedUsage();
+    return usage.chipPromptsUsed < 5;
+  }
+
+  void recordChipPrompt() {
+    if (state.isPremium) return;
+    final usage = _getUpdatedUsage();
+    state = state.copyWith(
+      freeTierUsage: usage.copyWith(chipPromptsUsed: usage.chipPromptsUsed + 1),
+    );
+    _saveStoreData();
+  }
+
+  bool canSolvePuzzle() {
+    if (state.isPremium) return true;
+    final usage = _getUpdatedUsage();
+    return usage.puzzlesSolved < 3;
+  }
+
+  void recordPuzzle() {
+    if (state.isPremium) return;
+    final usage = _getUpdatedUsage();
+    state = state.copyWith(
+      freeTierUsage: usage.copyWith(puzzlesSolved: usage.puzzlesSolved + 1),
+    );
+    _saveStoreData();
+  }
+
   // Dynamic clean-up logic: if active theme or avatar is expired, fall back to default
   void _checkExpirationsAndSync() {
+    if (!mounted) return;
     final chessState = ref.read(chessProvider);
     final chessNotifier = ref.read(chessProvider.notifier);
 
