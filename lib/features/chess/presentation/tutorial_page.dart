@@ -30,6 +30,61 @@ class TutorialPage extends ConsumerStatefulWidget {
 class _TutorialPageState extends ConsumerState<TutorialPage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
+  String _getGroupName(int chapterId) {
+    if (chapterId >= 1 && chapterId <= 8) return 'Foundations';
+    if (chapterId >= 9 && chapterId <= 17) return 'Special Rules';
+    if (chapterId >= 18 && chapterId <= 25) return 'Tactics Set 1';
+    if (chapterId >= 26 && chapterId <= 31) return 'Tactics Set 2';
+    if (chapterId >= 32 && chapterId <= 36) return 'Practical Openings';
+    if (chapterId >= 37 && chapterId <= 43) return 'Endgame Technique';
+    if (chapterId >= 44 && chapterId <= 47) return 'Pawn Strategy';
+    if (chapterId >= 48 && chapterId <= 53) return 'Tactics Master Class';
+    if (chapterId >= 54 && chapterId <= 55) return 'Mastery';
+    return 'Tutorial';
+  }
+
+  void _confirmSkip(BuildContext context, int chapterId) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Skip Chapter?',
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          'Are you sure you want to skip this chapter and proceed to the next lesson?',
+          style: GoogleFonts.inter(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontWeight: FontWeight.bold),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
+              OnboardingService(ref).advanceGuidedTutorial(chapterId);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: ScholarlyTheme.accentBlue,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: Text(
+              'Skip',
+              style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -194,23 +249,51 @@ class _TutorialPageState extends ConsumerState<TutorialPage> {
         borderColor: ScholarlyTheme.accentBlue.withValues(alpha: 0.18),
         child: Row(
           children: [
-            IconButton(
-              onPressed: () => ref.read(showChapterSelectionProvider.notifier).state = true,
-              icon: const Icon(
-                Icons.grid_view_rounded,
-                size: 20,
-                color: ScholarlyTheme.accentBlue,
+            InkWell(
+              onTap: () {
+                ref.read(chessSoundServiceProvider).playSfx(SoundEffect.click);
+                ref.read(showChapterSelectionProvider.notifier).state = true;
+              },
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.grid_view_rounded,
+                      size: 20,
+                      color: ScholarlyTheme.accentBlue,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Chapters',
+                      style: GoogleFonts.inter(
+                        color: ScholarlyTheme.accentBlue,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              tooltip: 'Chapter Selection',
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints.tightFor(width: 36, height: 36),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  Text(
+                    _getGroupName(state.currentLesson.chapterId).toUpperCase(),
+                    style: GoogleFonts.inter(
+                      color: ScholarlyTheme.accentBlue,
+                      fontSize: 8.5,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.0,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
                   Row(
                     children: [
                       Expanded(
@@ -252,10 +335,7 @@ class _TutorialPageState extends ConsumerState<TutorialPage> {
             if (isGuided) ...[
               const SizedBox(width: 10),
               TextButton.icon(
-                onPressed: () {
-                  ref.read(chessSoundServiceProvider).playSfx(SoundEffect.click);
-                  OnboardingService(ref).advanceGuidedTutorial(state.currentLesson.chapterId);
-                },
+                onPressed: () => _confirmSkip(context, state.currentLesson.chapterId),
                 style: TextButton.styleFrom(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                   minimumSize: Size.zero,

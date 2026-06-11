@@ -334,11 +334,16 @@ class _TutorialMentorPanelState extends ConsumerState<TutorialMentorPanel> with 
 
   Widget _buildInstructionBar(Color moodColor, TutorialState state) {
     final isAwaitMove = state.currentStep.type == TutorialStepType.awaitMove;
+    final isCorrection = state.mentorMood == MentorMood.correction;
+    final showTryAgain = isCorrection && isAwaitMove && !state.isAnimating;
+
     final label = state.isAnimating
         ? 'Processing move...'
-        : isAwaitMove
-            ? 'Make your move on the board above.'
-            : 'Tap the highlighted square.';
+        : showTryAgain
+            ? 'Try Again ↑'
+            : isAwaitMove
+                ? 'Make your move on the board above.'
+                : 'Tap the highlighted square.';
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
@@ -350,21 +355,39 @@ class _TutorialMentorPanelState extends ConsumerState<TutorialMentorPanel> with 
       child: Row(
         children: [
           Icon(
-            isAwaitMove ? Icons.touch_app_outlined : Icons.radio_button_checked_rounded,
+            showTryAgain ? Icons.refresh_rounded : (isAwaitMove ? Icons.touch_app_outlined : Icons.radio_button_checked_rounded),
             size: 15,
             color: moodColor.withValues(alpha: 0.75),
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(
-              label,
-              style: GoogleFonts.inter(
-                color: moodColor.withValues(alpha: 0.85),
-                fontSize: 11.5,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0.1,
-              ),
-            ),
+            child: showTryAgain
+                ? AnimatedBuilder(
+                    animation: _glowController,
+                    builder: (context, child) {
+                      return Opacity(
+                        opacity: 0.4 + (_glowController.value * 0.6),
+                        child: Text(
+                          label,
+                          style: GoogleFonts.inter(
+                            color: moodColor,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                      );
+                    },
+                  )
+                : Text(
+                    label,
+                    style: GoogleFonts.inter(
+                      color: moodColor.withValues(alpha: 0.85),
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.1,
+                    ),
+                  ),
           ),
         ],
       ),

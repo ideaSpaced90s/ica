@@ -52,6 +52,8 @@ class TutorialLessonsDatabase {
       ],
     ),
 
+
+
     // Chapter 2: Coordinates & Tiles (old 2)
     TutorialLesson(
       chapterId: 2,
@@ -90,10 +92,10 @@ class TutorialLessonsDatabase {
       ],
     ),
 
-    // Chapter 3: Pawn Movement (old 3)
+    // Chapter 3: Pawn Movement & Capture
     TutorialLesson(
       chapterId: 3,
-      title: 'Pawn Movement',
+      title: 'Pawn Movement & Capture',
       setupFen: 'r3k2r/8/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
       steps: [
         TutorialStep(
@@ -122,6 +124,46 @@ class TutorialLessonsDatabase {
           ),
         ),
         TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "But pawns have a unique, peculiar rule: they move straight, but they capture diagonally. One square diagonally forward.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Capture the Black pawn on d5. Take it off the board.",
+          resetToFen: 'k7/8/8/3p4/4P3/8/8/7K w - - 0 1',
+          highlightSquares: ['e4', 'd5'],
+          expectedMove: 'e4d5',
+          reactionCorrect: MentorReaction(
+            dialogue: "Excellent. Capturing diagonally is the pawn's unique signature.",
+            mood: MentorMood.encouraging,
+          ),
+          reactionIllegal: MentorReaction(
+            dialogue: "Capture diagonally. Move e4 to d5.",
+            mood: MentorMood.correction,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "Crucially, if a piece is directly in front of a pawn, it is blocked. It cannot move forward, and it cannot capture forward.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitSquareTap,
+          dialogue: "Our e4 pawn is blocked by the e5 pawn. Tap the blocked e4 pawn to acknowledge.",
+          resetToFen: 'k7/8/8/4p3/4P3/8/8/7K w - - 0 1',
+          allowedSquares: ['e4'],
+          highlightSquares: ['e4', 'e5'],
+          reactionCorrect: MentorReaction(
+            dialogue: "Exactly. The path forward is blocked, and pawns cannot capture straight ahead.",
+            mood: MentorMood.encouraging,
+          ),
+          reactionIllegal: MentorReaction(
+            dialogue: "Tap the highlighted e4 pawn.",
+            mood: MentorMood.correction,
+          ),
+        ),
+        TutorialStep(
           type: TutorialStepType.celebration,
           dialogue: "Pawn basics complete. They are the soul of chess — never underestimate them.",
           mentorMood: MentorMood.celebration,
@@ -129,10 +171,10 @@ class TutorialLessonsDatabase {
       ],
     ),
 
-    // Chapter 4: Rook Movement (old 4)
+    // Chapter 4: Rook Movement & Capture
     TutorialLesson(
       chapterId: 4,
-      title: 'Rook Movement',
+      title: 'Rook Movement & Capture',
       setupFen: 'k7/8/8/8/3R4/8/8/7K w - - 0 1',
       steps: [
         TutorialStep(
@@ -161,17 +203,37 @@ class TutorialLessonsDatabase {
           ),
         ),
         TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "Unlike pawns, Rooks capture the same way they move. They travel in a straight line and land directly on the enemy's square, taking it.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Capture the undefended Black Knight on d8. Slide the Rook up.",
+          resetToFen: 'k2n4/8/8/8/3R4/8/8/7K w - - 0 1',
+          highlightSquares: ['d4', 'd8'],
+          expectedMove: 'd4d8',
+          reactionCorrect: MentorReaction(
+            dialogue: "Precisely. The Knight is removed and our Rook occupies d8.",
+            mood: MentorMood.encouraging,
+          ),
+          reactionIllegal: MentorReaction(
+            dialogue: "Capture the Knight on d8. Rook d4 to d8.",
+            mood: MentorMood.correction,
+          ),
+        ),
+        TutorialStep(
           type: TutorialStepType.celebration,
-          dialogue: "Rook mobility secured. Keep your files open — always.",
+          dialogue: "Rook mobility and capturing secured. Keep your files open — always.",
           mentorMood: MentorMood.celebration,
         ),
       ],
     ),
 
-    // Chapter 5: Bishop Movement (old 5)
+    // Chapter 5: Bishop Movement & Capture
     TutorialLesson(
       chapterId: 5,
-      title: 'Bishop Movement',
+      title: 'Bishop Movement & Capture',
       setupFen: 'k7/8/8/8/3B4/8/8/7K w - - 0 1',
       steps: [
         TutorialStep(
@@ -200,6 +262,26 @@ class TutorialLessonsDatabase {
           ),
         ),
         TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "Bishops also capture the same way they move: diagonally, landing on the enemy's square and replacing them.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Capture the Black Rook on h8. Slide the Bishop along the light diagonal.",
+          resetToFen: 'k6r/8/8/8/3B4/8/8/7K w - - 0 1',
+          highlightSquares: ['d4', 'h8'],
+          expectedMove: 'd4h8',
+          reactionCorrect: MentorReaction(
+            dialogue: "Perfect capture. That diagonal threat has been resolved.",
+            mood: MentorMood.encouraging,
+          ),
+          reactionIllegal: MentorReaction(
+            dialogue: "Capture the Rook. Bishop d4 to h8.",
+            mood: MentorMood.correction,
+          ),
+        ),
+        TutorialStep(
           type: TutorialStepType.celebration,
           dialogue: "Bishop tactics locked in. Slice through the board.",
           mentorMood: MentorMood.celebration,
@@ -207,10 +289,10 @@ class TutorialLessonsDatabase {
       ],
     ),
 
-    // Chapter 6: Knight Movement (old 6)
+    // Chapter 6: Knight Movement & Capture
     TutorialLesson(
       chapterId: 6,
-      title: 'Knight Movement',
+      title: 'Knight Movement & Capture',
       setupFen: 'k7/8/8/8/3N4/8/8/7K w - - 0 1',
       steps: [
         TutorialStep(
@@ -244,6 +326,26 @@ class TutorialLessonsDatabase {
           ),
         ),
         TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "Knights capture by landing on the L-shape square occupied by an enemy. Watch how the Knight jumps over obstacle pieces on its path to capture.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Jump over the pawns on b3 and c3 to capture the Black pawn on d4.",
+          resetToFen: 'k7/8/8/8/3p4/1PP5/1PN5/7K w - - 0 1',
+          highlightSquares: ['c2', 'd4'],
+          expectedMove: 'c2d4',
+          reactionCorrect: MentorReaction(
+            dialogue: "Spectacular! Leaping and capturing at once. That is the magic of the Knight.",
+            mood: MentorMood.encouraging,
+          ),
+          reactionIllegal: MentorReaction(
+            dialogue: "Make the L-jump to capture on d4. Knight c2 to d4.",
+            mood: MentorMood.correction,
+          ),
+        ),
+        TutorialStep(
           type: TutorialStepType.celebration,
           dialogue: "Knight mobility verified. Use their arc for unblockable forks.",
           mentorMood: MentorMood.celebration,
@@ -251,10 +353,10 @@ class TutorialLessonsDatabase {
       ],
     ),
 
-    // Chapter 7: Queen Movement (old 7)
+    // Chapter 7: Queen Movement & Capture
     TutorialLesson(
       chapterId: 7,
-      title: 'Queen Movement',
+      title: 'Queen Movement & Capture',
       setupFen: 'k7/8/8/8/3Q4/8/8/7K w - - 0 1',
       steps: [
         TutorialStep(
@@ -283,6 +385,26 @@ class TutorialLessonsDatabase {
           ),
         ),
         TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "The Queen captures in straight or diagonal lines, sweeping the board and replacing the target.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Capture the Black Bishop on g7.",
+          resetToFen: 'k7/6b1/8/8/3Q4/8/8/7K w - - 0 1',
+          highlightSquares: ['d4', 'g7'],
+          expectedMove: 'd4g7',
+          reactionCorrect: MentorReaction(
+            dialogue: "Excellent. The threat on g7 is eliminated.",
+            mood: MentorMood.encouraging,
+          ),
+          reactionIllegal: MentorReaction(
+            dialogue: "Capture the Bishop on g7. Queen d4 to g7.",
+            mood: MentorMood.correction,
+          ),
+        ),
+        TutorialStep(
           type: TutorialStepType.celebration,
           dialogue: "Queen dominance affirmed. Absolute power demands absolute responsibility.",
           mentorMood: MentorMood.celebration,
@@ -290,10 +412,10 @@ class TutorialLessonsDatabase {
       ],
     ),
 
-    // Chapter 8: King Movement (old 8)
+    // Chapter 8: King Movement & Capture
     TutorialLesson(
       chapterId: 8,
-      title: 'King Movement',
+      title: 'King Movement & Capture',
       setupFen: 'k7/8/8/8/3K4/8/8/8 w - - 0 1',
       steps: [
         TutorialStep(
@@ -322,51 +444,38 @@ class TutorialLessonsDatabase {
           ),
         ),
         TutorialStep(
-          type: TutorialStepType.celebration,
-          dialogue: "King safety is paramount. Protect him first, activate him last.",
-          mentorMood: MentorMood.celebration,
-        ),
-      ],
-    ),
-
-    // Chapter 9: Capturing Pieces (old 9)
-    TutorialLesson(
-      chapterId: 9,
-      title: 'Capturing Pieces',
-      setupFen: 'k7/8/8/4p3/3R4/8/8/7K w - - 0 1',
-      steps: [
-        TutorialStep(
           type: TutorialStepType.dialogue,
-          dialogue: "Capturing. We do not jump over enemies — we occupy their square and remove them from the board.",
+          dialogue: "Even the King can capture! He can capture any undefended piece standing on an adjacent square.",
           mentorMood: MentorMood.calm,
         ),
         TutorialStep(
-          type: TutorialStepType.demonstrate,
-          dialogue: "Move onto the target's square to eliminate them. That is all.",
-          highlightSquares: ['d4', 'e5'],
-          overlayEffect: TutorialOverlayEffect.dangerZone,
-        ),
-        TutorialStep(
           type: TutorialStepType.awaitMove,
-          dialogue: "The Rook on d4 cannot strike diagonally. Reposition. Move to d5.",
-          highlightSquares: ['d4'],
-          expectedMove: 'd4d5',
+          dialogue: "Capture the undefended Black pawn on e5.",
+          resetToFen: 'k7/8/8/4p3/3K4/8/8/8 w - - 0 1',
+          highlightSquares: ['d4', 'e5'],
+          expectedMove: 'd4e5',
+          reactionCorrect: MentorReaction(
+            dialogue: "Well done. You eliminated the pawn and claimed e5.",
+            mood: MentorMood.encouraging,
+          ),
           reactionIllegal: MentorReaction(
-            dialogue: "Straight lines only. Move to d5.",
+            dialogue: "Capture the pawn. Move King d4 to e5.",
             mood: MentorMood.correction,
           ),
         ),
         TutorialStep(
           type: TutorialStepType.celebration,
-          dialogue: "Foundations mastered. The board is yours to read. From here, the remaining chapters are yours to conquer — open the Academy and chart your own path. I have given you the tools. Now forge the blade.",
+          dialogue: "King safety and captures complete. Foundations mastered. From here, the remaining chapters are yours to conquer — open the Academy and chart your own path. I have given you the tools. Now forge the blade.",
           mentorMood: MentorMood.celebration,
         ),
       ],
     ),
 
-    // Chapter 10: Pawn Promotion (old 17)
+
+
+    // Chapter 9: Pawn Promotion (old 17)
     TutorialLesson(
-      chapterId: 10,
+      chapterId: 9,
       title: 'Pawn Promotion',
       setupFen: 'k7/4P3/8/8/8/8/8/7K w - - 0 1',
       steps: [
@@ -423,9 +532,11 @@ class TutorialLessonsDatabase {
       ],
     ),
 
-    // Chapter 11: Kingside Castling (old 14)
+
+
+    // Chapter 10: Kingside Castling (old 14)
     TutorialLesson(
-      chapterId: 11,
+      chapterId: 10,
       title: 'Kingside Castling',
       setupFen: '4k3/8/8/8/8/8/8/R3K2R w KQ - 0 1',
       steps: [
@@ -467,15 +578,15 @@ class TutorialLessonsDatabase {
       ],
     ),
 
-    // Chapter 12: Queenside Castling (old 15)
+    // Chapter 11: Queenside Castling
     TutorialLesson(
-      chapterId: 12,
+      chapterId: 11,
       title: 'Queenside Castling',
       setupFen: '4k3/8/8/8/8/8/8/R3K2R w KQ - 0 1',
       steps: [
         TutorialStep(
           type: TutorialStepType.dialogue,
-          dialogue: "Queenside Castling (O-O-O). Identical rules, but the Rook travels three squares. A more aggressive setup.",
+          dialogue: "Queenside Castling (O-O-O). Identical rules, but the queenside Rook travels three squares (a1 to d1) instead of two. A more aggressive setup.",
           mentorMood: MentorMood.calm,
         ),
         TutorialStep(
@@ -506,9 +617,11 @@ class TutorialLessonsDatabase {
       ],
     ),
 
-    // Chapter 13: En Passant (old 16)
+
+
+    // Chapter 12: En Passant (old 16)
     TutorialLesson(
-      chapterId: 13,
+      chapterId: 12,
       title: 'En Passant Capture',
       setupFen: 'k7/3p4/8/4P3/8/8/8/7K b - - 0 1',
       steps: [
@@ -552,9 +665,9 @@ class TutorialLessonsDatabase {
       ],
     ),
 
-    // Chapter 14: Understanding Check (old 10)
+    // Chapter 13: Understanding Check
     TutorialLesson(
-      chapterId: 14,
+      chapterId: 13,
       title: 'Understanding Check',
       setupFen: '4k3/8/8/8/8/8/4r3/4K3 w - - 0 1',
       steps: [
@@ -571,9 +684,10 @@ class TutorialLessonsDatabase {
         ),
         TutorialStep(
           type: TutorialStepType.awaitMove,
-          dialogue: "Step off the dangerous file. Move to d1.",
+          dialogue: "Step off the dangerous file. Move to d1 or f1.",
           highlightSquares: ['e1'],
           expectedMove: 'e1d1',
+          alternativeMoves: ['e1f1'],
           reactionCorrect: MentorReaction(
             dialogue: "Crisis averted. Evading is the simplest solution when available.",
             mood: MentorMood.encouraging,
@@ -591,9 +705,9 @@ class TutorialLessonsDatabase {
       ],
     ),
 
-    // Chapter 15: Escaping Check (old 11)
+    // Chapter 14: Escaping Check
     TutorialLesson(
-      chapterId: 15,
+      chapterId: 14,
       title: 'Escaping Check',
       setupFen: 'k7/8/8/8/8/8/4B3/r3K3 w - - 0 1',
       steps: [
@@ -604,7 +718,7 @@ class TutorialLessonsDatabase {
         ),
         TutorialStep(
           type: TutorialStepType.demonstrate,
-          dialogue: "A flank attack. Moving the King is one option. Blocking with a piece is another.",
+          dialogue: "A back-rank check. Moving the King is one option. Blocking with a piece is another.",
           highlightSquares: ['e1'],
           overlayEffect: TutorialOverlayEffect.checkPulse,
         ),
@@ -630,9 +744,11 @@ class TutorialLessonsDatabase {
       ],
     ),
 
-    // Chapter 16: Checkmate (old 12)
+
+
+    // Chapter 15: Checkmate (old 12)
     TutorialLesson(
-      chapterId: 16,
+      chapterId: 15,
       title: 'Checkmate',
       setupFen: '7k/5Q2/6K1/8/8/8/8/8 w - - 0 1',
       steps: [
@@ -690,55 +806,76 @@ class TutorialLessonsDatabase {
       ],
     ),
 
-    // Chapter 17: Stalemate (old 13)
+    // Chapter 16: Stalemate
     TutorialLesson(
-      chapterId: 17,
+      chapterId: 16,
       title: 'Stalemate',
-      setupFen: '7k/8/5K2/6Q1/8/8/8/8 w - - 0 1',
+      setupFen: '7k/4Q3/5K2/8/8/8/8/8 w - - 0 1',
       steps: [
         TutorialStep(
           type: TutorialStepType.dialogue,
-          dialogue: "Stalemate. No moves, but no check. A draw. I have given it intentionally to save half a point — and regretted it when I stumbled into it carelessly.",
+          dialogue: "Stalemate. When it is your opponent's turn, they have no legal moves, but their King is NOT in check. The game ends in an immediate draw. I have seen players throw away won games by creating stalemates.",
           mentorMood: MentorMood.correction,
         ),
         TutorialStep(
           type: TutorialStepType.demonstrate,
-          dialogue: "Moving the Queen to g6 would trigger an automatic draw. Do not be that careless.",
-          highlightSquares: ['g6'],
-          overlayEffect: TutorialOverlayEffect.dangerZone,
+          dialogue: "If White moves the Queen to f7, the Black King is trapped with no legal moves, but is not in check. That is stalemate.",
+          highlightSquares: ['e7', 'f7'],
+          scriptedMove: 'e7f7',
         ),
         TutorialStep(
           type: TutorialStepType.awaitMove,
-          dialogue: "Make room. King to e6.",
-          highlightSquares: ['f6'],
-          expectedMove: 'f6e6',
+          dialogue: "Let us reset. Avoid the stalemate. Deliver checkmate with the Queen on g7.",
+          resetToFen: '7k/4Q3/5K2/8/8/8/8/8 w - - 0 1',
+          highlightSquares: ['e7', 'g7'],
+          expectedMove: 'e7g7',
           reactionCorrect: MentorReaction(
-            dialogue: "Wise. Always leave the enemy King a square to move — then mate it.",
-            mood: MentorMood.encouraging,
+            dialogue: "Checkmate! Excellent. You won the game instead of gifting a draw.",
+            mood: MentorMood.celebration,
           ),
           reactionIllegal: MentorReaction(
-            dialogue: "Step back to e6.",
+            dialogue: "Deliver mate on g7. Move e7 to g7.",
             mood: MentorMood.correction,
           ),
         ),
         TutorialStep(
           type: TutorialStepType.celebration,
-          dialogue: "Trap bypassed. Precision prevents gifting draws.",
+          dialogue: "Stalemate avoided. Always double check if your opponent has a legal move before making a non-checking move.",
           mentorMood: MentorMood.celebration,
         ),
       ],
     ),
 
-    // Chapter 18: Draw Conditions (old 18)
+    // Chapter 17: Draw Conditions
     TutorialLesson(
-      chapterId: 18,
+      chapterId: 17,
       title: 'Draw Conditions',
-      setupFen: 'k7/8/8/8/8/8/8/7K w - - 0 1',
+      setupFen: 'k7/8/8/8/8/8/8/1R5K w - - 0 1',
       steps: [
         TutorialStep(
           type: TutorialStepType.dialogue,
-          dialogue: "Draws. I have claimed them deliberately and been forced into them against my will. Know every type: repetition, mutual agreement, and the 50-move rule.",
+          dialogue: "Draws. I have claimed them deliberately and been forced into them against my will. Know every type: stalemate, repetition, and insufficient material.",
           mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Three-fold repetition occurs when the exact same board position is reached three times. Watch the Rook and King repeat positions.",
+          scriptedMove: 'b1b2',
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King moves to a7.",
+          scriptedMove: 'a8a7',
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "White Rook returns to b1.",
+          scriptedMove: 'b2b1',
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King returns to a8. The same position is repeating.",
+          scriptedMove: 'a7a8',
         ),
         TutorialStep(
           type: TutorialStepType.celebration,
@@ -748,16 +885,58 @@ class TutorialLessonsDatabase {
       ],
     ),
 
-    // Chapter 19: Piece Value Concepts (old 20)
+    // Chapter 18: Piece Value Concepts
     TutorialLesson(
-      chapterId: 19,
+      chapterId: 18,
       title: 'Piece Value Concepts',
-      setupFen: 'k7/8/8/8/8/8/8/7K w - - 0 1',
+      setupFen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
       steps: [
         TutorialStep(
           type: TutorialStepType.dialogue,
           dialogue: "Piece values. I calculate every trade at the board: Queen 9, Rook 5, Bishop 3, Knight 3, Pawn 1. These are starting benchmarks — not laws.",
           mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitSquareTap,
+          dialogue: "Identify the minor pieces (worth 3 points). Tap a Bishop or Knight to show me.",
+          allowedSquares: ['c1', 'f1', 'b1', 'g1', 'c8', 'f8', 'b8', 'g8'],
+          highlightSquares: ['c1', 'f1', 'b1', 'g1'],
+          reactionCorrect: MentorReaction(
+            dialogue: "Indeed. Bishops and Knights are minor pieces, valued at 3 pawns.",
+            mood: MentorMood.encouraging,
+          ),
+          reactionIllegal: MentorReaction(
+            dialogue: "Tap a Bishop (c1, f1) or Knight (b1, g1).",
+            mood: MentorMood.correction,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitSquareTap,
+          dialogue: "Identify the Rook (worth 5 points). Tap a Rook.",
+          allowedSquares: ['a1', 'h1', 'a8', 'h8'],
+          highlightSquares: ['a1', 'h1'],
+          reactionCorrect: MentorReaction(
+            dialogue: "Correct. Rooks are major pieces, worth 5 points.",
+            mood: MentorMood.encouraging,
+          ),
+          reactionIllegal: MentorReaction(
+            dialogue: "Tap a Rook on a1 or h1.",
+            mood: MentorMood.correction,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitSquareTap,
+          dialogue: "Now tap the ultimate force: the Queen (worth 9 points).",
+          allowedSquares: ['d1', 'd8'],
+          highlightSquares: ['d1'],
+          reactionCorrect: MentorReaction(
+            dialogue: "Yes! The Queen is worth 9 points — protect her with diligence.",
+            mood: MentorMood.encouraging,
+          ),
+          reactionIllegal: MentorReaction(
+            dialogue: "Tap the Queen on d1.",
+            mood: MentorMood.correction,
+          ),
         ),
         TutorialStep(
           type: TutorialStepType.celebration,
@@ -767,9 +946,9 @@ class TutorialLessonsDatabase {
       ],
     ),
 
-    // Chapter 20: Opening Principles (old 19)
+    // Chapter 19: Opening Principles
     TutorialLesson(
-      chapterId: 20,
+      chapterId: 19,
       title: 'Opening Principles',
       setupFen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
       steps: [
@@ -781,38 +960,329 @@ class TutorialLessonsDatabase {
         TutorialStep(
           type: TutorialStepType.awaitMove,
           dialogue: "Stake your claim in the center. e2 to e4.",
-          highlightSquares: ['e2'],
+          highlightSquares: ['e2', 'e4'],
           expectedMove: 'e2e4',
           reactionCorrect: MentorReaction(
             dialogue: "Excellent. Space and development now flow naturally.",
             mood: MentorMood.encouraging,
           ),
         ),
-      ],
-    ),
-
-    // Chapter 21: Tactical Patterns (old 21)
-    TutorialLesson(
-      chapterId: 21,
-      title: 'Tactical Patterns',
-      setupFen: 'k7/8/3q4/8/3N4/8/3K4/8 w - - 0 1',
-      steps: [
         TutorialStep(
-          type: TutorialStepType.dialogue,
-          dialogue: "The Fork. I have used it to destroy opponents who never saw it coming — one piece attacking two targets simultaneously.",
-          mentorMood: MentorMood.calm,
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black claims their share of the center.",
+          scriptedMove: 'e7e5',
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Develop a minor piece. Move Knight g1 to f3.",
+          highlightSquares: ['g1', 'f3'],
+          expectedMove: 'g1f3',
+          reactionCorrect: MentorReaction(
+            dialogue: "Good. Knight developed, attacking e5, and preparing castling.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black develops their Knight to c6, defending.",
+          scriptedMove: 'b8c6',
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Develop your Bishop to c4.",
+          highlightSquares: ['f1', 'c4'],
+          expectedMove: 'f1c4',
+          reactionCorrect: MentorReaction(
+            dialogue: "Superb. Minor pieces are moving out.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black develops their Knight to f6.",
+          scriptedMove: 'g8f6',
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Now castle your King to safety. Drag the King to g1.",
+          highlightSquares: ['e1'],
+          expectedMove: 'e1g1',
+          reactionCorrect: MentorReaction(
+            dialogue: "Wonderful! Your King is safe behind three pawns and a Rook is activated.",
+            mood: MentorMood.celebration,
+          ),
         ),
         TutorialStep(
           type: TutorialStepType.celebration,
-          dialogue: "Find the geometries. Strike twice. Tactics win games.",
+          dialogue: "Opening principles verified. Control, develop, and castle.",
           mentorMood: MentorMood.celebration,
         ),
       ],
     ),
 
-    // Chapter 22: The Principle of Mobility (old 40)
+    // Chapter 20: The Fork
+    TutorialLesson(
+      chapterId: 20,
+      title: 'The Fork',
+      setupFen: 'Q7/p4rkp/8/2p1q1N1/P1P5/8/8/7K w - - 0 1',
+      steps: [
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "The Fork. One of the most feared tactics. Let's study Petrosian vs. Simagin (1956). White (Tigran Petrosian) executed a legendary combination starting with a spectacular decoy sacrifice.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Sacrifice your Queen! Move Queen from a8 to h8 to check the King.",
+          highlightSquares: ['a8', 'h8'],
+          expectedMove: 'a8h8',
+          reactionCorrect: MentorReaction(
+            dialogue: "Outstanding! The Black King is decoyed to h8, placing it in range of a devastating fork.",
+            mood: MentorMood.encouraging,
+          ),
+          reactionIllegal: MentorReaction(
+            dialogue: "Sacrifice the Queen on h8 to force the King to move.",
+            mood: MentorMood.correction,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King captures the Queen.",
+          scriptedMove: 'g7h8',
+          animatePathSquares: ['g7', 'h8'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Now, deliver the fork! Move the Knight from g5 to f7 check, capturing the Rook.",
+          highlightSquares: ['g5', 'f7'],
+          expectedMove: 'g5f7',
+          reactionCorrect: MentorReaction(
+            dialogue: "Brilliant! The Knight checks the King on h8 and forks the Queen on e5.",
+            mood: MentorMood.encouraging,
+          ),
+          reactionIllegal: MentorReaction(
+            dialogue: "Move the Knight to f7 to check the King and fork the Queen.",
+            mood: MentorMood.correction,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King retreats to g7.",
+          scriptedMove: 'h8g7',
+          animatePathSquares: ['h8', 'g7'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Reap the reward of the fork! Capture the Black Queen on e5.",
+          highlightSquares: ['f7', 'e5'],
+          expectedMove: 'f7e5',
+          reactionCorrect: MentorReaction(
+            dialogue: "Incredible! You won a whole Rook and Queen, leaving Black with a hopeless position.",
+            mood: MentorMood.celebration,
+          ),
+          reactionIllegal: MentorReaction(
+            dialogue: "Knight f7 to e5 captures the Queen.",
+            mood: MentorMood.correction,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.celebration,
+          dialogue: "Fork tactics complete. With deep calculation, a simple fork can win entire games.",
+          mentorMood: MentorMood.celebration,
+        ),
+      ],
+    ),
+
+    // Chapter 21: The Pin
+    TutorialLesson(
+      chapterId: 21,
+      title: 'The Pin',
+      setupFen: '3rkb1r/p2nqppp/2p2n2/1B2p1B1/4P3/1QN5/PPP2PPP/2KR3R w k - 0 13',
+      steps: [
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "The Pin. A pin occurs when an attacked piece cannot move without exposing a more valuable target behind it. Let's study Paul Morphy's famous Opera Game (1858).",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "Look at Black's Knight on d7. It is pinned to the King on e8 by our Bishop on b5. It is illegal for the Knight to move — an absolute pin.",
+          mentorMood: MentorMood.calm,
+          highlightSquares: ['b5', 'd7', 'e8'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Morphy sacrificed a Rook to exploit this pin. Play Rook d1 captures Knight on d7.",
+          highlightSquares: ['d1', 'd7'],
+          expectedMove: 'd1d7',
+          reactionCorrect: MentorReaction(
+            dialogue: "Correct! Black is forced to recapture with their Rook to avoid losing a piece.",
+            mood: MentorMood.encouraging,
+          ),
+          reactionIllegal: MentorReaction(
+            dialogue: "Capture the Knight on d7 with your Rook on d1.",
+            mood: MentorMood.correction,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black recaptures with their Rook on d8.",
+          scriptedMove: 'd8d7',
+          animatePathSquares: ['d8', 'd7'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "The Black Rook on d7 is now pinned. Add more pressure! Bring your second Rook to d1.",
+          highlightSquares: ['h1', 'd1'],
+          expectedMove: 'h1d1',
+          reactionCorrect: MentorReaction(
+            dialogue: "Incredible! White has two pieces attacking the pinned Rook on d7, while Black cannot defend it further.",
+            mood: MentorMood.encouraging,
+          ),
+          reactionIllegal: MentorReaction(
+            dialogue: "Move your Rook from h1 to d1 to pressure the pinned piece.",
+            mood: MentorMood.correction,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.celebration,
+          dialogue: "Pin tactics complete. By pinning a piece and piling on pressure, you can break any defense.",
+          mentorMood: MentorMood.celebration,
+        ),
+      ],
+    ),
+
+    // Chapter 22: The Skewer
     TutorialLesson(
       chapterId: 22,
+      title: 'The Skewer',
+      setupFen: '8/8/2k5/8/8/8/4B3/7r w - - 0 1',
+      steps: [
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "The Skewer. Often called a 'reverse pin'. You attack a valuable piece, forcing it to move, which exposes a less valuable piece behind it.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Skewer the King. Move the Bishop from e2 to f3 check.",
+          highlightSquares: ['e2', 'f3'],
+          expectedMove: 'e2f3',
+          reactionCorrect: MentorReaction(
+            dialogue: "Check! The King must step aside, leaving the Rook behind it vulnerable.",
+            mood: MentorMood.encouraging,
+          ),
+          reactionIllegal: MentorReaction(
+            dialogue: "Move the Bishop to f3 to deliver check and attack the Rook.",
+            mood: MentorMood.correction,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King retreats to d6.",
+          scriptedMove: 'c6d6',
+          animatePathSquares: ['c6', 'd6'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "The Rook on h1 is now exposed. Capture it with your Bishop.",
+          highlightSquares: ['f3', 'h1'],
+          expectedMove: 'f3h1',
+          reactionCorrect: MentorReaction(
+            dialogue: "Excellent! You traded a Bishop's check for a whole Rook.",
+            mood: MentorMood.celebration,
+          ),
+          reactionIllegal: MentorReaction(
+            dialogue: "Bishop takes Rook on h1.",
+            mood: MentorMood.correction,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.celebration,
+          dialogue: "Skewer mastered. Attack the head, claim the tail.",
+          mentorMood: MentorMood.celebration,
+        ),
+      ],
+    ),
+
+    // Chapter 23: Discovered Attack & Check
+    TutorialLesson(
+      chapterId: 23,
+      title: 'Discovered Attack & Check',
+      setupFen: 'rn2kb1r/pp3ppp/2p5/4q3/4n3/2NQ4/PPPB1PPP/2KR1B1R w kq - 2 9',
+      steps: [
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "Discovered Attack. Moving a piece out of the way to open a line of sight for a long-range piece behind it. Let's study Réti vs. Tartakower (Vienna, 1910).",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Sacrifice your Queen to force the King into position! Move Queen to d8 check.",
+          highlightSquares: ['d3', 'd8'],
+          expectedMove: 'd3d8',
+          reactionCorrect: MentorReaction(
+            dialogue: "Superb! The Black King is lured to d8.",
+            mood: MentorMood.encouraging,
+          ),
+          reactionIllegal: MentorReaction(
+            dialogue: "Sacrifice the Queen. Move Queen from d3 to d8 check.",
+            mood: MentorMood.correction,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King captures the Queen.",
+          scriptedMove: 'e8d8',
+          animatePathSquares: ['e8', 'd8'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Now, deliver the double check! Move your Bishop from d2 to g5 check.",
+          highlightSquares: ['d2', 'g5'],
+          expectedMove: 'd2g5',
+          reactionCorrect: MentorReaction(
+            dialogue: "Brilliant! The King is checked by both the Bishop on g5 and the Rook on d1. Black is forced to run.",
+            mood: MentorMood.encouraging,
+          ),
+          reactionIllegal: MentorReaction(
+            dialogue: "Move Bishop to g5 to deliver double check.",
+            mood: MentorMood.correction,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King escapes to c7.",
+          scriptedMove: 'd8c7',
+          animatePathSquares: ['d8', 'c7'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Deliver the final blow! Move the Bishop to d8 checkmate.",
+          highlightSquares: ['g5', 'd8'],
+          expectedMove: 'g5d8',
+          reactionCorrect: MentorReaction(
+            dialogue: "Checkmate! The double check forced the King into a mating net, ending the game in style.",
+            mood: MentorMood.celebration,
+          ),
+          reactionIllegal: MentorReaction(
+            dialogue: "Move Bishop to d8 to deliver mate.",
+            mood: MentorMood.correction,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.celebration,
+          dialogue: "Discovered attack and double check mastered. Unleashing two threats at once is the ultimate way to shatter your opponent's defenses.",
+          mentorMood: MentorMood.celebration,
+        ),
+      ],
+    ),
+
+
+
+    // Chapter 24: The Principle of Mobility (old 40)
+    TutorialLesson(
+      chapterId: 24,
       title: 'The Principle of Mobility',
       setupFen: '8/8/4k1p1/3p1p1p/3P1P1P/6PB/5K2/8 b - - 0 1',
       steps: [
@@ -856,9 +1326,11 @@ class TutorialLessonsDatabase {
       ],
     ),
 
-    // Chapter 23: Open Files & Penetration (old 44)
+
+
+    // Chapter 25: Open Files & Penetration (old 44)
     TutorialLesson(
-      chapterId: 23,
+      chapterId: 25,
       title: 'Open Files & Penetration',
       setupFen: 'r5k1/pp3ppp/8/8/8/8/PP3PPP/4R1K1 w - - 0 1',
       steps: [
@@ -906,9 +1378,11 @@ class TutorialLessonsDatabase {
       ],
     ),
 
-    // Chapter 24: Undermining (old 45)
+
+
+    // Chapter 26: Undermining (old 45)
     TutorialLesson(
-      chapterId: 24,
+      chapterId: 26,
       title: 'Undermining',
       setupFen: 'r3k2r/pp3ppp/2n1b3/8/1b1q4/2N2B2/PP3PPP/R2QK1NR w KQkq - 0 10',
       steps: [
@@ -956,9 +1430,11 @@ class TutorialLessonsDatabase {
       ],
     ),
 
-    // Chapter 25: Overloading (old 46)
+
+
+    // Chapter 27: Overloading (old 46)
     TutorialLesson(
-      chapterId: 25,
+      chapterId: 27,
       title: 'Overloading',
       setupFen: 'r2qk1nr/2pbbppp/2np4/1p6/2B1P3/1BN2N2/PP3PPP/R1BQ1RK1 w kq - 0 10',
       steps: [
@@ -1001,9 +1477,11 @@ class TutorialLessonsDatabase {
       ],
     ),
 
-    // Chapter 26: Decoy & Attraction (old 47)
+
+
+    // Chapter 28: Decoy & Attraction (old 47)
     TutorialLesson(
-      chapterId: 26,
+      chapterId: 28,
       title: 'Decoy & Attraction',
       setupFen: 'rnb1kbnr/ppp2ppp/5q2/4p3/2B1q3/5N2/PPPP1PPP/RNBQ1RK1 w kq - 0 5',
       steps: [
@@ -1062,9 +1540,11 @@ class TutorialLessonsDatabase {
       ],
     ),
 
-    // Chapter 27: Clearance & Vacating (old 48)
+
+
+    // Chapter 29: Clearance & Vacating (old 48)
     TutorialLesson(
-      chapterId: 27,
+      chapterId: 29,
       title: 'Clearance & Vacating',
       setupFen: 'rnbq1bnr/pp2k1pp/8/3QN3/2BPp3/8/PPP2PPP/RNB1K2R w KQ - 1 9',
       steps: [
@@ -1112,9 +1592,11 @@ class TutorialLessonsDatabase {
       ],
     ),
 
-    // Chapter 28: Interference (old 49)
+
+
+    // Chapter 30: Interference (old 49)
     TutorialLesson(
-      chapterId: 28,
+      chapterId: 30,
       title: 'Interference',
       setupFen: 'r4bk1/pp1q2pp/2n1R3/6N1/2pp2P1/5Q2/PP3P1P/2B3K1 w - - 1 17',
       steps: [
@@ -1178,9 +1660,11 @@ class TutorialLessonsDatabase {
       ],
     ),
 
-    // Chapter 29: Zwischenzug (old 50)
+
+
+    // Chapter 31: Zwischenzug (old 50)
     TutorialLesson(
-      chapterId: 29,
+      chapterId: 31,
       title: 'Zwischenzug',
       setupFen: 'r1bq1b1r/ppp3kp/2N2np1/3Q4/8/8/PPP2PPP/RNB1K2R w KQ - 1 10',
       steps: [
@@ -1244,9 +1728,11 @@ class TutorialLessonsDatabase {
       ],
     ),
 
-    // Chapter 30: Italian Game (old 24)
+
+
+    // Chapter 32: Italian Game (old 24)
     TutorialLesson(
-      chapterId: 30,
+      chapterId: 32,
       title: 'Italian Game',
       setupFen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
       steps: [
@@ -1321,9 +1807,11 @@ class TutorialLessonsDatabase {
       ],
     ),
 
-    // Chapter 31: Ruy Lopez (old 25)
+
+
+    // Chapter 33: Ruy Lopez (old 25)
     TutorialLesson(
-      chapterId: 31,
+      chapterId: 33,
       title: 'Ruy Lopez',
       setupFen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
       steps: [
@@ -1398,9 +1886,11 @@ class TutorialLessonsDatabase {
       ],
     ),
 
-    // Chapter 32: Sicilian Defense (old 26)
+
+
+    // Chapter 34: Sicilian Defense (old 26)
     TutorialLesson(
-      chapterId: 32,
+      chapterId: 34,
       title: 'Sicilian Defense',
       setupFen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
       steps: [
@@ -1453,9 +1943,11 @@ class TutorialLessonsDatabase {
       ],
     ),
 
-    // Chapter 33: Queen's Gambit (old 27)
+
+
+    // Chapter 35: Queen's Gambit (old 27)
     TutorialLesson(
-      chapterId: 33,
+      chapterId: 35,
       title: "Queen's Gambit",
       setupFen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
       steps: [
@@ -1508,9 +2000,11 @@ class TutorialLessonsDatabase {
       ],
     ),
 
-    // Chapter 34: King's Indian Setup (old 28)
+
+
+    // Chapter 36: King's Indian Setup (old 28)
     TutorialLesson(
-      chapterId: 34,
+      chapterId: 36,
       title: "King's Indian Setup",
       setupFen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
       steps: [
@@ -1602,9 +2096,11 @@ class TutorialLessonsDatabase {
       ],
     ),
 
-    // Chapter 35: Queen Mate (old 29)
+
+
+    // Chapter 37: Queen Mate (old 29)
     TutorialLesson(
-      chapterId: 35,
+      chapterId: 37,
       title: 'Queen Mate',
       setupFen: '7k/5Q2/6K1/8/8/8/8/8 w - - 0 1',
       steps: [
@@ -1642,9 +2138,11 @@ class TutorialLessonsDatabase {
       ],
     ),
 
-    // Chapter 36: Rook Mate (old 30)
+
+
+    // Chapter 38: Rook Mate (old 30)
     TutorialLesson(
-      chapterId: 36,
+      chapterId: 38,
       title: 'Rook Mate',
       setupFen: '7k/5KR1/8/8/8/8/8/8 w - - 0 1',
       steps: [
@@ -1681,9 +2179,11 @@ class TutorialLessonsDatabase {
       ],
     ),
 
-    // Chapter 37: Opposition (old 31)
+
+
+    // Chapter 39: Opposition (old 31)
     TutorialLesson(
-      chapterId: 37,
+      chapterId: 39,
       title: 'Opposition',
       setupFen: '8/8/8/4k3/8/4K3/4P3/8 w - - 0 1',
       steps: [
@@ -1720,9 +2220,11 @@ class TutorialLessonsDatabase {
       ],
     ),
 
-    // Chapter 38: Wrong Bishop Draw (old 39)
+
+
+    // Chapter 40: Wrong Bishop Draw (old 39)
     TutorialLesson(
-      chapterId: 38,
+      chapterId: 40,
       title: 'Wrong Bishop Draw',
       setupFen: '7k/8/7P/8/8/8/4B3/6K1 b - - 0 1',
       steps: [
@@ -1781,9 +2283,11 @@ class TutorialLessonsDatabase {
       ],
     ),
 
-    // Chapter 39: Pawn Breakthrough (old 38)
+
+
+    // Chapter 41: Pawn Breakthrough (old 38)
     TutorialLesson(
-      chapterId: 39,
+      chapterId: 41,
       title: 'Pawn Breakthrough',
       setupFen: '8/ppp5/8/PPP5/8/8/8/k6K w - - 0 1',
       steps: [
@@ -1847,9 +2351,11 @@ class TutorialLessonsDatabase {
       ],
     ),
 
-    // Chapter 40: Lucena Position (old 32)
+
+
+    // Chapter 42: Lucena Position (old 32)
     TutorialLesson(
-      chapterId: 40,
+      chapterId: 42,
       title: 'Lucena Position',
       setupFen: '6k1/3PK3/8/8/8/8/7r/4R3 w - - 0 1',
       steps: [
@@ -1886,9 +2392,11 @@ class TutorialLessonsDatabase {
       ],
     ),
 
-    // Chapter 41: Philidor Position (old 33)
+
+
+    // Chapter 43: Philidor Position (old 33)
     TutorialLesson(
-      chapterId: 41,
+      chapterId: 43,
       title: 'Philidor Position',
       setupFen: '8/7r/8/8/8/3k4/3P4/3K4 b - - 0 1',
       steps: [
@@ -1925,9 +2433,11 @@ class TutorialLessonsDatabase {
       ],
     ),
 
-    // Chapter 42: The Pawn Chain (old 41)
+
+
+    // Chapter 44: The Pawn Chain (old 41)
     TutorialLesson(
-      chapterId: 42,
+      chapterId: 44,
       title: 'The Pawn Chain',
       setupFen: '6k1/pp4pp/2p1p3/3pP3/3P4/2P1P3/PP3PPP/6K1 w - - 0 1',
       steps: [
@@ -1975,9 +2485,11 @@ class TutorialLessonsDatabase {
       ],
     ),
 
-    // Chapter 43: The Backward Pawn (old 42)
+
+
+    // Chapter 45: The Backward Pawn (old 42)
     TutorialLesson(
-      chapterId: 43,
+      chapterId: 45,
       title: 'The Backward Pawn',
       setupFen: 'r4rk1/1pp1qppp/3p4/3Np3/4P3/1P1P4/1PP2PPP/R4RK1 w - - 0 1',
       steps: [
@@ -2025,9 +2537,11 @@ class TutorialLessonsDatabase {
       ],
     ),
 
-    // Chapter 44: Doubled Pawns (old 43)
+
+
+    // Chapter 46: Doubled Pawns (old 43)
     TutorialLesson(
-      chapterId: 44,
+      chapterId: 46,
       title: 'Doubled Pawns',
       setupFen: '6k1/pp1p1ppp/2p5/2P5/8/P7/1P1P1PPP/6K1 w - - 0 1',
       steps: [
@@ -2075,9 +2589,50 @@ class TutorialLessonsDatabase {
       ],
     ),
 
-    // Chapter 45: Légal's Mate (old 37)
+    // Chapter 47: The Isolated Pawn
     TutorialLesson(
-      chapterId: 45,
+      chapterId: 47,
+      title: 'The Isolated Pawn',
+      setupFen: '4rrk1/pp3ppp/8/3p4/8/5N2/PP3PPP/3R2K1 w - - 0 1',
+      steps: [
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "The Isolated Pawn. A pawn with no friendly pawns on the files next to it. Since no pawn can defend it, it is a permanent structural weakness.",
+          mentorMood: MentorMood.calm,
+        ),
+        TutorialStep(
+          type: TutorialStepType.dialogue,
+          dialogue: "Look at Black's d5 pawn. It is isolated. The c and e pawns are gone. Black must use active pieces to defend it, tying them down.",
+          mentorMood: MentorMood.calm,
+          highlightSquares: ['d5'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Blockade the pawn. Move your Knight from f3 to the outpost square d4 — directly in front of the isolated pawn.",
+          highlightSquares: ['f3', 'd4'],
+          expectedMove: 'f3d4',
+          reactionCorrect: MentorReaction(
+            dialogue: "Superb. The Knight is beautifully active here, and the isolated pawn is blocked forever.",
+            mood: MentorMood.encouraging,
+          ),
+          reactionIllegal: MentorReaction(
+            dialogue: "Move the Knight to d4 to blockade.",
+            mood: MentorMood.correction,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.celebration,
+          dialogue: "Isolated Pawn concepts locked. Blockade the weak pawn, attack it, and conquer.",
+          mentorMood: MentorMood.celebration,
+        ),
+      ],
+    ),
+
+
+
+    // Chapter 48: Légal's Mate (old 37)
+    TutorialLesson(
+      chapterId: 48,
       title: "Légal's Mate",
       setupFen: 'rn1qk2r/ppp2ppp/3p1n2/4p3/2BPP1b1/2N2N2/PPP2PPP/R1BQK2R w KQkq - 0 1',
       steps: [
@@ -2157,11 +2712,11 @@ class TutorialLessonsDatabase {
       ],
     ),
 
-    // Chapter 46: The Windmill (old 51)
+    // Chapter 49: The Windmill
     TutorialLesson(
-      chapterId: 46,
+      chapterId: 49,
       title: 'The Windmill',
-      setupFen: '6k1/pp4bp/2pr4/4p3/8/1P1P4/P1P1q1RP/2B3RK w - - 0 1',
+      setupFen: '5rk1/pp3ppp/5B2/4p2q/8/1P1P2R1/P1P5/6K1 w - - 0 1',
       steps: [
         TutorialStep(
           type: TutorialStepType.dialogue,
@@ -2170,9 +2725,9 @@ class TutorialLessonsDatabase {
         ),
         TutorialStep(
           type: TutorialStepType.awaitMove,
-          dialogue: "Initiate the windmill. Capture the Bishop on g7 with check.",
-          highlightSquares: ['g2', 'g7'],
-          expectedMove: 'g2g7',
+          dialogue: "Initiate the windmill. Play Rook to g7 check.",
+          highlightSquares: ['g3', 'g7'],
+          expectedMove: 'g3g7',
           reactionCorrect: MentorReaction(
             dialogue: "Excellent. The King must run to h8.",
             mood: MentorMood.encouraging,
@@ -2186,25 +2741,107 @@ class TutorialLessonsDatabase {
         ),
         TutorialStep(
           type: TutorialStepType.awaitMove,
-          dialogue: "Deliver checkmate. Move the Rook to g8.",
-          highlightSquares: ['g7', 'g8'],
-          expectedMove: 'g7g8',
+          dialogue: "Now, the discovered check. Retreat the Rook to f7. The Bishop on f6 delivers the check, while the Rook attacks f8.",
+          highlightSquares: ['g7', 'f7'],
+          expectedMove: 'g7f7',
           reactionCorrect: MentorReaction(
-            dialogue: "Checkmate. The windmill engine delivers mate.",
+            dialogue: "Discovered check! The King is forced to return to g8.",
             mood: MentorMood.encouraging,
           ),
         ),
         TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King returns to g8.",
+          scriptedMove: 'h8g8',
+          animatePathSquares: ['h8', 'g8'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Re-establish the check. Rook back to g7.",
+          highlightSquares: ['f7', 'g7'],
+          expectedMove: 'f7g7',
+          reactionCorrect: MentorReaction(
+            dialogue: "Correct. King goes back to h8.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King retreats to h8.",
+          scriptedMove: 'g8h8',
+          animatePathSquares: ['g8', 'h8'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Another discovered check. Capture the pawn on b7.",
+          highlightSquares: ['g7', 'b7'],
+          expectedMove: 'g7b7',
+          reactionCorrect: MentorReaction(
+            dialogue: "Yes! Capture with discovered check. King back to g8.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King returns to g8.",
+          scriptedMove: 'h8g8',
+          animatePathSquares: ['h8', 'g8'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Check again. Rook to g7.",
+          highlightSquares: ['b7', 'g7'],
+          expectedMove: 'b7g7',
+          reactionCorrect: MentorReaction(
+            dialogue: "King back to h8.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King retreats to h8.",
+          scriptedMove: 'g8h8',
+          animatePathSquares: ['g8', 'h8'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Discovered check again. Move Rook to g5, attacking the Queen on h5.",
+          highlightSquares: ['g7', 'g5'],
+          expectedMove: 'g7g5',
+          reactionCorrect: MentorReaction(
+            dialogue: "Perfect. King goes back to g8, and the Queen is trapped.",
+            mood: MentorMood.encouraging,
+          ),
+        ),
+        TutorialStep(
+          type: TutorialStepType.demonstrate,
+          dialogue: "Black King returns to g8.",
+          scriptedMove: 'h8g8',
+          animatePathSquares: ['h8', 'g8'],
+        ),
+        TutorialStep(
+          type: TutorialStepType.awaitMove,
+          dialogue: "Reap the final harvest. Capture the Black Queen on h5.",
+          highlightSquares: ['g5', 'h5'],
+          expectedMove: 'g5h5',
+          reactionCorrect: MentorReaction(
+            dialogue: "Incredible! You have completely cleaned the board and won the Queen.",
+            mood: MentorMood.celebration,
+          ),
+        ),
+        TutorialStep(
           type: TutorialStepType.celebration,
-          dialogue: "Windmill complete. The defense was swept away and checkmate delivered.",
+          dialogue: "Windmill complete. The defense was swept away and the Queen won.",
           mentorMood: MentorMood.celebration,
         ),
       ],
     ),
 
-    // Chapter 47: Lasker's Double Sacrifice (old 52)
+
+
+    // Chapter 50: Lasker's Double Sacrifice (old 52)
     TutorialLesson(
-      chapterId: 47,
+      chapterId: 50,
       title: "Lasker's Double Sacrifice",
       setupFen: 'r4rk1/1b2bpp1/ppq1p3/2ppB2n/5P2/1P1BP3/P1PPQ1PP/R4RK1 w - - 0 15',
       steps: [
@@ -2295,9 +2932,11 @@ class TutorialLessonsDatabase {
       ],
     ),
 
-    // Chapter 48: Alekhine's Gun (old 53)
+
+
+    // Chapter 51: Alekhine's Gun (old 53)
     TutorialLesson(
-      chapterId: 48,
+      chapterId: 51,
       title: "Alekhine's Gun",
       setupFen: '2r2rk1/1q2bppp/p2p1n2/3P4/1p1BP3/1P1R4/P1R1Q1PP/5B1K w - - 0 1',
       steps: [
@@ -2324,9 +2963,11 @@ class TutorialLessonsDatabase {
       ],
     ),
 
-    // Chapter 49: Saavedra Study (old 34)
+
+
+    // Chapter 52: Saavedra Study (old 34)
     TutorialLesson(
-      chapterId: 49,
+      chapterId: 52,
       title: 'Saavedra Study',
       setupFen: '8/2P5/1K1k4/3r4/8/8/8/8 w - - 0 1',
       steps: [
@@ -2363,9 +3004,11 @@ class TutorialLessonsDatabase {
       ],
     ),
 
-    // Chapter 50: Two Bishops Mate (old 35)
+
+
+    // Chapter 53: Two Bishops Mate (old 35)
     TutorialLesson(
-      chapterId: 50,
+      chapterId: 53,
       title: 'Two Bishops Mate',
       setupFen: '7k/8/8/8/8/8/8/2B1KB2 w - - 0 1',
       steps: [
@@ -2631,9 +3274,11 @@ class TutorialLessonsDatabase {
       ],
     ),
 
-    // Chapter 51: Knight & Bishop Mate (old 36)
+
+
+    // Chapter 54: Knight & Bishop Mate (old 36)
     TutorialLesson(
-      chapterId: 51,
+      chapterId: 54,
       title: 'Knight & Bishop Mate',
       setupFen: 'k7/8/2K5/3N4/5B2/8/8/8 w - - 0 1',
       steps: [
@@ -2969,9 +3614,11 @@ class TutorialLessonsDatabase {
       ],
     ),
 
-    // Chapter 52: Steinitz's Majority (old 54)
+
+
+    // Chapter 55: Steinitz's Majority (old 54)
     TutorialLesson(
-      chapterId: 52,
+      chapterId: 55,
       title: "Steinitz's Majority",
       setupFen: '8/8/6k1/p1pp4/P1P5/1P6/5K2/8 w - - 0 1',
       steps: [

@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:video_player/video_player.dart';
+import 'package:lottie/lottie.dart';
 import '../application/chess_provider.dart';
 import '../application/tutorial_provider.dart';
 import 'mobile_navigation_shell.dart';
@@ -23,12 +23,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     with TickerProviderStateMixin {
   late AnimationController _progressController;
   late Animation<double> _progressAnimation;
+  late Animation<double> _lottieProgress;
   late AnimationController _shimmerController;
   double _loadingValue = 0;
 
-  VideoPlayerController? _videoController;
-  bool _isVideoInitialized = false;
-  bool _isVideoFinished = false;
   bool _hasTransitioned = false;
   late Future<void> _servicesInitFuture;
   Timer? _fallbackTimer;
@@ -46,15 +44,16 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
     _progressController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 3500), // Nominal duration
+      duration: const Duration(milliseconds: 3000), // Fallback duration
     );
 
-    _progressAnimation = Tween<double>(begin: 0, end: 100).animate(
-      CurvedAnimation(
-        parent: _progressController,
-        curve: Curves.easeInOutCubic,
-      ),
-    )..addListener(() {
+    final curvedAnimation = CurvedAnimation(
+      parent: _progressController,
+      curve: Curves.easeInOutCubic,
+    );
+
+    _progressAnimation = Tween<double>(begin: 0, end: 100).animate(curvedAnimation)
+      ..addListener(() {
         setState(() {
           _loadingValue = _progressAnimation.value;
         });
@@ -64,12 +63,16 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
         }
       });
 
+    // Stop Lottie at 0.75 progress (frame 90, where the full icon builds and settles,
+    // rather than continuing into the exit/erasure animation phase)
+    _lottieProgress = Tween<double>(begin: 0.0, end: 0.75).animate(curvedAnimation);
+
     _shimmerController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1800),
     )..repeat();
 
-    // 1. Start services initialization in parallel during video playback
+    // 1. Start services initialization in parallel
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         final notifier = ref.read(chessProvider.notifier);
@@ -77,86 +80,21 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       }
     });
 
-    // 2. Initialize and play splash video
-    _initVideo();
-  }
-
-  void _initVideo() {
-    final useWinVideo = !kIsWeb && Platform.isWindows;
-    final path = useWinVideo ? 'assets/splash/splash_video-win.mp4' : 'assets/splash/splash_video.mp4';
-    debugPrint('Splash video: Initializing controller for asset path: $path');
-    
-    _videoController = VideoPlayerController.asset(path);
-
-    _videoController!.initialize().then((_) {
-      debugPrint('Splash video: Initialization completed successfully!');
-      if (mounted) {
-        setState(() {
-          _isVideoInitialized = true;
-        });
-        
-        // Calculate progress duration: video duration minus 500ms
-        final videoDuration = _videoController!.value.duration;
-        final videoSize = _videoController!.value.size;
-        debugPrint('Splash video: Video duration is $videoDuration, size is $videoSize');
-        
-        final targetDuration = videoDuration - const Duration(milliseconds: 500);
-        
-        // Ensure duration is positive and reasonable (fallback to 1s if video is extremely short)
-        _progressController.duration = targetDuration > const Duration(milliseconds: 500)
-            ? targetDuration
-            : const Duration(milliseconds: 1000);
-
-        debugPrint('Splash video: Playing video and starting progress with duration ${_progressController.duration}');
-        _videoController!.play();
-        _progressController.forward();
-      }
-    }).catchError((error) {
-      debugPrint('Splash video: Initialization error caught: $error');
-      if (mounted) {
-        setState(() {
-          _isVideoFinished = true;
-        });
-        _progressController.forward();
-        _checkTransition();
-      }
-    });
-
-    _videoController!.addListener(_videoListener);
-
-    // Safety fallback: transition to loading screen if video player hangs (15s timeout)
-    _fallbackTimer = Timer(const Duration(seconds: 15), () {
+    // 2. Safety fallback: transition to next screen if loading hangs (8s timeout)
+    _fallbackTimer = Timer(const Duration(seconds: 8), () {
       if (mounted && !_hasTransitioned) {
-        debugPrint('Splash video: Fallback triggered due to timeout. controller initialized: $_isVideoInitialized, error: ${_videoController?.value.hasError}, size: ${_videoController?.value.size}');
-        setState(() {
-          _isVideoFinished = true;
-        });
-        _progressController.forward(); // Ensure progress completes
+        debugPrint('Splash Lottie: Fallback triggered due to timeout.');
+        _progressController.duration = const Duration(milliseconds: 1000);
+        _progressController.forward();
         _checkTransition();
       }
     });
-  }
-
-  void _videoListener() {
-    if (_videoController == null) return;
-    final value = _videoController!.value;
-    if (value.isInitialized &&
-        value.position >= value.duration &&
-        !_isVideoFinished) {
-      setState(() {
-        _isVideoFinished = true;
-      });
-      _checkTransition();
-    }
   }
 
   void _checkTransition() {
     if (_hasTransitioned) return;
 
-    final isVideoDone = _isVideoFinished || (_videoController != null && _videoController!.value.hasError);
-    final isProgressDone = _progressController.isCompleted;
-
-    if (isVideoDone && isProgressDone) {
+    if (_progressController.isCompleted) {
       _hasTransitioned = true;
       _navigateToNextScreen();
     }
@@ -206,8 +144,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   @override
   void dispose() {
     _fallbackTimer?.cancel();
-    _videoController?.removeListener(_videoListener);
-    _videoController?.dispose();
     _progressController.dispose();
     _shimmerController.dispose();
     super.dispose();
@@ -216,32 +152,28 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F7EF), // Cream off-white to match the app icon
+      backgroundColor: const Color(0xFFF4F2EA), // Cream off-white to match the Lottie background
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // 1. Video Player Background (if initialized)
-          if (_isVideoInitialized && _videoController != null)
-            SizedBox.expand(
-              child: FittedBox(
-                fit: BoxFit.cover,
-                child: Builder(
-                  builder: (context) {
-                    final size = _videoController!.value.size;
-                    final width = size.width > 0 ? size.width : 1920.0;
-                    final height = size.height > 0 ? size.height : 1080.0;
-                    return SizedBox(
-                      width: width,
-                      height: height,
-                      child: VideoPlayer(_videoController!),
-                    );
-                  },
-                ),
+          // 1. Centered Lottie Splash Animation (stops at full icon build completion)
+          Center(
+            child: SizedBox(
+              width: 320,
+              height: 340,
+              child: Lottie.asset(
+                'assets/splash/splash_animation.json',
+                controller: _lottieProgress,
+                onLoaded: (composition) {
+                  if (mounted && !_progressController.isAnimating && !_progressController.isCompleted) {
+                    // Slow down the build build to 3.0 seconds (as requested by user)
+                    _progressController.duration = const Duration(milliseconds: 3000);
+                    _progressController.forward();
+                  }
+                },
               ),
-            )
-          else
-            // Fallback background during initialization
-            Container(color: const Color(0xFFF7F7EF)),
+            ),
+          ),
 
           // 2. Overlays: Loading Bar & Footer
           SafeArea(

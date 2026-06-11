@@ -172,8 +172,8 @@ class _TutorialBoardStageState extends ConsumerState<TutorialBoardStage> with Si
                               if (pieceObj != null)
                                 Center(
                                   child: SizedBox(
-                                    width: sqSize * 0.85,
-                                    height: sqSize * 0.85,
+                                    width: sqSize * 0.95,
+                                    height: sqSize * 0.95,
                                     child: theme.buildPiece(
                                       context,
                                       pieceObj.type.toUpperCase(),

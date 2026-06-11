@@ -51,8 +51,8 @@ enum GuidedTutorialLevel {
 class GuidedTutorialFlow {
   static const int firstChapter = 1;
 
-  /// The guided tour covers Foundations only: Chapters 1–9.
-  static const int lastGuidedChapter = 9;
+  /// The guided tour covers Foundations only: Chapters 1–8.
+  static const int lastGuidedChapter = 8;
 
   /// Total chapters in the curriculum (used for non-guided navigation).
   static const int totalChapters = kTutorialChapterCount;

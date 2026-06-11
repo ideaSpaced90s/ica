@@ -27,71 +27,71 @@ class ChapterSelectScreen extends ConsumerWidget {
       title: 'Foundations',
       subtitle: 'Board, coordinates, all six pieces, and capture rules',
       start: 1,
-      end: 9,
+      end: 8,
       icon: Icons.grid_on_rounded,
       color: Color(0xFF059669),
     ),
     _ChapterGroup(
       title: 'Special Rules & King Safety',
       subtitle: 'Check, mate, stalemate, castling, promotion, en passant, draws',
-      start: 10,
-      end: 18,
+      start: 9,
+      end: 17,
       icon: Icons.security_rounded,
       color: ScholarlyTheme.accentBlue,
     ),
     _ChapterGroup(
       title: 'Tactics Set 1',
-      subtitle: 'Piece values, opening habits, forks, mobility, open files',
-      start: 19,
-      end: 23,
+      subtitle: 'Piece values, opening habits, forks, pins, skewers, discovered attacks',
+      start: 18,
+      end: 25,
       icon: Icons.psychology_rounded,
       color: Color(0xFF7C3AED),
     ),
     _ChapterGroup(
       title: 'Tactics Set 2',
       subtitle: 'Undermining, overloading, decoy, clearance, interference, zwischenzug',
-      start: 24,
-      end: 29,
+      start: 26,
+      end: 31,
       icon: Icons.bolt_rounded,
       color: Color(0xFF0284C7),
     ),
     _ChapterGroup(
       title: 'Practical Openings',
       subtitle: 'Italian, Ruy Lopez, Sicilian, Queen\'s Gambit, King\'s Indian',
-      start: 30,
-      end: 34,
+      start: 32,
+      end: 36,
       icon: Icons.flag_rounded,
       color: Color(0xFFD97706),
     ),
     _ChapterGroup(
       title: 'Endgame Technique',
       subtitle: 'Queen mate, rook mate, opposition, wrong bishop, breakthrough, Lucena, Philidor',
-      start: 35,
-      end: 41,
+      start: 37,
+      end: 43,
       icon: Icons.workspace_premium_rounded,
       color: ScholarlyTheme.realGold,
     ),
     _ChapterGroup(
       title: 'Pawn Strategy',
-      subtitle: 'Pawn chains, backward pawns, doubled pawns',
-      start: 42,
-      end: 44,
+      subtitle: 'Pawn chains, backward pawns, doubled pawns, isolated pawns',
+      start: 44,
+      end: 47,
       icon: Icons.track_changes_rounded,
       color: Color(0xFF0F766E),
     ),
     _ChapterGroup(
       title: 'Tactics Set 3: Master Class',
       subtitle: 'Légal\'s Mate, Windmill, Lasker, Alekhine\'s Gun, Saavedra, Two Bishops',
-      start: 45,
-      end: 50,
+      start: 48,
+      end: 53,
       icon: Icons.history_edu_rounded,
       color: Color(0xFF6B21A8),
     ),
     _ChapterGroup(
       title: 'Mastery',
       subtitle: 'Knight & Bishop mate, Steinitz majority',
-      start: 51,
-      end: 52,
+      start: 54,
+      end: 55,
       icon: Icons.emoji_events_rounded,
       color: Color(0xFF9F1239),
     ),
@@ -576,67 +576,70 @@ class _ChapterCard extends StatelessWidget {
 
   IconData _getChapterIcon(int chapterId) {
     switch (chapterId) {
-      // GROUP 1 — Foundations (1–9)
+      // GROUP 1 — Foundations (1–8)
       case 1: return Icons.grid_on_rounded;           // Board Introduction
       case 2: return Icons.pin_drop_rounded;          // Coordinates & Tiles
-      case 3: return Icons.arrow_upward_rounded;      // Pawn Movement
-      case 4: return Icons.unfold_more_rounded;       // Rook Movement
-      case 5: return Icons.open_in_full_rounded;      // Bishop Movement
-      case 6: return Icons.shortcut_rounded;          // Knight Movement
-      case 7: return Icons.workspace_premium_rounded; // Queen Movement
-      case 8: return Icons.emoji_people_rounded;      // King Movement
-      case 9: return Icons.gavel_rounded;             // Capturing Pieces
-      // GROUP 2 — Special Rules & King Safety (10–18)
-      case 10: return Icons.upgrade_rounded;          // Pawn Promotion
-      case 11: return Icons.castle_rounded;           // Kingside Castling
-      case 12: return Icons.fort_rounded;             // Queenside Castling
-      case 13: return Icons.bolt_rounded;             // En Passant
-      case 14: return Icons.warning_amber_rounded;    // Understanding Check
-      case 15: return Icons.security_rounded;         // Escaping Check
-      case 16: return Icons.dangerous_rounded;        // Checkmate
-      case 17: return Icons.balance_rounded;          // Stalemate
-      case 18: return Icons.compare_arrows_rounded;   // Draw Conditions
-      // GROUP 3 — Tactics Set 1 (19–23)
-      case 19: return Icons.calculate_rounded;        // Piece Value Concepts
-      case 20: return Icons.rocket_launch_rounded;    // Opening Principles
-      case 21: return Icons.psychology_rounded;       // Tactical Patterns (Fork)
-      case 22: return Icons.zoom_out_map_rounded;     // Principle of Mobility
-      case 23: return Icons.view_week_rounded;        // Open Files & Penetration
-      // GROUP 4 — Tactics Set 2 (24–29)
-      case 24: return Icons.heart_broken_rounded;     // Undermining
-      case 25: return Icons.scale_rounded;            // Overloading
-      case 26: return Icons.radar_rounded;            // Decoy & Attraction
-      case 27: return Icons.cleaning_services_rounded; // Clearance & Vacating
-      case 28: return Icons.block_rounded;            // Interference
-      case 29: return Icons.pending_actions_rounded;  // Zwischenzug
-      // GROUP 5 — Practical Openings (30–34)
-      case 30: return Icons.flag_rounded;             // Italian Game
-      case 31: return Icons.account_tree_rounded;     // Ruy Lopez
-      case 32: return Icons.call_split_rounded;       // Sicilian Defense
-      case 33: return Icons.diamond_rounded;          // Queen's Gambit
-      case 34: return Icons.shield_rounded;           // King's Indian Setup
-      // GROUP 6 — Endgame Technique (35–41)
-      case 35: return Icons.workspace_premium_rounded; // Queen Mate
-      case 36: return Icons.vertical_align_top_rounded; // Rook Mate
-      case 37: return Icons.compare_arrows_rounded;   // Opposition
-      case 38: return Icons.grid_off_rounded;         // Wrong Bishop Draw
-      case 39: return Icons.trending_up_rounded;      // Pawn Breakthrough
-      case 40: return Icons.architecture_rounded;     // Lucena Position
-      case 41: return Icons.horizontal_rule_rounded;  // Philidor Position
-      // GROUP 7 — Pawn Strategy (42–44)
-      case 42: return Icons.link_rounded;             // Pawn Chain
-      case 43: return Icons.subdirectory_arrow_right_rounded; // Backward Pawn
-      case 44: return Icons.layers_rounded;           // Doubled Pawns
-      // GROUP 8 — Tactics Set 3: Master Class (45–50)
-      case 45: return Icons.offline_bolt_rounded;     // Légal's Mate
-      case 46: return Icons.cyclone_rounded;          // The Windmill
-      case 47: return Icons.filter_2_rounded;         // Lasker's Double Sacrifice
-      case 48: return Icons.align_horizontal_left_rounded; // Alekhine's Gun
-      case 49: return Icons.auto_awesome_rounded;     // Saavedra Study
-      case 50: return Icons.people_outline_rounded;   // Two Bishops Mate
-      // GROUP 9 — Mastery (51–52)
-      case 51: return Icons.extension_rounded;        // Knight & Bishop Mate
-      case 52: return Icons.groups_rounded;           // Steinitz's Majority
+      case 3: return Icons.arrow_upward_rounded;      // Pawn Movement & Capture
+      case 4: return Icons.unfold_more_rounded;       // Rook Movement & Capture
+      case 5: return Icons.open_in_full_rounded;      // Bishop Movement & Capture
+      case 6: return Icons.shortcut_rounded;          // Knight Movement & Capture
+      case 7: return Icons.workspace_premium_rounded; // Queen Movement & Capture
+      case 8: return Icons.emoji_people_rounded;      // King Movement & Capture
+      // GROUP 2 — Special Rules & King Safety (9–17)
+      case 9: return Icons.upgrade_rounded;          // Pawn Promotion
+      case 10: return Icons.castle_rounded;           // Kingside Castling
+      case 11: return Icons.fort_rounded;             // Queenside Castling
+      case 12: return Icons.bolt_rounded;             // En Passant
+      case 13: return Icons.warning_amber_rounded;    // Understanding Check
+      case 14: return Icons.security_rounded;         // Escaping Check
+      case 15: return Icons.dangerous_rounded;        // Checkmate
+      case 16: return Icons.balance_rounded;          // Stalemate
+      case 17: return Icons.compare_arrows_rounded;   // Draw Conditions
+      // GROUP 3 — Tactics Set 1 (18–25)
+      case 18: return Icons.calculate_rounded;        // Piece Value Concepts
+      case 19: return Icons.rocket_launch_rounded;    // Opening Principles
+      case 20: return Icons.psychology_rounded;       // The Fork
+      case 21: return Icons.push_pin_rounded;          // The Pin
+      case 22: return Icons.call_made_rounded;        // The Skewer
+      case 23: return Icons.visibility_rounded;       // Discovered Attack & Check
+      case 24: return Icons.zoom_out_map_rounded;     // Principle of Mobility
+      case 25: return Icons.view_week_rounded;        // Open Files & Penetration
+      // GROUP 4 — Tactics Set 2 (26–31)
+      case 26: return Icons.heart_broken_rounded;     // Undermining
+      case 27: return Icons.scale_rounded;            // Overloading
+      case 28: return Icons.radar_rounded;            // Decoy & Attraction
+      case 29: return Icons.cleaning_services_rounded; // Clearance & Vacating
+      case 30: return Icons.block_rounded;            // Interference
+      case 31: return Icons.pending_actions_rounded;  // Zwischenzug
+      // GROUP 5 — Practical Openings (32–36)
+      case 32: return Icons.flag_rounded;             // Italian Game
+      case 33: return Icons.account_tree_rounded;     // Ruy Lopez
+      case 34: return Icons.call_split_rounded;       // Sicilian Defense
+      case 35: return Icons.diamond_rounded;          // Queen's Gambit
+      case 36: return Icons.shield_rounded;           // King's Indian Setup
+      // GROUP 6 — Endgame Technique (37–43)
+      case 37: return Icons.workspace_premium_rounded; // Queen Mate
+      case 38: return Icons.vertical_align_top_rounded; // Rook Mate
+      case 39: return Icons.compare_arrows_rounded;   // Opposition
+      case 40: return Icons.grid_off_rounded;         // Wrong Bishop Draw
+      case 41: return Icons.trending_up_rounded;      // Pawn Breakthrough
+      case 42: return Icons.architecture_rounded;     // Lucena Position
+      case 43: return Icons.horizontal_rule_rounded;  // Philidor Position
+      // GROUP 7 — Pawn Strategy (44–47)
+      case 44: return Icons.link_rounded;             // Pawn Chain
+      case 45: return Icons.subdirectory_arrow_right_rounded; // Backward Pawn
+      case 46: return Icons.layers_rounded;           // Doubled Pawns
+      case 47: return Icons.grain_rounded;            // The Isolated Pawn
+      // GROUP 8 — Tactics Set 3: Master Class (48–53)
+      case 48: return Icons.offline_bolt_rounded;     // Légal's Mate
+      case 49: return Icons.cyclone_rounded;          // The Windmill
+      case 50: return Icons.filter_2_rounded;         // Lasker's Double Sacrifice
+      case 51: return Icons.align_horizontal_left_rounded; // Alekhine's Gun
+      case 52: return Icons.auto_awesome_rounded;     // Saavedra Study
+      case 53: return Icons.people_outline_rounded;   // Two Bishops Mate
+      // GROUP 9 — Mastery (54–55)
+      case 54: return Icons.extension_rounded;        // Knight & Bishop Mate
+      case 55: return Icons.groups_rounded;           // Steinitz's Majority
       default: return Icons.help_outline_rounded;
     }
   }
@@ -660,7 +663,7 @@ class _ChapterCard extends StatelessWidget {
           child: Material(
             color: Colors.white.withValues(alpha: isUnlocked ? 0.92 : 0.62),
             child: InkWell(
-              onTap: isUnlocked ? onTap : null,
+              onTap: isUnlocked && !isCompleted ? onTap : null,
               child: Container(
                 padding: const EdgeInsets.all(11),
                 decoration: BoxDecoration(

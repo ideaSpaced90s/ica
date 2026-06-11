@@ -156,6 +156,18 @@ class _ChapterCompletionOverlayState extends ConsumerState<ChapterCompletionOver
                     ],
                   ),
 
+                  const SizedBox(height: 8),
+
+                  Text(
+                    '3 Stars: No Mistakes | 2 Stars: 1 Mistake | 1 Star: Completed',
+                    style: GoogleFonts.inter(
+                      color: ScholarlyTheme.textMuted,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+
                   const SizedBox(height: 24),
 
                   Container(
