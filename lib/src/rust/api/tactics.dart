@@ -13,10 +13,12 @@ TacticsResult generateTacticsAnalysis({
   required String fen,
   required List<String> userUciMoves,
   required List<StockfishTacticLine> engineAlternatives,
+  required bool isChess960,
 }) => RustLib.instance.api.crateApiTacticsGenerateTacticsAnalysis(
   fen: fen,
   userUciMoves: userUciMoves,
   engineAlternatives: engineAlternatives,
+  isChess960: isChess960,
 );
 
 class StockfishTacticLine {

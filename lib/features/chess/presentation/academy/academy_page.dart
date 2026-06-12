@@ -64,6 +64,7 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
     _slideController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 350),
+      value: 1.0,
     );
     // Listener to handle panel collapse: ensure the commentary list scrolls to the latest message.
     _slideController.addListener(() {
@@ -739,83 +740,6 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
 
   double _lerp(double start, double end, double t) => start + (end - start) * t;
 
-  Widget _buildBottomActionBar(BuildContext context, ChessState state, ChessNotifier notifier) {
-    final isPlayerTurn = state.isPlayerWhite == (state.game.turn == chess_lib.Color.WHITE);
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 400),
-      transitionBuilder: (Widget child, Animation<double> animation) {
-        return SlideTransition(
-          position: Tween<Offset>(
-            begin: const Offset(0.0, 0.3),
-            end: Offset.zero,
-          ).animate(animation),
-          child: FadeTransition(
-            opacity: animation,
-            child: child,
-          ),
-        );
-      },
-      child: state.activeTacticIndex != null
-          ? const KeyedSubtree(
-              key: ValueKey('tactics_playback_bottom'),
-              child: TacticsPlaybackControls(axis: Axis.horizontal),
-            )
-          : Column(
-              key: const ValueKey('normal_bottom_action_bar_with_pendulums'),
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                AcademyPendulumIndicator(
-                  isActive: !state.game.gameOver && !isPlayerTurn,
-                  isChanakya: true,
-                ),
-                const SizedBox(height: 8),
-                JuicyGlassCard(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  borderRadius: 20,
-                  child: Center(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _PremiumActionIcon(
-                          icon: Icons.add_box_rounded,
-                          tooltip: 'New Game',
-                          baseColor: const Color(0xFF10B981),
-                          onTap: () => _handleNewGame(context, ref),
-                        ),
-                        const SizedBox(width: 12),
-                        _PremiumActionIcon(
-                          icon: Icons.undo_rounded,
-                          tooltip: 'Undo',
-                          baseColor: const Color(0xFFF59E0B),
-                          isEnabled: state.canUndo,
-                          isBlinking: state.isAcademyBlunderActive,
-                          onTap: state.canUndo ? () => notifier.undo() : null,
-                        ),
-                        const SizedBox(width: 12),
-                        _PremiumActionIcon(
-                          icon: state.showLog
-                              ? Icons.chat_bubble_outline_rounded
-                              : Icons.history_edu_rounded,
-                          tooltip: 'Toggle Log',
-                          baseColor: const Color(0xFF3B82F6),
-                          isActive: state.showLog,
-                          onTap: () => notifier.toggleLog(),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                AcademyPendulumIndicator(
-                  isActive: !state.game.gameOver && isPlayerTurn,
-                  isChanakya: false,
-                ),
-              ],
-            ),
-    );
-  }
-
   Widget _buildVerticalActionBar(BuildContext context, ChessState state, ChessNotifier notifier) {
     final isPlayerTurn = state.isPlayerWhite == (state.game.turn == chess_lib.Color.WHITE);
     return AnimatedSwitcher(
@@ -839,7 +763,7 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
             )
           : Container(
               key: const ValueKey('normal_vertical_action_bar'),
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.35),
                 borderRadius: BorderRadius.circular(20),
@@ -860,7 +784,8 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   AcademyPendulumIndicator(
-                    isActive: !state.game.gameOver && !isPlayerTurn,
+                    isFrozen: state.isTacticsModeActive && !isPlayerTurn,
+                    isActive: !state.isTacticsModeActive && !state.game.gameOver && !isPlayerTurn,
                     isChanakya: true,
                   ),
                   const SizedBox(height: 12),
@@ -868,16 +793,17 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
                     icon: Icons.add_box_rounded,
                     tooltip: 'New Game',
                     baseColor: const Color(0xFF10B981),
-                    onTap: () => _handleNewGame(context, ref),
+                    isEnabled: !state.isTacticsModeActive,
+                    onTap: !state.isTacticsModeActive ? () => _handleNewGame(context, ref) : null,
                   ),
                   const SizedBox(height: 12),
                   _PremiumActionIcon(
                     icon: Icons.undo_rounded,
                     tooltip: 'Undo',
                     baseColor: const Color(0xFFF59E0B),
-                    isEnabled: state.canUndo,
-                    isBlinking: state.isAcademyBlunderActive,
-                    onTap: state.canUndo ? () => notifier.undo() : null,
+                    isEnabled: !state.isTacticsModeActive && state.canUndo,
+                    isBlinking: !state.isTacticsModeActive && state.isAcademyBlunderActive,
+                    onTap: (!state.isTacticsModeActive && state.canUndo) ? () => notifier.undo() : null,
                   ),
                   const SizedBox(height: 12),
                   _PremiumActionIcon(
@@ -886,19 +812,111 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
                         : Icons.history_edu_rounded,
                     tooltip: 'Toggle Log',
                     baseColor: const Color(0xFF3B82F6),
+                    isEnabled: !state.isTacticsModeActive,
                     isActive: state.showLog,
-                    onTap: () => notifier.toggleLog(),
+                    onTap: !state.isTacticsModeActive ? () => notifier.toggleLog() : null,
                   ),
                   const SizedBox(height: 12),
                   AcademyPendulumIndicator(
-                    isActive: !state.game.gameOver && isPlayerTurn,
+                    isFrozen: state.isTacticsModeActive && isPlayerTurn,
+                    isActive: !state.isTacticsModeActive && !state.game.gameOver && isPlayerTurn,
                     isChanakya: false,
                   ),
                 ],
               ),
             ),
     );
-  }  Widget _buildLandscapeLayout(
+  }
+
+  Widget _buildHorizontalActionBar(BuildContext context, ChessState state, ChessNotifier notifier) {
+    final isPlayerTurn = state.isPlayerWhite == (state.game.turn == chess_lib.Color.WHITE);
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 400),
+      transitionBuilder: (Widget child, Animation<double> animation) {
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0.0, 0.3),
+            end: Offset.zero,
+          ).animate(animation),
+          child: FadeTransition(
+            opacity: animation,
+            child: child,
+          ),
+        );
+      },
+      child: state.activeTacticIndex != null
+          ? const KeyedSubtree(
+              key: ValueKey('tactics_playback_horizontal'),
+              child: TacticsPlaybackControls(axis: Axis.horizontal),
+            )
+          : Container(
+              key: const ValueKey('normal_horizontal_action_bar'),
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.35),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.5),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  AcademyPendulumIndicator(
+                    isFrozen: state.isTacticsModeActive && !isPlayerTurn,
+                    isActive: !state.isTacticsModeActive && !state.game.gameOver && !isPlayerTurn,
+                    isChanakya: true,
+                  ),
+                  const SizedBox(width: 12),
+                  _PremiumActionIcon(
+                    icon: Icons.add_box_rounded,
+                    tooltip: 'New Game',
+                    baseColor: const Color(0xFF10B981),
+                    isEnabled: !state.isTacticsModeActive,
+                    onTap: !state.isTacticsModeActive ? () => _handleNewGame(context, ref) : null,
+                  ),
+                  const SizedBox(width: 12),
+                  _PremiumActionIcon(
+                    icon: Icons.undo_rounded,
+                    tooltip: 'Undo',
+                    baseColor: const Color(0xFFF59E0B),
+                    isEnabled: !state.isTacticsModeActive && state.canUndo,
+                    isBlinking: !state.isTacticsModeActive && state.isAcademyBlunderActive,
+                    onTap: (!state.isTacticsModeActive && state.canUndo) ? () => notifier.undo() : null,
+                  ),
+                  const SizedBox(width: 12),
+                  _PremiumActionIcon(
+                    icon: state.showLog
+                        ? Icons.chat_bubble_outline_rounded
+                        : Icons.history_edu_rounded,
+                    tooltip: 'Toggle Log',
+                    baseColor: const Color(0xFF3B82F6),
+                    isEnabled: !state.isTacticsModeActive,
+                    isActive: state.showLog,
+                    onTap: !state.isTacticsModeActive ? () => notifier.toggleLog() : null,
+                  ),
+                  const SizedBox(width: 12),
+                  AcademyPendulumIndicator(
+                    isFrozen: state.isTacticsModeActive && isPlayerTurn,
+                    isActive: !state.isTacticsModeActive && !state.game.gameOver && isPlayerTurn,
+                    isChanakya: false,
+                  ),
+                ],
+              ),
+            ),
+    );
+  }
+
+  Widget _buildLandscapeLayout(
     BuildContext context,
     ChessState state,
     ChessNotifier notifier,
@@ -927,39 +945,7 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
                       SizedBox(
                         width: boardSize,
                         height: boardSize,
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            const AcademyBoard(alignment: Alignment.center),
-                            if (state.isTacticsModeActive)
-                              Positioned(
-                                top: 12,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: ScholarlyTheme.accentGold.withValues(alpha: 0.9),
-                                    borderRadius: BorderRadius.circular(12),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: ScholarlyTheme.accentGold.withValues(alpha: 0.35),
-                                        blurRadius: 8,
-                                        spreadRadius: 1,
-                                      ),
-                                    ],
-                                  ),
-                                  child: Text(
-                                    'TACTICS MODE',
-                                    style: GoogleFonts.inter(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 11,
-                                      letterSpacing: 1.0,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
+                        child: const AcademyBoard(alignment: Alignment.center),
                       ),
                       SizedBox(width: paddingValue),
                       Container(
@@ -1019,6 +1005,58 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
     ChessState state,
     double factor,
   ) {
+    if (factor == 0.0) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 12.0),
+        height: 56.0,
+        child: GestureDetector(
+          onTap: () => _slideController.forward(),
+          onVerticalDragUpdate: (details) {
+            final delta = -details.primaryDelta! / MediaQuery.of(context).size.height;
+            _slideController.value = (_slideController.value + delta * 1.5).clamp(0.0, 1.0);
+          },
+          onVerticalDragEnd: (details) {
+            final velocity = details.primaryVelocity ?? 0;
+            if (velocity < -300 || _slideController.value > 0.4) {
+              _slideController.forward();
+            } else {
+              _slideController.reverse();
+            }
+          },
+          child: JuicyGlassCard(
+            borderRadius: 20.0,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const CircleAvatar(
+                      radius: 14,
+                      backgroundImage: AssetImage('assets/persona/gm_chanakya.png'),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      'GM Chanakya',
+                      style: GoogleFonts.inter(
+                        color: ScholarlyTheme.textPrimary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                _BlinkingUpwardArrow(
+                  onTap: () => _slideController.forward(),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     final double borderRadius = _lerp(20.0, 0.0, factor);
     final double horizontalPadding = _lerp(12.0, 0.0, factor);
 
@@ -1030,28 +1068,52 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
       },
       onVerticalDragEnd: (details) {
         final velocity = details.primaryVelocity ?? 0;
-        if (velocity < -300 || _slideController.value > 0.4) {
+        if (velocity < -300 || _slideController.value > 0.5) {
           _slideController.forward();
-        } else if (velocity > 300 || _slideController.value <= 0.4) {
+        } else {
           _slideController.reverse();
         }
       },
       child: Container(
         color: Colors.transparent,
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        padding: const EdgeInsets.symmetric(vertical: 8),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: ScholarlyTheme.textMuted.withValues(alpha: 0.35),
-                  borderRadius: BorderRadius.circular(2),
+            Row(
+              children: [
+                const SizedBox(width: 48), // spacer to balance the close button on the right
+                Expanded(
+                  child: Center(
+                    child: Container(
+                      width: 36,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: ScholarlyTheme.textMuted.withValues(alpha: 0.35),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
                 ),
-              ),
+                GestureDetector(
+                  onTap: () => _slideController.animateTo(0.0, duration: const Duration(milliseconds: 300)),
+                  behavior: HitTestBehavior.opaque,
+                  child: Container(
+                    margin: const EdgeInsets.only(right: 16),
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: ScholarlyTheme.textMuted.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      color: ScholarlyTheme.textMuted,
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ],
             ),
             if (state.showLog && (state.game.capturedByWhite.isNotEmpty || state.game.capturedByBlack.isNotEmpty)) ...[
               const SizedBox(height: 10),
@@ -1135,81 +1197,79 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
                     final isLandscape = constraints.maxWidth > constraints.maxHeight;
                     if (isLandscape) {
                       return _buildLandscapeLayout(context, state, notifier, constraints);
-                    }
-
-                    final totalWidth = constraints.maxWidth;
+                    }                    final totalWidth = constraints.maxWidth;
                     final totalHeight = constraints.maxHeight;
-                    final boardHeight = totalWidth;
-                    final remainingHeight = totalHeight - boardHeight;
+
+                    final double paddingValue = 6.0;
+                    final double actionWidth = 46.0;
+                    final double boardMargin = 8.0;
 
                     return AnimatedBuilder(
                       animation: _slideController,
                       builder: (context, child) {
                         final factor = _slideController.value;
+                        final bool isCollapsed = factor < 0.5;
 
-                        final bottomBarOpacity = (1.0 - factor).clamp(0.0, 1.0);
-                        final bottomBarTranslation = 120.0 * factor;
+                        // Collapsed layout sizes
+                        final double boardSizeCollapsed = totalWidth - (boardMargin * 2);
+                        final double boardAreaHeightCollapsed = totalHeight - 56.0;
 
-                        final collapsedTop = boardHeight + 4;
-                        // The collapsed panel occupies the space below the board except the bottom action bar.
-                        // The action bar + padding takes roughly 82px.
-                        final collapsedHeight = remainingHeight - 82;
+                        // Expanded layout sizes
+                        final double boardSizeExpanded = totalWidth - paddingValue - actionWidth - (boardMargin * 2);
+                        final double boardAreaHeightExpanded = boardSizeExpanded + 24.0;
 
-                        final currentTop = _lerp(collapsedTop, 0.0, factor);
-                        final currentHeight = _lerp(collapsedHeight, totalHeight, factor);
+                        final double currentTop = _lerp(totalHeight - 56.0, boardAreaHeightExpanded, factor);
+                        final double currentHeight = _lerp(56.0, totalHeight - boardAreaHeightExpanded, factor);
 
                         return Stack(
                           children: [
-                            // 1. CHESSBOARD LAYER (with dynamic blur overlay)
+                            // 1. CHESSBOARD LAYER (no blur overlay, height fixed to boardAreaHeightCollapsed to prevent overflow)
                             Positioned(
                               top: 0,
                               left: 0,
                               right: 0,
-                              height: boardHeight,
+                              height: boardAreaHeightCollapsed,
                               child: ClipRect(
                                 child: Stack(
-                                  alignment: Alignment.center,
                                   children: [
-                                    const AcademyBoard(alignment: Alignment.topCenter),
-                                    if (state.isTacticsModeActive)
-                                      Positioned(
-                                        top: 12,
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                                          decoration: BoxDecoration(
-                                            color: ScholarlyTheme.accentGold.withValues(alpha: 0.9),
-                                            borderRadius: BorderRadius.circular(12),
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: ScholarlyTheme.accentGold.withValues(alpha: 0.35),
-                                                blurRadius: 8,
-                                                spreadRadius: 1,
-                                              ),
-                                            ],
-                                          ),
-                                          child: Text(
-                                            'TACTICS MODE',
-                                            style: GoogleFonts.inter(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 11,
-                                              letterSpacing: 1.0,
+                                    if (isCollapsed)
+                                      Padding(
+                                        padding: EdgeInsets.symmetric(horizontal: boardMargin),
+                                        child: Column(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            const Spacer(),
+                                            SizedBox(
+                                              width: boardSizeCollapsed,
+                                              height: boardSizeCollapsed,
+                                              child: const AcademyBoard(alignment: Alignment.center),
                                             ),
-                                          ),
+                                            const SizedBox(height: 16),
+                                            _buildHorizontalActionBar(context, state, notifier),
+                                            const Spacer(),
+                                          ],
                                         ),
-                                      ),
-                                    if (factor > 0.0)
-                                      Positioned.fill(
-                                        child: BackdropFilter(
-                                          filter: ImageFilter.blur(
-                                            sigmaX: 12.0 * factor,
-                                            sigmaY: 12.0 * factor,
-                                          ),
-                                          child: Container(
-                                            color: Colors.white.withValues(
-                                              alpha: 0.15 * factor,
+                                      )
+                                    else
+                                      Padding(
+                                        padding: EdgeInsets.symmetric(horizontal: boardMargin, vertical: 12.0),
+                                        child: Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            SizedBox(
+                                              width: boardSizeExpanded,
+                                              height: boardSizeExpanded,
+                                              child: const AcademyBoard(alignment: Alignment.center),
                                             ),
-                                          ),
+                                            SizedBox(width: paddingValue),
+                                            Container(
+                                              width: actionWidth,
+                                              height: boardSizeExpanded,
+                                              alignment: Alignment.center,
+                                              child: _buildVerticalActionBar(context, state, notifier),
+                                            ),
+                                          ],
                                         ),
                                       ),
                                   ],
@@ -1217,24 +1277,7 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
                               ),
                             ),
 
-                            // 2. BOTTOM ACTION BAR LAYER (fades and slides off screen)
-                            Positioned(
-                              left: 0,
-                              right: 0,
-                              bottom: 12 - bottomBarTranslation,
-                              child: Opacity(
-                                opacity: bottomBarOpacity,
-                                child: IgnorePointer(
-                                  ignoring: factor > 0.5,
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                                    child: _buildBottomActionBar(context, state, notifier),
-                                  ),
-                                ),
-                              ),
-                            ),
-
-                            // 3. SLIDING COMMENTARY HISTORY LAYER
+                            // 2. SLIDING COMMENTARY HISTORY LAYER
                             Positioned(
                               top: currentTop,
                               left: 0,
@@ -1447,6 +1490,77 @@ class _PremiumActionIconState extends State<_PremiumActionIcon>
   }
 }
 
+class _BlinkingUpwardArrow extends StatefulWidget {
+  const _BlinkingUpwardArrow({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  State<_BlinkingUpwardArrow> createState() => _BlinkingUpwardArrowState();
+}
+
+class _BlinkingUpwardArrowState extends State<_BlinkingUpwardArrow>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    );
+    _animation = Tween<double>(begin: 1.0, end: 0.3).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+    _controller.repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const themeColor = ScholarlyTheme.accentBlue;
+    return GestureDetector(
+      onTap: widget.onTap,
+      behavior: HitTestBehavior.opaque,
+      child: FadeTransition(
+        opacity: _animation,
+        child: Container(
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(
+            color: themeColor.withValues(alpha: 0.20),
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: themeColor.withValues(alpha: 0.6),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: themeColor.withValues(alpha: 0.25),
+                blurRadius: 6,
+                spreadRadius: 1,
+              ),
+            ],
+          ),
+          child: const Center(
+            child: Icon(
+              Icons.keyboard_arrow_up_rounded,
+              color: themeColor,
+              size: 24,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _CompactCapturedPiecesHeader extends ConsumerWidget {
   final ChessState state;
 
@@ -1460,6 +1574,11 @@ class _CompactCapturedPiecesHeader extends ConsumerWidget {
     if (whiteCaptures.isEmpty && blackCaptures.isEmpty) {
       return const SizedBox.shrink();
     }
+
+    final whiteMajors = whiteCaptures.where((p) => p.type != chess_lib.PieceType.PAWN).toList();
+    final whitePawns = whiteCaptures.where((p) => p.type == chess_lib.PieceType.PAWN).toList();
+    final blackMajors = blackCaptures.where((p) => p.type != chess_lib.PieceType.PAWN).toList();
+    final blackPawns = blackCaptures.where((p) => p.type == chess_lib.PieceType.PAWN).toList();
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(10),
@@ -1475,20 +1594,61 @@ class _CompactCapturedPiecesHeader extends ConsumerWidget {
               width: 1.2,
             ),
           ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          if (whiteCaptures.isNotEmpty)
-            _InlineCapturedGroup(pieces: whiteCaptures, isWhiteTeam: true),
-          if (whiteCaptures.isNotEmpty && blackCaptures.isNotEmpty)
-            const SizedBox(width: 8),
-          if (blackCaptures.isNotEmpty)
-            _InlineCapturedGroup(pieces: blackCaptures, isWhiteTeam: false),
-        ],
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: whiteMajors.isNotEmpty
+                          ? _InlineCapturedGroup(pieces: whiteMajors, isWhiteTeam: true)
+                          : const SizedBox.shrink(),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: blackMajors.isNotEmpty
+                          ? _InlineCapturedGroup(pieces: blackMajors, isWhiteTeam: false)
+                          : const SizedBox.shrink(),
+                    ),
+                  ),
+                ],
+              ),
+              if (whitePawns.isNotEmpty || blackPawns.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: whitePawns.isNotEmpty
+                            ? _InlineCapturedGroup(pieces: whitePawns, isWhiteTeam: true)
+                            : const SizedBox.shrink(),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: blackPawns.isNotEmpty
+                            ? _InlineCapturedGroup(pieces: blackPawns, isWhiteTeam: false)
+                            : const SizedBox.shrink(),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
       ),
-    ),
-  ),
-);
+    );
   }
 }
 

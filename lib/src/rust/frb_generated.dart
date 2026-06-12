@@ -107,7 +107,10 @@ abstract class RustLibApi extends BaseApi {
     required ScotomaResult scotoma,
   });
 
-  List<String> crateApiThreatsAnalyzeTacticalThreats({required String fen});
+  List<String> crateApiThreatsAnalyzeTacticalThreats({
+    required String fen,
+    required bool isChess960,
+  });
 
   (String, String) crateApiPgnDbClassifyOpeningEco({
     required List<String> movesSan,
@@ -123,6 +126,7 @@ abstract class RustLibApi extends BaseApi {
   PositionMetrics crateApiContextEvaluatePositionMetrics({
     required String fen,
     required int historyLength,
+    required bool isChess960,
   });
 
   String crateApiPgnDbExportPgnWithHeaders({
@@ -136,6 +140,7 @@ abstract class RustLibApi extends BaseApi {
     required String fen,
     required List<String> userUciMoves,
     required List<StockfishTacticLine> engineAlternatives,
+    required bool isChess960,
   });
 
   List<String> crateApiMovesGetLegalDestinations({
@@ -156,13 +161,17 @@ abstract class RustLibApi extends BaseApi {
     required bool isChess960,
   });
 
-  List<String> crateApiThreatsGetThreatenedSquares({required String fen});
+  List<String> crateApiThreatsGetThreatenedSquares({
+    required String fen,
+    required bool isChess960,
+  });
 
   String crateApiSimpleGreet({required String name});
 
   String crateApiHumanizerHumanizeMoveRust({
     required String fenBefore,
     required String moveUci,
+    required bool isChess960,
   });
 
   Future<void> crateApiSimpleInitApp();
@@ -323,12 +332,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  List<String> crateApiThreatsAnalyzeTacticalThreats({required String fen}) {
+  List<String> crateApiThreatsAnalyzeTacticalThreats({
+    required String fen,
+    required bool isChess960,
+  }) {
     return handler.executeSync(
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(fen, serializer);
+          sse_encode_bool(isChess960, serializer);
           return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 4)!;
         },
         codec: SseCodec(
@@ -336,7 +349,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeErrorData: null,
         ),
         constMeta: kCrateApiThreatsAnalyzeTacticalThreatsConstMeta,
-        argValues: [fen],
+        argValues: [fen, isChess960],
         apiImpl: this,
       ),
     );
@@ -345,7 +358,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiThreatsAnalyzeTacticalThreatsConstMeta =>
       const TaskConstMeta(
         debugName: "analyze_tactical_threats",
-        argNames: ["fen"],
+        argNames: ["fen", "isChess960"],
       );
 
   @override
@@ -433,6 +446,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   PositionMetrics crateApiContextEvaluatePositionMetrics({
     required String fen,
     required int historyLength,
+    required bool isChess960,
   }) {
     return handler.executeSync(
       SyncTask(
@@ -440,6 +454,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(fen, serializer);
           sse_encode_u_32(historyLength, serializer);
+          sse_encode_bool(isChess960, serializer);
           return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 8)!;
         },
         codec: SseCodec(
@@ -447,7 +462,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeErrorData: null,
         ),
         constMeta: kCrateApiContextEvaluatePositionMetricsConstMeta,
-        argValues: [fen, historyLength],
+        argValues: [fen, historyLength, isChess960],
         apiImpl: this,
       ),
     );
@@ -456,7 +471,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiContextEvaluatePositionMetricsConstMeta =>
       const TaskConstMeta(
         debugName: "evaluate_position_metrics",
-        argNames: ["fen", "historyLength"],
+        argNames: ["fen", "historyLength", "isChess960"],
       );
 
   @override
@@ -521,6 +536,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     required String fen,
     required List<String> userUciMoves,
     required List<StockfishTacticLine> engineAlternatives,
+    required bool isChess960,
   }) {
     return handler.executeSync(
       SyncTask(
@@ -529,6 +545,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_String(fen, serializer);
           sse_encode_list_String(userUciMoves, serializer);
           sse_encode_list_stockfish_tactic_line(engineAlternatives, serializer);
+          sse_encode_bool(isChess960, serializer);
           return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 11)!;
         },
         codec: SseCodec(
@@ -536,7 +553,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeErrorData: null,
         ),
         constMeta: kCrateApiTacticsGenerateTacticsAnalysisConstMeta,
-        argValues: [fen, userUciMoves, engineAlternatives],
+        argValues: [fen, userUciMoves, engineAlternatives, isChess960],
         apiImpl: this,
       ),
     );
@@ -545,7 +562,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiTacticsGenerateTacticsAnalysisConstMeta =>
       const TaskConstMeta(
         debugName: "generate_tactics_analysis",
-        argNames: ["fen", "userUciMoves", "engineAlternatives"],
+        argNames: ["fen", "userUciMoves", "engineAlternatives", "isChess960"],
       );
 
   @override
@@ -650,12 +667,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  List<String> crateApiThreatsGetThreatenedSquares({required String fen}) {
+  List<String> crateApiThreatsGetThreatenedSquares({
+    required String fen,
+    required bool isChess960,
+  }) {
     return handler.executeSync(
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(fen, serializer);
+          sse_encode_bool(isChess960, serializer);
           return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 15)!;
         },
         codec: SseCodec(
@@ -663,7 +684,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeErrorData: null,
         ),
         constMeta: kCrateApiThreatsGetThreatenedSquaresConstMeta,
-        argValues: [fen],
+        argValues: [fen, isChess960],
         apiImpl: this,
       ),
     );
@@ -672,7 +693,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiThreatsGetThreatenedSquaresConstMeta =>
       const TaskConstMeta(
         debugName: "get_threatened_squares",
-        argNames: ["fen"],
+        argNames: ["fen", "isChess960"],
       );
 
   @override
@@ -702,6 +723,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   String crateApiHumanizerHumanizeMoveRust({
     required String fenBefore,
     required String moveUci,
+    required bool isChess960,
   }) {
     return handler.executeSync(
       SyncTask(
@@ -709,6 +731,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(fenBefore, serializer);
           sse_encode_String(moveUci, serializer);
+          sse_encode_bool(isChess960, serializer);
           return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 17)!;
         },
         codec: SseCodec(
@@ -716,7 +739,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeErrorData: null,
         ),
         constMeta: kCrateApiHumanizerHumanizeMoveRustConstMeta,
-        argValues: [fenBefore, moveUci],
+        argValues: [fenBefore, moveUci, isChess960],
         apiImpl: this,
       ),
     );
@@ -725,7 +748,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiHumanizerHumanizeMoveRustConstMeta =>
       const TaskConstMeta(
         debugName: "humanize_move_rust",
-        argNames: ["fenBefore", "moveUci"],
+        argNames: ["fenBefore", "moveUci", "isChess960"],
       );
 
   @override

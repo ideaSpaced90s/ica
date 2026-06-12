@@ -4,11 +4,13 @@ import '../../scholarly_theme.dart';
 class AcademyPendulumIndicator extends StatefulWidget {
   final bool isActive;
   final bool isChanakya;
+  final bool isFrozen;
 
   const AcademyPendulumIndicator({
     super.key,
     required this.isActive,
     required this.isChanakya,
+    this.isFrozen = false,
   });
 
   @override
@@ -17,9 +19,9 @@ class AcademyPendulumIndicator extends StatefulWidget {
 
 class _AcademyPendulumIndicatorState extends State<AcademyPendulumIndicator>
     with TickerProviderStateMixin {
-  late AnimationController _swingController;
-  late AnimationController _fadeController;
-  late Animation<double> _swingAnimation;
+  late final AnimationController _swingController;
+  late final AnimationController _fadeController;
+  late final Animation<double> _swingAnimation;
 
   @override
   void initState() {
@@ -41,10 +43,12 @@ class _AcademyPendulumIndicatorState extends State<AcademyPendulumIndicator>
     // Fade animation controller for turn transitions
     _fadeController = AnimationController(
       vsync: this,
-      value: widget.isActive ? 1.0 : 0.0,
+      value: widget.isFrozen ? 1.0 : (widget.isActive ? 1.0 : 0.0),
     );
 
-    if (widget.isActive) {
+    if (widget.isFrozen) {
+      _swingController.value = 0.5;
+    } else if (widget.isActive) {
       _swingController.repeat(reverse: true);
     }
   }
@@ -53,7 +57,25 @@ class _AcademyPendulumIndicatorState extends State<AcademyPendulumIndicator>
   void didUpdateWidget(AcademyPendulumIndicator oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    if (widget.isActive != oldWidget.isActive) {
+    if (widget.isFrozen != oldWidget.isFrozen) {
+      if (widget.isFrozen) {
+        _swingController.stop();
+        _swingController.value = 0.5;
+        _fadeController.animateTo(1.0, duration: const Duration(milliseconds: 50));
+      } else {
+        if (widget.isActive) {
+          _swingController.repeat(reverse: true);
+          _fadeController.animateTo(1.0, duration: const Duration(milliseconds: 50));
+        } else {
+          _fadeController.animateTo(0.0, duration: const Duration(milliseconds: 800)).then((_) {
+            if (!mounted) return;
+            if (!widget.isActive && !widget.isFrozen) {
+              _swingController.stop();
+            }
+          });
+        }
+      }
+    } else if (!widget.isFrozen && widget.isActive != oldWidget.isActive) {
       if (widget.isActive) {
         // Swing active
         _swingController.repeat(reverse: true);
@@ -63,7 +85,7 @@ class _AcademyPendulumIndicatorState extends State<AcademyPendulumIndicator>
         // Turn indicator vanishes gradually
         _fadeController.animateTo(0.0, duration: const Duration(milliseconds: 800)).then((_) {
           if (!mounted) return;
-          if (!widget.isActive) {
+          if (!widget.isActive && !widget.isFrozen) {
             _swingController.stop();
           }
         });

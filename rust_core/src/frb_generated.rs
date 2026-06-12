@@ -170,10 +170,12 @@ fn wire__crate__api__threats__analyze_tactical_threats_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_fen = <String>::sse_decode(&mut deserializer);
+            let api_is_chess960 = <bool>::sse_decode(&mut deserializer);
             deserializer.end();
             transform_result_sse::<_, ()>((move || {
-                let output_ok =
-                    Result::<_, ()>::Ok(crate::api::threats::analyze_tactical_threats(api_fen))?;
+                let output_ok = Result::<_, ()>::Ok(
+                    crate::api::threats::analyze_tactical_threats(api_fen, api_is_chess960),
+                )?;
                 Ok(output_ok)
             })())
         },
@@ -298,11 +300,15 @@ fn wire__crate__api__context__evaluate_position_metrics_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_fen = <String>::sse_decode(&mut deserializer);
             let api_history_length = <u32>::sse_decode(&mut deserializer);
+            let api_is_chess960 = <bool>::sse_decode(&mut deserializer);
             deserializer.end();
             transform_result_sse::<_, ()>((move || {
-                let output_ok = Result::<_, ()>::Ok(
-                    crate::api::context::evaluate_position_metrics(api_fen, api_history_length),
-                )?;
+                let output_ok =
+                    Result::<_, ()>::Ok(crate::api::context::evaluate_position_metrics(
+                        api_fen,
+                        api_history_length,
+                        api_is_chess960,
+                    ))?;
                 Ok(output_ok)
             })())
         },
@@ -400,6 +406,7 @@ fn wire__crate__api__tactics__generate_tactics_analysis_impl(
             let api_user_uci_moves = <Vec<String>>::sse_decode(&mut deserializer);
             let api_engine_alternatives =
                 <Vec<crate::api::tactics::StockfishTacticLine>>::sse_decode(&mut deserializer);
+            let api_is_chess960 = <bool>::sse_decode(&mut deserializer);
             deserializer.end();
             transform_result_sse::<_, ()>((move || {
                 let output_ok =
@@ -407,6 +414,7 @@ fn wire__crate__api__tactics__generate_tactics_analysis_impl(
                         api_fen,
                         api_user_uci_moves,
                         api_engine_alternatives,
+                        api_is_chess960,
                     ))?;
                 Ok(output_ok)
             })())
@@ -546,10 +554,13 @@ fn wire__crate__api__threats__get_threatened_squares_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_fen = <String>::sse_decode(&mut deserializer);
+            let api_is_chess960 = <bool>::sse_decode(&mut deserializer);
             deserializer.end();
             transform_result_sse::<_, ()>((move || {
-                let output_ok =
-                    Result::<_, ()>::Ok(crate::api::threats::get_threatened_squares(api_fen))?;
+                let output_ok = Result::<_, ()>::Ok(crate::api::threats::get_threatened_squares(
+                    api_fen,
+                    api_is_chess960,
+                ))?;
                 Ok(output_ok)
             })())
         },
@@ -608,11 +619,13 @@ fn wire__crate__api__humanizer__humanize_move_rust_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_fen_before = <String>::sse_decode(&mut deserializer);
             let api_move_uci = <String>::sse_decode(&mut deserializer);
+            let api_is_chess960 = <bool>::sse_decode(&mut deserializer);
             deserializer.end();
             transform_result_sse::<_, ()>((move || {
                 let output_ok = Result::<_, ()>::Ok(crate::api::humanizer::humanize_move_rust(
                     api_fen_before,
                     api_move_uci,
+                    api_is_chess960,
                 ))?;
                 Ok(output_ok)
             })())

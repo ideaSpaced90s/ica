@@ -8,8 +8,12 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `format_role`
 
-String humanizeMoveRust({required String fenBefore, required String moveUci}) =>
-    RustLib.instance.api.crateApiHumanizerHumanizeMoveRust(
-      fenBefore: fenBefore,
-      moveUci: moveUci,
-    );
+String humanizeMoveRust({
+  required String fenBefore,
+  required String moveUci,
+  required bool isChess960,
+}) => RustLib.instance.api.crateApiHumanizerHumanizeMoveRust(
+  fenBefore: fenBefore,
+  moveUci: moveUci,
+  isChess960: isChess960,
+);

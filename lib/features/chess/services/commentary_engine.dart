@@ -213,6 +213,7 @@ class CommentaryEngine {
     String? tacticsBaseFen,
     List<String>? tacticsSequence,
     List<CandidateMove>? tacticsCandidates,
+    bool isChess960 = false,
   }) async* {
     final isTacticsQuery = userQuery?.startsWith('[TACTICS_QUERY]') ?? false;
     if (isTacticsQuery) {
@@ -232,6 +233,7 @@ class CommentaryEngine {
           fen: tacticsBaseFen,
           userUciMoves: tacticsSequence,
           engineAlternatives: engineAlternatives,
+          isChess960: isChess960,
         );
         yield result.textResponse;
       } catch (e) {

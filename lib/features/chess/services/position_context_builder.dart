@@ -9,7 +9,7 @@ import '../domain/models/candidate_move.dart';
 import '../domain/models/precomputed_rust_context.dart';
 
 class PositionContextBuilder {
-  static List<String> _humanizeUciSequence(String startFen, List<String> uciMoves) {
+  static List<String> _humanizeUciSequence(String startFen, List<String> uciMoves, {bool isChess960 = false}) {
     if (uciMoves.isEmpty) return [];
     final List<String> humanized = [];
     try {
@@ -23,7 +23,7 @@ class PositionContextBuilder {
         final fenBefore = board.fen;
         String label = uci;
         try {
-          label = humanizeMoveRust(fenBefore: fenBefore, moveUci: uci);
+          label = humanizeMoveRust(fenBefore: fenBefore, moveUci: uci, isChess960: isChess960);
         } catch (e) {
           debugPrint('ContextBuilder: Error humanizing move $uci in sequence: $e');
         }
@@ -81,7 +81,7 @@ class PositionContextBuilder {
       final results = await Future.wait([
         Future(() {
           try {
-            return humanizeMoveRust(fenBefore: fenBefore, moveUci: move);
+            return humanizeMoveRust(fenBefore: fenBefore, moveUci: move, isChess960: game.isChess960);
           } catch (e) {
             debugPrint('ContextBuilder: Error calling humanizeMoveRust: $e');
             return move;
@@ -89,7 +89,7 @@ class PositionContextBuilder {
         }),
         Future(() {
           try {
-            return analyzeTacticalThreats(fen: game.fen);
+            return analyzeTacticalThreats(fen: game.fen, isChess960: game.isChess960);
           } catch (e) {
             debugPrint('ContextBuilder: Error calling analyzeTacticalThreats: $e');
             return <String>[];
@@ -111,26 +111,26 @@ class PositionContextBuilder {
     String? humanBestMove;
     if (bestMove != null) {
       try {
-        humanBestMove = humanizeMoveRust(fenBefore: game.fen, moveUci: bestMove);
+        humanBestMove = humanizeMoveRust(fenBefore: game.fen, moveUci: bestMove, isChess960: game.isChess960);
       } catch (e) {
         humanBestMove = bestMove;
       }
     }
 
     // Humanize pvLine at current board FEN
-    final humanizedPvLine = _humanizeUciSequence(game.fen, pvLine);
+    final humanizedPvLine = _humanizeUciSequence(game.fen, pvLine, isChess960: game.isChess960);
 
     // Humanize candidates list
     final List<CandidateMove> humanizedCandidates = [];
     for (final c in candidates) {
       String humanMove = c.uciMove;
       try {
-        humanMove = humanizeMoveRust(fenBefore: game.fen, moveUci: c.uciMove);
+        humanMove = humanizeMoveRust(fenBefore: game.fen, moveUci: c.uciMove, isChess960: game.isChess960);
       } catch (e) {
         // fallback
       }
       
-      final humanPv = _humanizeUciSequence(game.fen, c.fullPv);
+      final humanPv = _humanizeUciSequence(game.fen, c.fullPv, isChess960: game.isChess960);
       
       humanizedCandidates.add(CandidateMove(
         multipvIndex: c.multipvIndex,
@@ -170,6 +170,7 @@ class PositionContextBuilder {
       final metrics = evaluatePositionMetrics(
         fen: game.fen,
         historyLength: game.history.length,
+        isChess960: game.isChess960,
       );
       return metrics.gamePhase;
     } catch (e) {

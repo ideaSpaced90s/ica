@@ -534,6 +534,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
                     entry.text.startsWith('[TACTICS_QUERY]')
                         ? entry.text.replaceFirst('[TACTICS_QUERY]', '').trim()
                         : entry.text,
+                    textAlign: TextAlign.justify,
                     style: GoogleFonts.inter(
                       color: ScholarlyTheme.textPrimary,
                       fontSize: 13,
@@ -633,12 +634,14 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
                           children: [
                             DottedGridLoader(),
                             SizedBox(width: 12),
-                            Text(
-                              'GM Chanakya is formulating counsel...',
-                              style: TextStyle(
-                                color: ScholarlyTheme.textMuted,
-                                fontSize: 12,
-                                fontStyle: FontStyle.italic,
+                            Flexible(
+                              child: Text(
+                                'GM Chanakya is formulating counsel...',
+                                style: TextStyle(
+                                  color: ScholarlyTheme.textMuted,
+                                  fontSize: 12,
+                                  fontStyle: FontStyle.italic,
+                                ),
                               ),
                             ),
                           ],
@@ -648,6 +651,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text.rich(
+                              textAlign: TextAlign.justify,
                               TextSpan(
                                 children: [
                                   ..._parseAcademyRichText(
@@ -826,67 +830,70 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
               width: 1.2,
             ),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _buildJuicyIconCircle(
-                icon: Icons.grid_on_rounded,
-                label: 'Classic',
-                isSelected: _selectedMode == 'classic',
-                onTap: () {
-                  setState(() {
-                    _selectedMode = 'classic';
-                  });
-                  ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                },
-                color: ScholarlyTheme.accentBlue,
-              ),
-              const SizedBox(width: 16),
-              _buildJuicyIconCircle(
-                icon: Icons.shuffle_rounded,
-                label: 'Chess 960',
-                isSelected: _selectedMode == 'chess960',
-                onTap: () {
-                  setState(() {
-                    _selectedMode = 'chess960';
-                  });
-                  ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                },
-                color: Colors.purple,
-              ),
-              Container(
-                height: 40,
-                width: 1.5,
-                margin: const EdgeInsets.symmetric(horizontal: 20),
-                color: ScholarlyTheme.panelStroke.withValues(alpha: 0.8),
-              ),
-              _buildJuicyIconCircle(
-                icon: Icons.brightness_high_rounded,
-                label: 'Play White',
-                isSelected: false,
-                isDisabled: !modeSelected,
-                onTap: () {
-                  if (modeSelected) {
-                    ref.read(chessProvider.notifier).selectAcademySide(true, gameMode: _selectedMode!);
-                  }
-                },
-                color: const Color(0xFFF59E0B),
-              ),
-              const SizedBox(width: 16),
-              _buildJuicyIconCircle(
-                icon: Icons.nightlight_round,
-                label: 'Play Black',
-                isSelected: false,
-                isDisabled: !modeSelected,
-                onTap: () {
-                  if (modeSelected) {
-                    ref.read(chessProvider.notifier).selectAcademySide(false, gameMode: _selectedMode!);
-                  }
-                },
-                color: Colors.grey.shade900,
-              ),
-            ],
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildJuicyIconCircle(
+                  icon: Icons.grid_on_rounded,
+                  label: 'Classic',
+                  isSelected: _selectedMode == 'classic',
+                  onTap: () {
+                    setState(() {
+                      _selectedMode = 'classic';
+                    });
+                    ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                  },
+                  color: ScholarlyTheme.accentBlue,
+                ),
+                const SizedBox(width: 16),
+                _buildJuicyIconCircle(
+                  icon: Icons.shuffle_rounded,
+                  label: 'Chess 960',
+                  isSelected: _selectedMode == 'chess960',
+                  onTap: () {
+                    setState(() {
+                      _selectedMode = 'chess960';
+                    });
+                    ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                  },
+                  color: Colors.purple,
+                ),
+                Container(
+                  height: 40,
+                  width: 1.5,
+                  margin: const EdgeInsets.symmetric(horizontal: 20),
+                  color: ScholarlyTheme.panelStroke.withValues(alpha: 0.8),
+                ),
+                _buildJuicyIconCircle(
+                  icon: Icons.brightness_high_rounded,
+                  label: 'Play White',
+                  isSelected: false,
+                  isDisabled: !modeSelected,
+                  onTap: () {
+                    if (modeSelected) {
+                      ref.read(chessProvider.notifier).selectAcademySide(true, gameMode: _selectedMode!);
+                    }
+                  },
+                  color: const Color(0xFFF59E0B),
+                ),
+                const SizedBox(width: 16),
+                _buildJuicyIconCircle(
+                  icon: Icons.nightlight_round,
+                  label: 'Play Black',
+                  isSelected: false,
+                  isDisabled: !modeSelected,
+                  onTap: () {
+                    if (modeSelected) {
+                      ref.read(chessProvider.notifier).selectAcademySide(false, gameMode: _selectedMode!);
+                    }
+                  },
+                  color: Colors.grey.shade900,
+                ),
+              ],
+            ),
           ),
         ),
       ),

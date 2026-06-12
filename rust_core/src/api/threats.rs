@@ -1,14 +1,20 @@
 use shakmaty::{fen::Fen, CastlingMode, Chess, Position, Square};
 
 #[flutter_rust_bridge::frb(sync)]
-pub fn get_threatened_squares(fen: String) -> Vec<String> {
+pub fn get_threatened_squares(fen: String, is_chess960: bool) -> Vec<String> {
     // Parse the FEN string safely
     let setup = match fen.parse::<Fen>() {
         Ok(f) => f,
         Err(_) => return vec![],
     };
 
-    let pos: Chess = match setup.into_position(CastlingMode::Standard) {
+    let mode = if is_chess960 {
+        CastlingMode::Chess960
+    } else {
+        CastlingMode::Standard
+    };
+
+    let pos: Chess = match setup.into_position(mode) {
         Ok(p) => p,
         Err(_) => return vec![],
     };
@@ -47,13 +53,19 @@ pub fn get_threatened_squares(fen: String) -> Vec<String> {
 }
 
 #[flutter_rust_bridge::frb(sync)]
-pub fn analyze_tactical_threats(fen: String) -> Vec<String> {
+pub fn analyze_tactical_threats(fen: String, is_chess960: bool) -> Vec<String> {
     let setup = match fen.parse::<Fen>() {
         Ok(f) => f,
         Err(_) => return vec![],
     };
 
-    let pos: Chess = match setup.into_position(CastlingMode::Standard) {
+    let mode = if is_chess960 {
+        CastlingMode::Chess960
+    } else {
+        CastlingMode::Standard
+    };
+
+    let pos: Chess = match setup.into_position(mode) {
         Ok(p) => p,
         Err(_) => return vec![],
     };
@@ -191,7 +203,7 @@ mod tests {
     fn test_hanging_piece_detection() {
         // A position with a hanging black pawn on e5 under attack by white knight on f3
         let fen = "rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2".to_string();
-        let threats = analyze_tactical_threats(fen);
+        let threats = analyze_tactical_threats(fen, false);
         assert!(threats.iter().any(|t| t.contains("hanging")));
     }
 }

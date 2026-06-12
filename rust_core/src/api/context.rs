@@ -6,7 +6,7 @@ pub struct PositionMetrics {
 }
 
 #[flutter_rust_bridge::frb(sync)]
-pub fn evaluate_position_metrics(fen: String, history_length: u32) -> PositionMetrics {
+pub fn evaluate_position_metrics(fen: String, history_length: u32, is_chess960: bool) -> PositionMetrics {
     let setup = match fen.parse::<Fen>() {
         Ok(f) => f,
         Err(_) => {
@@ -17,7 +17,13 @@ pub fn evaluate_position_metrics(fen: String, history_length: u32) -> PositionMe
         }
     };
 
-    let pos: Chess = match setup.into_position(CastlingMode::Standard) {
+    let mode = if is_chess960 {
+        CastlingMode::Chess960
+    } else {
+        CastlingMode::Standard
+    };
+
+    let pos: Chess = match setup.into_position(mode) {
         Ok(p) => p,
         Err(_) => {
             return PositionMetrics {

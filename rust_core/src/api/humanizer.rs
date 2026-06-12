@@ -4,13 +4,20 @@ use shakmaty::{fen::Fen, CastlingMode, Chess, Move, Position, Square, Role};
 pub fn humanize_move_rust(
     fen_before: String,
     move_uci: String,
+    is_chess960: bool,
 ) -> String {
     let setup = match fen_before.parse::<Fen>() {
         Ok(f) => f,
         Err(_) => return format!("Move played: {}", move_uci),
     };
 
-    let pos: Chess = match setup.into_position(CastlingMode::Standard) {
+    let mode = if is_chess960 {
+        CastlingMode::Chess960
+    } else {
+        CastlingMode::Standard
+    };
+
+    let pos: Chess = match setup.into_position(mode) {
         Ok(p) => p,
         Err(_) => return format!("Move played: {}", move_uci),
     };
@@ -153,10 +160,10 @@ mod tests {
     fn test_humanize_standard_moves() {
         let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1".to_string();
         
-        let desc = humanize_move_rust(fen.clone(), "e2e4".to_string());
+        let desc = humanize_move_rust(fen.clone(), "e2e4".to_string(), false);
         assert_eq!(desc, "White moves Pawn to e4.");
 
-        let desc2 = humanize_move_rust(fen, "g1f3".to_string());
+        let desc2 = humanize_move_rust(fen, "g1f3".to_string(), false);
         assert_eq!(desc2, "White moves Knight to f3.");
     }
 
@@ -164,7 +171,7 @@ mod tests {
     fn test_humanize_castling() {
         // Position where white can castle kingside
         let fen = "r1bqk2r/pppp1ppp/2n2n2/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 5".to_string();
-        let desc = humanize_move_rust(fen, "e1g1".to_string());
+        let desc = humanize_move_rust(fen, "e1g1".to_string(), false);
         assert_eq!(desc, "White castles kingside.");
     }
 }

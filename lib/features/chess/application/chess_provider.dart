@@ -1255,7 +1255,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
     final stopwatchRust = Stopwatch()..start();
     List<String> threatenedRust = [];
     try {
-      threatenedRust = getThreatenedSquares(fen: fen);
+      threatenedRust = getThreatenedSquares(fen: fen, isChess960: state.isChess960);
     } catch (e) {
       debugPrint('Rust Threat Engine Error: $e');
     }
@@ -2759,7 +2759,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
     _pendingRustContextFuture = Future.wait([
       Future(() {
         try {
-          return humanizeMoveRust(fenBefore: fenBefore, moveUci: move);
+          return humanizeMoveRust(fenBefore: fenBefore, moveUci: move, isChess960: game.isChess960);
         } catch (e) {
           debugPrint('ContextBuilder: Error calling humanizeMoveRust: $e');
           return move;
@@ -2767,7 +2767,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
       }),
       Future(() {
         try {
-          return analyzeTacticalThreats(fen: fen);
+          return analyzeTacticalThreats(fen: fen, isChess960: game.isChess960);
         } catch (e) {
           debugPrint('ContextBuilder: Error calling analyzeTacticalThreats: $e');
           return <String>[];
@@ -2778,6 +2778,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
           final metrics = evaluatePositionMetrics(
             fen: fen,
             historyLength: historyLength,
+            isChess960: game.isChess960,
           );
           return metrics.gamePhase;
         } catch (e) {
@@ -3155,6 +3156,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
         tacticsBaseFen: state.tacticsBaseFen,
         tacticsSequence: state.tacticsSequence.map((s) => '${s.from}${s.to}').toList(),
         tacticsCandidates: List.from(_currentCandidates),
+        isChess960: state.isChess960,
       );
 
       String finalResponse = '';

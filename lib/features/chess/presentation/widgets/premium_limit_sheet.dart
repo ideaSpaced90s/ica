@@ -22,6 +22,7 @@ class PremiumLimitSheet extends StatefulWidget {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(28),
@@ -79,123 +80,127 @@ class _PremiumLimitSheetState extends State<PremiumLimitSheet> {
   Widget build(BuildContext context) {
     return Consumer(
       builder: (context, ref, child) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Icon Header
-              Center(
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.amber.shade100.withValues(alpha: 0.3),
-                    shape: BoxShape.circle,
+        return SafeArea(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Icon Header
+                  Center(
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.shade100.withValues(alpha: 0.3),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(Icons.lock_clock_rounded, color: Colors.amber.shade800, size: 42),
+                    ),
                   ),
-                  child: Icon(Icons.lock_clock_rounded, color: Colors.amber.shade800, size: 42),
-                ),
-              ),
-              const SizedBox(height: 20),
+                  const SizedBox(height: 20),
 
-              // Title
-              Text(
-                widget.title,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.outfit(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: ScholarlyTheme.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 8),
+                  // Title
+                  Text(
+                    widget.title,
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.outfit(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: ScholarlyTheme.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
 
-              // Description
-              Text(
-                widget.limitDescription,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  color: ScholarlyTheme.textMuted,
-                  height: 1.4,
-                ),
-              ),
-              const SizedBox(height: 24),
+                  // Description
+                  Text(
+                    widget.limitDescription,
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: ScholarlyTheme.textMuted,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
 
-              // Countdown timer box
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.grey.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.grey.withValues(alpha: 0.15)),
-                ),
-                child: Column(
-                  children: [
-                    Text(
-                      'DAILY COUNTERS RESET IN',
+                  // Countdown timer box
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.grey.withValues(alpha: 0.15)),
+                    ),
+                    child: Column(
+                      children: [
+                        Text(
+                          'DAILY COUNTERS RESET IN',
+                          style: GoogleFonts.outfit(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.0,
+                            color: ScholarlyTheme.textMuted,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          _formatDuration(_timeLeft),
+                          style: GoogleFonts.jetBrainsMono(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: ScholarlyTheme.textPrimary,
+                            letterSpacing: 1.0,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 28),
+
+                  // Buttons
+                  ElevatedButton(
+                    onPressed: () {
+                      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                      Navigator.pop(context); // Close bottom sheet
+                      ref.read(mobileNavIndexProvider.notifier).state = 10; // Switch to Store tab
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: ScholarlyTheme.accentBlue,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    child: Text(
+                      'UPGRADE TO PREMIUM',
                       style: GoogleFonts.outfit(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1.0,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextButton(
+                    onPressed: () {
+                      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                      Navigator.pop(context);
+                    },
+                    child: Text(
+                      'Dismiss',
+                      style: GoogleFonts.inter(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
                         color: ScholarlyTheme.textMuted,
                       ),
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      _formatDuration(_timeLeft),
-                      style: GoogleFonts.jetBrainsMono(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: ScholarlyTheme.textPrimary,
-                        letterSpacing: 1.0,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 28),
-
-              // Buttons
-              ElevatedButton(
-                onPressed: () {
-                  ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                  Navigator.pop(context); // Close bottom sheet
-                  ref.read(mobileNavIndexProvider.notifier).state = 10; // Switch to Store tab
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: ScholarlyTheme.accentBlue,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
                   ),
-                ),
-                child: Text(
-                  'UPGRADE TO PREMIUM',
-                  style: GoogleFonts.outfit(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                    letterSpacing: 0.5,
-                  ),
-                ),
+                ],
               ),
-              const SizedBox(height: 12),
-              TextButton(
-                onPressed: () {
-                  ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                  Navigator.pop(context);
-                },
-                child: Text(
-                  'Dismiss',
-                  style: GoogleFonts.inter(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                    color: ScholarlyTheme.textMuted,
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
         );
       },

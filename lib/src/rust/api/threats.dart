@@ -8,8 +8,18 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `format_role_name`
 
-List<String> getThreatenedSquares({required String fen}) =>
-    RustLib.instance.api.crateApiThreatsGetThreatenedSquares(fen: fen);
+List<String> getThreatenedSquares({
+  required String fen,
+  required bool isChess960,
+}) => RustLib.instance.api.crateApiThreatsGetThreatenedSquares(
+  fen: fen,
+  isChess960: isChess960,
+);
 
-List<String> analyzeTacticalThreats({required String fen}) =>
-    RustLib.instance.api.crateApiThreatsAnalyzeTacticalThreats(fen: fen);
+List<String> analyzeTacticalThreats({
+  required String fen,
+  required bool isChess960,
+}) => RustLib.instance.api.crateApiThreatsAnalyzeTacticalThreats(
+  fen: fen,
+  isChess960: isChess960,
+);

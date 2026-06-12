@@ -64,14 +64,17 @@ class TacticsPlaybackControls extends ConsumerWidget {
         ],
       );
     } else {
-      return Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (var i = 0; i < children.length; i++) ...[
-            children[i],
-            if (i < children.length - 1) const SizedBox(width: 8),
-          ]
-        ],
+      return FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var i = 0; i < children.length; i++) ...[
+              children[i],
+              if (i < children.length - 1) const SizedBox(width: 8),
+            ]
+          ],
+        ),
       );
     }
   }

@@ -22,53 +22,6 @@ pub struct TacticsResult {
     pub alternatives: Vec<TacticData>,
 }
 
-fn evaluate_move(pos: &Chess, m: &Move) -> i32 {
-    let mut score = 0;
-    
-    // Simulate move
-    let mut next_pos = pos.clone();
-    next_pos.play_unchecked(m);
-    
-    if next_pos.is_checkmate() {
-        score += 10000;
-    }
-    if next_pos.is_check() {
-        score += 500;
-    }
-    
-    if let Some(capture) = m.capture() {
-        score += match capture {
-            Role::Pawn => 100,
-            Role::Knight => 320,
-            Role::Bishop => 330,
-            Role::Rook => 500,
-            Role::Queen => 900,
-            Role::King => 0,
-        };
-    }
-    
-    if m.is_castle() {
-        score += 80;
-    }
-    
-    // Center control (d4, d5, e4, e5 squares and surrounds)
-    let to_sq = m.to();
-    let file = to_sq.file();
-    let rank = to_sq.rank();
-    if (file == shakmaty::File::C || file == shakmaty::File::D || file == shakmaty::File::E || file == shakmaty::File::F)
-        && (rank == shakmaty::Rank::Third || rank == shakmaty::Rank::Fourth || rank == shakmaty::Rank::Fifth || rank == shakmaty::Rank::Sixth)
-    {
-        score += 30;
-    }
-    
-    // Slight penalty for moving king unless castling
-    if m.role() == Role::King && !m.is_castle() {
-        score -= 50;
-    }
-
-    score
-}
-
 fn parse_uci_to_move(pos: &Chess, uci: &str) -> Option<Move> {
     if uci.len() < 4 {
         return None;
@@ -117,27 +70,12 @@ fn parse_uci_to_move(pos: &Chess, uci: &str) -> Option<Move> {
     None
 }
 
-fn to_uci(m: &Move) -> String {
-    let from_str = m.from().map_or("".to_string(), |s| s.to_string());
-    let to_str = m.to().to_string();
-    let promo_str = match m {
-        Move::Normal { promotion: Some(role), .. } => match role {
-            Role::Queen => "q",
-            Role::Rook => "r",
-            Role::Bishop => "b",
-            Role::Knight => "n",
-            _ => "",
-        },
-        _ => "",
-    };
-    format!("{}{}{}", from_str, to_str, promo_str)
-}
-
 #[flutter_rust_bridge::frb(sync)]
 pub fn generate_tactics_analysis(
     fen: String,
     user_uci_moves: Vec<String>,
     engine_alternatives: Vec<StockfishTacticLine>,
+    is_chess960: bool,
 ) -> TacticsResult {
     let setup = match fen.parse::<Fen>() {
         Ok(f) => f,
@@ -155,7 +93,13 @@ pub fn generate_tactics_analysis(
         }
     };
 
-    let pos: Chess = match setup.into_position(CastlingMode::Standard) {
+    let mode = if is_chess960 {
+        CastlingMode::Chess960
+    } else {
+        CastlingMode::Standard
+    };
+
+    let pos: Chess = match setup.into_position(mode) {
         Ok(p) => p,
         Err(_) => {
             return TacticsResult {
@@ -195,7 +139,7 @@ pub fn generate_tactics_analysis(
                         parts[3] = "-"; // Clear en-passant to avoid invalid FEN for the new turn
                         let aligned_fen_str = parts.join(" ");
                         if let Ok(aligned_setup) = aligned_fen_str.parse::<Fen>() {
-                            if let Ok(aligned_pos) = aligned_setup.into_position(CastlingMode::Standard) {
+                            if let Ok(aligned_pos) = aligned_setup.into_position(mode) {
                                 current_pos = aligned_pos;
                             }
                         }
@@ -298,87 +242,6 @@ pub fn generate_tactics_analysis(
         }
     }
 
-    if alternatives.is_empty() {
-        let mut legal_starts: Vec<Move> = pos.legal_moves().into_iter().collect();
-        // Sort legal starts by evaluate_move
-        legal_starts.sort_by_key(|m| -evaluate_move(&pos, m));
-
-        for m1 in legal_starts {
-            if alternatives.len() >= limit {
-                break;
-            }
-
-            let m1_uci = to_uci(&m1);
-            
-            // Let's make sure the first move is different from the user's first move if possible,
-            // so that we show fresh tactical options.
-            if let Some(user_first) = user_first_move_uci {
-                if &m1_uci == user_first && pos.legal_moves().len() > 1 && alternatives.len() == 0 {
-                    // If it's the only move, we must generate it. But if there are alternatives,
-                    // skip user's first move for the first alternative card.
-                    continue;
-                }
-            }
-
-            // Build sequence of length up to 4
-            let mut sim_pos = pos.clone();
-            let mut seq_moves = vec![m1_uci.clone()];
-            let mut seq_san = vec![San::from_move(&sim_pos, &m1).to_string()];
-            
-            sim_pos.play_unchecked(&m1);
-
-            // Turn 2 (Opponent response)
-            if !sim_pos.is_game_over() {
-                let mut opp_moves: Vec<Move> = sim_pos.legal_moves().into_iter().collect();
-                if !opp_moves.is_empty() {
-                    opp_moves.sort_by_key(|m| -evaluate_move(&sim_pos, m));
-                    let m2 = opp_moves[0].clone();
-                    seq_moves.push(to_uci(&m2));
-                    seq_san.push(San::from_move(&sim_pos, &m2).to_string());
-                    sim_pos.play_unchecked(&m2);
-                }
-            }
-
-            // Turn 3 (Player second move)
-            if !sim_pos.is_game_over() {
-                let mut play_moves: Vec<Move> = sim_pos.legal_moves().into_iter().collect();
-                if !play_moves.is_empty() {
-                    play_moves.sort_by_key(|m| -evaluate_move(&sim_pos, m));
-                    let m3 = play_moves[0].clone();
-                    seq_moves.push(to_uci(&m3));
-                    seq_san.push(San::from_move(&sim_pos, &m3).to_string());
-                    sim_pos.play_unchecked(&m3);
-                }
-            }
-
-            // Turn 4 (Opponent second response)
-            if !sim_pos.is_game_over() {
-                let mut opp_moves: Vec<Move> = sim_pos.legal_moves().into_iter().collect();
-                if !opp_moves.is_empty() {
-                    opp_moves.sort_by_key(|m| -evaluate_move(&sim_pos, m));
-                    let m4 = opp_moves[0].clone();
-                    seq_moves.push(to_uci(&m4));
-                    seq_san.push(San::from_move(&sim_pos, &m4).to_string());
-                    sim_pos.play_unchecked(&m4);
-                }
-            }
-
-            let name = names[alternatives.len()].to_string();
-            let explanation = format!(
-                "Initiating with {} creates distinct imbalances. A solid continuation path involves {}.",
-                seq_san.first().unwrap_or(&"".to_string()),
-                if seq_san.len() > 2 { seq_san[2].clone() } else { "rapid piece development".to_string() }
-            );
-
-            alternatives.push(TacticData {
-                name,
-                moves: seq_moves,
-                san_moves: seq_san,
-                explanation,
-            });
-        }
-    }
-
     // 3. Build Chanakya text response containing the hidden tags
     let mut prose = String::new();
     prose.push_str("I have analyzed your candidate lines, Apprentice. Here is my tactical report:\n\n");
@@ -395,18 +258,22 @@ pub fn generate_tactics_analysis(
         ));
     }
 
-    prose.push_str("Consider these alternative tactical variations:\n\n");
-    
-    // Add alternatives
-    for alt in &alternatives {
-        let tag_name = alt.name.to_ascii_uppercase().replace(" ", "_");
-        let uci_str = alt.moves.join(" ");
-        let san_str = alt.san_moves.join(" ");
+    if alternatives.is_empty() {
+        prose.push_str("I do not see any alternative tactical lines at this moment, Apprentice.\n\n");
+    } else {
+        prose.push_str("Consider these alternative tactical variations:\n\n");
         
-        prose.push_str(&format!(
-            "**{}** ({}):\n[{}: {}]\n{}\n\n",
-            alt.name, san_str, tag_name, uci_str, alt.explanation
-        ));
+        // Add alternatives
+        for alt in &alternatives {
+            let tag_name = alt.name.to_ascii_uppercase().replace(" ", "_");
+            let uci_str = alt.moves.join(" ");
+            let san_str = alt.san_moves.join(" ");
+            
+            prose.push_str(&format!(
+                "**{}** ({}):\n[{}: {}]\n{}\n\n",
+                alt.name, san_str, tag_name, uci_str, alt.explanation
+            ));
+        }
     }
     
     if piece_count <= 10 {

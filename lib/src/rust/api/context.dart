@@ -9,9 +9,11 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 PositionMetrics evaluatePositionMetrics({
   required String fen,
   required int historyLength,
+  required bool isChess960,
 }) => RustLib.instance.api.crateApiContextEvaluatePositionMetrics(
   fen: fen,
   historyLength: historyLength,
+  isChess960: isChess960,
 );
 
 class PositionMetrics {
