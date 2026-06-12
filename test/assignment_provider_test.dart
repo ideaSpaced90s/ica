@@ -318,6 +318,53 @@ void main() {
       expect(fakeRepository.savedState?.goalElo, 1400);
     });
 
+    test('setupGoal preserves completed tasks when updated on the same day', () async {
+      final container = createContainer(isPremium: true);
+      final notifier = container.read(assignmentProvider.notifier);
+      await Future.delayed(const Duration(milliseconds: 20));
+
+      // Calibrate first to generate active tasks
+      notifier.state = notifier.state.copyWith(
+        isCalibrated: true,
+        startElo: 1200,
+        goalElo: 1350,
+      );
+      await notifier.generateActiveTasks(1200, isNewDay: true);
+
+      // Mark the arena task as completed
+      final arenaIndex = notifier.state.dailyTasks.indexWhere((t) => t.taskType == DailyTaskType.arena);
+      expect(arenaIndex, isNot(-1));
+      notifier.state = notifier.state.copyWith(
+        dailyTasks: notifier.state.dailyTasks.map((t) => t.taskType == DailyTaskType.arena ? t.copyWith(isCompleted: true) : t).toList(),
+      );
+
+      // Adjust the goal (which calls generateActiveTasks internally with isNewDay = false)
+      await notifier.setupGoal(1400);
+
+      // Check if the arena task is still completed
+      final updatedArenaTask = notifier.state.dailyTasks.firstWhere((t) => t.taskType == DailyTaskType.arena);
+      expect(updatedArenaTask.isCompleted, isTrue);
+    });
+
+    test('daily reset does not log yesterday as failure if dailyTasks was empty', () async {
+      final container = createContainer(isPremium: true);
+      final notifier = container.read(assignmentProvider.notifier);
+      await Future.delayed(const Duration(milliseconds: 20));
+
+      // Start with empty tasks and yesterday's lastResetDate
+      notifier.state = notifier.state.copyWith(
+        dailyTasks: const [],
+        lastResetDate: DateTime.now().subtract(const Duration(days: 1)),
+        historyLog: const {},
+      );
+
+      // Perform reset
+      await notifier.checkDailyReset();
+
+      // Yesterday should NOT be in the history log
+      expect(notifier.state.historyLog, isEmpty);
+    });
+
     test('resetAssignmentProgress clears all progress', () async {
       final container = createContainer(isPremium: true);
 

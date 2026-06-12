@@ -175,7 +175,8 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
       goalElo: baselineRating + 150, // Baseline goal ELO +150
       goalDeadline: DateTime.now().add(const Duration(days: 30)),
     );
-    generateActiveTasks(baselineRating);
+    generateActiveTasks(baselineRating, isNewDay: true);
+    _saveState();
   }
 
   Future<void> checkDailyReset() async {
@@ -194,7 +195,9 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
           state.dailyTasks.every((t) => t.isCompleted);
 
       final updatedHistory = Map<String, bool>.from(state.historyLog);
-      updatedHistory[dateKey] = allDone;
+      if (state.dailyTasks.isNotEmpty) {
+        updatedHistory[dateKey] = allDone;
+      }
 
       state = state.copyWith(historyLog: updatedHistory, lastResetDate: now);
 
@@ -242,13 +245,13 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
           ],
         );
       } else {
-        await generateActiveTasks(bgState.consolidatedRating);
+        await generateActiveTasks(bgState.consolidatedRating, isNewDay: true);
       }
       await _saveState();
     }
   }
 
-  Future<void> generateActiveTasks(int elo) async {
+  Future<void> generateActiveTasks(int elo, {bool isNewDay = false}) async {
     final bgState = ref.read(battlegroundProvider);
     final tutorialState = ref.read(tutorialProvider);
 
@@ -398,6 +401,17 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
 
     final dailyTasks = [attendanceTask, arenaTask, puzzleTask, tutorialTask, cinemaTask];
 
+    // Preserve completion status from existing tasks if it is NOT a new day
+    final finalTasks = dailyTasks.map((newTask) {
+      if (!isNewDay) {
+        final existingIndex = state.dailyTasks.indexWhere((t) => t.taskType == newTask.taskType);
+        if (existingIndex != -1) {
+          return newTask.copyWith(isCompleted: state.dailyTasks[existingIndex].isCompleted);
+        }
+      }
+      return newTask;
+    }).toList();
+
     final isRevision =
         state.goalDeadline != null &&
         DateTime.now().isAfter(state.goalDeadline!) &&
@@ -406,7 +420,7 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
     String wisdom = routine.wisdomMessage;
 
     if (isRevision) {
-      final tutorialIndex = dailyTasks.indexWhere(
+      final tutorialIndex = finalTasks.indexWhere(
         (t) => t.taskType == DailyTaskType.tutorial,
       );
       if (tutorialIndex != -1) {
@@ -414,7 +428,7 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
         final revChapterId = _mapScotomaToBasicChapter(revWorstAxis);
         final revChapterTitle = _getChapterTitle(revChapterId);
 
-        dailyTasks[tutorialIndex] = DailyTask(
+        finalTasks[tutorialIndex] = DailyTask(
           title: "Basic Revision",
           description:
               "Your target deadline has passed and your ELO is below target. GM Chanakya demands you revise Chapter $revChapterId: '$revChapterTitle'.",
@@ -434,7 +448,7 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
     }
 
     state = state.copyWith(
-      dailyTasks: dailyTasks,
+      dailyTasks: finalTasks,
       wisdomMessage: wisdom,
       assignedCinemaIds: updatedCinemaIds,
     );
@@ -546,14 +560,14 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
     );
     await _saveState();
     final bgState = ref.read(battlegroundProvider);
-    await generateActiveTasks(bgState.consolidatedRating);
+    await generateActiveTasks(bgState.consolidatedRating, isNewDay: false);
   }
 
   Future<void> setupGoalDeadline(DateTime deadline) async {
     state = state.copyWith(goalDeadline: deadline);
     await _saveState();
     final bgState = ref.read(battlegroundProvider);
-    await generateActiveTasks(bgState.consolidatedRating);
+    await generateActiveTasks(bgState.consolidatedRating, isNewDay: false);
   }
 
   Future<void> submitGameForReview(String gameId, String pgnContent) async {

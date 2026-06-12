@@ -374,7 +374,7 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
 
   Widget _buildCalendarStrip(AssignmentState state) {
     final today = DateTime.now();
-    final dateList = List.generate(10, (index) => today.subtract(Duration(days: 9 - index)));
+    final dateList = List.generate(7, (index) => today.subtract(Duration(days: 6 - index)));
 
     return JuicyGlassCard(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
@@ -441,10 +441,22 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
                 return Container(
                   padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
                   decoration: BoxDecoration(
-                    color: isToday ? ScholarlyTheme.accentBlue.withValues(alpha: 0.1) : Colors.transparent,
-                    borderRadius: BorderRadius.circular(10),
-                    border: isToday
-                        ? Border.all(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.25), width: 1)
+                    color: isToday
+                        ? ScholarlyTheme.accentBlue.withValues(alpha: 0.15)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isToday ? ScholarlyTheme.accentBlue : Colors.transparent,
+                      width: isToday ? 2.0 : 1.0,
+                    ),
+                    boxShadow: isToday
+                        ? [
+                            BoxShadow(
+                              color: ScholarlyTheme.accentBlue.withValues(alpha: 0.15),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            )
+                          ]
                         : null,
                   ),
                   child: Column(
@@ -914,6 +926,10 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
     final targetElo = state.goalElo;
     final startElo = state.startElo;
 
+    final double minElo = (currentElo + 50).toDouble();
+    final double maxElo = (currentElo + 500).toDouble();
+    final double sliderValue = targetElo.toDouble().clamp(minElo, maxElo);
+
     // Calculate progress fraction
     double progress = 0.0;
     if (targetElo > startElo) {
@@ -1020,12 +1036,70 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
                   style: GoogleFonts.inter(fontSize: 11, color: ScholarlyTheme.textMuted),
                 ),
                 const SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildTargetOptionButton(context, currentElo + 100),
-                    _buildTargetOptionButton(context, currentElo + 200),
-                    _buildTargetOptionButton(context, currentElo + 300),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          "Target Rating:",
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: ScholarlyTheme.textPrimary,
+                          ),
+                        ),
+                        Text(
+                          "${sliderValue.round()} ELO (${(sliderValue - currentElo).round() >= 0 ? '+' : ''}${(sliderValue - currentElo).round()} ELO)",
+                          style: GoogleFonts.jetBrainsMono(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: ScholarlyTheme.accentBlue,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Theme(
+                      data: Theme.of(context).copyWith(
+                        sliderTheme: SliderThemeData(
+                          activeTrackColor: ScholarlyTheme.accentBlue,
+                          inactiveTrackColor: ScholarlyTheme.panelStroke,
+                          thumbColor: ScholarlyTheme.accentBlue,
+                          overlayColor: ScholarlyTheme.accentBlue.withValues(alpha: 0.15),
+                          valueIndicatorColor: ScholarlyTheme.accentBlue,
+                          valueIndicatorTextStyle: GoogleFonts.jetBrainsMono(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          showValueIndicator: ShowValueIndicator.alwaysVisible,
+                        ),
+                      ),
+                      child: Slider(
+                        value: sliderValue,
+                        min: minElo,
+                        max: maxElo,
+                        divisions: 9,
+                        label: "${sliderValue.round()} ELO",
+                        onChanged: (value) {
+                          ref.read(assignmentProvider.notifier).setupGoal(value.round());
+                        },
+                      ),
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          "+50 ELO",
+                          style: GoogleFonts.inter(fontSize: 10, color: ScholarlyTheme.textMuted),
+                        ),
+                        Text(
+                          "+500 ELO",
+                          style: GoogleFonts.inter(fontSize: 10, color: ScholarlyTheme.textMuted),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
                 const SizedBox(height: 20),
@@ -1096,42 +1170,6 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
     );
   }
 
-  Widget _buildTargetOptionButton(BuildContext context, int target) {
-    final state = ref.watch(assignmentProvider);
-    final isSelected = state.goalElo == target;
-
-    return Expanded(
-      child: Padding(
-        key: ValueKey(target),
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        child: OutlinedButton(
-          style: OutlinedButton.styleFrom(
-            backgroundColor: isSelected ? ScholarlyTheme.accentBlue.withValues(alpha: 0.1) : Colors.transparent,
-            side: BorderSide(
-              color: isSelected ? ScholarlyTheme.accentBlue : ScholarlyTheme.panelStroke,
-              width: isSelected ? 1.5 : 1,
-            ),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            padding: const EdgeInsets.symmetric(vertical: 12),
-          ),
-          onPressed: () {
-            ref.read(assignmentProvider.notifier).setupGoal(target);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text("Goal ELO updated to $target!"), backgroundColor: Colors.green),
-            );
-          },
-          child: Text(
-            "$target ELO",
-            style: GoogleFonts.jetBrainsMono(
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
-              color: isSelected ? ScholarlyTheme.accentBlue : ScholarlyTheme.textPrimary,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 
   Widget _buildWeeklyGoalCard(BuildContext context, AssignmentState state) {
     return JuicyGlassCard(
