@@ -17,6 +17,8 @@ import 'puzzles/puzzles_page.dart';
 import 'analysis/analysis_page.dart';
 import 'history_page.dart';
 import 'assignment/assignment_page.dart';
+import '../application/assignment_provider.dart';
+import '../services/notification_service.dart';
 
 import 'tutorial_page.dart';
 import 'about_us_page.dart';
@@ -37,6 +39,10 @@ class MobileNavigationShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    NotificationService.onNotificationClicked = (index) {
+      ref.read(mobileNavIndexProvider.notifier).state = index;
+    };
+
     final currentIndex = ref.watch(mobileNavIndexProvider);
     final bgState = ref.watch(battlegroundProvider);
     final isBgMatchActive = currentIndex == 2 && bgState.activeRatedMatchId != null;
@@ -423,6 +429,8 @@ class _MobileSidebarDrawer extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentIndex = ref.watch(mobileNavIndexProvider);
+    final assignmentState = ref.watch(assignmentProvider);
+    final pendingCount = assignmentState.dailyTasks.where((task) => !task.isCompleted).length;
 
     return Drawer(
       backgroundColor: Colors.transparent,
@@ -462,6 +470,23 @@ class _MobileSidebarDrawer extends ConsumerWidget {
                   label: 'Assignment',
                   icon: Icons.assignment_turned_in_rounded,
                   isSelected: currentIndex == 11,
+                  trailing: pendingCount > 0
+                      ? Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: ScholarlyTheme.accentBlue,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            '$pendingCount',
+                            style: GoogleFonts.inter(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        )
+                      : null,
                   onTap: () {
                     _navigate(ref, context, 11);
                   },
@@ -936,12 +961,14 @@ class _DrawerTile extends StatelessWidget {
   final IconData icon;
   final bool isSelected;
   final VoidCallback onTap;
+  final Widget? trailing;
 
   const _DrawerTile({
     required this.label,
     required this.icon,
     required this.isSelected,
     required this.onTap,
+    this.trailing,
   });
 
   @override
@@ -973,6 +1000,7 @@ class _DrawerTile extends StatelessWidget {
               color: isSelected ? ScholarlyTheme.accentBlue : ScholarlyTheme.textPrimary,
             ),
           ),
+          trailing: trailing,
         ),
       ),
     );

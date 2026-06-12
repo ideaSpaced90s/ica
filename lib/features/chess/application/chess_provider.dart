@@ -34,6 +34,7 @@ import '../domain/models/ai_avatar.dart';
 import '../domain/models/candidate_move.dart';
 import '../domain/chess_persona_evaluator.dart';
 import 'battleground_provider.dart';
+import '../services/notification_service.dart';
 
 
 const _sentinel = Object();
@@ -241,6 +242,16 @@ class ChessState {
     this.isCouncilOnline = false,
     this.baseTimeDuration = _initialClock,
     this.gameMode = 'classic',
+    this.isNotificationsEnabled = false,
+    this.dailyBriefingEnabled = true,
+    this.streakProtectionEnabled = true,
+    this.weeklyDiagnosticsEnabled = true,
+    this.milestonesEnabled = true,
+    this.dailyBriefingTime = '09:00',
+    this.streakWarningHoursBeforeReset = 4,
+    this.quietHoursEnabled = false,
+    this.quietHoursStart = '22:00',
+    this.quietHoursEnd = '08:00',
 
     this.academyHouseAnimations = true,
     this.academyHouseColorFonts = true,
@@ -362,6 +373,17 @@ class ChessState {
   final int tacticPlaybackPosition;
   final bool isBoardInChampionsTheme;
 
+  final bool isNotificationsEnabled;
+  final bool dailyBriefingEnabled;
+  final bool streakProtectionEnabled;
+  final bool weeklyDiagnosticsEnabled;
+  final bool milestonesEnabled;
+  final String dailyBriefingTime;
+  final int streakWarningHoursBeforeReset;
+  final bool quietHoursEnabled;
+  final String quietHoursStart;
+  final String quietHoursEnd;
+
 
   bool get isChess960 => gameMode == 'chess960';
 
@@ -469,6 +491,16 @@ class ChessState {
     Object? activeTacticMoves = _sentinel,
     int? tacticPlaybackPosition,
     bool? isBoardInChampionsTheme,
+    bool? isNotificationsEnabled,
+    bool? dailyBriefingEnabled,
+    bool? streakProtectionEnabled,
+    bool? weeklyDiagnosticsEnabled,
+    bool? milestonesEnabled,
+    String? dailyBriefingTime,
+    int? streakWarningHoursBeforeReset,
+    bool? quietHoursEnabled,
+    String? quietHoursStart,
+    String? quietHoursEnd,
 
   }) {
     return ChessState(
@@ -613,6 +645,16 @@ class ChessState {
           : activeTacticMoves as List<String>?,
       tacticPlaybackPosition: tacticPlaybackPosition ?? this.tacticPlaybackPosition,
       isBoardInChampionsTheme: isBoardInChampionsTheme ?? this.isBoardInChampionsTheme,
+      isNotificationsEnabled: isNotificationsEnabled ?? this.isNotificationsEnabled,
+      dailyBriefingEnabled: dailyBriefingEnabled ?? this.dailyBriefingEnabled,
+      streakProtectionEnabled: streakProtectionEnabled ?? this.streakProtectionEnabled,
+      weeklyDiagnosticsEnabled: weeklyDiagnosticsEnabled ?? this.weeklyDiagnosticsEnabled,
+      milestonesEnabled: milestonesEnabled ?? this.milestonesEnabled,
+      dailyBriefingTime: dailyBriefingTime ?? this.dailyBriefingTime,
+      streakWarningHoursBeforeReset: streakWarningHoursBeforeReset ?? this.streakWarningHoursBeforeReset,
+      quietHoursEnabled: quietHoursEnabled ?? this.quietHoursEnabled,
+      quietHoursStart: quietHoursStart ?? this.quietHoursStart,
+      quietHoursEnd: quietHoursEnd ?? this.quietHoursEnd,
 
     );
   }
@@ -745,6 +787,16 @@ class ChessNotifier extends StateNotifier<ChessState> {
         gameMode: s.gameMode,
         userName: s.userName,
         userAvatarPath: s.userAvatarPath,
+        isNotificationsEnabled: s.isNotificationsEnabled,
+        dailyBriefingEnabled: s.dailyBriefingEnabled,
+        streakProtectionEnabled: s.streakProtectionEnabled,
+        weeklyDiagnosticsEnabled: s.weeklyDiagnosticsEnabled,
+        milestonesEnabled: s.milestonesEnabled,
+        dailyBriefingTime: s.dailyBriefingTime,
+        streakWarningHoursBeforeReset: s.streakWarningHoursBeforeReset,
+        quietHoursEnabled: s.quietHoursEnabled,
+        quietHoursStart: s.quietHoursStart,
+        quietHoursEnd: s.quietHoursEnd,
       );
       _soundService.boardThemeId = s.boardThemeId;
       _soundService.isThemeSoundEnabled = true;
@@ -771,6 +823,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
       // Automatically load saved games and populate dashboard caches on boot
       await loadSavedGames();
       _syncTimesToClockProvider();
+      if (s.isNotificationsEnabled) {
+        ref.read(notificationServiceProvider).initialize();
+      }
     } catch (e) {
       debugPrint('Failed to load settings: $e');
     }
@@ -800,8 +855,19 @@ class ChessNotifier extends StateNotifier<ChessState> {
         gameMode: state.gameMode,
         userName: state.userName,
         userAvatarPath: state.userAvatarPath,
+        isNotificationsEnabled: state.isNotificationsEnabled,
+        dailyBriefingEnabled: state.dailyBriefingEnabled,
+        streakProtectionEnabled: state.streakProtectionEnabled,
+        weeklyDiagnosticsEnabled: state.weeklyDiagnosticsEnabled,
+        milestonesEnabled: state.milestonesEnabled,
+        dailyBriefingTime: state.dailyBriefingTime,
+        streakWarningHoursBeforeReset: state.streakWarningHoursBeforeReset,
+        quietHoursEnabled: state.quietHoursEnabled,
+        quietHoursStart: state.quietHoursStart,
+        quietHoursEnd: state.quietHoursEnd,
       );
       await _settingsRepository.saveSettings(updated);
+      _syncScheduledNotifications();
     } catch (e) {
       debugPrint('Failed to save settings: $e');
     }
@@ -847,6 +913,54 @@ class ChessNotifier extends StateNotifier<ChessState> {
       isRatedMode: false,
     );
     _saveSettings();
+  }
+
+  Future<void> toggleNotifications(bool enabled) async {
+    state = state.copyWith(isNotificationsEnabled: enabled);
+    await _saveSettings();
+    if (enabled) {
+      await ref.read(notificationServiceProvider).initialize();
+    } else {
+      await ref.read(notificationServiceProvider).cancelAllNotifications();
+    }
+  }
+
+  Future<void> updateNotificationPreferences({
+    bool? dailyBriefingEnabled,
+    bool? streakProtectionEnabled,
+    bool? weeklyDiagnosticsEnabled,
+    bool? milestonesEnabled,
+    String? dailyBriefingTime,
+    int? streakWarningHoursBeforeReset,
+    bool? quietHoursEnabled,
+    String? quietHoursStart,
+    String? quietHoursEnd,
+  }) async {
+    state = state.copyWith(
+      dailyBriefingEnabled: dailyBriefingEnabled ?? state.dailyBriefingEnabled,
+      streakProtectionEnabled: streakProtectionEnabled ?? state.streakProtectionEnabled,
+      weeklyDiagnosticsEnabled: weeklyDiagnosticsEnabled ?? state.weeklyDiagnosticsEnabled,
+      milestonesEnabled: milestonesEnabled ?? state.milestonesEnabled,
+      dailyBriefingTime: dailyBriefingTime ?? state.dailyBriefingTime,
+      streakWarningHoursBeforeReset: streakWarningHoursBeforeReset ?? state.streakWarningHoursBeforeReset,
+      quietHoursEnabled: quietHoursEnabled ?? state.quietHoursEnabled,
+      quietHoursStart: quietHoursStart ?? state.quietHoursStart,
+      quietHoursEnd: quietHoursEnd ?? state.quietHoursEnd,
+    );
+    await _saveSettings();
+  }
+
+  Future<void> _syncScheduledNotifications() async {
+    final service = ref.read(notificationServiceProvider);
+    await service.cancelAllNotifications();
+    if (state.isNotificationsEnabled) {
+      if (state.dailyBriefingEnabled) {
+        await service.scheduleDailyBriefing(state.dailyBriefingTime);
+      }
+      if (state.streakProtectionEnabled) {
+        await service.scheduleStreakProtection(state.streakWarningHoursBeforeReset);
+      }
+    }
   }
 
   void toggleGameSound() {

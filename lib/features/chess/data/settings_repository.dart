@@ -46,6 +46,18 @@ class AppSettings {
   final int blitzStreak;
   final int rapidStreak;
 
+  // Notification preferences
+  final bool isNotificationsEnabled;
+  final bool dailyBriefingEnabled;
+  final bool streakProtectionEnabled;
+  final bool weeklyDiagnosticsEnabled;
+  final bool milestonesEnabled;
+  final String dailyBriefingTime;
+  final int streakWarningHoursBeforeReset;
+  final bool quietHoursEnabled;
+  final String quietHoursStart;
+  final String quietHoursEnd;
+
   // Academy House Specific Settings
   final bool academyHouseAnimations;
   final bool academyHouseColorFonts;
@@ -126,6 +138,16 @@ class AppSettings {
     this.userName = 'Apprentice',
     this.userAvatarPath = 'assets/persona/user_profile_0.png',
     this.activeRatedMatchId,
+    this.isNotificationsEnabled = false,
+    this.dailyBriefingEnabled = true,
+    this.streakProtectionEnabled = true,
+    this.weeklyDiagnosticsEnabled = true,
+    this.milestonesEnabled = true,
+    this.dailyBriefingTime = '09:00',
+    this.streakWarningHoursBeforeReset = 4,
+    this.quietHoursEnabled = false,
+    this.quietHoursStart = '22:00',
+    this.quietHoursEnd = '08:00',
   });
 
   AppSettings copyWith({
@@ -176,6 +198,16 @@ class AppSettings {
     String? userName,
     String? userAvatarPath,
     Object? activeRatedMatchId = const Object(),
+    bool? isNotificationsEnabled,
+    bool? dailyBriefingEnabled,
+    bool? streakProtectionEnabled,
+    bool? weeklyDiagnosticsEnabled,
+    bool? milestonesEnabled,
+    String? dailyBriefingTime,
+    int? streakWarningHoursBeforeReset,
+    bool? quietHoursEnabled,
+    String? quietHoursStart,
+    String? quietHoursEnd,
   }) {
     return AppSettings(
       boardThemeId: boardThemeId ?? this.boardThemeId,
@@ -229,6 +261,16 @@ class AppSettings {
       activeRatedMatchId: identical(activeRatedMatchId, const Object())
           ? this.activeRatedMatchId
           : activeRatedMatchId as String?,
+      isNotificationsEnabled: isNotificationsEnabled ?? this.isNotificationsEnabled,
+      dailyBriefingEnabled: dailyBriefingEnabled ?? this.dailyBriefingEnabled,
+      streakProtectionEnabled: streakProtectionEnabled ?? this.streakProtectionEnabled,
+      weeklyDiagnosticsEnabled: weeklyDiagnosticsEnabled ?? this.weeklyDiagnosticsEnabled,
+      milestonesEnabled: milestonesEnabled ?? this.milestonesEnabled,
+      dailyBriefingTime: dailyBriefingTime ?? this.dailyBriefingTime,
+      streakWarningHoursBeforeReset: streakWarningHoursBeforeReset ?? this.streakWarningHoursBeforeReset,
+      quietHoursEnabled: quietHoursEnabled ?? this.quietHoursEnabled,
+      quietHoursStart: quietHoursStart ?? this.quietHoursStart,
+      quietHoursEnd: quietHoursEnd ?? this.quietHoursEnd,
     );
   }
 
@@ -280,6 +322,16 @@ class AppSettings {
     'userName': userName,
     'userAvatarPath': userAvatarPath,
     'activeRatedMatchId': activeRatedMatchId,
+    'isNotificationsEnabled': isNotificationsEnabled,
+    'dailyBriefingEnabled': dailyBriefingEnabled,
+    'streakProtectionEnabled': streakProtectionEnabled,
+    'weeklyDiagnosticsEnabled': weeklyDiagnosticsEnabled,
+    'milestonesEnabled': milestonesEnabled,
+    'dailyBriefingTime': dailyBriefingTime,
+    'streakWarningHoursBeforeReset': streakWarningHoursBeforeReset,
+    'quietHoursEnabled': quietHoursEnabled,
+    'quietHoursStart': quietHoursStart,
+    'quietHoursEnd': quietHoursEnd,
   };
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
@@ -385,6 +437,16 @@ class AppSettings {
       userName: json['userName'] ?? 'Apprentice',
       userAvatarPath: json['userAvatarPath'] ?? 'assets/persona/user_profile_0.png',
       activeRatedMatchId: json['activeRatedMatchId'] as String?,
+      isNotificationsEnabled: json['isNotificationsEnabled'] ?? false,
+      dailyBriefingEnabled: json['dailyBriefingEnabled'] ?? true,
+      streakProtectionEnabled: json['streakProtectionEnabled'] ?? true,
+      weeklyDiagnosticsEnabled: json['weeklyDiagnosticsEnabled'] ?? true,
+      milestonesEnabled: json['milestonesEnabled'] ?? true,
+      dailyBriefingTime: json['dailyBriefingTime'] ?? '09:00',
+      streakWarningHoursBeforeReset: json['streakWarningHoursBeforeReset'] ?? 4,
+      quietHoursEnabled: json['quietHoursEnabled'] ?? false,
+      quietHoursStart: json['quietHoursStart'] ?? '22:00',
+      quietHoursEnd: json['quietHoursEnd'] ?? '08:00',
     );
   }
 }

@@ -12,6 +12,7 @@ import 'widgets/ambient_scaffold.dart';
 import 'sign_in_page.dart';
 import 'mobile_navigation_shell.dart';
 import '../application/onboarding_provider.dart';
+import 'notification_settings_page.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -73,6 +74,18 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                             : Icons.vibration_outlined,
                         value: state.isHapticsEnabled,
                         onChanged: (v) => notifier.toggleHaptics(),
+                      ),
+                      _SettingsTile(
+                        label: 'Notifications',
+                        description: 'Configure briefings, streak alerts, and quiet hours',
+                        icon: Icons.notifications_active_rounded,
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => const NotificationSettingsPage(),
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),
