@@ -694,7 +694,7 @@ class _ArenaPersonasSelectionPageState extends ConsumerState<ArenaPersonasSelect
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(22),
-        child: Image.asset(
+        child: buildAvatarImage(
           avatar.imagePath,
           fit: BoxFit.cover,
         ),
@@ -730,7 +730,7 @@ class _ArenaPersonasSelectionPageState extends ConsumerState<ArenaPersonasSelect
           fit: StackFit.expand,
           children: [
             // Portrait Image
-            Image.asset(
+            buildAvatarImage(
               avatar.imagePath,
               fit: BoxFit.cover,
             ),
@@ -914,9 +914,23 @@ class _ArenaPersonasSelectionPageState extends ConsumerState<ArenaPersonasSelect
                 // Avatar Mini Header
                 Row(
                   children: [
-                    CircleAvatar(
-                      radius: 20,
-                      backgroundImage: AssetImage(avatar.imagePath),
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: avatar.color.withValues(alpha: 0.15),
+                        border: Border.all(
+                          color: avatar.color,
+                          width: 1.5,
+                        ),
+                      ),
+                      child: ClipOval(
+                        child: buildAvatarImage(
+                          avatar.imagePath,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(

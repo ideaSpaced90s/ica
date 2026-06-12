@@ -144,7 +144,7 @@ void showAvatarSelectionSheet(BuildContext context, WidgetRef ref, {bool isBotto
                                   border: Border.all(color: avatar.color, width: 1.5),
                                 ),
                                 child: ClipOval(
-                                  child: Image.asset(
+                                  child: buildAvatarImage(
                                     avatar.imagePath,
                                     fit: BoxFit.cover,
                                   ),

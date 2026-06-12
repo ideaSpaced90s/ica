@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%">
+  <defs>
+    <radialGradient id="bgGrad" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#A1887F" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#0A0D14" stop-opacity="1"/>
+    </radialGradient>
+    <linearGradient id="primaryGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#A1887F"/>
+      <stop offset="100%" stop-color="#5D4037"/>
+    </linearGradient>
+    <filter id="glow" x="-25%" y="-25%" width="150%" height="150%">
+      <feGaussianBlur stdDeviation="10" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+  <!-- Background -->
+  <rect width="400" height="400" fill="url(#bgGrad)"/>
+  <rect width="400" height="400" fill="none" stroke="#A1887F" stroke-opacity="0.15" stroke-width="2"/>
+  
+  <!-- Subtle circular grid -->
+  <circle cx="200" cy="200" r="150" fill="none" stroke="#A1887F" stroke-opacity="0.04" stroke-width="1.5" stroke-dasharray="5,5"/>
+  <circle cx="200" cy="200" r="100" fill="none" stroke="#A1887F" stroke-opacity="0.06" stroke-width="1.5" stroke-dasharray="5,5"/>
+  <circle cx="200" cy="200" r="50" fill="none" stroke="#A1887F" stroke-opacity="0.08" stroke-width="1.5" stroke-dasharray="5,5"/>
+  <path d="M 50 200 L 350 200 M 200 50 L 200 350" fill="none" stroke="#A1887F" stroke-opacity="0.04" stroke-width="1.5"/>
+
+  <!-- Persona Specific Abstract Art -->
+  <!-- Sparky: Chaotic circles and erratic connection lines -->
+    <g stroke="url(#primaryGrad)" stroke-width="2" fill="none" opacity="0.8">
+      <path d="M 120 180 L 190 130 L 280 220 L 210 280 L 120 180" stroke-dasharray="4,4"/>
+      <path d="M 190 130 L 210 280 M 120 180 L 280 220"/>
+    </g>
+    <circle cx="120" cy="180" r="16" fill="url(#primaryGrad)" filter="url(#glow)"/>
+    <circle cx="190" cy="130" r="12" fill="#E53935" filter="url(#glow)"/>
+    <circle cx="280" cy="220" r="22" fill="url(#primaryGrad)" filter="url(#glow)"/>
+    <circle cx="210" cy="280" r="14" fill="url(#primaryGrad)" filter="url(#glow)"/>
+    <circle cx="150" cy="240" r="8" fill="#FFB300" opacity="0.6"/>
+    <circle cx="240" cy="160" r="6" fill="#1E88E5" opacity="0.6"/>
+    <circle cx="200" cy="200" r="30" fill="none" stroke="url(#primaryGrad)" stroke-width="1.5" stroke-dasharray="8,8"/>
+</svg>

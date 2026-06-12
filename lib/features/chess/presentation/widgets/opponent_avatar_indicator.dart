@@ -97,7 +97,7 @@ class _OpponentAvatarIndicatorState extends State<OpponentAvatarIndicator> {
                   ),
                 ),
                 child: ClipOval(
-                  child: Image.asset(
+                  child: buildAvatarImage(
                     widget.avatar.imagePath,
                     fit: BoxFit.cover,
                   ),

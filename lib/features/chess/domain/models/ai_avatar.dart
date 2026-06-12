@@ -1,4 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+
+Widget buildAvatarImage(String imagePath, {double? width, double? height, BoxFit fit = BoxFit.cover}) {
+  if (imagePath.endsWith('.svg')) {
+    return SvgPicture.asset(
+      imagePath,
+      width: width,
+      height: height,
+      fit: fit,
+    );
+  } else {
+    return Image.asset(
+      imagePath,
+      width: width,
+      height: height,
+      fit: fit,
+    );
+  }
+}
 
 class AiAvatar {
   final String id;
@@ -46,7 +65,7 @@ class AiAvatar {
       depth: 1,
       icon: Icons.child_care_rounded,
       color: Color(0xFFA1887F), // Soft Earth
-      imagePath: 'assets/persona/sparky.png',
+      imagePath: 'assets/persona_vector/sparky.svg',
     ),
     AiAvatar(
       id: 'avatar_1',
@@ -58,7 +77,7 @@ class AiAvatar {
       depth: 1,
       icon: Icons.cruelty_free_rounded,
       color: Color(0xFF81C784), // Soft green
-      imagePath: 'assets/persona/pawnzy.png',
+      imagePath: 'assets/persona_vector/pawnzy.svg',
     ),
     AiAvatar(
       id: 'avatar_2',
@@ -70,7 +89,7 @@ class AiAvatar {
       depth: 2,
       icon: Icons.shield_rounded,
       color: Color(0xFF90CAF9), // Pale blue
-      imagePath: 'assets/persona/coward.png',
+      imagePath: 'assets/persona_vector/coward.svg',
     ),
     AiAvatar(
       id: 'avatar_3',
@@ -82,7 +101,7 @@ class AiAvatar {
       depth: 3,
       icon: Icons.castle_rounded,
       color: Color(0xFF64B5F6), // Light blue
-      imagePath: 'assets/persona/rook-ie.png',
+      imagePath: 'assets/persona_vector/rook-ie.svg',
     ),
     AiAvatar(
       id: 'avatar_4',
@@ -94,7 +113,7 @@ class AiAvatar {
       depth: 3,
       icon: Icons.school_rounded,
       color: Color(0xFFFFF59D), // Yellow
-      imagePath: 'assets/persona/scholar.png',
+      imagePath: 'assets/persona_vector/scholar.svg',
     ),
     AiAvatar(
       id: 'avatar_5',
@@ -106,7 +125,7 @@ class AiAvatar {
       depth: 4,
       icon: Icons.security_rounded,
       color: Color(0xFF90A4AE), // Muted blue-grey
-      imagePath: 'assets/persona/molly.png',
+      imagePath: 'assets/persona_vector/molly.svg',
     ),
     AiAvatar(
       id: 'avatar_6',
@@ -118,7 +137,7 @@ class AiAvatar {
       depth: 4,
       icon: Icons.sports_martial_arts,
       color: Color(0xFFFFCC80), // Orange
-      imagePath: 'assets/persona/berserker.png',
+      imagePath: 'assets/persona_vector/berserker.svg',
     ),
     AiAvatar(
       id: 'avatar_7',
@@ -130,7 +149,7 @@ class AiAvatar {
       depth: 5,
       icon: Icons.bolt_rounded,
       color: Color(0xFFFFB74D), // Soft orange
-      imagePath: 'assets/persona/blaire.png',
+      imagePath: 'assets/persona_vector/blaire.svg',
     ),
     AiAvatar(
       id: 'avatar_8',
@@ -142,7 +161,7 @@ class AiAvatar {
       depth: 6,
       icon: Icons.all_out_rounded,
       color: Color(0xFFC5E1A5), // Olive green
-      imagePath: 'assets/persona/python.png',
+      imagePath: 'assets/persona_vector/python.svg',
     ),
     AiAvatar(
       id: 'avatar_9',
@@ -154,7 +173,7 @@ class AiAvatar {
       depth: 7,
       icon: Icons.casino_rounded,
       color: Color(0xFFBA68C8), // Muted purple
-      imagePath: 'assets/persona/gambit.png',
+      imagePath: 'assets/persona_vector/gambit.svg',
     ),
     AiAvatar(
       id: 'avatar_10',
@@ -166,7 +185,7 @@ class AiAvatar {
       depth: 8,
       icon: Icons.catching_pokemon,
       color: Color(0xFFCE93D8), // Purple
-      imagePath: 'assets/persona/trapper.png',
+      imagePath: 'assets/persona_vector/trapper.svg',
     ),
     AiAvatar(
       id: 'avatar_11',
@@ -178,7 +197,7 @@ class AiAvatar {
       depth: 9,
       icon: Icons.gps_fixed_rounded,
       color: Color(0xFFEF9A9A), // Deep Red
-      imagePath: 'assets/persona/assassin.png',
+      imagePath: 'assets/persona_vector/assassin.svg',
     ),
     AiAvatar(
       id: 'avatar_12',
@@ -190,7 +209,7 @@ class AiAvatar {
       depth: 10,
       icon: Icons.track_changes_rounded,
       color: Color(0xFF4DB6AC), // Teal
-      imagePath: 'assets/persona/vala.png',
+      imagePath: 'assets/persona_vector/vala.svg',
     ),
     AiAvatar(
       id: 'avatar_13',
@@ -202,7 +221,7 @@ class AiAvatar {
       depth: 12,
       icon: Icons.auto_awesome_rounded,
       color: Color(0xFFF48FB1), // Magenta
-      imagePath: 'assets/persona/magician.png',
+      imagePath: 'assets/persona_vector/magician.svg',
     ),
     AiAvatar(
       id: 'avatar_14',
@@ -214,7 +233,7 @@ class AiAvatar {
       depth: 14,
       icon: Icons.gpp_good_rounded,
       color: Color(0xFF7986CB), // Indigo
-      imagePath: 'assets/persona/sentinel.png',
+      imagePath: 'assets/persona_vector/sentinel.svg',
     ),
     AiAvatar(
       id: 'avatar_15',
@@ -226,7 +245,7 @@ class AiAvatar {
       depth: 15,
       icon: Icons.local_fire_department_rounded,
       color: Color(0xFFE57373), // Red soft
-      imagePath: 'assets/persona/im_murphy.png',
+      imagePath: 'assets/persona_vector/im_murphy.svg',
     ),
     AiAvatar(
       id: 'avatar_16',
@@ -238,7 +257,7 @@ class AiAvatar {
       depth: 18,
       icon: Icons.psychology_rounded,
       color: Color(0xFFFFD54F), // Amber
-      imagePath: 'assets/persona/gm_titan.png',
+      imagePath: 'assets/persona_vector/gm_titan.svg',
     ),
     AiAvatar(
       id: 'avatar_17',
@@ -250,7 +269,7 @@ class AiAvatar {
       depth: 19,
       icon: Icons.rocket_launch_rounded,
       color: Color(0xFFA5D6A7), // Neon Green
-      imagePath: 'assets/persona/alien.png',
+      imagePath: 'assets/persona_vector/alien.svg',
     ),
     AiAvatar(
       id: 'avatar_18',
@@ -262,7 +281,7 @@ class AiAvatar {
       depth: 20,
       icon: Icons.public_rounded,
       color: Color(0xFFFFE082), // Gold
-      imagePath: 'assets/persona/champ.png',
+      imagePath: 'assets/persona_vector/champ.svg',
     ),
     AiAvatar(
       id: 'avatar_19',
@@ -274,7 +293,7 @@ class AiAvatar {
       depth: 22,
       icon: Icons.diamond_rounded,
       color: Color(0xFFE0E0E0), // Platinum / White
-      imagePath: 'assets/persona/king.png',
+      imagePath: 'assets/persona_vector/king.svg',
     ),
   ];
 

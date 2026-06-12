@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%">
+  <defs>
+    <radialGradient id="bgGrad" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#E57373" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#0A0D14" stop-opacity="1"/>
+    </radialGradient>
+    <linearGradient id="primaryGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E57373"/>
+      <stop offset="100%" stop-color="#C62828"/>
+    </linearGradient>
+    <filter id="glow" x="-25%" y="-25%" width="150%" height="150%">
+      <feGaussianBlur stdDeviation="10" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+  <!-- Background -->
+  <rect width="400" height="400" fill="url(#bgGrad)"/>
+  <rect width="400" height="400" fill="none" stroke="#E57373" stroke-opacity="0.15" stroke-width="2"/>
+  
+  <!-- Subtle circular grid -->
+  <circle cx="200" cy="200" r="150" fill="none" stroke="#E57373" stroke-opacity="0.04" stroke-width="1.5" stroke-dasharray="5,5"/>
+  <circle cx="200" cy="200" r="100" fill="none" stroke="#E57373" stroke-opacity="0.06" stroke-width="1.5" stroke-dasharray="5,5"/>
+  <circle cx="200" cy="200" r="50" fill="none" stroke="#E57373" stroke-opacity="0.08" stroke-width="1.5" stroke-dasharray="5,5"/>
+  <path d="M 50 200 L 350 200 M 200 50 L 200 350" fill="none" stroke="#E57373" stroke-opacity="0.04" stroke-width="1.5"/>
+
+  <!-- Persona Specific Abstract Art -->
+  <!-- Murphy: Ocean wave sweeps and compass rose lines -->
+    <g stroke="url(#primaryGrad)" fill="none" stroke-linejoin="round">
+      <!-- Compass outer ring -->
+      <circle cx="200" cy="200" r="110" stroke-width="2" opacity="0.4"/>
+      <!-- Wave sweeps -->
+      <path d="M 80 250 Q 140 160 200 250 T 320 250" stroke-width="8" stroke-linecap="round" filter="url(#glow)"/>
+      <path d="M 100 220 Q 160 140 220 220 T 300 220" stroke-width="4" stroke-linecap="round" opacity="0.6"/>
+      
+      <!-- Compass arrows -->
+      <polygon points="200,60 210,100 190,100" fill="url(#primaryGrad)"/>
+      <polygon points="200,340 210,300 190,300" fill="url(#primaryGrad)"/>
+      <polygon points="60,200 100,210 100,190" fill="url(#primaryGrad)"/>
+      <polygon points="340,200 300,210 300,190" fill="url(#primaryGrad)"/>
+    </g>
+    <!-- Compass center dial -->
+    <circle cx="200" cy="200" r="18" fill="url(#primaryGrad)" filter="url(#glow)"/>
+    <circle cx="200" cy="200" r="6" fill="#FFF"/>
+</svg>

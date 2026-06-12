@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%">
+  <defs>
+    <radialGradient id="bgGrad" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#FFF59D" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#0A0D14" stop-opacity="1"/>
+    </radialGradient>
+    <linearGradient id="primaryGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFF59D"/>
+      <stop offset="100%" stop-color="#FBC02D"/>
+    </linearGradient>
+    <filter id="glow" x="-25%" y="-25%" width="150%" height="150%">
+      <feGaussianBlur stdDeviation="10" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+  <!-- Background -->
+  <rect width="400" height="400" fill="url(#bgGrad)"/>
+  <rect width="400" height="400" fill="none" stroke="#FFF59D" stroke-opacity="0.15" stroke-width="2"/>
+  
+  <!-- Subtle circular grid -->
+  <circle cx="200" cy="200" r="150" fill="none" stroke="#FFF59D" stroke-opacity="0.04" stroke-width="1.5" stroke-dasharray="5,5"/>
+  <circle cx="200" cy="200" r="100" fill="none" stroke="#FFF59D" stroke-opacity="0.06" stroke-width="1.5" stroke-dasharray="5,5"/>
+  <circle cx="200" cy="200" r="50" fill="none" stroke="#FFF59D" stroke-opacity="0.08" stroke-width="1.5" stroke-dasharray="5,5"/>
+  <path d="M 50 200 L 350 200 M 200 50 L 200 350" fill="none" stroke="#FFF59D" stroke-opacity="0.04" stroke-width="1.5"/>
+
+  <!-- Persona Specific Abstract Art -->
+  <!-- Scholar: Sharp triangular prisms and tactical starburst -->
+    <g transform="translate(200, 200)">
+      <!-- Prisms -->
+      <polygon points="0,-120 40,0 -40,0" fill="url(#primaryGrad)" opacity="0.9"/>
+      <polygon points="120,0 0,30 0,-30" fill="url(#primaryGrad)" opacity="0.6"/>
+      <polygon points="-120,0 0,30 0,-30" fill="url(#primaryGrad)" opacity="0.6"/>
+      <polygon points="0,120 30,0 -30,0" fill="url(#primaryGrad)" opacity="0.75"/>
+      <!-- Glowing core -->
+      <circle cx="0" cy="0" r="32" fill="#FFFFFF" filter="url(#glow)"/>
+      <circle cx="0" cy="0" r="16" fill="url(#primaryGrad)"/>
+      <!-- Small spark diamonds -->
+      <polygon points="60,60 70,70 60,80 50,70" fill="#FFFFFF" filter="url(#glow)"/>
+      <polygon points="-60,-60 -50,-70 -60,-80 -70,-70" fill="#FFFFFF" filter="url(#glow)"/>
+    </g>
+</svg>

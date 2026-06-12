@@ -102,6 +102,7 @@ flutter:
     - assets/pieces/arc/
     - assets/pieces/arc-webP/
     - assets/persona/
+    - assets/persona_vector/
     - assets/sfx/
     - assets/bgm/
     - assets/splash/

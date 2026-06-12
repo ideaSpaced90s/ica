@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%">
+  <defs>
+    <radialGradient id="bgGrad" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#FFB74D" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#0A0D14" stop-opacity="1"/>
+    </radialGradient>
+    <linearGradient id="primaryGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFB74D"/>
+      <stop offset="100%" stop-color="#F57C00"/>
+    </linearGradient>
+    <filter id="glow" x="-25%" y="-25%" width="150%" height="150%">
+      <feGaussianBlur stdDeviation="10" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+  <!-- Background -->
+  <rect width="400" height="400" fill="url(#bgGrad)"/>
+  <rect width="400" height="400" fill="none" stroke="#FFB74D" stroke-opacity="0.15" stroke-width="2"/>
+  
+  <!-- Subtle circular grid -->
+  <circle cx="200" cy="200" r="150" fill="none" stroke="#FFB74D" stroke-opacity="0.04" stroke-width="1.5" stroke-dasharray="5,5"/>
+  <circle cx="200" cy="200" r="100" fill="none" stroke="#FFB74D" stroke-opacity="0.06" stroke-width="1.5" stroke-dasharray="5,5"/>
+  <circle cx="200" cy="200" r="50" fill="none" stroke="#FFB74D" stroke-opacity="0.08" stroke-width="1.5" stroke-dasharray="5,5"/>
+  <path d="M 50 200 L 350 200 M 200 50 L 200 350" fill="none" stroke="#FFB74D" stroke-opacity="0.04" stroke-width="1.5"/>
+
+  <!-- Persona Specific Abstract Art -->
+  <!-- Blaire: Blitzing lightning bolts intersecting -->
+    <g filter="url(#glow)">
+      <!-- Left bolt -->
+      <polygon points="120,60 210,180 160,190 230,320 180,330 290,170 230,170" fill="url(#primaryGrad)"/>
+      <!-- Right crossing bolt (semi-transparent) -->
+      <polygon points="280,70 190,190 240,195 170,330 220,340 110,180 170,180" fill="#FFF" opacity="0.4"/>
+    </g>
+    <!-- Speed/lightning sparks -->
+    <line x1="80" y1="120" x2="110" y2="100" stroke="#FFF" stroke-width="3" filter="url(#glow)"/>
+    <line x1="320" y1="280" x2="290" y2="300" stroke="#FFF" stroke-width="3" filter="url(#glow)"/>
+    <circle cx="200" cy="185" r="12" fill="#FFFFFF" filter="url(#glow)"/>
+</svg>

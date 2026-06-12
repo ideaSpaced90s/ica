@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%">
+  <defs>
+    <radialGradient id="bgGrad" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#C5E1A5" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#0A0D14" stop-opacity="1"/>
+    </radialGradient>
+    <linearGradient id="primaryGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#C5E1A5"/>
+      <stop offset="100%" stop-color="#558B2F"/>
+    </linearGradient>
+    <filter id="glow" x="-25%" y="-25%" width="150%" height="150%">
+      <feGaussianBlur stdDeviation="10" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+  <!-- Background -->
+  <rect width="400" height="400" fill="url(#bgGrad)"/>
+  <rect width="400" height="400" fill="none" stroke="#C5E1A5" stroke-opacity="0.15" stroke-width="2"/>
+  
+  <!-- Subtle circular grid -->
+  <circle cx="200" cy="200" r="150" fill="none" stroke="#C5E1A5" stroke-opacity="0.04" stroke-width="1.5" stroke-dasharray="5,5"/>
+  <circle cx="200" cy="200" r="100" fill="none" stroke="#C5E1A5" stroke-opacity="0.06" stroke-width="1.5" stroke-dasharray="5,5"/>
+  <circle cx="200" cy="200" r="50" fill="none" stroke="#C5E1A5" stroke-opacity="0.08" stroke-width="1.5" stroke-dasharray="5,5"/>
+  <path d="M 50 200 L 350 200 M 200 50 L 200 350" fill="none" stroke="#C5E1A5" stroke-opacity="0.04" stroke-width="1.5"/>
+
+  <!-- Persona Specific Abstract Art -->
+  <!-- Python: Concentric, squeezing spiral path -->
+    <path d="M 200 200 
+             L 200 170 
+             A 30 30 0 0 1 230 200 
+             A 60 60 0 0 1 170 200 
+             A 90 90 0 0 1 260 200 
+             A 120 120 0 0 1 140 200 
+             A 150 150 0 0 1 290 200" 
+          fill="none" stroke="url(#primaryGrad)" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" opacity="0.95" filter="url(#glow)"/>
+    <!-- Center green core -->
+    <circle cx="200" cy="200" r="14" fill="#E8F5E9" filter="url(#glow)"/>
+</svg>

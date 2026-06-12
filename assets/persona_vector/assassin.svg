@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%">
+  <defs>
+    <radialGradient id="bgGrad" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#EF9A9A" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#0A0D14" stop-opacity="1"/>
+    </radialGradient>
+    <linearGradient id="primaryGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#EF9A9A"/>
+      <stop offset="100%" stop-color="#C62828"/>
+    </linearGradient>
+    <filter id="glow" x="-25%" y="-25%" width="150%" height="150%">
+      <feGaussianBlur stdDeviation="10" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+  <!-- Background -->
+  <rect width="400" height="400" fill="url(#bgGrad)"/>
+  <rect width="400" height="400" fill="none" stroke="#EF9A9A" stroke-opacity="0.15" stroke-width="2"/>
+  
+  <!-- Subtle circular grid -->
+  <circle cx="200" cy="200" r="150" fill="none" stroke="#EF9A9A" stroke-opacity="0.04" stroke-width="1.5" stroke-dasharray="5,5"/>
+  <circle cx="200" cy="200" r="100" fill="none" stroke="#EF9A9A" stroke-opacity="0.06" stroke-width="1.5" stroke-dasharray="5,5"/>
+  <circle cx="200" cy="200" r="50" fill="none" stroke="#EF9A9A" stroke-opacity="0.08" stroke-width="1.5" stroke-dasharray="5,5"/>
+  <path d="M 50 200 L 350 200 M 200 50 L 200 350" fill="none" stroke="#EF9A9A" stroke-opacity="0.04" stroke-width="1.5"/>
+
+  <!-- Persona Specific Abstract Art -->
+  <!-- Assassin: Ominous target ring and crossing bladed lines -->
+    <circle cx="200" cy="200" r="90" fill="none" stroke="url(#primaryGrad)" stroke-width="4" filter="url(#glow)"/>
+    <!-- Crossing blades -->
+    <g stroke="url(#primaryGrad)" stroke-width="3" fill="none">
+      <!-- Target cross -->
+      <line x1="70" y1="200" x2="330" y2="200"/>
+      <line x1="200" y1="70" x2="200" y2="330"/>
+      
+      <!-- Tilted blades -->
+      <path d="M 80 80 L 320 320" stroke="#FF5252" stroke-width="2"/>
+      <path d="M 320 80 L 80 320" stroke="#FF5252" stroke-width="2"/>
+    </g>
+    
+    <!-- Central hunter red glowing core -->
+    <circle cx="200" cy="200" r="28" fill="#0A0D14" stroke="url(#primaryGrad)" stroke-width="2"/>
+    <circle cx="200" cy="200" r="14" fill="#D32F2F" filter="url(#glow)"/>
+    <circle cx="200" cy="200" r="6" fill="#FFF"/>
+</svg>

@@ -1388,22 +1388,9 @@ class _PersonaSectionState extends State<_PersonaSection> {
                                 : [],
                           ),
                           child: ClipOval(
-                            child: Image.asset(
+                            child: buildAvatarImage(
                               persona.imagePath,
                               fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) => Container(
-                                color: persona.color.withValues(alpha: 0.2),
-                                child: Center(
-                                  child: Text(
-                                    persona.name[0],
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: persona.color,
-                                      fontSize: 18,
-                                    ),
-                                  ),
-                                ),
-                              ),
                             ),
                           ),
                         ),
@@ -1456,22 +1443,9 @@ class _PersonaSectionState extends State<_PersonaSection> {
                           ),
                         ),
                         child: ClipOval(
-                          child: Image.asset(
+                          child: buildAvatarImage(
                             _selectedPersona.imagePath,
                             fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => Container(
-                              color: _selectedPersona.color.withValues(alpha: 0.2),
-                              child: Center(
-                                child: Text(
-                                  _selectedPersona.name[0],
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: _selectedPersona.color,
-                                    fontSize: 18,
-                                  ),
-                                ),
-                              ),
-                            ),
                           ),
                         ),
                       ),
