@@ -11,7 +11,6 @@ import '../widgets/animated_check_widget.dart';
 import '../mobile_navigation_shell.dart';
 import '../widgets/ambient_scaffold.dart';
 import '../scholarly_theme.dart';
-import 'package:kingslayer_chess/src/rust/api/pgn_db.dart' as rust_pgn;
 import '../../services/chess_sound_service.dart';
 import '../widgets/gm_chanakya_intro_overlay.dart';
 import '../../application/chess_provider.dart';
@@ -770,7 +769,7 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  "Annotate a defeated game from your archive in the Analysis page (add comments/marks), and save it. Submit it here to GM Chanakya for structural diagnostics.",
+                  "Attend the Chess Academy, study the syllabus, and finish one game with GM Chanakya (win, loss, or draw). Once the game is completed, GM Chanakya's structural diagnostic report will automatically generate and be displayed below.",
                   style: GoogleFonts.inter(fontSize: 12, height: 1.4, color: ScholarlyTheme.textMuted),
                 ),
                 const SizedBox(height: 16),
@@ -782,9 +781,12 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
                         backgroundColor: ScholarlyTheme.accentBlue,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
-                      icon: const Icon(Icons.upload_file_rounded),
-                      label: Text("Submit Game from Library", style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-                      onPressed: () => _showGameSubmissionSelector(context),
+                      icon: const Icon(Icons.school_rounded),
+                      label: Text("Go to Academy Mode", style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+                      onPressed: () {
+                        ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                        ref.read(mobileNavIndexProvider.notifier).state = 3; // Redirect to Academy page
+                      },
                     ),
                   )
                 else
@@ -793,7 +795,7 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
                       const Icon(Icons.check_circle_rounded, color: Colors.green, size: 20),
                       const SizedBox(width: 8),
                       Text(
-                        "Game Submitted for Review This Week",
+                        "Game Completed & Reviewed This Week",
                         style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.green),
                       ),
                     ],
@@ -813,89 +815,56 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
             JuicyGlassCard(
               padding: const EdgeInsets.all(16),
               borderRadius: 16,
-              child: SelectableText(
-                state.weeklyReport!,
-                style: GoogleFonts.inter(fontSize: 13, height: 1.6, color: ScholarlyTheme.textPrimary),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SelectableText(
+                    state.weeklyReport!,
+                    style: GoogleFonts.inter(fontSize: 13, height: 1.6, color: ScholarlyTheme.textPrimary),
+                  ),
+                  if (state.submittedGameId != null) ...[
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: ScholarlyTheme.accentBlue.withValues(alpha: 0.2),
+                          foregroundColor: ScholarlyTheme.accentBlue,
+                          side: const BorderSide(color: ScholarlyTheme.accentBlue, width: 1.5),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        icon: const Icon(Icons.analytics_rounded),
+                        label: Text("Review Game in Analysis", style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+                        onPressed: () {
+                          ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                          final chessState = ref.read(chessProvider);
+                          final game = chessState.savedGames.where(
+                            (g) => g.id == state.submittedGameId,
+                          ).firstOrNull;
+                          if (game != null) {
+                            ref.read(studyLabProvider.notifier).loadGameEntry(
+                              game,
+                              chanakyaCommentary: game.commentaryHistory,
+                            );
+                            ref.read(mobileNavIndexProvider.notifier).state = 5; // Analysis tab
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("Could not find the game in your library!"),
+                                backgroundColor: Colors.redAccent,
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
           ],
         ],
       ),
-    );
-  }
-
-  Future<void> _showGameSubmissionSelector(BuildContext context) async {
-    final studyNotifier = ref.read(studyLabProvider.notifier);
-    final records = await studyNotifier.loadGamesFromLibrary();
-
-    if (!context.mounted) return;
-
-    if (records.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("No saved games in your Library! Go to Analysis mode to annotate and save a game."),
-          backgroundColor: Colors.orangeAccent,
-        ),
-      );
-      return;
-    }
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: ScholarlyTheme.panelBase,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Text(
-                  "Select Annotated Game to Submit",
-                  style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary),
-                ),
-              ),
-              const Divider(color: ScholarlyTheme.panelStroke),
-              Expanded(
-                child: ListView.separated(
-                  itemCount: records.length,
-                  separatorBuilder: (context, index) => const Divider(color: ScholarlyTheme.panelStroke, height: 1),
-                  itemBuilder: (context, index) {
-                    final record = records[index];
-                    return ListTile(
-                      leading: const Icon(Icons.history_edu_rounded, color: ScholarlyTheme.realGold),
-                      title: Text(
-                        record.header.event,
-                        style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary),
-                      ),
-                      subtitle: Text(
-                        "ECO: ${record.header.eco} | Result: ${record.header.result}",
-                        style: GoogleFonts.inter(fontSize: 11, color: ScholarlyTheme.textMuted),
-                      ),
-                      onTap: () {
-                        Navigator.pop(context);
-                        // Assemble PGN content with annotations
-                        final pgn = rust_pgn.exportPgnWithHeaders(
-                          header: record.header,
-                          annotatedPgn: record.movesPgn,
-                        );
-                        ref.read(assignmentProvider.notifier).submitGameForReview(
-                          record.header.event,
-                          pgn,
-                        );
-                      },
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 

@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import 'game_clock_provider.dart';
+import 'assignment_provider.dart';
 import 'package:kingslayer_chess/src/rust/api/threats.dart';
 import 'package:kingslayer_chess/src/rust/api/humanizer.dart';
 import 'package:kingslayer_chess/src/rust/api/context.dart';
@@ -3817,6 +3818,16 @@ class ChessNotifier extends StateNotifier<ChessState> {
     );
 
     _soundService.playSfx(SoundEffect.gmchanakyaComplete);
+
+    // Generate weekly report automatically if calibrated
+    final assignmentState = ref.read(assignmentProvider);
+    if (assignmentState.isCalibrated) {
+      unawaited(
+        ref.read(assignmentProvider.notifier).generateWeeklyReportFromAcademyGame(
+          savedGameId ?? "academy_game_${DateTime.now().millisecondsSinceEpoch}",
+        ),
+      );
+    }
   }
 
   Future<void> shutdown() async {

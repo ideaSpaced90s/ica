@@ -1,5 +1,8 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import 'package:chess/chess.dart' as chess_lib;
+import 'package:kingslayer_chess/src/rust/api/pgn_db.dart' as rust_pgn;
 import '../domain/models/assignment_state.dart';
 import '../data/assignment_repository.dart';
 import 'battleground_provider.dart';
@@ -10,6 +13,7 @@ import '../data/historical_cinema_repository.dart';
 import '../data/tutorial_lessons.dart';
 import '../domain/models/tutorial_lesson.dart';
 import 'store_provider.dart';
+import 'chess_provider.dart';
 import 'package:kingslayer_chess/src/rust/api/assignment.dart'
     as rust_assignment;
 import 'package:kingslayer_chess/src/rust/api/cognitive.dart' as rust_cognitive;
@@ -225,14 +229,6 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
           wisdomMessage:
               "Apprentice, complete 10 rated games to calibrate your strength. Only then can I structure your daily training.",
           dailyTasks: [
-            const DailyTask(
-              title: "DAILY ROLL CALL",
-              description: "Report to the Chess Academy for today's training.",
-              taskType: DailyTaskType.attendance,
-              targetId: "daily_checkin",
-              targetValue: 1,
-              isCompleted: false,
-            ),
             DailyTask(
               title: "Calibrate Strength",
               description:
@@ -351,19 +347,7 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
       isCompleted: false,
     );
 
-    // 3. Tutorial Task
-    final chapterId = _pickTutorialChapter(elo, tutorialState.progress.completedChapters.toList());
-    final chapterTitle = _getChapterTitle(chapterId);
-    final tutorialTask = DailyTask(
-      title: "ACADEMY SYLLABUS",
-      description: "Complete Chapter $chapterId: '$chapterTitle'. Focus on piece coordinate precision and fundamental technique.",
-      taskType: DailyTaskType.tutorial,
-      targetId: chapterId.toString(),
-      targetValue: 1,
-      isCompleted: false,
-    );
-
-    // 4. Historical Archive Task
+    // 3. Historical Archive Task
     final worstAxis = _getWorstScotomaAxis(scotomaInput);
     final cinemaRepo = HistoricalCinemaRepository();
     final cinemaGame = await cinemaRepo.pickGameForScotoma(worstAxis, state.assignedCinemaIds);
@@ -390,16 +374,7 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
       );
     }
 
-    final attendanceTask = const DailyTask(
-      title: "DAILY ROLL CALL",
-      description: "Report to the Chess Academy for today's training.",
-      taskType: DailyTaskType.attendance,
-      targetId: "daily_checkin",
-      targetValue: 1,
-      isCompleted: false,
-    );
-
-    final dailyTasks = [attendanceTask, arenaTask, puzzleTask, tutorialTask, cinemaTask];
+    final dailyTasks = [arenaTask, puzzleTask, cinemaTask];
 
     // Preserve completion status from existing tasks if it is NOT a new day
     final finalTasks = dailyTasks.map((newTask) {
@@ -454,38 +429,6 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
     );
   }
 
-  int _getTierStart(int elo) {
-    if (elo < 600) return 1;
-    if (elo < 900) return 13;
-    if (elo < 1100) return 29;
-    if (elo < 1400) return 41;
-    return 51;
-  }
-
-  int _getTierEnd(int elo) {
-    if (elo < 600) return 12;
-    if (elo < 900) return 28;
-    if (elo < 1100) return 40;
-    if (elo < 1400) return 50;
-    return 55;
-  }
-
-  int _pickTutorialChapter(int elo, List<int> completedChapters) {
-    final completedSet = completedChapters.toSet();
-    final start = _getTierStart(elo);
-    final end = _getTierEnd(elo);
-    for (int c = start; c <= end; c++) {
-      if (!completedSet.contains(c)) return c;
-    }
-    // Spill into next tier if all current tier is done
-    if (end < 55) {
-      for (int c = end + 1; c <= 55; c++) {
-        if (!completedSet.contains(c)) return c;
-      }
-    }
-    // All 55 done — loop back to tier start for revision
-    return start;
-  }
 
   String _getChapterTitle(int chapterId) {
     final lesson = TutorialLessonsDatabase.lessons.firstWhere(
@@ -600,6 +543,122 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
       // 1. Call Rust PGN analyzer
       final summary = rust_assignment.analyzeSubmittedGameRust(
         pgnContent: pgnContent,
+        scotoma: scotomaInput,
+      );
+
+      state = state.copyWith(weeklyReport: summary.fallbackReport);
+      await _saveState();
+    } catch (e) {
+      state = state.copyWith(weeklyReport: "Failed to generate review: $e");
+      await _saveState();
+    }
+  }
+
+  Future<void> generateWeeklyReportFromAcademyGame(String gameId) async {
+    // 1. Get ChessState
+    final chessState = ref.read(chessProvider);
+    final moves = chessState.recentMoves;
+    final commentary = chessState.commentaryHistory;
+
+    // 2. Reconstruct PGN with annotations/blunders
+    final pgnMoves = StringBuffer();
+    final tempGame = chess_lib.Chess.fromFEN(chessState.game.initialFen);
+
+    for (int i = 0; i < moves.length; i++) {
+      final moveSan = moves[i];
+      if (i % 2 == 0) {
+        final moveNumber = (i ~/ 2) + 1;
+        pgnMoves.write('$moveNumber. ');
+      }
+      pgnMoves.write('$moveSan ');
+
+      try {
+        tempGame.move(moveSan);
+        final fenAfterMove = tempGame.fen;
+
+        // Find if there's a blunder comment
+        final blunderComment = commentary.where(
+          (entry) => !entry.isUser && entry.associatedFen == fenAfterMove && entry.text.toLowerCase().contains('blunder'),
+        ).firstOrNull;
+
+        if (blunderComment != null) {
+          final cleanText = blunderComment.text.replaceAll(RegExp(r'\*\*.*?\*\*\n\n'), '').trim();
+          pgnMoves.write('?? {$cleanText} ');
+        } else {
+          final normalComment = commentary.where(
+            (entry) => !entry.isUser && entry.associatedFen == fenAfterMove,
+          ).firstOrNull;
+          if (normalComment != null) {
+            final cleanText = normalComment.text.replaceAll(RegExp(r'\*\*.*?\*\*\n\n'), '').trim();
+            pgnMoves.write('{$cleanText} ');
+          }
+        }
+      } catch (e) {
+        // Fallback for safety if move execution throws
+      }
+    }
+
+    // Determine the result for PGN
+    String pgnResult = "*";
+    if (chessState.game.gameOver) {
+      if (chessState.game.inCheckmate) {
+        final turn = chessState.game.turn; // turn who is next to move (so previous turn won)
+        if (turn == chess_lib.Color.WHITE) {
+          pgnResult = "0-1"; // Black won
+        } else {
+          pgnResult = "1-0"; // White won
+        }
+      } else if (chessState.game.inDraw || chessState.game.inStalemate) {
+        pgnResult = "1/2-1/2";
+      }
+    }
+
+    final header = rust_pgn.PgnGameHeader(
+      event: "Academy Game vs GM Chanakya",
+      site: "ideaSpace Academy",
+      date: DateFormat('yyyy.MM.dd').format(DateTime.now()),
+      white: chessState.isPlayerWhite ? chessState.userName : "GM Chanakya",
+      black: chessState.isPlayerWhite ? "GM Chanakya" : chessState.userName,
+      whiteElo: chessState.isPlayerWhite ? 1200 : 1400,
+      blackElo: chessState.isPlayerWhite ? 1400 : 1200,
+      result: pgnResult,
+      eco: "?",
+      opening: "?",
+    );
+
+    final fullPgn = rust_pgn.exportPgnWithHeaders(
+      header: header,
+      annotatedPgn: pgnMoves.toString().trim(),
+    );
+
+    // 3. Mark submitted and run analysis
+    state = state.copyWith(
+      weeklyReviewSubmitted: true,
+      submittedGameId: gameId,
+      weeklyReport: "GM Chanakya is reviewing your game records... Please wait.",
+    );
+    await _saveState();
+
+    try {
+      final bgState = ref.read(battlegroundProvider);
+      final scotomaInput = bgState.cachedScotoma ??
+          const rust_cognitive.ScotomaResult(
+            diagonalRetreats: 0.15,
+            horizontalSwings: 0.15,
+            knightForks: 0.15,
+            timePanic: 0.15,
+            materialGreed: 0.15,
+            tunnelVision: 0.15,
+            pinnedPieces: 0.15,
+            kingSafety: 0.15,
+            totalRatedGames: 0,
+            analyzedGames: 0,
+            skippedGames: 0,
+          );
+
+      // Call Rust PGN analyzer
+      final summary = rust_assignment.analyzeSubmittedGameRust(
+        pgnContent: fullPgn,
         scotoma: scotomaInput,
       );
 
