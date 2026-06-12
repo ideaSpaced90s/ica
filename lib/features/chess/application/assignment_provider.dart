@@ -608,6 +608,8 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
   }
 
   void checkInAttendance() {
+    final isPremium = ref.read(storeProvider).isPremium;
+    if (!isPremium) return;
     if (state.dailyTasks.isEmpty) return;
     final index = state.dailyTasks.indexWhere(
       (t) => t.taskType == DailyTaskType.attendance,

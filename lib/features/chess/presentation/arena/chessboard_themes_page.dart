@@ -17,21 +17,24 @@ class ChessboardThemesPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(chessProvider);
     final notifier = ref.read(chessProvider.notifier);
+    ref.watch(storeProvider);
+    final storeNotifier = ref.read(storeProvider.notifier);
 
     // Group definitions based on user preferences
     final groupAIds = ['classic', 'scholar', 'vector_glass', 'vector_championship'];
     final groupDIds = ['theme2', 'theme3', 'theme5', 'vector_egyptian', 'theme4', 'theme10'];
     final groupCIds = ['sprite_plasma', 'sprite_lightning', 'sprite_diamonds', 'sprite_arc', 'sprite_fairytale'];
 
-    final themesA = ThemeRegistry.allThemes.where((t) => groupAIds.contains(t.id)).toList();
-    final themesC = ThemeRegistry.allThemes.where((t) => groupCIds.contains(t.id)).toList();
-    final themesD = ThemeRegistry.allThemes.where((t) => groupDIds.contains(t.id)).toList();
+    final themesA = ThemeRegistry.allThemes.where((t) => groupAIds.contains(t.id) && storeNotifier.isBoardThemePurchased(t.id)).toList();
+    final themesC = ThemeRegistry.allThemes.where((t) => groupCIds.contains(t.id) && storeNotifier.isBoardThemePurchased(t.id)).toList();
+    final themesD = ThemeRegistry.allThemes.where((t) => groupDIds.contains(t.id) && storeNotifier.isBoardThemePurchased(t.id)).toList();
     
     // Group B contains all remaining themes
     final themesB = ThemeRegistry.allThemes.where((t) => 
       !groupAIds.contains(t.id) &&
       !groupCIds.contains(t.id) &&
-      !groupDIds.contains(t.id)
+      !groupDIds.contains(t.id) &&
+      storeNotifier.isBoardThemePurchased(t.id)
     ).toList();
 
     return AmbientScaffold(
@@ -176,16 +179,21 @@ class ChessboardThemesPage extends ConsumerWidget {
     bool isSelected,
     dynamic notifier,
   ) {
+    final isOwned = ref.watch(storeProvider.notifier).isBoardThemePurchased(theme.id);
+
     return GestureDetector(
       onTap: () {
         ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
         
-        final isOwned = ref.read(storeProvider.notifier).isBoardThemePurchased(theme.id);
         if (isOwned) {
           notifier.setBoardTheme(theme.id);
           Navigator.of(context).popUntil((route) => route.isFirst);
         } else {
-          _showGoToStoreDialog(context, ref, theme.name);
+          // Switch to Store tab, set store tab index to 1 (Themes Tab), and set highlight theme
+          ref.read(mobileNavIndexProvider.notifier).state = 10;
+          ref.read(storeTabProvider.notifier).state = 1;
+          ref.read(storeHighlightThemeIdProvider.notifier).state = theme.id;
+          Navigator.of(context).popUntil((route) => route.isFirst);
         }
       },
       child: Column(
@@ -247,6 +255,22 @@ class ChessboardThemesPage extends ConsumerWidget {
                       ),
                     ),
                   ),
+                  if (!isOwned)
+                    Positioned.fill(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.25),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: const Center(
+                          child: Icon(
+                            Icons.lock_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                    ),
                   if (isSelected)
                     Positioned(
                       top: -4,
@@ -283,46 +307,6 @@ class ChessboardThemesPage extends ConsumerWidget {
           ),
         ],
       ),
-    );
-  }
-
-  void _showGoToStoreDialog(BuildContext context, WidgetRef ref, String themeName) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: Colors.white,
-          surfaceTintColor: Colors.transparent,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Text(
-            'Theme Locked',
-            style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary),
-          ),
-          content: Text(
-            'The "$themeName" theme is a premium customization. You can purchase it or unlock all premium themes in the Store.',
-            style: GoogleFonts.inter(fontSize: 13, color: ScholarlyTheme.textPrimary, height: 1.4),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('Cancel', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted)),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                ref.read(mobileNavIndexProvider.notifier).state = 10; // Switch to Store tab
-                Navigator.of(context).popUntil((route) => route.isFirst);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: ScholarlyTheme.accentBlue,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              child: Text('Go to Store', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-            ),
-          ],
-        );
-      },
     );
   }
 }

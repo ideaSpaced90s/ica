@@ -443,3 +443,6 @@ class StoreNotifier extends StateNotifier<StoreState> {
     _checkExpirationsAndSync();
   }
 }
+
+final storeTabProvider = StateProvider<int>((ref) => 0);
+final storeHighlightThemeIdProvider = StateProvider<String?>((ref) => null);

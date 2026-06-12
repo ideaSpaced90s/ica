@@ -18,9 +18,72 @@ class StorePage extends ConsumerStatefulWidget {
   ConsumerState<StorePage> createState() => _StorePageState();
 }
 
-class _StorePageState extends ConsumerState<StorePage> {
+class _StorePageState extends ConsumerState<StorePage> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  late ScrollController _themesScrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    final initialTab = ref.read(storeTabProvider);
+    _tabController = TabController(length: 2, vsync: this, initialIndex: initialTab);
+    _tabController.addListener(() {
+      if (_tabController.indexIsChanging) return;
+      ref.read(storeTabProvider.notifier).state = _tabController.index;
+    });
+
+    _themesScrollController = ScrollController();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _themesScrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollToTheme(String themeId) {
+    final freeThemeIds = {'classic', 'scholar', 'vector_wood', 'theme3', 'sprite_fairytale'};
+    final premiumThemes = ThemeRegistry.allThemes.where((t) => !freeThemeIds.contains(t.id)).toList();
+    final index = premiumThemes.indexWhere((t) => t.id == themeId);
+    if (index == -1) return;
+
+    final screenWidth = MediaQuery.of(context).size.width;
+    final crossAxisCount = (screenWidth / 180).floor().clamp(2, 6);
+    final rowIndex = index ~/ crossAxisCount;
+
+    final gridWidth = screenWidth - 32.0;
+    final itemWidth = (gridWidth - (12.0 * (crossAxisCount - 1))) / crossAxisCount;
+    final itemHeight = itemWidth / 0.8;
+    final rowHeight = itemHeight + 12.0;
+
+    final targetOffset = 150.0 + (rowIndex * rowHeight);
+
+    if (_themesScrollController.hasClients) {
+      _themesScrollController.animateTo(
+        targetOffset.clamp(0.0, _themesScrollController.position.maxScrollExtent),
+        duration: const Duration(milliseconds: 800),
+        curve: Curves.easeOutCubic,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    ref.listen<int>(storeTabProvider, (previous, next) {
+      if (_tabController.index != next) {
+        _tabController.animateTo(next);
+      }
+    });
+
+    ref.listen<String?>(storeHighlightThemeIdProvider, (previous, next) {
+      if (next != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _scrollToTheme(next);
+        });
+      }
+    });
+
     final storeState = ref.watch(storeProvider);
     final storeNotifier = ref.read(storeProvider.notifier);
 
@@ -29,103 +92,102 @@ class _StorePageState extends ConsumerState<StorePage> {
       storeNotifier.verifyActiveSelections();
     });
 
-    return DefaultTabController(
-      length: 2,
-      child: AmbientScaffold(
-        blob1Color: const Color(0xFFE0F2FE), // Soft cyan/blue
-        blob2Color: const Color(0xFFF3E8FF), // Soft purple
-        blob3Color: const Color(0xFFFEF08A), // Warm yellow/gold
-        body: SafeArea(
-          child: Column(
-            children: [
-              // Top App Bar/Header
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'KINGSLAYER STORE',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.outfit(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1.0,
-                              color: ScholarlyTheme.textPrimary,
-                            ),
+    return AmbientScaffold(
+      blob1Color: const Color(0xFFE0F2FE), // Soft cyan/blue
+      blob2Color: const Color(0xFFF3E8FF), // Soft purple
+      blob3Color: const Color(0xFFFEF08A), // Warm yellow/gold
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Top App Bar/Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'KINGSLAYER STORE',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.outfit(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.0,
+                            color: ScholarlyTheme.textPrimary,
                           ),
-                          Text(
-                            'Subscriptions and Chessboard Customizations',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              color: ScholarlyTheme.textMuted,
-                            ),
+                        ),
+                        Text(
+                          'Subscriptions and Chessboard Customizations',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: ScholarlyTheme.textMuted,
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            // TabBar in a beautiful container
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Container(
+                height: 48,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.8), width: 1.5),
+                ),
+                child: TabBar(
+                  controller: _tabController,
+                  indicator: BoxDecoration(
+                    color: ScholarlyTheme.accentBlue,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  indicatorSize: TabBarIndicatorSize.tab,
+                  labelColor: Colors.white,
+                  unselectedLabelColor: ScholarlyTheme.textPrimary,
+                  labelStyle: GoogleFonts.outfit(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                    letterSpacing: 0.5,
+                  ),
+                  unselectedLabelStyle: GoogleFonts.outfit(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                    letterSpacing: 0.5,
+                  ),
+                  tabs: const [
+                    Tab(text: 'PLANS'),
+                    Tab(text: 'BOARD THEMES'),
                   ],
                 ),
               ),
+            ),
 
-              const SizedBox(height: 8),
+            const SizedBox(height: 12),
 
-              // TabBar in a beautiful container
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Container(
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.5),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.8), width: 1.5),
-                  ),
-                  child: TabBar(
-                    indicator: BoxDecoration(
-                      color: ScholarlyTheme.accentBlue,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    indicatorSize: TabBarIndicatorSize.tab,
-                    labelColor: Colors.white,
-                    unselectedLabelColor: ScholarlyTheme.textPrimary,
-                    labelStyle: GoogleFonts.outfit(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                      letterSpacing: 0.5,
-                    ),
-                    unselectedLabelStyle: GoogleFonts.outfit(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                      letterSpacing: 0.5,
-                    ),
-                    tabs: const [
-                      Tab(text: 'PLANS'),
-                      Tab(text: 'BOARD THEMES'),
-                    ],
-                  ),
-                ),
+            // TabBarView content
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildPlansTab(context, storeState, storeNotifier),
+                  _buildThemesTab(context, storeState, storeNotifier),
+                ],
               ),
-
-              const SizedBox(height: 12),
-
-              // TabBarView content
-              Expanded(
-                child: TabBarView(
-                  children: [
-                    _buildPlansTab(context, storeState, storeNotifier),
-                    _buildThemesTab(context, storeState, storeNotifier),
-                  ],
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -509,11 +571,13 @@ class _StorePageState extends ConsumerState<StorePage> {
 
     // Grouping themes
     final freeThemeIds = {'classic', 'scholar', 'vector_wood', 'theme3', 'sprite_fairytale'};
-
-    final freeThemes = ThemeRegistry.allThemes.where((t) => freeThemeIds.contains(t.id)).toList();
     final premiumThemes = ThemeRegistry.allThemes.where((t) => !freeThemeIds.contains(t.id)).toList();
 
+    final screenWidth = MediaQuery.of(context).size.width;
+    final crossAxisCount = (screenWidth / 180).floor().clamp(2, 6);
+
     return CustomScrollView(
+      controller: _themesScrollController,
       physics: const BouncingScrollPhysics(),
       slivers: [
         // Intro Header
@@ -528,7 +592,7 @@ class _StorePageState extends ConsumerState<StorePage> {
                 border: Border.all(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.15)),
               ),
               child: Text(
-                '🎨 Free themes are always available. Premium themes can be purchased individually or unlocked entirely with any Premium Subscription plan!',
+                '🎨 All free themes are always available in Arena Settings! Premium themes can be purchased individually below or unlocked entirely with any Premium Subscription plan!',
                 style: GoogleFonts.inter(
                   fontSize: 11,
                   fontWeight: FontWeight.w500,
@@ -540,47 +604,10 @@ class _StorePageState extends ConsumerState<StorePage> {
           ),
         ),
 
-        // Section: Free Themes Header
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Text(
-              'FREE THEMES',
-              style: GoogleFonts.outfit(
-                fontSize: 12,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 1.5,
-                color: ScholarlyTheme.textMuted,
-              ),
-            ),
-          ),
-        ),
-
-        // Grid for Free Themes
-        SliverPadding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          sliver: SliverGrid(
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 0.8,
-            ),
-            delegate: SliverChildBuilderDelegate(
-              (context, index) {
-                final theme = freeThemes[index];
-                final isSelected = theme.id == chessState.boardThemeId;
-                return _buildThemeShopCard(context, theme, true, isSelected, storeState, storeNotifier, chessNotifier);
-              },
-              childCount: freeThemes.length,
-            ),
-          ),
-        ),
-
         // Section: Premium Themes Header
         SliverToBoxAdapter(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: Text(
               'PREMIUM THEMES',
               style: GoogleFonts.outfit(
@@ -597,8 +624,8 @@ class _StorePageState extends ConsumerState<StorePage> {
         SliverPadding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           sliver: SliverGrid(
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
               crossAxisSpacing: 12,
               mainAxisSpacing: 12,
               childAspectRatio: 0.8,
@@ -632,9 +659,14 @@ class _StorePageState extends ConsumerState<StorePage> {
     dynamic chessNotifier,
   ) {
     final isOwned = isFree || storeState.isPremium || storeState.purchasedBoardThemes.contains(theme.id);
+    final highlightThemeId = ref.watch(storeHighlightThemeIdProvider);
+    final isHighlighted = theme.id == highlightThemeId;
 
     return GestureDetector(
       onTap: () {
+        if (isHighlighted) {
+          ref.read(storeHighlightThemeIdProvider.notifier).state = null;
+        }
         ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
         showDialog(
           context: context,
@@ -763,48 +795,61 @@ class _StorePageState extends ConsumerState<StorePage> {
 
               const SizedBox(height: 6),
 
-              // Action button
               SizedBox(
                 height: 28,
-                child: ElevatedButton(
-                  onPressed: () {
-                    ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                    if (isSelected) {
-                      // Do nothing
-                    } else if (isOwned) {
-                      chessNotifier.setBoardTheme(theme.id);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('🎨 Applied ${theme.name} theme!'),
-                          behavior: SnackBarBehavior.floating,
-                          backgroundColor: ScholarlyTheme.accentBlue,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                child: isOwned
+                    ? Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFDCFCE7), // Premium light green-100
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFFBBF7D0), width: 1.5), // green-200 border
                         ),
-                      );
-                    } else {
-                      _showThemePurchaseConfirmation(context, theme, storeNotifier, chessNotifier);
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: isSelected
-                        ? Colors.grey.shade400
-                        : (isOwned ? ScholarlyTheme.accentBlue : Colors.amber.shade700),
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    padding: EdgeInsets.zero,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  child: Text(
-                    isSelected ? 'APPLIED' : (isOwned ? 'APPLY' : 'BUY ₹49'),
-                    style: GoogleFonts.outfit(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.check_circle_rounded, color: Color(0xFF15803D), size: 14), // green-700
+                            const SizedBox(width: 4),
+                            Text(
+                              'OWNED',
+                              style: GoogleFonts.outfit(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF15803D), // green-700
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : BeatingWidget(
+                        enabled: isHighlighted,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            if (isHighlighted) {
+                              ref.read(storeHighlightThemeIdProvider.notifier).state = null;
+                            }
+                            ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                            _showThemePurchaseConfirmation(context, theme, storeNotifier, chessNotifier);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.amber.shade700,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            padding: EdgeInsets.zero,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: Text(
+                            'BUY ₹49',
+                            style: GoogleFonts.outfit(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      ),
               ),
             ],
           ),
@@ -1359,3 +1404,58 @@ const List<SubscriptionPlan> plans = [
     ],
   ),
 ];
+
+class BeatingWidget extends StatefulWidget {
+  final Widget child;
+  final bool enabled;
+  const BeatingWidget({super.key, required this.child, this.enabled = true});
+
+  @override
+  State<BeatingWidget> createState() => _BeatingWidgetState();
+}
+
+class _BeatingWidgetState extends State<BeatingWidget> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _animation = Tween<double>(begin: 1.0, end: 1.12).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+    if (widget.enabled) {
+      _controller.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant BeatingWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.enabled && !_controller.isAnimating) {
+      _controller.repeat(reverse: true);
+    } else if (!widget.enabled && _controller.isAnimating) {
+      _controller.stop();
+      _controller.reset();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!widget.enabled) return widget.child;
+    return ScaleTransition(
+      scale: _animation,
+      child: widget.child,
+    );
+  }
+}

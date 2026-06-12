@@ -206,277 +206,344 @@ class _ThemePreviewDialogState extends ConsumerState<ThemePreviewDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktop = screenWidth >= 750;
+
     return Dialog(
       backgroundColor: Colors.white,
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final double boardSize = constraints.maxWidth.clamp(160.0, 280.0);
-            final double squareSize = boardSize / 8;
+      insetPadding: isDesktop
+          ? const EdgeInsets.symmetric(horizontal: 40, vertical: 24)
+          : const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      child: Container(
+        constraints: BoxConstraints(
+          maxWidth: isDesktop ? 760 : 400,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+        child: isDesktop
+            ? _buildDesktopLayout(context)
+            : _buildMobileLayout(context),
+      ),
+    );
+  }
 
-            return Column(
-              mainAxisSize: MainAxisSize.min,
+  Widget _buildMobileLayout(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final double boardSize = constraints.maxWidth.clamp(160.0, 280.0);
+        final double squareSize = boardSize / 8;
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _buildHeader(showCloseButton: true),
+            const SizedBox(height: 20),
+            Center(child: _buildChessboard(boardSize, squareSize)),
+            const SizedBox(height: 16),
+            _buildMoveLogsTicker(),
+            const SizedBox(height: 24),
+            _buildFooterActions(),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildDesktopLayout(BuildContext context) {
+    const double boardSize = 380.0;
+    const double squareSize = boardSize / 8;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Left Column: Large Board & Move Ticker
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildChessboard(boardSize, squareSize),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: boardSize,
+              child: _buildMoveLogsTicker(),
+            ),
+          ],
+        ),
+        const SizedBox(width: 28),
+        // Right Column: Title, Badge, Description, Spacer, Buttons
+        Expanded(
+          child: SizedBox(
+            height: boardSize + 16 + 40, // Match the height of the left column (boardSize + spacing + ticker)
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Header
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.theme.name,
-                            style: GoogleFonts.outfit(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: ScholarlyTheme.textPrimary,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: widget.isFree
-                                  ? Colors.green.withValues(alpha: 0.1)
-                                  : ScholarlyTheme.accentBlueSoft.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              widget.isFree ? '🆓 FREE THEME' : '👑 PREMIUM THEME',
-                              style: GoogleFonts.outfit(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: widget.isFree ? Colors.green.shade700 : ScholarlyTheme.accentBlue,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close_rounded, color: ScholarlyTheme.textMuted),
-                      onPressed: () {
-                        ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                        Navigator.pop(context);
-                      },
-                    ),
-                  ],
-                ),
-                
-                const SizedBox(height: 20),
-
-                // Chessboard Stage
-                Center(
-                  child: Container(
-                    width: boardSize,
-                    height: boardSize,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.08),
-                          blurRadius: 16,
-                          spreadRadius: 2,
-                        ),
-                      ],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: Stack(
-                        children: [
-                          // Squares Grid / Custom Painters
-                          if (widget.theme.boardImagePath != null)
-                            Positioned.fill(
-                              child: Image.asset(
-                                widget.theme.boardImagePath!,
-                                fit: BoxFit.cover,
-                              ),
-                            )
-                          else
-                            for (int r = 0; r < 8; r++)
-                              for (int c = 0; c < 8; c++)
-                                Positioned(
-                                  left: c * squareSize,
-                                  top: r * squareSize,
-                                  width: squareSize,
-                                  height: squareSize,
-                                  child: Container(
-                                    color: (r + c) % 2 == 0
-                                        ? widget.theme.lightSquare
-                                        : widget.theme.darkSquare,
-                                    child: widget.theme.getSquarePainter((r + c) % 2 == 0, 0.0) != null
-                                        ? CustomPaint(
-                                            painter: widget.theme.getSquarePainter((r + c) % 2 == 0, 0.0),
-                                          )
-                                        : null,
-                                  ),
-                                ),
-
-                          // Rank Coordinates (left edge)
-                          for (int r = 0; r < 8; r++)
-                            Positioned(
-                              left: 2,
-                              top: r * squareSize + 2,
-                              child: Text(
-                                '${8 - r}',
-                                style: GoogleFonts.jetBrainsMono(
-                                  fontSize: 7,
-                                  fontWeight: FontWeight.bold,
-                                  color: r % 2 == 0
-                                      ? widget.theme.darkCoordinateColor
-                                      : widget.theme.lightCoordinateColor,
-                                ),
-                              ),
-                            ),
-
-                          // File Coordinates (bottom edge)
-                          for (int c = 0; c < 8; c++)
-                            Positioned(
-                              left: (c + 1) * squareSize - 8,
-                              top: 8 * squareSize - 10,
-                              child: Text(
-                                String.fromCharCode(97 + c),
-                                style: GoogleFonts.jetBrainsMono(
-                                  fontSize: 7,
-                                  fontWeight: FontWeight.bold,
-                                  color: c % 2 == 0
-                                      ? widget.theme.lightCoordinateColor
-                                      : widget.theme.darkCoordinateColor,
-                                ),
-                              ),
-                            ),
-
-                          // Pieces Layer (AnimatedPositioned)
-                          for (final piece in _pieces)
-                            (() {
-                              final pos = _getSquarePosition(piece.square, squareSize);
-                              return AnimatedPositioned(
-                                key: ValueKey(piece.id),
-                                duration: const Duration(milliseconds: 500),
-                                curve: Curves.easeInOut,
-                                left: pos.dx,
-                                top: pos.dy,
-                                width: squareSize,
-                                height: squareSize,
-                                child: Padding(
-                                  padding: const EdgeInsets.all(4),
-                                  child: widget.theme.buildPiece(
-                                    context,
-                                    piece.type,
-                                    piece.isWhite,
-                                    false,
-                                    0.0,
-                                  ),
-                                ),
-                              );
-                            }()),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // Move Logs Ticker
-                Container(
-                  height: 40,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Center(
-                    child: Text(
-                      _logText.isEmpty ? "Setting up board..." : _logText,
-                      style: GoogleFonts.jetBrainsMono(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: ScholarlyTheme.textPrimary,
-                      ),
-                    ),
-                  ),
-                ),
-
+                _buildHeader(showCloseButton: true),
                 const SizedBox(height: 24),
-
-                // Footer Action Buttons
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextButton(
-                        onPressed: () {
-                          ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                          Navigator.pop(context);
-                        },
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        ),
-                        child: Text(
-                          'Dismiss',
-                          style: GoogleFonts.inter(
-                            fontWeight: FontWeight.bold,
-                            color: ScholarlyTheme.textMuted,
-                          ),
-                        ),
-                      ),
+                Expanded(
+                  child: Text(
+                    'Preview the stunning animations and premium styling of the "${widget.theme.name}" theme. Click "BUY" to unlock it forever, or "APPLY" if you already own it.',
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      height: 1.5,
+                      color: ScholarlyTheme.textMuted,
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                          if (widget.isSelected) {
-                            // Already applied, do nothing
-                          } else if (widget.isOwned) {
-                            // Apply and close dialog
-                            widget.chessNotifier.setBoardTheme(widget.theme.id);
-                            Navigator.pop(context);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('🎨 Applied ${widget.theme.name} theme!'),
-                                behavior: SnackBarBehavior.floating,
-                                backgroundColor: ScholarlyTheme.accentBlue,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              ),
-                            );
-                          } else {
-                            // Show purchase confirmation
-                            _confirmPurchase(context);
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: widget.isSelected
-                              ? Colors.grey.shade400
-                              : (widget.isOwned ? ScholarlyTheme.accentBlue : Colors.amber.shade700),
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        ),
-                        child: Text(
-                          widget.isSelected ? 'APPLIED' : (widget.isOwned ? 'APPLY' : 'BUY ₹49'),
-                          style: GoogleFonts.outfit(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
+                _buildFooterActions(),
               ],
-            );
-          },
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHeader({required bool showCloseButton}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                widget.theme.name,
+                style: GoogleFonts.outfit(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: ScholarlyTheme.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: widget.isFree
+                      ? Colors.green.withValues(alpha: 0.1)
+                      : ScholarlyTheme.accentBlueSoft.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  widget.isFree ? '🆓 FREE THEME' : '👑 PREMIUM THEME',
+                  style: GoogleFonts.outfit(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: widget.isFree ? Colors.green.shade700 : ScholarlyTheme.accentBlue,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (showCloseButton)
+          IconButton(
+            icon: const Icon(Icons.close_rounded, color: ScholarlyTheme.textMuted),
+            onPressed: () {
+              ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+              Navigator.pop(context);
+            },
+          ),
+      ],
+    );
+  }
+
+  Widget _buildChessboard(double boardSize, double squareSize) {
+    return Container(
+      width: boardSize,
+      height: boardSize,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 16,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Stack(
+          children: [
+            // Squares Grid / Custom Painters
+            if (widget.theme.boardImagePath != null)
+              Positioned.fill(
+                child: Image.asset(
+                  widget.theme.boardImagePath!,
+                  fit: BoxFit.cover,
+                ),
+              )
+            else
+              for (int r = 0; r < 8; r++)
+                for (int c = 0; c < 8; c++)
+                  Positioned(
+                    left: c * squareSize,
+                    top: r * squareSize,
+                    width: squareSize,
+                    height: squareSize,
+                    child: Container(
+                      color: (r + c) % 2 == 0
+                          ? widget.theme.lightSquare
+                          : widget.theme.darkSquare,
+                      child: widget.theme.getSquarePainter((r + c) % 2 == 0, 0.0) != null
+                          ? CustomPaint(
+                              painter: widget.theme.getSquarePainter((r + c) % 2 == 0, 0.0),
+                            )
+                          : null,
+                    ),
+                  ),
+
+            // Rank Coordinates (left edge)
+            for (int r = 0; r < 8; r++)
+              Positioned(
+                left: 2,
+                top: r * squareSize + 2,
+                child: Text(
+                  '${8 - r}',
+                  style: GoogleFonts.jetBrainsMono(
+                    fontSize: 7,
+                    fontWeight: FontWeight.bold,
+                    color: r % 2 == 0
+                        ? widget.theme.darkCoordinateColor
+                        : widget.theme.lightCoordinateColor,
+                  ),
+                ),
+              ),
+
+            // File Coordinates (bottom edge)
+            for (int c = 0; c < 8; c++)
+              Positioned(
+                left: (c + 1) * squareSize - 8,
+                top: 8 * squareSize - 10,
+                child: Text(
+                  String.fromCharCode(97 + c),
+                  style: GoogleFonts.jetBrainsMono(
+                    fontSize: 7,
+                    fontWeight: FontWeight.bold,
+                    color: c % 2 == 0
+                        ? widget.theme.lightCoordinateColor
+                        : widget.theme.darkCoordinateColor,
+                  ),
+                ),
+              ),
+
+            // Pieces Layer (AnimatedPositioned)
+            for (final piece in _pieces)
+              (() {
+                final pos = _getSquarePosition(piece.square, squareSize);
+                return AnimatedPositioned(
+                  key: ValueKey(piece.id),
+                  duration: const Duration(milliseconds: 500),
+                  curve: Curves.easeInOut,
+                  left: pos.dx,
+                  top: pos.dy,
+                  width: squareSize,
+                  height: squareSize,
+                  child: Padding(
+                    padding: const EdgeInsets.all(4),
+                    child: widget.theme.buildPiece(
+                      context,
+                      piece.type,
+                      piece.isWhite,
+                      false,
+                      0.0,
+                    ),
+                  ),
+                );
+              }()),
+          ],
         ),
       ),
+    );
+  }
+
+  Widget _buildMoveLogsTicker() {
+    return Container(
+      height: 40,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Center(
+        child: Text(
+          _logText.isEmpty ? "Setting up board..." : _logText,
+          style: GoogleFonts.jetBrainsMono(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: ScholarlyTheme.textPrimary,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFooterActions() {
+    return Row(
+      children: [
+        Expanded(
+          child: TextButton(
+            onPressed: () {
+              ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+              Navigator.pop(context);
+            },
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+            child: Text(
+              'Dismiss',
+              style: GoogleFonts.inter(
+                fontWeight: FontWeight.bold,
+                color: ScholarlyTheme.textMuted,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: ElevatedButton(
+            onPressed: () {
+              ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+              if (widget.isSelected) {
+                // Already applied, do nothing
+              } else if (widget.isOwned) {
+                // Apply and close dialog
+                widget.chessNotifier.setBoardTheme(widget.theme.id);
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('🎨 Applied ${widget.theme.name} theme!'),
+                    behavior: SnackBarBehavior.floating,
+                    backgroundColor: ScholarlyTheme.accentBlue,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                );
+              } else {
+                // Show purchase confirmation
+                _confirmPurchase(context);
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: widget.isSelected
+                  ? Colors.grey.shade400
+                  : (widget.isOwned ? ScholarlyTheme.accentBlue : Colors.amber.shade700),
+              foregroundColor: Colors.white,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+            child: Text(
+              widget.isSelected ? 'APPLIED' : (widget.isOwned ? 'APPLY' : 'BUY ₹49'),
+              style: GoogleFonts.outfit(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

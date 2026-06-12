@@ -48,7 +48,7 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
     final isMobile = screenWidth < 900;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
+      if (mounted && ref.read(storeProvider).isPremium) {
         ref.read(assignmentProvider.notifier).checkInAttendance();
       }
     });
@@ -116,9 +116,7 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
           if (_showChanakyaIntro && !state.isCalibrated)
             GMChanakyaIntroOverlay(
               pageTitle: 'ASSIGNMENTS',
-              text: ref.watch(storeProvider).isPremium
-                  ? "Welcome to your Assignment Desk, Apprentice. I am GM Chanakya. This is the crucible where your daily discipline is forged. However, to construct a tailored prescription of scenarios for you, I require a baseline calibration. Complete 10 rated games in the Battleground so I can diagnose your ELO strength, playstyle biases, and cognitive scotomas. Play rated games to unlock tailored assignments."
-                  : "Welcome to your Assignment Desk, Apprentice. I am GM Chanakya. To construct a tailored prescription of daily training scenarios for you, a baseline calibration of 10 rated games is required. Note that strength calibration and daily assignments are premium features. Subscribe to Premium to begin your training.",
+              text: "Welcome to your Assignment Desk, Apprentice. I am GM Chanakya. To construct a tailored activity of daily training scenarios for you, a baseline calibration of 10 rated games is required. Complete your rated games in the Battleground so I can analyze your strength and design your personalized training program.",
               onDismiss: () {
                 ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
                 setState(() {
@@ -171,9 +169,9 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
               _buildRevisionWarningCard(state),
               const SizedBox(height: 20),
             ],
-            _buildCalendarStrip(state),
-            const SizedBox(height: 16),
-            if (state.isCalibrated && isPremium) ...[
+            if (isPremium && state.isCalibrated) ...[
+              _buildCalendarStrip(state),
+              const SizedBox(height: 16),
               _buildStreakCard(state),
               const SizedBox(height: 20),
             ],
@@ -239,7 +237,7 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
           children: [
             // Left Column (Tasks and Greetings)
             Expanded(
-              flex: 6,
+              flex: (isPremium && state.isCalibrated) ? 6 : 10,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -309,20 +307,21 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
                 ],
               ),
             ),
-            const SizedBox(width: 24),
-            // Right Column (Attendance Ledger & Streak Card)
-            Expanded(
-              flex: 4,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildCalendarStrip(state),
-                  const SizedBox(height: 16),
-                  if (state.isCalibrated && isPremium)
+            if (isPremium && state.isCalibrated) ...[
+              const SizedBox(width: 24),
+              // Right Column (Attendance Ledger & Streak Card)
+              Expanded(
+                flex: 4,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildCalendarStrip(state),
+                    const SizedBox(height: 16),
                     _buildStreakCard(state),
-                ],
+                  ],
+                ),
               ),
-            ),
+            ],
           ],
         ),
       );
