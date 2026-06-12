@@ -52,29 +52,6 @@ class _AboutUsPageState extends ConsumerState<AboutUsPage> {
         body: SafeArea(
           child: Column(
             children: [
-              // Custom Header Bar
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back_rounded, color: ScholarlyTheme.textPrimary),
-                      onPressed: () => exitToDashboardWithSidebar(context, ref),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'ABOUT ACADEMY',
-                      style: GoogleFonts.outfit(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1.5,
-                        color: ScholarlyTheme.textPrimary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
               // Pill Tab Selector
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
@@ -394,9 +371,9 @@ class _OverviewTab extends StatelessWidget {
           child: _buildPillarSection(),
         ),
         const SizedBox(height: 24),
-        _AnimatedEntryCard(
+        const _AnimatedEntryCard(
           index: 2,
-          child: _buildPersonaStrip(),
+          child: _PersonaSection(),
         ),
         const SizedBox(height: 24),
         _AnimatedEntryCard(
@@ -489,96 +466,6 @@ class _OverviewTab extends StatelessWidget {
     );
   }
 
-  Widget _buildPersonaStrip() {
-    final personas = [
-      const _PersonaMini(
-        name: 'Chanakya',
-        imagePath: 'assets/persona/gm_chanakya.png',
-        color: ScholarlyTheme.accentBlue,
-      ),
-      ...AiAvatar.avatars.map((a) => _PersonaMini(
-        name: a.name,
-        imagePath: a.imagePath,
-        color: a.color,
-      )),
-    ];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4.0),
-          child: Text(
-            '20 AI COMPANIONS & MENTORS',
-            style: GoogleFonts.outfit(
-              fontSize: 13,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 1.2,
-              color: Colors.indigo,
-            ),
-          ),
-        ),
-        const SizedBox(height: 10),
-        SizedBox(
-          height: 95,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            itemCount: personas.length,
-            itemBuilder: (context, index) {
-              final persona = personas[index];
-              return Container(
-                margin: const EdgeInsets.only(right: 14),
-                child: Column(
-                  children: [
-                    Container(
-                      width: 55,
-                      height: 55,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: persona.color.withValues(alpha: 0.4),
-                          width: 2,
-                        ),
-                      ),
-                      child: ClipOval(
-                        child: Image.asset(
-                          persona.imagePath,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => Container(
-                            color: persona.color.withValues(alpha: 0.2),
-                            child: Center(
-                              child: Text(
-                                persona.name[0],
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: persona.color,
-                                  fontSize: 18,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      persona.name,
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: ScholarlyTheme.textPrimary,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
 
   Widget _buildThemeChips() {
     final themes = [
@@ -989,7 +876,7 @@ class _TechStackTab extends StatelessWidget {
       {
         'icon': Icons.memory_rounded,
         'category': 'LOCAL CHESS ENGINE',
-        'technology': 'Stockfish 16 (Native FFI)',
+        'technology': 'Stockfish 18 (Native FFI)',
         'description': 'Runs locally via an ARMv8 optimized C++ binary (`libstockfish.so`) interacting via non-blocking standard I/O pipes.',
       },
       {
@@ -997,12 +884,6 @@ class _TechStackTab extends StatelessWidget {
         'category': 'BARE-METAL CORE',
         'technology': 'Rust & Shakmaty',
         'description': 'Executes instant move generation, threat checks, and diagnostic scotomas on 64-bit CPU masks via `flutter_rust_bridge`.',
-      },
-      {
-        'icon': Icons.cloud_done_rounded,
-        'category': 'CLOUD COGNITION',
-        'technology': 'Sarvam & Gemini AI',
-        'description': 'Generates grandmaster-style move analysis and narration on-demand, stripping thoughts dynamically.',
       },
       {
         'icon': Icons.font_download_rounded,
@@ -1368,14 +1249,380 @@ class _ContactTab extends StatelessWidget {
   }
 }
 
+class _PersonaSection extends StatefulWidget {
+  const _PersonaSection();
+
+  @override
+  State<_PersonaSection> createState() => _PersonaSectionState();
+}
+
+class _PersonaSectionState extends State<_PersonaSection> {
+  late _PersonaMini _selectedPersona;
+
+  final List<_PersonaMini> _personas = [
+    const _PersonaMini(
+      name: 'Chanakya',
+      imagePath: 'assets/persona/gm_chanakya.png',
+      color: ScholarlyTheme.accentBlue,
+      title: 'The Chess Mentor AI',
+      description: 'The academy director and mentor. Chanakya analyzes your previous games and dynamically alters his heuristic algorithms to target your diagnosed tactical and spatial weaknesses, providing real-time feedback.',
+      trait: 'Heuristic Mentoring & Cognitive Targeting',
+      strength: '400 - 3200 ELO (Adaptive)',
+    ),
+    ...AiAvatar.avatars.map((a) => _PersonaMini(
+      name: a.name,
+      imagePath: a.imagePath,
+      color: a.color,
+      title: a.title,
+      description: a.playingStyle,
+      trait: _getPersonaTrait(a.name),
+      strength: '${a.fideRatingRange} ELO',
+    )),
+  ];
+
+  static String _getPersonaTrait(String name) {
+    switch (name) {
+      case 'Sparky': return 'Frequent Blunders & Random Play';
+      case 'Pawnzy': return 'Pawn Storm Obsession';
+      case 'Coward': return 'Passive Retreats & Extreme Defense';
+      case 'Rookie': return 'Immediate Undefended Piece Captures';
+      case 'Scholar': return 'Early Scholar\'s Mate Tactics';
+      case 'Molly': return 'Closed Files & Iron Pawn Walls';
+      case 'Berserker': return 'Reckless Attacking & Early Sacrifices';
+      case 'Blaire': return 'Rapid King-side Tactical Assault';
+      case 'Python': return 'Subtle Maneuvers & Positional Squeezes';
+      case 'Gambit': return 'Chaos Inducement & Material Imbalance';
+      case 'Trapper': return 'Tricky Openings & Poisoned Pawns';
+      case 'Assassin': return 'Relentless King Hunting';
+      case 'Vala': return 'Sharp Tactical Vision & Piece Punishment';
+      case 'Magician': return 'Imaginative Attacks & Brilliant Sacrifices';
+      case 'Sentinel': return 'Subtle Positional Traps';
+      case 'Murphy': return 'Rapid Coordinated Sea-Storm Attacks';
+      case 'Titan': return 'Flawless Endgame & Constant Pressure';
+      case 'Alien': return 'Unintuitive Algorithmic Moves';
+      case 'Champ': return 'Universal Flawless Play';
+      case 'King': return 'Apex Computational Engine';
+      default: return 'Dynamic Chess Simulation';
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedPersona = _personas.first;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '20 AI COMPANIONS & MENTORS',
+                style: GoogleFonts.outfit(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.2,
+                  color: Colors.indigo,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'Tap a profile icon to inspect traits and strengths',
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  color: ScholarlyTheme.textMuted,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        
+        // Wrap representing the grid of personas
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          alignment: WrapAlignment.start,
+          children: _personas.map((persona) {
+            final isSelected = _selectedPersona.name == persona.name;
+            return GestureDetector(
+              onTap: () {
+                setState(() {
+                  _selectedPersona = persona;
+                });
+              },
+              child: MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeInOut,
+                  transform: isSelected ? Matrix4.diagonal3Values(1.1, 1.1, 1.0) : Matrix4.identity(),
+                  child: SizedBox(
+                    width: 65,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 55,
+                          height: 55,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: isSelected ? persona.color : persona.color.withValues(alpha: 0.3),
+                              width: isSelected ? 3 : 1.5,
+                            ),
+                            boxShadow: isSelected
+                                ? [
+                                    BoxShadow(
+                                      color: persona.color.withValues(alpha: 0.4),
+                                      blurRadius: 8,
+                                      spreadRadius: 1,
+                                    )
+                                  ]
+                                : [],
+                          ),
+                          child: ClipOval(
+                            child: Image.asset(
+                              persona.imagePath,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) => Container(
+                                color: persona.color.withValues(alpha: 0.2),
+                                child: Center(
+                                  child: Text(
+                                    persona.name[0],
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: persona.color,
+                                      fontSize: 18,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          persona.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.inter(
+                            fontSize: 10.5,
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                            color: isSelected ? persona.color : ScholarlyTheme.textPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+        
+        const SizedBox(height: 20),
+        
+        // Detail panel
+        AnimatedSize(
+          duration: const Duration(milliseconds: 200),
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 250),
+            child: JuicyGlassCard(
+              key: ValueKey(_selectedPersona.name),
+              padding: const EdgeInsets.all(16),
+              borderRadius: 20,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 50,
+                        height: 50,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: _selectedPersona.color.withValues(alpha: 0.4),
+                            width: 1.5,
+                          ),
+                        ),
+                        child: ClipOval(
+                          child: Image.asset(
+                            _selectedPersona.imagePath,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Container(
+                              color: _selectedPersona.color.withValues(alpha: 0.2),
+                              child: Center(
+                                child: Text(
+                                  _selectedPersona.name[0],
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: _selectedPersona.color,
+                                    fontSize: 18,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _selectedPersona.name,
+                              style: GoogleFonts.outfit(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w900,
+                                color: ScholarlyTheme.textPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              _selectedPersona.title,
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: _selectedPersona.color,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const Divider(color: Colors.white12, height: 1),
+                  const SizedBox(height: 14),
+                  
+                  // Trait & Strength Section
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.psychology_rounded,
+                                  size: 16,
+                                  color: Colors.indigo,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'PRIMARY TRAIT',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 0.8,
+                                    color: Colors.indigo,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _selectedPersona.trait,
+                              style: GoogleFonts.inter(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w600,
+                                color: ScholarlyTheme.textPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.bolt_rounded,
+                                  size: 16,
+                                  color: _selectedPersona.color,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'STRENGTH',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 0.8,
+                                    color: _selectedPersona.color,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _selectedPersona.strength,
+                              style: GoogleFonts.inter(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w600,
+                                color: ScholarlyTheme.textPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  
+                  const SizedBox(height: 14),
+                  const Divider(color: Colors.white12, height: 1),
+                  const SizedBox(height: 14),
+                  
+                  // Description/Playing Style
+                  Text(
+                    _selectedPersona.description,
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      color: ScholarlyTheme.textMuted,
+                      height: 1.45,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _PersonaMini {
   final String name;
   final String imagePath;
   final Color color;
+  final String title;
+  final String description;
+  final String trait;
+  final String strength;
 
   const _PersonaMini({
     required this.name,
     required this.imagePath,
     required this.color,
+    required this.title,
+    required this.description,
+    required this.trait,
+    required this.strength,
   });
 }

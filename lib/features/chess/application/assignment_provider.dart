@@ -42,9 +42,6 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
   }
 
   void _checkInitialCalibration() {
-    final isPremium = ref.read(storeProvider).isPremium;
-    if (!isPremium) return;
-
     if (!state.isCalibrated) {
       if (state.calibrationGamesPlayed >= 10) {
         final bgState = ref.read(battlegroundProvider);
@@ -66,9 +63,6 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
 
     // Listen to battleground provider
     ref.listen(battlegroundProvider, (previous, next) {
-      final isPremium = ref.read(storeProvider).isPremium;
-      if (!isPremium) return; // Skip if not premium
-
       if (!state.isCalibrated) {
         final currentPlayed = next.totalRatedGamesCount;
         final prevPlayed = previous?.totalRatedGamesCount ?? 0;
@@ -99,9 +93,6 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
 
     // Listen to puzzles provider
     ref.listen(puzzlesProvider, (previous, next) {
-      final isPremium = ref.read(storeProvider).isPremium;
-      if (!isPremium) return; // Skip if not premium
-
       if (state.isCalibrated) {
         final puzzleTaskIndex = state.dailyTasks.indexWhere(
           (t) => t.taskType == DailyTaskType.puzzle,
@@ -121,9 +112,6 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
 
     // Listen to tutorial provider
     ref.listen(tutorialProvider, (previous, next) {
-      final isPremium = ref.read(storeProvider).isPremium;
-      if (!isPremium) return; // Skip if not premium
-
       if (state.isCalibrated) {
         final tutorialTaskIndex = state.dailyTasks.indexWhere(
           (t) => t.taskType == DailyTaskType.tutorial,
@@ -144,9 +132,6 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
 
     // Listen to historical cinema provider
     ref.listen(historicalCinemaProvider, (previous, next) {
-      final isPremium = ref.read(storeProvider).isPremium;
-      if (!isPremium) return; // Skip if not premium
-
       if (state.isCalibrated) {
         final archiveTaskIndex = state.dailyTasks.indexWhere(
           (t) => t.taskType == DailyTaskType.historicalArchive,
@@ -225,10 +210,9 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
       final bgState = ref.read(battlegroundProvider);
 
       if (!state.isCalibrated) {
-        final isPremium = ref.read(storeProvider).isPremium;
         // Calibration Mode Tasks
         state = state.copyWith(
-          calibrationGamesPlayed: isPremium ? state.calibrationGamesPlayed : 0,
+          calibrationGamesPlayed: state.calibrationGamesPlayed,
           wisdomMessage:
               "Apprentice, complete 10 rated games to calibrate your strength. Only then can I structure your daily training.",
           dailyTasks: [
@@ -247,7 +231,7 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
               taskType: DailyTaskType.arena,
               targetId: "calibration",
               targetValue: 10,
-              isCompleted: isPremium && state.calibrationGamesPlayed >= 10,
+              isCompleted: state.calibrationGamesPlayed >= 10,
             ),
           ],
         );
@@ -608,8 +592,6 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
   }
 
   void checkInAttendance() {
-    final isPremium = ref.read(storeProvider).isPremium;
-    if (!isPremium) return;
     if (state.dailyTasks.isEmpty) return;
     final index = state.dailyTasks.indexWhere(
       (t) => t.taskType == DailyTaskType.attendance,

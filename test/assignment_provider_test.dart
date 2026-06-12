@@ -409,7 +409,7 @@ void main() {
       expect(state.goalElo, 1550);
     });
 
-    test('Does not trigger calibration if user is free', () async {
+    test('Triggers calibration even if user is free (ungated calibration)', () async {
       final container = createContainer(isPremium: false);
 
       // Trigger initialization
@@ -428,8 +428,8 @@ void main() {
       await Future.delayed(const Duration(milliseconds: 10));
 
       final state = container.read(assignmentProvider);
-      // Should remain uncalibrated since they are a free user
-      expect(state.isCalibrated, isFalse);
+      // Should now be calibrated since calibration is no longer premium gated
+      expect(state.isCalibrated, isTrue);
     });
   });
 }

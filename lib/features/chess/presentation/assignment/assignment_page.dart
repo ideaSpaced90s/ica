@@ -7,7 +7,6 @@ import '../../application/assignment_provider.dart';
 import '../../domain/models/assignment_state.dart';
 import '../../application/battleground_provider.dart';
 import '../../application/study_lab_provider.dart';
-import '../../application/store_provider.dart';
 import '../widgets/animated_check_widget.dart';
 import '../mobile_navigation_shell.dart';
 import '../widgets/ambient_scaffold.dart';
@@ -48,7 +47,7 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
     final isMobile = screenWidth < 900;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && ref.read(storeProvider).isPremium) {
+      if (mounted) {
         ref.read(assignmentProvider.notifier).checkInAttendance();
       }
     });
@@ -145,9 +144,6 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
   // TAB 1: APPRENTICE DESK (DAILY CHECKLIST)
   // ────────────────────────────────────────────────────────────────────────────
   Widget _buildDeskTab(BuildContext context, AssignmentState state, BattlegroundState bgState, bool isMobile) {
-    final storeState = ref.watch(storeProvider);
-    final isPremium = storeState.isPremium;
-
     if (isMobile) {
       return SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
@@ -155,21 +151,18 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (!isPremium) ...[
-              _buildPremiumDisclaimerCard(),
-              const SizedBox(height: 20),
-            ] else if (state.isCalibrated) ...[
+            if (state.isCalibrated) ...[
               _buildChanakyaGreeting(state),
               const SizedBox(height: 20),
             ],
-            if (state.isCalibrated && isPremium &&
+            if (state.isCalibrated &&
                 state.goalDeadline != null &&
                 DateTime.now().isAfter(state.goalDeadline!) &&
                 bgState.consolidatedRating < state.goalElo) ...[
               _buildRevisionWarningCard(state),
               const SizedBox(height: 20),
             ],
-            if (isPremium && state.isCalibrated) ...[
+            if (state.isCalibrated) ...[
               _buildCalendarStrip(state),
               const SizedBox(height: 16),
               _buildStreakCard(state),
@@ -187,7 +180,7 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
                     letterSpacing: 0.5,
                   ),
                 ),
-                if (state.isCalibrated && isPremium)
+                if (state.isCalibrated)
                   TextButton.icon(
                     icon: const Icon(Icons.refresh_rounded, size: 16),
                     label: Text("Reset", style: GoogleFonts.inter(fontSize: 11)),
@@ -198,7 +191,7 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
               ],
             ),
             const SizedBox(height: 12),
-            if (!state.isCalibrated || !isPremium)
+            if (!state.isCalibrated)
               _buildCalibrationCard(state, bgState)
             else ...[
               ListView.separated(
@@ -237,18 +230,15 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
           children: [
             // Left Column (Tasks and Greetings)
             Expanded(
-              flex: (isPremium && state.isCalibrated) ? 6 : 10,
+              flex: state.isCalibrated ? 6 : 10,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (!isPremium) ...[
-                    _buildPremiumDisclaimerCard(),
-                    const SizedBox(height: 20),
-                  ] else if (state.isCalibrated) ...[
+                  if (state.isCalibrated) ...[
                     _buildChanakyaGreeting(state),
                     const SizedBox(height: 20),
                   ],
-                  if (state.isCalibrated && isPremium &&
+                  if (state.isCalibrated &&
                       state.goalDeadline != null &&
                       DateTime.now().isAfter(state.goalDeadline!) &&
                       bgState.consolidatedRating < state.goalElo) ...[
@@ -267,7 +257,7 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
                           letterSpacing: 0.5,
                         ),
                       ),
-                      if (state.isCalibrated && isPremium)
+                      if (state.isCalibrated)
                         TextButton.icon(
                           icon: const Icon(Icons.refresh_rounded, size: 16),
                           label: Text("Reset", style: GoogleFonts.inter(fontSize: 11)),
@@ -278,7 +268,7 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
                     ],
                   ),
                   const SizedBox(height: 12),
-                  if (!state.isCalibrated || !isPremium)
+                  if (!state.isCalibrated)
                     _buildCalibrationCard(state, bgState)
                   else ...[
                     ListView.separated(
@@ -307,7 +297,7 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
                 ],
               ),
             ),
-            if (isPremium && state.isCalibrated) ...[
+            if (state.isCalibrated) ...[
               const SizedBox(width: 24),
               // Right Column (Attendance Ledger & Streak Card)
               Expanded(
@@ -328,71 +318,6 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
     }
   }
 
-  Widget _buildPremiumDisclaimerCard() {
-    return JuicyGlassCard(
-      padding: const EdgeInsets.all(16),
-      borderRadius: 16,
-      borderColor: Colors.amber.withValues(alpha: 0.3),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.amber.withValues(alpha: 0.15),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.star_rounded, color: Colors.amber, size: 24),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "PREMIUM FEATURE",
-                  style: GoogleFonts.outfit(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.amber,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  "Strength calibration and Chanakya's tailored daily assignments are premium-only features. Upgrade to unlock structured training and start calibration.",
-                  style: GoogleFonts.inter(
-                     fontSize: 12,
-                     height: 1.4,
-                     color: ScholarlyTheme.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  height: 36,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.amber,
-                      foregroundColor: Colors.black,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
-                    onPressed: () {
-                      ref.read(mobileNavIndexProvider.notifier).state = 10; // Navigate to Store page
-                    },
-                    child: Text(
-                      "Upgrade to Premium",
-                      style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildChanakyaGreeting(AssignmentState state) {
     return JuicyGlassCard(
@@ -555,8 +480,7 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
   }
 
   Widget _buildCalibrationCard(AssignmentState state, BattlegroundState bgState) {
-    final isPremium = ref.watch(storeProvider).isPremium;
-    final currentGamesCount = isPremium ? state.calibrationGamesPlayed : 0;
+    final currentGamesCount = state.calibrationGamesPlayed;
     final progress = currentGamesCount / 10.0;
     return JuicyGlassCard(
       padding: const EdgeInsets.all(20),
@@ -572,38 +496,11 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
                 "CALIBRATION",
                 style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary),
               ),
-              const Spacer(),
-              if (!isPremium)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.amber.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.amber.withValues(alpha: 0.5), width: 1),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.lock_rounded, color: Colors.amber, size: 12),
-                      const SizedBox(width: 4),
-                      Text(
-                        "PREMIUM",
-                        style: GoogleFonts.outfit(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.amber,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
             ],
           ),
           const SizedBox(height: 12),
           Text(
-            isPremium
-                ? "GM Chanakya requires a baseline of 10 rated games to identify your ELO strength, playstyle biases, and cognitive scotomas. Play rated games to unlock tailored assignments."
-                : "GM Chanakya requires a baseline of 10 rated games to identify your ELO strength, playstyle biases, and cognitive scotomas. Calibration progress starts counting once you upgrade to Premium.",
+            "GM Chanakya requires a baseline of 10 rated games to identify your ELO strength, playstyle biases, and cognitive scotomas. Play rated games to unlock tailored assignments.",
             style: GoogleFonts.inter(fontSize: 13, height: 1.5, color: ScholarlyTheme.textMuted),
           ),
           const SizedBox(height: 20),
@@ -619,7 +516,7 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
                 style: GoogleFonts.jetBrainsMono(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
-                  color: isPremium ? ScholarlyTheme.accentBlue : ScholarlyTheme.textMuted,
+                  color: ScholarlyTheme.accentBlue,
                 ),
               ),
             ],
@@ -631,7 +528,7 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
               value: progress.clamp(0.0, 1.0),
               minHeight: 8,
               backgroundColor: ScholarlyTheme.panelStroke,
-              color: isPremium ? ScholarlyTheme.accentBlue : ScholarlyTheme.textMuted,
+              color: ScholarlyTheme.accentBlue,
             ),
           ),
         ],
@@ -816,48 +713,20 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
   // TAB 3: WEEKLY REVIEW (COACH SUBMISSIONS)
   // ────────────────────────────────────────────────────────────────────────────
   Widget _buildReviewTab(BuildContext context, AssignmentState state, bool isMobile) {
-    final isPremium = ref.watch(storeProvider).isPremium;
-    if (!state.isCalibrated || !isPremium) {
+    if (!state.isCalibrated) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              if (!isPremium) ...[
-                const Icon(Icons.lock_rounded, color: Colors.amber, size: 48),
-                const SizedBox(height: 16),
-                Text(
-                  "PREMIUM FEATURE",
-                  style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.amber),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  "Weekly master review is only available for Premium subscribers.",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: ScholarlyTheme.textMuted),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.amber,
-                    foregroundColor: Colors.black,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                  onPressed: () {
-                    ref.read(mobileNavIndexProvider.notifier).state = 10; // Navigate to Store page
-                  },
-                  child: const Text("Upgrade to Premium"),
-                ),
-              ] else ...[
-                const Icon(Icons.query_stats_rounded, color: ScholarlyTheme.textMuted, size: 48),
-                const SizedBox(height: 16),
-                const Text(
-                  "Weekly review unlocks after strength calibration is completed.",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: ScholarlyTheme.textMuted),
-                ),
-              ],
+              const Icon(Icons.query_stats_rounded, color: ScholarlyTheme.textMuted, size: 48),
+              const SizedBox(height: 16),
+              const Text(
+                "Weekly review unlocks after strength calibration is completed.",
+                textAlign: TextAlign.center,
+                style: TextStyle(color: ScholarlyTheme.textMuted),
+              ),
             ],
           ),
         ),
@@ -1022,47 +891,19 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
   // TAB 4: BLUEPRINT (TARGET & PATH)
   // ────────────────────────────────────────────────────────────────────────────
   Widget _buildBlueprintTab(BuildContext context, AssignmentState state, BattlegroundState bgState, bool isMobile) {
-    final isPremium = ref.watch(storeProvider).isPremium;
-    if (!state.isCalibrated || !isPremium) {
-      return Center(
+    if (!state.isCalibrated) {
+      return const Center(
         child: Padding(
-          padding: const EdgeInsets.all(24.0),
+          padding: EdgeInsets.all(24.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              if (!isPremium) ...[
-                const Icon(Icons.lock_rounded, color: Colors.amber, size: 48),
-                const SizedBox(height: 16),
-                Text(
-                  "PREMIUM FEATURE",
-                  style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.amber),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  "The Weekly Training Blueprint is only available for Premium subscribers.",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: ScholarlyTheme.textMuted),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.amber,
-                    foregroundColor: Colors.black,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                  onPressed: () {
-                    ref.read(mobileNavIndexProvider.notifier).state = 10; // Navigate to Store page
-                  },
-                  child: const Text("Upgrade to Premium"),
-                ),
-              ] else ...[
-                const Icon(Icons.architecture_rounded, color: ScholarlyTheme.textMuted, size: 48),
-                const SizedBox(height: 16),
-                const Text(
-                  "Blueprint unlocks after calibration is completed.",
-                  style: TextStyle(color: ScholarlyTheme.textMuted),
-                ),
-              ],
+              Icon(Icons.architecture_rounded, color: ScholarlyTheme.textMuted, size: 48),
+              SizedBox(height: 16),
+              Text(
+                "Blueprint unlocks after calibration is completed.",
+                style: TextStyle(color: ScholarlyTheme.textMuted),
+              ),
             ],
           ),
         ),

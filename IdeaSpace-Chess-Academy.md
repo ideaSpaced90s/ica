@@ -226,13 +226,11 @@ The application runs a coordinated hybrid architecture across three processing l
 graph TD
     UI[Flutter UI / Dart State] <-->|FFI / flutter_rust_bridge| Rust[Bare-Metal Core / Shakmaty]
     UI <-->|STDIN / STDOUT Pipe| Stockfish[Stockfish C++ Engine / Native Binaries]
-    UI <-->|HTTPS API / Cloud| Cloud[AI Commentary / Gemini & Sarvam]
 ```
 
 1. **State & UI Layer (Flutter/Dart)**: Manages visual components, user gestures, clocks, audio, and state coordination (via Riverpod).
 2. **Computational Engine (Native Stockfish)**: An ARMv8-optimized C++ binary (`libstockfish.so`) loaded via native platform FFI. It provides fast positional evaluations and moves.
 3. **Bare-Metal Core (Rust)**: A compiled Rust library integrated via `flutter_rust_bridge`. It manages chess logic (`shakmaty`), validates moves, checks for checks/mates, compiles PGN strings, and runs the scotoma diagnostic engine.
-4. **Cloud AI Commentary (Sarvam/Gemini)**: An API layer that provides game summaries and feedback, stripping internal monologue tags (`<think>`) for clean output.
 
 ---
 
@@ -367,8 +365,7 @@ Tracks tactical slip-ups across 8 visual-spatial channels using coordinate-delta
 - **Core Framework**: Flutter (Dart 3.x)
 - **State Management**: Riverpod (for app state, game loop coordination)
 - **Local Database**: SharedPreferences (settings, themes, logs)
-- **Native Engine FFI**: Stockfish 16 (compiled C++ for Android/Windows ARMv8)
+- **Native Engine FFI**: Stockfish 18 (compiled C++ for Android/Windows ARMv8)
 - **Bare-Metal Core**: Rust + `shakmaty` library via `flutter_rust_bridge`
-- **Cloud Services**: Google Gemini & Sarvam API (for commentary generation)
 - **Typography**: Outfit, Inter, JetBrains Mono, Pirata One (loaded via Google Fonts)
 - **Platform Targets**: Android (Primary / ARMv8 optimized), Windows (Secondary)

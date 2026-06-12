@@ -22,7 +22,6 @@ class _ArenaPersonasSelectionPageState extends ConsumerState<ArenaPersonasSelect
   // Drag offsets
   double _dragDx = 0.0;
   double _dragDy = 0.0;
-  bool _isDragging = false;
 
   late AnimationController _swipeController;
   late Animation<Offset> _swipeAnimation;
@@ -89,8 +88,9 @@ class _ArenaPersonasSelectionPageState extends ConsumerState<ArenaPersonasSelect
     }
 
     setState(() {
+      _swipeController.duration = const Duration(milliseconds: 350);
       _swipeStartOffset = Offset(_dragDx, _dragDy);
-      _swipeEndOffset = Offset(forward ? -500.0 : 500.0, 0.0);
+      _swipeEndOffset = Offset(forward ? -600.0 : 600.0, 0.0);
       _swipeAnimation = Tween<Offset>(
         begin: _swipeStartOffset,
         end: _swipeEndOffset,
@@ -102,7 +102,6 @@ class _ArenaPersonasSelectionPageState extends ConsumerState<ArenaPersonasSelect
   void _handleDragUpdate(DragUpdateDetails details) {
     if (_swipeController.isAnimating) return;
     setState(() {
-      _isDragging = true;
       _dragDx += details.delta.dx;
       _dragDy += details.delta.dy;
     });
@@ -110,25 +109,46 @@ class _ArenaPersonasSelectionPageState extends ConsumerState<ArenaPersonasSelect
 
   void _handleDragEnd(DragEndDetails details) {
     if (_swipeController.isAnimating) return;
-    _isDragging = false;
 
     // Threshold to complete swipe
     const double threshold = 120.0;
-    if (_dragDx.abs() > threshold) {
-      // Swiped past threshold -> trigger swipe away
+    final double velocityDx = details.velocity.pixelsPerSecond.dx;
+    const double velocityThreshold = 800.0;
+
+    final bool isFling = velocityDx.abs() > velocityThreshold;
+    final bool isSwipePassed = _dragDx.abs() > threshold;
+
+    if (isSwipePassed || isFling) {
+      // Swiped past threshold or flung -> trigger swipe away
+      final bool swipeRight = isFling ? velocityDx > 0 : _dragDx > 0;
+      final double targetDx = swipeRight ? 600.0 : -600.0;
+      
+      // Project final dy based on current vertical velocity to make fling feel physics-aligned
+      final double velocityDy = details.velocity.pixelsPerSecond.dy;
+      final double targetDy = _dragDy + (velocityDy * 0.08);
+
+      // Adjust animation duration based on drag speed
+      final double speed = velocityDx.abs();
+      int durationMs = 350;
+      if (speed > 1000) {
+        durationMs = (600.0 / speed * 1000).clamp(180.0, 350.0).toInt();
+      }
+
       setState(() {
+        _swipeController.duration = Duration(milliseconds: durationMs);
         _swipeStartOffset = Offset(_dragDx, _dragDy);
-        _swipeEndOffset = Offset(_dragDx > 0 ? 500.0 : -500.0, _dragDy);
+        _swipeEndOffset = Offset(targetDx, targetDy);
         _swipeAnimation = Tween<Offset>(
           begin: _swipeStartOffset,
           end: _swipeEndOffset,
-        ).animate(CurvedAnimation(parent: _swipeController, curve: Curves.easeOut));
+        ).animate(CurvedAnimation(parent: _swipeController, curve: Curves.easeOutCubic));
       });
       _swipeController.forward();
     } else {
       // Return to center
       final start = Offset(_dragDx, _dragDy);
       setState(() {
+        _swipeController.duration = const Duration(milliseconds: 450);
         _swipeStartOffset = start;
         _swipeEndOffset = Offset.zero;
         _swipeAnimation = Tween<Offset>(
@@ -146,15 +166,9 @@ class _ArenaPersonasSelectionPageState extends ConsumerState<ArenaPersonasSelect
     final notifier = ref.read(chessProvider.notifier);
 
     final currentAvatar = AiAvatar.avatars[_currentIndex];
-    final nextIndex = (_currentIndex + 1) % AiAvatar.avatars.length;
-    final nextAvatar = AiAvatar.avatars[nextIndex];
 
     final isUpSelected = state.engineLevel == currentAvatar.id;
     final isDownSelected = state.bottomAvatarId == currentAvatar.id;
-
-    // Maintain global keys to animate flips per persona card
-    _cardKeys.putIfAbsent(currentAvatar.id, () => GlobalKey<FlippableCardState>());
-    _cardKeys.putIfAbsent(nextAvatar.id, () => GlobalKey<FlippableCardState>());
 
     final bool isWide = MediaQuery.of(context).size.width > 720;
 
@@ -201,7 +215,6 @@ class _ArenaPersonasSelectionPageState extends ConsumerState<ArenaPersonasSelect
                   _buildWideLayout(
                     context: context,
                     currentAvatar: currentAvatar,
-                    nextAvatar: nextAvatar,
                     isUpSelected: isUpSelected,
                     isDownSelected: isDownSelected,
                     notifier: notifier,
@@ -210,7 +223,6 @@ class _ArenaPersonasSelectionPageState extends ConsumerState<ArenaPersonasSelect
                   _buildNarrowLayout(
                     context: context,
                     currentAvatar: currentAvatar,
-                    nextAvatar: nextAvatar,
                     isUpSelected: isUpSelected,
                     isDownSelected: isDownSelected,
                     notifier: notifier,
@@ -226,7 +238,6 @@ class _ArenaPersonasSelectionPageState extends ConsumerState<ArenaPersonasSelect
   Widget _buildWideLayout({
     required BuildContext context,
     required AiAvatar currentAvatar,
-    required AiAvatar nextAvatar,
     required bool isUpSelected,
     required bool isDownSelected,
     required dynamic notifier,
@@ -266,59 +277,12 @@ class _ArenaPersonasSelectionPageState extends ConsumerState<ArenaPersonasSelect
             Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Container(
-                  constraints: const BoxConstraints(
-                    maxWidth: 360,
-                    maxHeight: 440,
-                  ),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    clipBehavior: Clip.none,
-                    children: [
-                      // Background card (Next Card Preview)
-                      if (!_swipeController.isAnimating && !_isDragging)
-                        Transform.translate(
-                          offset: const Offset(0, 16),
-                          child: Transform.scale(
-                            scale: 0.94,
-                            child: Opacity(
-                              opacity: 0.5,
-                              child: _buildStaticCard(nextAvatar),
-                            ),
-                          ),
-                        ),
-                      
-                      // Top Draggable/Swipable Card
-                      AnimatedBuilder(
-                        animation: _swipeAnimation,
-                        builder: (context, child) {
-                          final offset = _swipeController.isAnimating
-                              ? _swipeAnimation.value
-                              : Offset(_dragDx, _dragDy);
-                          
-                          // Calculate rotation angle based on drag/swipe displacement
-                          final rotationAngle = (offset.dx / 300) * (math.pi / 16);
-
-                          return Transform.translate(
-                            offset: offset,
-                            child: Transform.rotate(
-                              angle: rotationAngle,
-                              child: child,
-                            ),
-                          );
-                        },
-                        child: GestureDetector(
-                          onPanUpdate: _handleDragUpdate,
-                          onPanEnd: _handleDragEnd,
-                          child: FlippableCard(
-                            key: _cardKeys[currentAvatar.id],
-                            front: _buildCardFront(currentAvatar, isUpSelected, isDownSelected),
-                            back: _buildCardBack(currentAvatar),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                _buildCardStack(
+                  maxWidth: 360,
+                  maxHeight: 440,
+                  currentAvatar: currentAvatar,
+                  isUpSelected: isUpSelected,
+                  isDownSelected: isDownSelected,
                 ),
                 const SizedBox(height: 24),
                 // Center details title badge
@@ -381,7 +345,6 @@ class _ArenaPersonasSelectionPageState extends ConsumerState<ArenaPersonasSelect
   Widget _buildNarrowLayout({
     required BuildContext context,
     required AiAvatar currentAvatar,
-    required AiAvatar nextAvatar,
     required bool isUpSelected,
     required bool isDownSelected,
     required dynamic notifier,
@@ -392,59 +355,14 @@ class _ArenaPersonasSelectionPageState extends ConsumerState<ArenaPersonasSelect
           // Card Stack Area
           Expanded(
             child: Center(
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 24),
-                constraints: const BoxConstraints(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: _buildCardStack(
                   maxWidth: 380,
                   maxHeight: 460,
-                ),
-                child: Stack(
-                  alignment: Alignment.center,
-                  clipBehavior: Clip.none,
-                  children: [
-                    // Background card (Next Card Preview)
-                    if (!_swipeController.isAnimating && !_isDragging)
-                      Transform.translate(
-                        offset: const Offset(0, 16),
-                        child: Transform.scale(
-                          scale: 0.94,
-                          child: Opacity(
-                            opacity: 0.5,
-                            child: _buildStaticCard(nextAvatar),
-                          ),
-                        ),
-                      ),
-                    
-                    // Top Draggable/Swipable Card
-                    AnimatedBuilder(
-                      animation: _swipeAnimation,
-                      builder: (context, child) {
-                        final offset = _swipeController.isAnimating
-                            ? _swipeAnimation.value
-                            : Offset(_dragDx, _dragDy);
-                        
-                        // Calculate rotation angle based on drag/swipe displacement
-                        final rotationAngle = (offset.dx / 300) * (math.pi / 16);
-
-                        return Transform.translate(
-                          offset: offset,
-                          child: Transform.rotate(
-                            angle: rotationAngle,
-                            child: child,
-                          ),
-                        );
-                      },
-                      child: GestureDetector(
-                        onPanUpdate: _handleDragUpdate,
-                        onPanEnd: _handleDragEnd,
-                        child: FlippableCard(
-                          key: _cardKeys[currentAvatar.id],
-                          front: _buildCardFront(currentAvatar, isUpSelected, isDownSelected),
-                          back: _buildCardBack(currentAvatar),
-                        ),
-                      ),
-                    ),
-                  ],
+                  currentAvatar: currentAvatar,
+                  isUpSelected: isUpSelected,
+                  isDownSelected: isDownSelected,
                 ),
               ),
             ),
@@ -537,6 +455,103 @@ class _ArenaPersonasSelectionPageState extends ConsumerState<ArenaPersonasSelect
             ),
           ),
           const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCardStack({
+    required double maxWidth,
+    required double maxHeight,
+    required AiAvatar currentAvatar,
+    required bool isUpSelected,
+    required bool isDownSelected,
+  }) {
+    final int L = AiAvatar.avatars.length;
+    final double currentDx = _swipeController.isAnimating ? _swipeAnimation.value.dx : _dragDx;
+    final bool isMovingRight = currentDx > 0;
+    
+    final int midIndex = isMovingRight
+        ? (_currentIndex - 1 + L) % L
+        : (_currentIndex + 1) % L;
+        
+    final int bottomIndex = isMovingRight
+        ? (_currentIndex - 2 + L) % L
+        : (_currentIndex + 2) % L;
+
+    final midAvatar = AiAvatar.avatars[midIndex];
+    final bottomAvatar = AiAvatar.avatars[bottomIndex];
+
+    // Transition progress: 150 px for full transition of background cards
+    final double progress = (currentDx.abs() / 150.0).clamp(0.0, 1.0);
+
+    // Ensure keys are tracked
+    _cardKeys.putIfAbsent(currentAvatar.id, () => GlobalKey<FlippableCardState>());
+    _cardKeys.putIfAbsent(midAvatar.id, () => GlobalKey<FlippableCardState>());
+    _cardKeys.putIfAbsent(bottomAvatar.id, () => GlobalKey<FlippableCardState>());
+
+    return Container(
+      constraints: BoxConstraints(
+        maxWidth: maxWidth,
+        maxHeight: maxHeight,
+      ),
+      child: Stack(
+        alignment: Alignment.center,
+        clipBehavior: Clip.none,
+        children: [
+          // 1. Bottom Card
+          Transform.translate(
+            offset: Offset(0.0, 32.0 - (16.0 * progress)),
+            child: Transform.scale(
+              scale: 0.88 + (0.06 * progress),
+              child: Opacity(
+                opacity: 0.2 + (0.3 * progress),
+                child: _buildStaticCard(bottomAvatar),
+              ),
+            ),
+          ),
+
+          // 2. Middle Card
+          Transform.translate(
+            offset: Offset(0.0, 16.0 * (1.0 - progress)),
+            child: Transform.scale(
+              scale: 0.94 + (0.06 * progress),
+              child: Opacity(
+                opacity: 0.5 + (0.5 * progress),
+                child: _buildStaticCard(midAvatar),
+              ),
+            ),
+          ),
+
+          // 3. Top Card (Interactive/Draggable/Swipable)
+          AnimatedBuilder(
+            animation: _swipeAnimation,
+            builder: (context, child) {
+              final offset = _swipeController.isAnimating
+                  ? _swipeAnimation.value
+                  : Offset(_dragDx, _dragDy);
+              
+              // Calculate rotation angle based on drag/swipe displacement
+              final rotationAngle = (offset.dx / 300) * (math.pi / 16);
+
+              return Transform.translate(
+                offset: offset,
+                child: Transform.rotate(
+                  angle: rotationAngle,
+                  child: child,
+                ),
+              );
+            },
+            child: GestureDetector(
+              onPanUpdate: _handleDragUpdate,
+              onPanEnd: _handleDragEnd,
+              child: FlippableCard(
+                key: _cardKeys[currentAvatar.id],
+                front: _buildCardFront(currentAvatar, isUpSelected, isDownSelected),
+                back: _buildCardBack(currentAvatar),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -690,6 +705,8 @@ class _ArenaPersonasSelectionPageState extends ConsumerState<ArenaPersonasSelect
   // Frontend of the persona card
   Widget _buildCardFront(AiAvatar avatar, bool isUpActive, bool isDownActive) {
     final isLightColor = avatar.color.computeLuminance() > 0.6;
+    final double currentDx = _swipeController.isAnimating ? _swipeAnimation.value.dx : _dragDx;
+    final double progress = (currentDx.abs() / 120.0).clamp(0.0, 1.0);
     
     return Container(
       decoration: BoxDecoration(
@@ -827,6 +844,40 @@ class _ArenaPersonasSelectionPageState extends ConsumerState<ArenaPersonasSelect
                 ),
               ),
             ),
+
+            // Tinder-style stamp overlays
+            if (progress > 0.02)
+              Positioned(
+                top: 48,
+                left: currentDx > 0 ? 24 : null,
+                right: currentDx > 0 ? null : 24,
+                child: Transform.rotate(
+                  angle: currentDx > 0 ? -0.2 : 0.2,
+                  child: Opacity(
+                    opacity: progress,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: currentDx > 0 ? const Color(0xFFF59E0B) : const Color(0xFF10B981),
+                          width: 3.5,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        color: Colors.black.withValues(alpha: 0.15),
+                      ),
+                      child: Text(
+                        currentDx > 0 ? 'PREV' : 'NEXT',
+                        style: GoogleFonts.outfit(
+                          color: currentDx > 0 ? const Color(0xFFF59E0B) : const Color(0xFF10B981),
+                          fontSize: 24,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 2,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -1060,6 +1111,11 @@ class FlippableCardState extends State<FlippableCard> with SingleTickerProviderS
           // Calculate blur magnitude: peaks at midpoint (angle = pi/2, controller.value = 0.5)
           final double blurVal = math.sin(_controller.value * math.pi) * 6.0;
 
+          // 3D Lift/Elevation values
+          final liftProgress = math.sin(_controller.value * math.pi);
+          final scaleVal = 1.0 + (liftProgress * 0.05);
+          final yOffset = -liftProgress * 15.0;
+
           Widget cardContent = isFront
               ? widget.front
               : Transform(
@@ -1074,13 +1130,16 @@ class FlippableCardState extends State<FlippableCard> with SingleTickerProviderS
               child: cardContent,
             );
           }
-
           return Transform(
             transform: Matrix4.identity()
               ..setEntry(3, 2, 0.001) // perspective distortion
+              ..translateByDouble(0.0, yOffset, 0.0, 1.0) // lift card vertically
               ..rotateY(angle),
             alignment: Alignment.center,
-            child: cardContent,
+            child: Transform.scale(
+              scale: scaleVal, // scale up slightly to simulate lifting
+              child: cardContent,
+            ),
           );
         },
       ),
