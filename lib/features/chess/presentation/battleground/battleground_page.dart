@@ -94,10 +94,10 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
       _wasVisible = false;
     }
 
-    // One-time Rated Caution Popup, only show if this page/tab is currently active/visible to the user and the Chanakya intro has been seen/dismissed
-    if (isVisible && !showIntro && !_hasShownRatedCaution) {
+    // One-time Rated Caution Popup, only show if this page/tab is currently active/visible to the user, the Chanakya intro has been seen/dismissed, and no active match is configured
+    if (isVisible && !showIntro && !_hasShownRatedCaution && state.activeRatedMatchId == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
-        if (mounted && !_hasShownRatedCaution) {
+        if (mounted && !_hasShownRatedCaution && state.activeRatedMatchId == null) {
           setState(() => _hasShownRatedCaution = true);
           final isReady = await _showRatedCautionDialog(context);
           if (isReady && context.mounted) {

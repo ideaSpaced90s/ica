@@ -12,6 +12,7 @@ class DailyTask {
   final DailyTaskType taskType;
   final String targetId;
   final int targetValue;
+  final int currentValue;
   final bool isCompleted;
 
   const DailyTask({
@@ -20,6 +21,7 @@ class DailyTask {
     required this.taskType,
     required this.targetId,
     required this.targetValue,
+    this.currentValue = 0,
     this.isCompleted = false,
   });
 
@@ -29,6 +31,7 @@ class DailyTask {
     DailyTaskType? taskType,
     String? targetId,
     int? targetValue,
+    int? currentValue,
     bool? isCompleted,
   }) {
     return DailyTask(
@@ -37,6 +40,7 @@ class DailyTask {
       taskType: taskType ?? this.taskType,
       targetId: targetId ?? this.targetId,
       targetValue: targetValue ?? this.targetValue,
+      currentValue: currentValue ?? this.currentValue,
       isCompleted: isCompleted ?? this.isCompleted,
     );
   }
@@ -47,6 +51,7 @@ class DailyTask {
     'taskType': taskType.name,
     'targetId': targetId,
     'targetValue': targetValue,
+    'currentValue': currentValue,
     'isCompleted': isCompleted,
   };
 
@@ -60,6 +65,7 @@ class DailyTask {
       ),
       targetId: json['targetId'] as String,
       targetValue: json['targetValue'] as int,
+      currentValue: json['currentValue'] as int? ?? 0,
       isCompleted: json['isCompleted'] as bool? ?? false,
     );
   }

@@ -15,6 +15,12 @@ import '../../services/chess_sound_service.dart';
 import '../widgets/gm_chanakya_intro_overlay.dart';
 import '../../application/chess_provider.dart';
 
+import 'dart:ui';
+import '../../application/onboarding_provider.dart';
+import '../../application/historical_cinema_provider.dart';
+import '../../application/tutorial_provider.dart';
+import '../academy/historical_cinema_page.dart';
+
 class AssignmentPage extends ConsumerStatefulWidget {
   const AssignmentPage({super.key});
 
@@ -123,17 +129,7 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
               },
             )
           else if (state.newlyCompletedTaskIndex >= 0)
-            Positioned(
-              bottom: 24,
-              left: 24,
-              right: 24,
-              child: JuicyCompletionBanner(
-                task: state.dailyTasks[state.newlyCompletedTaskIndex],
-                onDismiss: () {
-                  ref.read(assignmentProvider.notifier).clearCompletionAnimation();
-                },
-              ),
-            ),
+            _buildCelebrationOverlay(context, state.dailyTasks[state.newlyCompletedTaskIndex]),
         ],
       ),
     );
@@ -614,7 +610,43 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
                     task.description,
                     style: GoogleFonts.inter(fontSize: 11, color: ScholarlyTheme.textMuted),
                   ),
-                  if (!task.isCompleted) _buildHintChip(task),
+                  // Progress display
+                  if (!task.isCompleted &&
+                      (task.taskType == DailyTaskType.puzzle ||
+                          task.taskType == DailyTaskType.arena ||
+                          task.taskType == DailyTaskType.historicalArchive))
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6.0),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(2),
+                              child: LinearProgressIndicator(
+                                value: task.targetValue > 0 ? (task.currentValue / task.targetValue) : 0.0,
+                                backgroundColor: ScholarlyTheme.panelStroke.withValues(alpha: 0.3),
+                                valueColor: AlwaysStoppedAnimation<Color>(color),
+                                minHeight: 4,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            "${task.currentValue}/${task.targetValue}",
+                            style: GoogleFonts.inter(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: color,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  if (!task.isCompleted) ...[
+                    _buildHintChip(task),
+                    const SizedBox(height: 8),
+                    _buildActionButton(context, task),
+                  ],
                 ],
               ),
             ),
@@ -630,6 +662,108 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
     );
   }
 
+  Widget _buildActionButton(BuildContext context, DailyTask task) {
+    String label = "";
+    IconData icon = Icons.play_arrow_rounded;
+    Color buttonColor = ScholarlyTheme.accentBlue;
+
+    switch (task.taskType) {
+      case DailyTaskType.arena:
+        label = "LAUNCH COMBAT";
+        icon = Icons.sports_esports_rounded;
+        buttonColor = Colors.cyan;
+        break;
+      case DailyTaskType.puzzle:
+        label = "SOLVE PUZZLES";
+        icon = Icons.extension_rounded;
+        buttonColor = ScholarlyTheme.realGold;
+        break;
+      case DailyTaskType.tutorial:
+        label = "START LESSON";
+        icon = Icons.menu_book_rounded;
+        buttonColor = Colors.purpleAccent;
+        break;
+      case DailyTaskType.historicalArchive:
+        label = "STUDY CINEMA";
+        icon = Icons.history_edu_rounded;
+        buttonColor = ScholarlyTheme.accentGold;
+        break;
+      case DailyTaskType.attendance:
+        return const SizedBox.shrink();
+    }
+
+    return ElevatedButton.icon(
+      onPressed: () => _handleTaskAction(context, task),
+      icon: Icon(icon, size: 14, color: Colors.white),
+      label: Text(
+        label,
+        style: GoogleFonts.outfit(
+          fontSize: 10.5,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.5,
+          color: Colors.white,
+        ),
+      ),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: buttonColor,
+        elevation: 0,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        minimumSize: const Size(0, 32),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+    );
+  }
+
+  void _handleTaskAction(BuildContext context, DailyTask task) {
+    ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
+
+    switch (task.taskType) {
+      case DailyTaskType.arena:
+        ref.read(battlegroundProvider.notifier).launchAssignmentMatch(
+          avatarId: task.targetId,
+          baseTime: const Duration(minutes: 10),
+          increment: Duration.zero,
+        );
+        ref.read(mobileNavIndexProvider.notifier).state = 2; // Battleground tab
+        break;
+      case DailyTaskType.puzzle:
+        ref.read(mobileNavIndexProvider.notifier).state = 4; // Puzzles tab
+        break;
+      case DailyTaskType.tutorial:
+        final chapterId = int.tryParse(task.targetId);
+        if (chapterId != null) {
+          ref.read(tutorialProvider.notifier).loadChapter(chapterId);
+          ref.read(showChapterSelectionProvider.notifier).state = false;
+          ref.read(mobileNavIndexProvider.notifier).state = 7; // Tutorial tab
+        }
+        break;
+      case DailyTaskType.historicalArchive:
+        final cinemaGames = ref.read(historicalCinemaProvider).games;
+        final gameId = int.tryParse(task.targetId);
+        if (gameId != null && cinemaGames.isNotEmpty) {
+          final matchedGame = cinemaGames.firstWhere(
+            (g) => g.id == gameId,
+            orElse: () => cinemaGames.first,
+          );
+          ref.read(historicalCinemaProvider.notifier).selectGame(matchedGame);
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const HistoricalCinemaPage(),
+            ),
+          );
+        } else {
+          // Fallback to Academy tab if games not loaded
+          ref.read(mobileNavIndexProvider.notifier).state = 3; 
+        }
+        break;
+      case DailyTaskType.attendance:
+        break;
+    }
+  }
+
   Widget _buildHintChip(DailyTask task) {
     String text = "";
     switch (task.taskType) {
@@ -637,7 +771,7 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
         text = "Completed automatically upon entering the Assignment Desk.";
         break;
       case DailyTaskType.arena:
-        text = "Go to Arena tab — win recorded automatically";
+        text = "Complete pre-configured rated game in Battleground";
         break;
       case DailyTaskType.puzzle:
         text = "Go to Puzzles tab — solve 3 puzzles on target axis";
@@ -646,7 +780,7 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
         text = "Go to Academy — complete the prescribed chapter";
         break;
       case DailyTaskType.historicalArchive:
-        text = "Go to Academy → Historical Cinema — watch at least 5 moves";
+        text = "Go to Academy → Historical Cinema — watch until the final move";
         break;
     }
 
@@ -667,6 +801,173 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
             color: ScholarlyTheme.textMuted,
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildCelebrationOverlay(BuildContext context, DailyTask task) {
+    final title = task.title.toUpperCase();
+    final description = task.description;
+
+    return Positioned.fill(
+      child: Stack(
+        children: [
+          // Blurred Darkened Backdrop
+          Positioned.fill(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 8.0, sigmaY: 8.0),
+              child: Container(
+                color: Colors.black.withValues(alpha: 0.65),
+              ),
+            ),
+          ),
+
+          // Central Card Info
+          Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 420),
+                decoration: BoxDecoration(
+                  color: ScholarlyTheme.panelBase.withValues(alpha: 0.96),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: ScholarlyTheme.accentGold.withValues(alpha: 0.45),
+                    width: 1.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: ScholarlyTheme.accentGold.withValues(alpha: 0.15),
+                      blurRadius: 30,
+                      spreadRadius: 2,
+                    ),
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.3),
+                      blurRadius: 15,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: ScholarlyTheme.accentGold.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.military_tech_rounded,
+                        color: ScholarlyTheme.accentGold,
+                        size: 48,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      "ASSIGNMENT COMPLETE",
+                      style: GoogleFonts.outfit(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        color: ScholarlyTheme.accentGold,
+                        letterSpacing: 1.0,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      "Apprentice, you have successfully completed the assignment:",
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: ScholarlyTheme.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: ScholarlyTheme.panelStroke.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: ScholarlyTheme.panelStroke.withValues(alpha: 0.5),
+                          width: 1,
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          Text(
+                            title,
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.outfit(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: ScholarlyTheme.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            description,
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              color: ScholarlyTheme.textMuted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      "\"Discipline is the forge of masters. Continue your path with diligence.\"",
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.outfit(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        fontStyle: FontStyle.italic,
+                        color: ScholarlyTheme.realGold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      "— GM Chanakya",
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: ScholarlyTheme.textMuted,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: () {
+                        ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                        ref.read(assignmentProvider.notifier).clearCompletionAnimation();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: ScholarlyTheme.accentGold,
+                        foregroundColor: Colors.black,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
+                        elevation: 4,
+                      ),
+                      child: Text(
+                        "PROCEED",
+                        style: GoogleFonts.outfit(
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

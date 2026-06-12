@@ -76,6 +76,34 @@ class _HistoricalCinemaPageState extends ConsumerState<HistoricalCinemaPage> {
     final notifier = ref.read(historicalCinemaProvider.notifier);
     final soundService = ref.read(chessSoundServiceProvider);
 
+    ref.listen<HistoricalCinemaState>(historicalCinemaProvider, (previous, next) {
+      final oldGame = previous?.activeGame;
+      final newGame = next.activeGame;
+      if (newGame == null) return;
+      
+      // If we switched games, don't play chess move sounds, just reset/ignore
+      if (oldGame?.id != newGame.id) {
+        return;
+      }
+      
+      final oldIdx = previous?.currentMoveIndex ?? 0;
+      final newIdx = next.currentMoveIndex;
+      
+      if (newIdx > oldIdx) {
+        // Player advanced forward
+        final moveIndex = newIdx - 1;
+        if (moveIndex >= 0 && moveIndex < newGame.moves.length) {
+          final moveSan = newGame.moves[moveIndex];
+          _playSanMoveSound(moveSan, soundService);
+        }
+      } else if (newIdx < oldIdx) {
+        // Player stepped backward
+        if (newIdx > 0) {
+          soundService.playSfx(SoundEffect.move);
+        }
+      }
+    });
+
     final game = state.activeGame;
     if (game == null) {
       return const AmbientScaffold(
@@ -389,7 +417,6 @@ class _HistoricalCinemaPageState extends ConsumerState<HistoricalCinemaPage> {
             tooltip: "Previous Move",
             onPressed: state.currentMoveIndex > 0
                 ? () {
-                    soundService.playSfx(SoundEffect.move);
                     notifier.previousMove();
                   }
                 : null,
@@ -427,7 +454,6 @@ class _HistoricalCinemaPageState extends ConsumerState<HistoricalCinemaPage> {
             tooltip: "Next Move",
             onPressed: state.activeGame != null && state.currentMoveIndex < state.activeGame!.moves.length
                 ? () {
-                    soundService.playSfx(SoundEffect.move);
                     notifier.nextMove();
                   }
                 : null,
@@ -671,5 +697,20 @@ class _HistoricalCinemaPageState extends ConsumerState<HistoricalCinemaPage> {
         },
       ),
     );
+  }
+
+  void _playSanMoveSound(String san, ChessSoundService soundService) {
+    final cleanSan = san.toUpperCase();
+    if (cleanSan.contains('O-O') || cleanSan.contains('0-0')) {
+      soundService.playSfx(SoundEffect.castle);
+    } else if (cleanSan.contains('+') || cleanSan.contains('#')) {
+      soundService.playSfx(SoundEffect.check);
+    } else if (cleanSan.contains('=')) {
+      soundService.playSfx(SoundEffect.promote);
+    } else if (cleanSan.contains('X')) {
+      soundService.playSfx(SoundEffect.capture);
+    } else {
+      soundService.playSfx(SoundEffect.move);
+    }
   }
 }

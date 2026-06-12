@@ -94,7 +94,20 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
           if (arenaTaskIndex != -1) {
             final task = state.dailyTasks[arenaTaskIndex];
             if (next.activeOpponent?.id == task.targetId && !task.isCompleted) {
-              _markTaskCompleted(arenaTaskIndex);
+              final newProgress = task.currentValue + 1;
+              final isTaskCompleted = newProgress >= task.targetValue;
+              
+              final updated = List<DailyTask>.from(state.dailyTasks);
+              updated[arenaTaskIndex] = task.copyWith(
+                currentValue: newProgress,
+                isCompleted: isTaskCompleted,
+              );
+              
+              state = state.copyWith(
+                dailyTasks: updated,
+                newlyCompletedTaskIndex: isTaskCompleted ? arenaTaskIndex : -1,
+              );
+              _saveState();
             }
           }
         }
@@ -109,11 +122,27 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
         );
         if (puzzleTaskIndex != -1) {
           final task = state.dailyTasks[puzzleTaskIndex];
-          // Check if solvedCount matches target value
-          if (next.solvedCount >= task.targetValue && !task.isCompleted) {
+          if (!task.isCompleted) {
             final axisName = next.activeAxis?.name;
             if (axisName == task.targetId) {
-              _markTaskCompleted(puzzleTaskIndex);
+              final prevSolved = previous?.solvedCount ?? 0;
+              if (next.solvedCount > prevSolved) {
+                final solvedDiff = next.solvedCount - prevSolved;
+                final newProgress = (task.currentValue + solvedDiff).clamp(0, task.targetValue);
+                final isTaskCompleted = newProgress >= task.targetValue;
+                
+                final updated = List<DailyTask>.from(state.dailyTasks);
+                updated[puzzleTaskIndex] = task.copyWith(
+                  currentValue: newProgress,
+                  isCompleted: isTaskCompleted,
+                );
+                
+                state = state.copyWith(
+                  dailyTasks: updated,
+                  newlyCompletedTaskIndex: isTaskCompleted ? puzzleTaskIndex : -1,
+                );
+                _saveState();
+              }
             }
           }
         }
@@ -151,8 +180,23 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
           if (!task.isCompleted) {
             final activeGame = next.activeGame;
             if (activeGame != null && activeGame.id.toString() == task.targetId) {
-              if (next.currentMoveIndex >= task.targetValue) {
-                _markTaskCompleted(archiveTaskIndex);
+              final currentProgress = next.currentMoveIndex;
+              final maxProgress = currentProgress > task.currentValue ? currentProgress : task.currentValue;
+              final newProgress = maxProgress.clamp(0, task.targetValue);
+              final isTaskCompleted = newProgress >= task.targetValue;
+              
+              if (newProgress != task.currentValue) {
+                final updated = List<DailyTask>.from(state.dailyTasks);
+                updated[archiveTaskIndex] = task.copyWith(
+                  currentValue: newProgress,
+                  isCompleted: isTaskCompleted,
+                );
+                
+                state = state.copyWith(
+                  dailyTasks: updated,
+                  newlyCompletedTaskIndex: isTaskCompleted ? archiveTaskIndex : -1,
+                );
+                _saveState();
               }
             }
           }
@@ -307,6 +351,15 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
       );
     }
 
+    // Calculate ELO gap and dynamic Arena target value
+    final eloGap = state.goalElo - elo;
+    final int dynamicArenaGames;
+    if (eloGap <= 0) {
+      dynamicArenaGames = 1;
+    } else {
+      dynamicArenaGames = (eloGap ~/ 40 + 1).clamp(1, 5);
+    }
+
     // 1. Arena Task
     final arenaRoutineTask = routine.tasks.firstWhere(
       (t) => t.taskType == rust_assignment.ChanakyaTaskType.arena,
@@ -320,10 +373,11 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
     );
     final arenaTask = DailyTask(
       title: arenaRoutineTask.title,
-      description: arenaRoutineTask.description,
+      description: "${arenaRoutineTask.description} (Complete $dynamicArenaGames game${dynamicArenaGames > 1 ? 's' : ''})",
       taskType: DailyTaskType.arena,
       targetId: arenaRoutineTask.targetId,
-      targetValue: arenaRoutineTask.targetValue,
+      targetValue: dynamicArenaGames,
+      currentValue: 0,
       isCompleted: false,
     );
 
@@ -344,6 +398,7 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
       taskType: DailyTaskType.puzzle,
       targetId: puzzleRoutineTask.targetId,
       targetValue: 3, // Force target value to 3
+      currentValue: 0,
       isCompleted: false,
     );
 
@@ -355,12 +410,14 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
     int cinemaGameId = -1;
     if (cinemaGame != null) {
       cinemaGameId = cinemaGame.id;
+      final totalMoves = cinemaGame.moves.length;
       cinemaTask = DailyTask(
         title: "HISTORICAL ARCHIVE: ${cinemaGame.event}",
-        description: "${cinemaGame.white} vs ${cinemaGame.black} (${cinemaGame.year}) — ${cinemaGame.educationalTheme}. Open in Analysis to study.",
+        description: "${cinemaGame.white} vs ${cinemaGame.black} (${cinemaGame.year}) — ${cinemaGame.educationalTheme}. Study until the final move.",
         taskType: DailyTaskType.historicalArchive,
         targetId: cinemaGame.id.toString(),
-        targetValue: 5, // 5 moves navigated to count as "studied"
+        targetValue: totalMoves,
+        currentValue: 0,
         isCompleted: false,
       );
     } else {
@@ -369,19 +426,26 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
         description: "Open any historical master game in Analysis to study and analyze key patterns.",
         taskType: DailyTaskType.historicalArchive,
         targetId: "-1",
-        targetValue: 5,
+        targetValue: 20,
+        currentValue: 0,
         isCompleted: false,
       );
     }
 
     final dailyTasks = [arenaTask, puzzleTask, cinemaTask];
 
-    // Preserve completion status from existing tasks if it is NOT a new day
+    // Preserve completion status and progress from existing tasks if it is NOT a new day
     final finalTasks = dailyTasks.map((newTask) {
       if (!isNewDay) {
         final existingIndex = state.dailyTasks.indexWhere((t) => t.taskType == newTask.taskType);
         if (existingIndex != -1) {
-          return newTask.copyWith(isCompleted: state.dailyTasks[existingIndex].isCompleted);
+          final existing = state.dailyTasks[existingIndex];
+          return newTask.copyWith(
+            currentValue: existing.currentValue,
+            isCompleted: existing.isCompleted,
+            targetValue: existing.targetValue,
+            description: existing.description,
+          );
         }
       }
       return newTask;
@@ -398,20 +462,24 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
       final tutorialIndex = finalTasks.indexWhere(
         (t) => t.taskType == DailyTaskType.tutorial,
       );
-      if (tutorialIndex != -1) {
-        final revWorstAxis = _getWorstScotomaAxis(scotomaInput);
-        final revChapterId = _mapScotomaToBasicChapter(revWorstAxis);
-        final revChapterTitle = _getChapterTitle(revChapterId);
+      final revWorstAxis = _getWorstScotomaAxis(scotomaInput);
+      final revChapterId = _mapScotomaToBasicChapter(revWorstAxis);
+      final revChapterTitle = _getChapterTitle(revChapterId);
+      
+      final revisionTask = DailyTask(
+        title: "Basic Revision",
+        description:
+            "Your target deadline has passed and your ELO is below target. GM Chanakya demands you revise Chapter $revChapterId: '$revChapterTitle'.",
+        taskType: DailyTaskType.tutorial,
+        targetId: revChapterId.toString(),
+        targetValue: 1,
+        isCompleted: false,
+      );
 
-        finalTasks[tutorialIndex] = DailyTask(
-          title: "Basic Revision",
-          description:
-              "Your target deadline has passed and your ELO is below target. GM Chanakya demands you revise Chapter $revChapterId: '$revChapterTitle'.",
-          taskType: DailyTaskType.tutorial,
-          targetId: revChapterId.toString(),
-          targetValue: 1,
-          isCompleted: false,
-        );
+      if (tutorialIndex != -1) {
+        finalTasks[tutorialIndex] = revisionTask;
+      } else {
+        finalTasks.add(revisionTask);
       }
       wisdom =
           "Apprentice, your target deadline has passed but you remain below the target ELO of ${state.goalElo}. I have revised your syllabus to focus on basic moves revision. Repetition is the mother of wisdom.";

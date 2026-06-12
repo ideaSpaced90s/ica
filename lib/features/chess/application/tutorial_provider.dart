@@ -196,6 +196,7 @@ class TutorialNotifier extends StateNotifier<TutorialState> {
       animatedBoard.load(boardToUse.fen);
       animatedBoard.move({'from': from, 'to': to, 'promotion': 'q'});
       boardToUse = animatedBoard;
+      _playBoardMoveSound(boardToUse);
     }
 
     String mentorDialogue = firstStep.dialogue;
@@ -272,6 +273,7 @@ class TutorialNotifier extends StateNotifier<TutorialState> {
       newBoard.load(boardToUse.fen);
       newBoard.move({'from': from, 'to': to, 'promotion': 'q'});
       boardToUse = newBoard;
+      _playBoardMoveSound(boardToUse);
     }
 
     state = state.copyWith(
@@ -362,10 +364,6 @@ class TutorialNotifier extends StateNotifier<TutorialState> {
     }
 
     if (isExpected) {
-      // Inspect piece on target destination square to track capture status beforehand
-      final targetPiece = state.board.get(to);
-      final isCapture = targetPiece != null;
-
       // Extract promotion piece: 
       // 1. From the user's attempt if provided
       // 2. Otherwise from the lesson's expectedMove if it has one
@@ -389,7 +387,7 @@ class TutorialNotifier extends StateNotifier<TutorialState> {
           );
         }
         
-        _sounds.playSfx(isCapture ? SoundEffect.capture : SoundEffect.move);
+        _playBoardMoveSound(state.board);
 
         // Advance to next setup after brief visual celebration delay
         Future.delayed(const Duration(milliseconds: 1500), () {
@@ -485,6 +483,41 @@ class TutorialNotifier extends StateNotifier<TutorialState> {
   void _cancelHesitationTimer() {
     _hesitationTimer?.cancel();
     _hesitationTimer = null;
+  }
+
+  void _playBoardMoveSound(chess_lib.Chess board) {
+    if (board.history.isEmpty) return;
+
+    if (board.in_check) {
+      _sounds.playSfx(SoundEffect.check);
+      return;
+    }
+
+    final lastState = board.history.last;
+    final lastMove = lastState.move;
+
+    if (lastMove.promotion != null) {
+      _sounds.playSfx(SoundEffect.promote);
+      return;
+    }
+
+    final pieceType = lastMove.piece.toString().toLowerCase();
+    bool isCastle = false;
+    if (pieceType == 'k') {
+      final fromFile = lastMove.from % 8;
+      final toFile = lastMove.to % 8;
+      if ((fromFile - toFile).abs() == 2) {
+        isCastle = true;
+      }
+    }
+
+    if (isCastle) {
+      _sounds.playSfx(SoundEffect.castle);
+    } else if (lastMove.captured != null) {
+      _sounds.playSfx(SoundEffect.capture);
+    } else {
+      _sounds.playSfx(SoundEffect.move);
+    }
   }
 
   void _autosave() {

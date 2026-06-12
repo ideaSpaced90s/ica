@@ -1383,9 +1383,68 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
         );
       }
     }
+  }
 
-    // Sound effects disabled in Battleground
-    // _soundService.playSfx(SoundEffect.uiClick);
+  void launchAssignmentMatch({
+    required String avatarId,
+    required Duration baseTime,
+    required Duration increment,
+  }) {
+    _clockTimer?.cancel();
+    _engineMoveTimer?.cancel();
+    _engineMoveTimer = null;
+    _stopClockTimer();
+
+    final opponent = AiAvatar.getAvatar(avatarId);
+    
+    // Play as White for the daily assignment
+    final forcedPlayerWhite = DateTime.now().isAfter(DateTime(2000));
+    final initialGame = ChessGame(isChess960: false);
+    final aiMovesFirst = !forcedPlayerWhite;
+
+    state = state.copyWith(
+      game: initialGame,
+      lastMove: null,
+      recentMoves: const [],
+      uciMoves: const [],
+      analysis: const {},
+      previousEvaluation: 0.0,
+      currentEvaluation: 0.0,
+      isEngineThinking: aiMovesFirst && state.servicesStarted && state.engineReady,
+      isPlayerWhite: forcedPlayerWhite,
+      isBoardFlipped: !forcedPlayerWhite,
+      whiteTimeLeft: baseTime,
+      blackTimeLeft: baseTime,
+      baseTimeDuration: baseTime,
+      incrementDuration: increment,
+      clockStarted: true,
+      activeClockSide: _clockWhite,
+      threatenedSquares: const [],
+      moveAnimation: null,
+      isPaused: false,
+      viewingMoveIndex: null,
+      isGameOverDismissed: false,
+      isPromoting: false,
+      promotionSource: null,
+      promotionDestination: null,
+      isTimeOut: false,
+      premoveFrom: null,
+      premoveTo: null,
+      activeOpponent: opponent,
+      activeRatedMatchId: DateTime.now().millisecondsSinceEpoch.toString(), // Mark active rated match
+    );
+
+    _startClockTicker();
+
+    if (aiMovesFirst) {
+      unawaited(
+        ensureGameServicesStarted(analyzeCurrentPosition: true).then((_) {
+          if (!_isDisposed && state.engineReady && _isAiTurn()) {
+            state = state.copyWith(isEngineThinking: true);
+          }
+        }),
+      );
+    }
   }
 
   void startGame() {
