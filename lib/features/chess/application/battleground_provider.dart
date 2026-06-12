@@ -440,13 +440,21 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
 
     // Check for active rated match ID found on boot (unfair exit loss registration)
     if (s.activeRatedMatchId != null) {
+      final matchId = s.activeRatedMatchId!;
       debugPrint(
-        'BattlegroundNotifier: Active rated match ID found on boot: ${s.activeRatedMatchId}. Registering unfair exit loss.',
+        'BattlegroundNotifier: Active rated match ID found on boot: $matchId. Registering unfair exit loss.',
       );
+
+      // Clear the activeRatedMatchId immediately from state and disk first.
+      // This guarantees that any subsequent async step or developer hot restart
+      // will not see the stale match ID again, preventing a phantom exit loop.
+      state = state.copyWith(activeRatedMatchId: null);
+      await _saveSettings();
+
       await _updateRating(0.0);
 
       final entry = SavedGameEntry(
-        id: s.activeRatedMatchId!,
+        id: matchId,
         savedAt: DateTime.now(),
         fen: chess_lib.Chess.DEFAULT_POSITION,
         recentMoves: const [],
@@ -462,8 +470,6 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
         result: 'L',
       );
       await _savedGameRepository.save(entry);
-      state = state.copyWith(activeRatedMatchId: null);
-      await _saveSettings();
 
       // reload ledger
       final freshLedger = await _performanceLedgerRepository.listEntries();
@@ -738,7 +744,7 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
 
     if (moveMade) {
       final actualPromo = move.length > 4 ? move[4] : '';
-      _onMoveCompleted('$from$to$actualPromo');
+      unawaited(_onMoveCompleted('$from$to$actualPromo'));
     } else {
       state = state.copyWith(moveAnimation: null);
     }
@@ -846,7 +852,7 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
     }
 
     final wasClockStarted = state.clockStarted;
-    _onMoveCompleted('$from$to');
+    unawaited(_onMoveCompleted('$from$to'));
 
     if (!wasClockStarted) {
       state = state.copyWith(clockStarted: true);
@@ -889,7 +895,7 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
     );
   }
 
-  void _onMoveCompleted(String moveLabel) {
+  Future<void> _onMoveCompleted(String moveLabel) async {
     final updatedMoves = state.game.moveHistoryLabels();
     final updatedUciMoves = [...state.uciMoves, moveLabel];
     final isWhiteTurn = state.game.turn == chess_lib.Color.WHITE;
@@ -948,7 +954,7 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
 
     if (state.game.gameOver) {
       state = state.copyWith(activeRatedMatchId: null);
-      _saveSettings();
+      await _saveSettings(); // Must be awaited — guarantees null is on disk before any interruption
 
       String? result;
       if (state.game.inCheckmate) {
@@ -964,7 +970,7 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
         state = state.copyWith(
           activeRatedMatchId: DateTime.now().millisecondsSinceEpoch.toString(),
         );
-        _saveSettings();
+        await _saveSettings();
       }
     }
 
@@ -1256,7 +1262,7 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
 
     if (moveMade) {
       final wasClockStarted = state.clockStarted;
-      _onMoveCompleted('$from$to${promotionPiece.toLowerCase()}');
+      unawaited(_onMoveCompleted('$from$to${promotionPiece.toLowerCase()}'));
       if (!wasClockStarted) {
         state = state.copyWith(clockStarted: true);
       }
@@ -1359,6 +1365,8 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
       isTimeOut: false,
       premoveFrom: null,
       premoveTo: null,
+      // Clear any stale match ID so a fresh game never inherits a ghost ID
+      activeRatedMatchId: null,
     );
 
     _autoSelectRatedOpponent();
@@ -1451,7 +1459,7 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
             clockStarted: false,
             activeClockSide: null,
           );
-          _handleClockTimeout(_clockWhite);
+          unawaited(_handleClockTimeout(_clockWhite));
           return;
         }
         state = state.copyWith(whiteTimeLeft: next);
@@ -1466,7 +1474,7 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
             clockStarted: false,
             activeClockSide: null,
           );
-          _handleClockTimeout(_clockBlack);
+          unawaited(_handleClockTimeout(_clockBlack));
           return;
         }
         state = state.copyWith(blackTimeLeft: next);
@@ -1484,7 +1492,7 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
     // Heartbeat haptics disabled in Battleground for snappiness
   }
 
-  void _handleClockTimeout(String side) {
+  Future<void> _handleClockTimeout(String side) async {
     state = state.copyWith(
       clockStarted: false,
       activeClockSide: null,
@@ -1497,13 +1505,13 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
 
     // Apply loss/win to ELO
     final score = humanWon ? 1.0 : 0.0;
-    _updateRating(score);
+    await _updateRating(score);
 
     state = state.copyWith(activeRatedMatchId: null);
-    _saveSettings();
+    await _saveSettings();
 
     final result = humanWon ? 'W' : 'L';
-    saveCurrentGame(resultOverride: result);
+    await saveCurrentGame(resultOverride: result);
 
     // Timeout sound disabled in Battleground
   }

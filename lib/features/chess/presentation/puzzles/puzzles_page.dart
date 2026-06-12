@@ -39,7 +39,7 @@ class _PuzzlesPageState extends ConsumerState<PuzzlesPage> {
       final currentIndex = ref.read(mobileNavIndexProvider);
       if (currentIndex == 4 && !ref.read(puzzlesProvider).isPuzzleMode) {
         if (!_checkPuzzleLimitAndUpsell(context, ref)) {
-          ref.read(mobileNavIndexProvider.notifier).state = 0; // Redirect to Home
+          ref.read(mobileNavIndexProvider.notifier).state = 0; // Redirect to Dashboard
           return;
         }
         ref.read(storeProvider.notifier).recordPuzzle();
@@ -466,7 +466,7 @@ class _PuzzlesPageState extends ConsumerState<PuzzlesPage> {
     ref.listen<int>(mobileNavIndexProvider, (previous, current) {
       if (current == 4 && !ref.read(puzzlesProvider).isPuzzleMode) {
         if (!_checkPuzzleLimitAndUpsell(context, ref)) {
-          ref.read(mobileNavIndexProvider.notifier).state = 0; // Redirect to Home
+          ref.read(mobileNavIndexProvider.notifier).state = 0; // Redirect to Dashboard
           return;
         }
         ref.read(storeProvider.notifier).recordPuzzle();

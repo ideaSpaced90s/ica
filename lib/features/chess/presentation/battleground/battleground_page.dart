@@ -66,7 +66,7 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
         state == AppLifecycleState.inactive ||
         state == AppLifecycleState.detached) {
       final bgState = ref.read(battlegroundProvider);
-      if (bgState.recentMoves.isNotEmpty && !bgState.game.gameOver) {
+      if (bgState.activeRatedMatchId != null) {
         ref.read(battlegroundProvider.notifier).resignRatedGame();
       }
     }
@@ -115,7 +115,7 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
       canPop: false,
       onPopInvokedWithResult: (bool didPop, Object? result) async {
         if (didPop) return;
-        final isMatchActive = state.recentMoves.isNotEmpty && !state.game.gameOver;
+        final isMatchActive = state.activeRatedMatchId != null;
         if (isMatchActive) {
           final resigned = await showRatedExitDialog(context);
           if (resigned == true) {
@@ -512,7 +512,7 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
   }
 
   Widget _buildRatedActionRow(BuildContext context, WidgetRef ref, BattlegroundState state) {
-    final isMatchActive = state.recentMoves.isNotEmpty && !state.game.gameOver;
+    final isMatchActive = state.activeRatedMatchId != null;
 
     return FittedBox(
       fit: BoxFit.scaleDown,
@@ -871,7 +871,7 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
         content: Column(mainAxisSize: MainAxisSize.min, children: [
           const Text('Welcome to the Battleground.', textAlign: TextAlign.center),
           const SizedBox(height: 16),
-          Text('Every match played here is recorded for your rating and the same will be displayed in the home page. Resigning or abandoning a game prematurely will negatively impact your ELO rating. Proceed if you can completly dedicate focus and time.', textAlign: TextAlign.center, style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 12, height: 1.6)),
+          Text('Every match played here is recorded for your rating and the same will be displayed in the Dashboard. Resigning or abandoning a game prematurely will negatively impact your ELO rating. Proceed if you can completly dedicate focus and time.', textAlign: TextAlign.center, style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 12, height: 1.6)),
         ]),
         actions: [
           Padding(

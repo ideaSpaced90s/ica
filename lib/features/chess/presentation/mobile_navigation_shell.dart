@@ -39,7 +39,7 @@ class MobileNavigationShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final currentIndex = ref.watch(mobileNavIndexProvider);
     final bgState = ref.watch(battlegroundProvider);
-    final isBgMatchActive = currentIndex == 2 && bgState.recentMoves.isNotEmpty && !bgState.game.gameOver;
+    final isBgMatchActive = currentIndex == 2 && bgState.activeRatedMatchId != null;
 
     final academyState = ref.watch(chessProvider);
     final isAcademyMatchActive = currentIndex == 3 && academyState.recentMoves.isNotEmpty && !academyState.game.gameOver;
@@ -71,7 +71,7 @@ class MobileNavigationShell extends ConsumerWidget {
     String getTitle() {
       switch (currentIndex) {
         case 0:
-          return 'HOME';
+          return 'DASHBOARD';
         case 1:
           return 'ARENA';
         case 2:
@@ -133,7 +133,7 @@ class MobileNavigationShell extends ConsumerWidget {
 
                 final isBattleground = currentIndex == 2;
                 final bgState = ref.read(battlegroundProvider);
-                final isMatchActive = isBattleground && bgState.recentMoves.isNotEmpty && !bgState.game.gameOver;
+                final isMatchActive = isBattleground && bgState.activeRatedMatchId != null;
                 
                 if (isMatchActive) {
                   final resigned = await showRatedExitDialog(context);
@@ -449,10 +449,10 @@ class _MobileSidebarDrawer extends ConsumerWidget {
             child: ListView(
               padding: const EdgeInsets.symmetric(vertical: 8.0),
               children: [
-                // Top Group: Home
+                // Top Group: Dashboard
                 _DrawerTile(
-                  label: 'Home',
-                  icon: Icons.home_rounded,
+                  label: 'Dashboard',
+                  icon: Icons.space_dashboard_rounded,
                   isSelected: currentIndex == 0,
                   onTap: () {
                     _navigate(ref, context, 0);

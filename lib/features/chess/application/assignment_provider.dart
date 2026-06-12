@@ -31,6 +31,14 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
     final loaded = await _repository.loadAssignment();
     state = loaded;
 
+    // Sync calibration progress from battleground on startup if uncalibrated
+    if (!state.isCalibrated) {
+      final bgState = ref.read(battlegroundProvider);
+      if (bgState.totalRatedGamesCount > state.calibrationGamesPlayed) {
+        state = state.copyWith(calibrationGamesPlayed: bgState.totalRatedGamesCount);
+      }
+    }
+
     // Check daily reset on load
     await checkDailyReset();
 
@@ -65,11 +73,9 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
     ref.listen(battlegroundProvider, (previous, next) {
       if (!state.isCalibrated) {
         final currentPlayed = next.totalRatedGamesCount;
-        final prevPlayed = previous?.totalRatedGamesCount ?? 0;
-        if (currentPlayed > prevPlayed) {
-          final newCount = state.calibrationGamesPlayed + (currentPlayed - prevPlayed);
-          state = state.copyWith(calibrationGamesPlayed: newCount);
-          if (newCount >= 10) {
+        if (currentPlayed > state.calibrationGamesPlayed) {
+          state = state.copyWith(calibrationGamesPlayed: currentPlayed);
+          if (currentPlayed >= 10) {
             // Unlocked calibration!
             _unlockCalibration(next.consolidatedRating);
           }

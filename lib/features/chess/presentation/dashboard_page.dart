@@ -387,6 +387,10 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                 _buildGameModesCard(),
               ],
             ),
+            if (bgState.totalWinningStreak > 0) ...[
+              const SizedBox(height: 32),
+              _buildWinStreakBanner(bgState),
+            ],
             const SizedBox(height: 32),
             _buildSectionHeader(
               'RECENT WINS',
@@ -448,6 +452,10 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
             ),
           ],
         ),
+        if (bgState.totalWinningStreak > 0) ...[
+          const SizedBox(height: 32),
+          _buildWinStreakBanner(bgState),
+        ],
         const SizedBox(height: 32),
         _buildSectionHeader(
           'RECENT WINS',
@@ -671,13 +679,6 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
             children: [
               _buildConsolidatedEloCard(bgState),
               _buildTotalMatchesCard(bgState),
-              if (bgState.totalWinningStreak > 0)
-                _buildHeaderMetricCard(
-                  title: 'WIN STREAK',
-                  value: '${bgState.totalWinningStreak}',
-                  color: Colors.deepOrangeAccent,
-                  icon: Icons.local_fire_department_rounded,
-                ),
               _buildGameModesCard(),
             ],
           );
@@ -987,82 +988,146 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
     );
   }
 
-  Widget _buildHeaderMetricCard({
-    required String title,
-    required String value,
-    required Color color,
-    required IconData icon,
-  }) {
-    return SizedBox(
-      width: 200,
-      height: 208,
-      child: HoverScaleEffect(
-        child: JuicyGlassCard(
-          borderRadius: 20,
-          borderColor: color,
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(7),
-                    decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(icon, color: color, size: 18),
+
+  Widget _buildWinStreakBanner(BattlegroundState bgState) {
+    return HoverScaleEffect(
+      child: JuicyGlassCard(
+        borderRadius: 24,
+        borderColor: Colors.deepOrangeAccent.withValues(alpha: 0.6),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+        backgroundColor: Colors.white.withValues(alpha: 0.45),
+        shadows: [
+          BoxShadow(
+            color: Colors.deepOrangeAccent.withValues(alpha: 0.08),
+            blurRadius: 24,
+            spreadRadius: 2,
+          ),
+        ],
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isNarrow = constraints.maxWidth < 600;
+
+            final mainStreakInfo = Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.deepOrangeAccent.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.deepOrangeAccent.withValues(alpha: 0.2),
+                        blurRadius: 12,
+                        spreadRadius: 1,
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      title,
+                  child: const Icon(
+                    Icons.local_fire_department_rounded,
+                    color: Colors.deepOrangeAccent,
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'WIN STREAK',
                       style: GoogleFonts.outfit(
                         color: ScholarlyTheme.textPrimary,
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: FontWeight.w900,
-                        letterSpacing: 0.6,
+                        letterSpacing: 1.5,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${bgState.totalWinningStreak} GAMES ON FIRE',
+                      style: GoogleFonts.outfit(
+                        color: Colors.deepOrangeAccent,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            );
+
+            final specificStreaks = Wrap(
+              spacing: 12,
+              runSpacing: 8,
+              children: [
+                if (bgState.bulletStreak > 0)
+                  _buildSubStreakPill('BULLET', bgState.bulletStreak, Colors.cyan),
+                if (bgState.blitzStreak > 0)
+                  _buildSubStreakPill('BLITZ', bgState.blitzStreak, Colors.orangeAccent),
+                if (bgState.rapidStreak > 0)
+                  _buildSubStreakPill('RAPID', bgState.rapidStreak, ScholarlyTheme.accentBlue),
+              ],
+            );
+
+            if (isNarrow) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  mainStreakInfo,
+                  if (bgState.bulletStreak > 0 || bgState.blitzStreak > 0 || bgState.rapidStreak > 0) ...[
+                    const SizedBox(height: 16),
+                    specificStreaks,
+                  ],
                 ],
-              ),
-              const Spacer(),
-              Center(
-                child: Text(
-                  value,
-                  style: GoogleFonts.outfit(
-                    color: ScholarlyTheme.textPrimary,
-                    fontSize: 40,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-              ),
-              const Spacer(),
-              Container(
-                height: 4,
-                width: 40,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Live Performance',
-                style: GoogleFonts.inter(
-                  color: ScholarlyTheme.textMuted,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
+              );
+            }
+
+            return Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                mainStreakInfo,
+                specificStreaks,
+              ],
+            );
+          },
         ),
+      ),
+    );
+  }
+
+  Widget _buildSubStreakPill(String mode, int streak, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: color.withValues(alpha: 0.25),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: color,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            '$mode: $streak 🔥',
+            style: GoogleFonts.jetBrainsMono(
+              color: ScholarlyTheme.textPrimary,
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
       ),
     );
   }

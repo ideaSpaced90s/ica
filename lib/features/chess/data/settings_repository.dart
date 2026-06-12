@@ -152,7 +152,7 @@ class AppSettings {
     int? bulletElo,
     int? blitzElo,
     int? rapidElo,
-    int? lastRatedGameTimestampMs,
+    Object? lastRatedGameTimestampMs = const Object(),
     int? recalibrationGamesRemaining,
     int? decayIntervalsApplied,
     int? totalRatedGamesCount,
@@ -175,7 +175,7 @@ class AppSettings {
     double? rapidDominance,
     String? userName,
     String? userAvatarPath,
-    String? activeRatedMatchId,
+    Object? activeRatedMatchId = const Object(),
   }) {
     return AppSettings(
       boardThemeId: boardThemeId ?? this.boardThemeId,
@@ -201,7 +201,9 @@ class AppSettings {
       bulletElo: bulletElo ?? this.bulletElo,
       blitzElo: blitzElo ?? this.blitzElo,
       rapidElo: rapidElo ?? this.rapidElo,
-      lastRatedGameTimestampMs: lastRatedGameTimestampMs ?? this.lastRatedGameTimestampMs,
+      lastRatedGameTimestampMs: identical(lastRatedGameTimestampMs, const Object())
+          ? this.lastRatedGameTimestampMs
+          : lastRatedGameTimestampMs as int?,
       recalibrationGamesRemaining: recalibrationGamesRemaining ?? this.recalibrationGamesRemaining,
       decayIntervalsApplied: decayIntervalsApplied ?? this.decayIntervalsApplied,
       totalRatedGamesCount: totalRatedGamesCount ?? this.totalRatedGamesCount,
@@ -224,7 +226,9 @@ class AppSettings {
       rapidDominance: rapidDominance ?? this.rapidDominance,
       userName: userName ?? this.userName,
       userAvatarPath: userAvatarPath ?? this.userAvatarPath,
-      activeRatedMatchId: activeRatedMatchId ?? this.activeRatedMatchId,
+      activeRatedMatchId: identical(activeRatedMatchId, const Object())
+          ? this.activeRatedMatchId
+          : activeRatedMatchId as String?,
     );
   }
 

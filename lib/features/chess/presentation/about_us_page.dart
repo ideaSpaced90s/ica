@@ -581,8 +581,8 @@ class _ManualTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final manualItems = [
       {
-        'icon': Icons.home_rounded,
-        'title': '🏠 Home Dashboard',
+        'icon': Icons.space_dashboard_rounded,
+        'title': '🏠 Dashboard',
         'description': 'Your personal chess cockpit. Tracks live ELO rating progress, tactical dominance indexes, and coordinates opening/endgame mastery metrics via a visual multi-axis radar chart.',
         'bullets': [
           'Track your current rating and view your first 10 placement matches progress.',
@@ -592,7 +592,7 @@ class _ManualTab extends StatelessWidget {
       },
       {
         'icon': Icons.assignment_turned_in_rounded,
-        'title': '📋 Daily Assignments',
+        'title': '📋 Assignment',
         'description': 'Targeted exercises curated by GM Chanakya. Serves custom puzzle sequences and specialized board conversion setups designed to patch cognitive gaps.',
         'bullets': [
           'Receive structured training recommendations every 24 hours.',
@@ -602,7 +602,7 @@ class _ManualTab extends StatelessWidget {
       },
       {
         'icon': Icons.sports_esports_rounded,
-        'title': '⚔️ Rated Arena',
+        'title': '⚔️ Arena',
         'description': 'Our primary tournament lobby. Matches you against 20 custom AI opponents calibrated from 400 to 3200+ FIDE ELO. Supports Chess 960 and variable time formats.',
         'bullets': [
           'Select your opponent profile, rating difficulty, color, and timer rules.',
@@ -612,7 +612,7 @@ class _ManualTab extends StatelessWidget {
       },
       {
         'icon': Icons.emoji_events_rounded,
-        'title': '🏟️ Battleground Sandbox',
+        'title': '🏟️ Battleground',
         'description': 'A zero-pressure analytical arena. Test new strategies against the native Stockfish engine with support for on-board evaluation meters and robot simulation modes.',
         'bullets': [
           'Analyze mid-game board dynamics using the liquid centipawn evaluation bar.',
@@ -622,7 +622,7 @@ class _ManualTab extends StatelessWidget {
       },
       {
         'icon': Icons.school_rounded,
-        'title': '🏫 Chanakya Academy',
+        'title': '🏫 Academy',
         'description': 'Interactive play with our mentor AI. Instead of playing pure engine moves, Chanakya dynamically alters his heuristic algorithms to target your diagnosed blindspots.',
         'bullets': [
           'Experience a playstyle designed to exploit your weaknesses.',
@@ -632,7 +632,7 @@ class _ManualTab extends StatelessWidget {
       },
       {
         'icon': Icons.extension_rounded,
-        'title': '🧩 Targeted Puzzles',
+        'title': '🧩 Puzzles',
         'description': 'Tactical drills sorted by visual channel. Serves specific geometric patterns (diagonal retreats, knight flanks, pins) corresponding to your largest blindspots.',
         'bullets': [
           'Train with custom puzzles generated from actual blunder states.',
@@ -642,7 +642,7 @@ class _ManualTab extends StatelessWidget {
       },
       {
         'icon': Icons.science_rounded,
-        'title': '🔬 Study Lab (Analysis)',
+        'title': '🔬 Analysis',
         'description': 'An offline workspace for board dissection. Features PGN game loading, FEN state edits, custom move branches, and multi-line engine recommendations.',
         'bullets': [
           'Load, export, and manage your custom PGN and FEN databases.',
@@ -652,7 +652,7 @@ class _ManualTab extends StatelessWidget {
       },
       {
         'icon': Icons.history_rounded,
-        'title': '📚 Replay Archive',
+        'title': '📚 Archive',
         'description': 'Your personal library of games. Replay previous rated and academy games move-by-move under dynamic cinematic animations and checkmate replays.',
         'bullets': [
           'Browse and filter your local database of historical rated matches.',
@@ -662,7 +662,7 @@ class _ManualTab extends StatelessWidget {
       },
       {
         'icon': Icons.menu_book_rounded,
-        'title': '📖 Lesson Tutorials',
+        'title': '📖 Tutorial',
         'description': 'Structured beginner-to-advanced syllabus. Features lessons in basic piece geometry, tactical elements, pawn structures, and theoretical endgame conversions.',
         'bullets': [
           'Complete lesson chapters categorized across Initiate, Scholar, and Master tiers.',
@@ -672,7 +672,7 @@ class _ManualTab extends StatelessWidget {
       },
       {
         'icon': Icons.settings_rounded,
-        'title': '⚙️ Settings Console',
+        'title': '⚙️ Settings',
         'description': 'Full client configurations. Control native engine thread bounds, background volume mixers, board visual templates, and move confirmation boxes.',
         'bullets': [
           'Set custom Stockfish processing limits from 100ms to 3000ms.',
@@ -682,7 +682,7 @@ class _ManualTab extends StatelessWidget {
       },
       {
         'icon': Icons.storefront_rounded,
-        'title': '🛒 Academy Store',
+        'title': '🛒 Store',
         'description': 'Visual market. Spend earned performance tokens to unlock premium board sets, thematic sounds, and piece collections.',
         'bullets': [
           'Earn tokens by completing daily assignments and solving puzzles.',
