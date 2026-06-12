@@ -42,6 +42,7 @@ class PuzzlesState {
   final ScotomaAxis? activeAxis;
   final bool isPressureCookerActive;
   final int solvedCount;
+  final bool isWrongMoveAttempted;
 
   PuzzlesState({
     required this.game,
@@ -66,6 +67,7 @@ class PuzzlesState {
     this.activeAxis,
     this.isPressureCookerActive = false,
     this.solvedCount = 0,
+    this.isWrongMoveAttempted = false,
   });
 
   PuzzlesState copyWith({
@@ -91,6 +93,7 @@ class PuzzlesState {
     Object? activeAxis = _sentinel,
     bool? isPressureCookerActive,
     int? solvedCount,
+    bool? isWrongMoveAttempted,
   }) {
     return PuzzlesState(
       game: game ?? this.game,
@@ -123,6 +126,7 @@ class PuzzlesState {
       activeAxis: identical(activeAxis, _sentinel) ? this.activeAxis : activeAxis as ScotomaAxis?,
       isPressureCookerActive: isPressureCookerActive ?? this.isPressureCookerActive,
       solvedCount: solvedCount ?? this.solvedCount,
+      isWrongMoveAttempted: isWrongMoveAttempted ?? this.isWrongMoveAttempted,
     );
   }
 }
@@ -341,6 +345,7 @@ class PuzzlesNotifier extends StateNotifier<PuzzlesState> {
       });
 
       if (moveMade) {
+        state = state.copyWith(isWrongMoveAttempted: false);
         _onMoveCompleted(expectedMove);
 
         final chessSettings = ref.read(chessProvider);
@@ -356,6 +361,7 @@ class PuzzlesNotifier extends StateNotifier<PuzzlesState> {
           state = state.copyWith(
             puzzleMovesRemaining: const [],
             solvedCount: newCount,
+            isWrongMoveAttempted: false,
             commentaryHistory: [
               ...state.commentaryHistory,
               CommentaryEntry(
@@ -366,13 +372,14 @@ class PuzzlesNotifier extends StateNotifier<PuzzlesState> {
               ),
             ],
           );
-          ref.read(chessSoundServiceProvider).playSfx(SoundEffect.chanakyaNotify);
+          ref.read(chessSoundServiceProvider).playSfx(SoundEffect.victory);
           return;
         }
 
         final oppMove = remaining.removeAt(0);
         state = state.copyWith(
           puzzleMovesRemaining: remaining,
+          isWrongMoveAttempted: false,
           commentaryHistory: [
             ...state.commentaryHistory,
             CommentaryEntry(
@@ -383,7 +390,6 @@ class PuzzlesNotifier extends StateNotifier<PuzzlesState> {
             ),
           ],
         );
-        ref.read(chessSoundServiceProvider).playSfx(SoundEffect.chanakyaNotify);
 
         Future.delayed(const Duration(milliseconds: 500), () {
           if (_isDisposed || !state.isPuzzleMode) return;
@@ -418,6 +424,7 @@ class PuzzlesNotifier extends StateNotifier<PuzzlesState> {
                 : ChanakyaQuotes.getProgress(newCount);
             state = state.copyWith(
               solvedCount: newCount,
+              isWrongMoveAttempted: false,
               commentaryHistory: [
                 ...state.commentaryHistory,
                 CommentaryEntry(
@@ -428,7 +435,7 @@ class PuzzlesNotifier extends StateNotifier<PuzzlesState> {
                 ),
               ],
             );
-            ref.read(chessSoundServiceProvider).playSfx(SoundEffect.chanakyaNotify);
+            ref.read(chessSoundServiceProvider).playSfx(SoundEffect.victory);
           }
         });
       }
@@ -443,6 +450,7 @@ class PuzzlesNotifier extends StateNotifier<PuzzlesState> {
       final pieceCode = piece != null ? '$colorPrefix${piece.type.toUpperCase()}' : 'wP';
 
       state = state.copyWith(
+        isWrongMoveAttempted: true,
         moveAnimation: MoveAnimationData(
           from: from,
           to: to,
@@ -459,7 +467,7 @@ class PuzzlesNotifier extends StateNotifier<PuzzlesState> {
           ),
         ],
       );
-      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.chanakyaNotify);
+      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.defeat);
     }
   }
 
@@ -468,6 +476,66 @@ class PuzzlesNotifier extends StateNotifier<PuzzlesState> {
       lastMove: uciMove,
       recentMoves: [...state.recentMoves, uciMove],
     );
+    _playMoveSound();
+  }
+
+  chess_lib.Move? _lastMoveFromHistory() {
+    final history = state.game.history;
+    if (history.isEmpty) return null;
+    final lastState = history.last;
+    return lastState.move as chess_lib.Move?;
+  }
+
+  void _playMoveSound() {
+    final soundService = ref.read(chessSoundServiceProvider);
+
+    if (state.game.inCheck) {
+      soundService.playSfx(SoundEffect.check);
+      return;
+    }
+
+    final lastMove = _lastMoveFromHistory();
+    if (lastMove == null) {
+      soundService.playSfx(SoundEffect.move);
+      return;
+    }
+
+    if (lastMove.promotion != null) {
+      soundService.playSfx(SoundEffect.promote);
+      return;
+    }
+
+    if (lastMove.captured != null) {
+      soundService.playCapture();
+      return;
+    }
+
+    final piece = lastMove.piece;
+    final type = piece.toString().toLowerCase();
+    bool isCastle = false;
+    if (type == 'k') {
+      final fromFile = lastMove.from % 8;
+      final toFile = lastMove.to % 8;
+      if ((fromFile - toFile).abs() == 2) {
+        isCastle = true;
+      }
+    }
+
+    if (isCastle) {
+      soundService.playSfx(SoundEffect.castle);
+    } else if (type == 'k') {
+      soundService.playKingMove();
+    } else if (type == 'p') {
+      soundService.playPawnMove();
+    } else {
+      soundService.playWhoosh();
+    }
+  }
+
+  void clearWrongMoveAttempt() {
+    if (state.isWrongMoveAttempted) {
+      state = state.copyWith(isWrongMoveAttempted: false);
+    }
   }
 
   void toggleBoardOrientation() {

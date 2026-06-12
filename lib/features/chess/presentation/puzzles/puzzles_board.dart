@@ -312,35 +312,71 @@ class _PuzzlesBoardState extends ConsumerState<PuzzlesBoard>
                                                                 .turn) ||
                                                     isThreatened),
                                             child: Center(
-                                              child: ChessPieceWidget(
-                                                squareName: squareName,
-                                                game: displayGame,
-                                                highlighted: isSelected,
-                                                rotation: 0.0,
-                                                theme: chessTheme,
-                                                isMoving:
-                                                    puzzlesState
-                                                            .moveAnimation
-                                                            ?.from ==
-                                                        squareName ||
-                                                    puzzlesState
-                                                            .moveAnimation
-                                                            ?.to ==
-                                                        squareName,
-                                                onTap: () =>
-                                                    _handleSquareTap(
-                                                      squareName:
-                                                          squareName,
-                                                      pieceExists:
-                                                          piece != null,
+                                              child: Builder(
+                                                builder: (context) {
+                                                  final squareSize = boardSize / 8;
+                                                  final isGameOver = puzzlesState.game.gameOver;
+                                                  final isPlayerTurn = displayGame.turn == (puzzlesState.isPlayerWhite ? chess_lib.Color.WHITE : chess_lib.Color.BLACK);
+                                                  final isPlayerPiece = piece != null &&
+                                                      (piece.color == (puzzlesState.isPlayerWhite ? chess_lib.Color.WHITE : chess_lib.Color.BLACK));
+                                                  final isDraggable = isPlayerPiece && !isGameOver && isPlayerTurn;
+
+                                                  final pieceWidget = ChessPieceWidget(
+                                                    squareName: squareName,
+                                                    game: displayGame,
+                                                    highlighted: isSelected,
+                                                    rotation: 0.0,
+                                                    theme: chessTheme,
+                                                    isMoving: puzzlesState.moveAnimation?.from == squareName ||
+                                                        puzzlesState.moveAnimation?.to == squareName,
+                                                    onTap: () => _handleSquareTap(
+                                                      squareName: squareName,
+                                                      pieceExists: piece != null,
                                                     ),
-                                                onDragStarted: () =>
-                                                    _handlePieceSelection(
-                                                      squareName,
-                                                      displayGame,
-                                                    ),
-                                                onDragEnd:
-                                                    _clearSelection,
+                                                  );
+
+                                                  if (isDraggable) {
+                                                    return Draggable<String>(
+                                                      data: squareName,
+                                                      onDragStarted: () {
+                                                        ref.read(puzzlesProvider.notifier).clearWrongMoveAttempt();
+                                                        _handlePieceSelection(squareName, displayGame);
+                                                      },
+                                                      onDraggableCanceled: (velocity, offset) {
+                                                        _clearSelection();
+                                                      },
+                                                      onDragEnd: (details) {
+                                                        _clearSelection();
+                                                      },
+                                                      feedback: Material(
+                                                        color: Colors.transparent,
+                                                        child: SizedBox(
+                                                          width: squareSize * 1.2,
+                                                          height: squareSize * 1.2,
+                                                          child: ChessPieceWidget(
+                                                            squareName: squareName,
+                                                            game: displayGame,
+                                                            highlighted: false,
+                                                            theme: chessTheme,
+                                                            isMoving: false,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      childWhenDragging: Opacity(
+                                                        opacity: 0.35,
+                                                        child: ChessPieceWidget(
+                                                          squareName: squareName,
+                                                          game: displayGame,
+                                                          highlighted: false,
+                                                          theme: chessTheme,
+                                                          isMoving: false,
+                                                        ),
+                                                      ),
+                                                      child: pieceWidget,
+                                                    );
+                                                  }
+                                                  return pieceWidget;
+                                                },
                                               ),
                                             ),
                                           ),
@@ -428,6 +464,7 @@ class _PuzzlesBoardState extends ConsumerState<PuzzlesBoard>
     required String squareName,
     required bool pieceExists,
   }) {
+    ref.read(puzzlesProvider.notifier).clearWrongMoveAttempt();
     final haptics = ref.read(chessHapticsServiceProvider);
     haptics.selection();
     final puzzlesState = ref.read(puzzlesProvider);
@@ -452,6 +489,7 @@ class _PuzzlesBoardState extends ConsumerState<PuzzlesBoard>
   }
 
   void _handlePieceSelection(String squareName, ChessGame displayGame) {
+    ref.read(puzzlesProvider.notifier).clearWrongMoveAttempt();
     final puzzlesState = ref.read(puzzlesProvider);
     final piece = displayGame.getPiece(squareName);
     if (piece == null) {

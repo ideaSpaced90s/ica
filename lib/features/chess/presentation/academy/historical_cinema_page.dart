@@ -10,8 +10,9 @@ import '../../domain/models/historical_game.dart';
 import '../../domain/models/tutorial_lesson.dart' show MentorMood;
 import '../../application/historical_cinema_provider.dart';
 import '../../services/chess_sound_service.dart';
-import '../../application/chess_provider.dart' show chessSoundServiceProvider;
+import '../../application/chess_provider.dart' show chessProvider, chessSoundServiceProvider;
 import '../arena/themes/theme_registry.dart';
+import '../shared/widgets/chess_piece_widget.dart';
 
 class HistoricalCinemaPage extends ConsumerStatefulWidget {
   const HistoricalCinemaPage({super.key});
@@ -281,13 +282,13 @@ class _HistoricalCinemaPageState extends ConsumerState<HistoricalCinemaPage> {
   }
 
   Widget _buildChessBoard(BuildContext context, String fen) {
-    final theme = ThemeRegistry.getTheme('classic');
+    final activeThemeId = ref.watch(chessProvider).boardThemeId;
+    final theme = ThemeRegistry.getTheme(activeThemeId);
     _board.load(fen);
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final boardSize = math.min(constraints.maxWidth, constraints.maxHeight);
-        final sqSize = boardSize / 8;
 
         return Center(
           child: Container(
@@ -295,7 +296,7 @@ class _HistoricalCinemaPageState extends ConsumerState<HistoricalCinemaPage> {
             height: boardSize,
             decoration: BoxDecoration(
               boxShadow: ScholarlyTheme.boardShadow,
-              border: Border.all(color: ScholarlyTheme.boardFrame, width: 2),
+              border: Border.all(color: theme.frameColor, width: 2),
             ),
             child: GridView.builder(
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -319,16 +320,12 @@ class _HistoricalCinemaPageState extends ConsumerState<HistoricalCinemaPage> {
                     children: [
                       if (pieceObj != null)
                         Center(
-                          child: SizedBox(
-                            width: sqSize * 0.9,
-                            height: sqSize * 0.9,
-                            child: theme.buildPiece(
-                              context,
-                              pieceObj.type.toUpperCase(),
-                              pieceObj.color == chess_lib.Color.WHITE,
-                              false,
-                              0.0,
-                            ),
+                          child: ChessPieceWidget(
+                            squareName: squareName,
+                            pieceCode: '${pieceObj.color == chess_lib.Color.WHITE ? 'w' : 'b'}${pieceObj.type.toUpperCase()}',
+                            highlighted: false,
+                            theme: theme,
+                            isMoving: false,
                           ),
                         ),
                       if (col == 0 || row == 7)

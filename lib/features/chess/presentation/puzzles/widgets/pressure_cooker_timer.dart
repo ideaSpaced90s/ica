@@ -19,7 +19,7 @@ class _PressureCookerTimerState extends ConsumerState<PressureCookerTimer> with 
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 15),
+      duration: const Duration(seconds: 30),
     );
 
     _controller.addStatusListener((status) {
@@ -28,10 +28,22 @@ class _PressureCookerTimerState extends ConsumerState<PressureCookerTimer> with 
       }
     });
 
-    _startTimer();
+    final currentPuzzle = ref.read(puzzlesProvider).currentPuzzle;
+    _lastPuzzleId = currentPuzzle?.id;
+    _startTimer(currentPuzzle?.rating ?? 1500);
   }
 
-  void _startTimer() {
+  int _calculateDurationSeconds(int rating) {
+    if (rating < 1100) return 20;
+    if (rating < 1500) return 30;
+    if (rating < 1900) return 45;
+    if (rating < 2300) return 60;
+    return 90;
+  }
+
+  void _startTimer(int rating) {
+    final secs = _calculateDurationSeconds(rating);
+    _controller.duration = Duration(seconds: secs);
     _controller.reset();
     _controller.forward();
   }
@@ -49,10 +61,11 @@ class _PressureCookerTimerState extends ConsumerState<PressureCookerTimer> with 
   }
 
   void _checkAndResetIfNeeded() {
-    final currentPuzzleId = ref.read(puzzlesProvider).currentPuzzle?.id;
+    final currentPuzzle = ref.read(puzzlesProvider).currentPuzzle;
+    final currentPuzzleId = currentPuzzle?.id;
     if (currentPuzzleId != _lastPuzzleId) {
       _lastPuzzleId = currentPuzzleId;
-      _startTimer();
+      _startTimer(currentPuzzle?.rating ?? 1500);
     }
   }
 
@@ -65,13 +78,14 @@ class _PressureCookerTimerState extends ConsumerState<PressureCookerTimer> with 
   @override
   Widget build(BuildContext context) {
     // Also check during build in case state changed
-    final currentPuzzleId = ref.watch(puzzlesProvider.select((s) => s.currentPuzzle?.id));
+    final currentPuzzle = ref.watch(puzzlesProvider.select((s) => s.currentPuzzle));
+    final currentPuzzleId = currentPuzzle?.id;
     if (currentPuzzleId != _lastPuzzleId) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           setState(() {
             _lastPuzzleId = currentPuzzleId;
-            _startTimer();
+            _startTimer(currentPuzzle?.rating ?? 1500);
           });
         }
       });
@@ -81,7 +95,8 @@ class _PressureCookerTimerState extends ConsumerState<PressureCookerTimer> with 
       animation: _controller,
       builder: (context, child) {
         final progress = 1.0 - _controller.value;
-        final secondsLeft = (15 * progress).ceil();
+        final totalSecs = _controller.duration?.inSeconds ?? 30;
+        final secondsLeft = (totalSecs * progress).ceil();
         
         // Color shifts from Amber to Crimson as time runs out
         final timerColor = Color.lerp(

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:confetti/confetti.dart';
 
+import 'package:kingslayer_chess/src/rust/api/puzzles.dart' as rust_puzzles;
 import '../../application/puzzles_provider.dart';
 import '../scholarly_theme.dart';
 import 'puzzles_board.dart';
@@ -140,6 +141,42 @@ class _PuzzlesPageState extends ConsumerState<PuzzlesPage> {
           ),
         ],
 
+        if (state.isWrongMoveAttempted && !isSolved)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.red.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Colors.redAccent.withValues(alpha: 0.3),
+                  width: 1.2,
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.warning_amber_rounded,
+                    color: Colors.redAccent,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Incorrect move. Try again!',
+                      style: GoogleFonts.inter(
+                        color: Colors.red.shade800,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
         const SizedBox(height: 8), // Snug spacing to keep board directly below Toughness Header
 
         // 2. Board (Centered in the middle area)
@@ -258,22 +295,50 @@ class _PuzzlesPageState extends ConsumerState<PuzzlesPage> {
         // Spacer to push actions/banner to bottom
         const Spacer(),
 
-        // 3. Actions / Solved CTA Button
+        // 3. Actions / Solved CTA Buttons
         if (!isSolved)
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 4, 12, 16),
-            child: Center(
-              child: _CompactActionIcon(
-                icon: state.isBulbGlowing
-                    ? Icons.lightbulb_rounded
-                    : Icons.lightbulb_outline_rounded,
-                tooltip: 'Hint',
-                isEnabled: !state.isHintLoading,
-                isActive: state.isBulbGlowing,
-                activeColor: ScholarlyTheme.accentYellowSoft,
-                activeIconColor: ScholarlyTheme.accentYellow,
-                onTap: () => notifier.requestHint(),
-              ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _CompactActionIcon(
+                  icon: state.isBulbGlowing
+                      ? Icons.lightbulb_rounded
+                      : Icons.lightbulb_outline_rounded,
+                  tooltip: 'Hint',
+                  isEnabled: !state.isHintLoading,
+                  isActive: state.isBulbGlowing,
+                  activeColor: ScholarlyTheme.accentYellowSoft,
+                  activeIconColor: ScholarlyTheme.accentYellow,
+                  onTap: () => notifier.requestHint(),
+                ),
+                const SizedBox(width: 16),
+                _CompactActionIcon(
+                  icon: Icons.replay_rounded,
+                  tooltip: 'Reset Puzzle',
+                  isEnabled: true,
+                  onTap: () => notifier.resetPuzzleLine(),
+                ),
+                const SizedBox(width: 16),
+                _CompactActionIcon(
+                  icon: Icons.skip_next_rounded,
+                  tooltip: 'Skip Puzzle',
+                  isEnabled: true,
+                  onTap: () async {
+                    if (state.solvedCount >= 5) {
+                      await ref.read(puzzlesProvider.notifier).exitPuzzleMode();
+                      if (context.mounted) {
+                        ref.read(mobileNavIndexProvider.notifier).state = 1; // Back to Arena
+                      }
+                    } else {
+                      if (!_checkPuzzleLimitAndUpsell(context, ref)) return;
+                      ref.read(storeProvider.notifier).recordPuzzle();
+                      notifier.nextPrescriptionPuzzle(silent: true);
+                    }
+                  },
+                ),
+              ],
             ),
           ),
       ],
@@ -324,6 +389,42 @@ class _PuzzlesPageState extends ConsumerState<PuzzlesPage> {
                   const PressureCookerTimer(),
                   const SizedBox(height: 6),
                 ],
+
+                if (state.isWrongMoveAttempted && !isSolved)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.redAccent.withValues(alpha: 0.3),
+                          width: 1.2,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.warning_amber_rounded,
+                            color: Colors.redAccent,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Incorrect move. Try again!',
+                              style: GoogleFonts.inter(
+                                color: Colors.red.shade800,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 
                 const Spacer(),
 
@@ -433,19 +534,50 @@ class _PuzzlesPageState extends ConsumerState<PuzzlesPage> {
                   const SizedBox(height: 8),
                 ],
 
-                // 3. Actions Row / Solved CTA Button
+                // 3. Actions Row / Solved CTA Buttons
                 if (!isSolved)
-                  Center(
-                    child: _CompactActionIcon(
-                      icon: state.isBulbGlowing
-                          ? Icons.lightbulb_rounded
-                          : Icons.lightbulb_outline_rounded,
-                      tooltip: 'Hint',
-                      isEnabled: !state.isHintLoading,
-                      isActive: state.isBulbGlowing,
-                      activeColor: ScholarlyTheme.accentYellowSoft,
-                      activeIconColor: ScholarlyTheme.accentYellow,
-                      onTap: () => notifier.requestHint(),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _CompactActionIcon(
+                          icon: state.isBulbGlowing
+                              ? Icons.lightbulb_rounded
+                              : Icons.lightbulb_outline_rounded,
+                          tooltip: 'Hint',
+                          isEnabled: !state.isHintLoading,
+                          isActive: state.isBulbGlowing,
+                          activeColor: ScholarlyTheme.accentYellowSoft,
+                          activeIconColor: ScholarlyTheme.accentYellow,
+                          onTap: () => notifier.requestHint(),
+                        ),
+                        const SizedBox(width: 16),
+                        _CompactActionIcon(
+                          icon: Icons.replay_rounded,
+                           tooltip: 'Reset Puzzle',
+                          isEnabled: true,
+                          onTap: () => notifier.resetPuzzleLine(),
+                        ),
+                        const SizedBox(width: 16),
+                        _CompactActionIcon(
+                          icon: Icons.skip_next_rounded,
+                          tooltip: 'Skip Puzzle',
+                          isEnabled: true,
+                          onTap: () async {
+                            if (state.solvedCount >= 5) {
+                              await ref.read(puzzlesProvider.notifier).exitPuzzleMode();
+                              if (context.mounted) {
+                                ref.read(mobileNavIndexProvider.notifier).state = 1; // Back to Arena
+                              }
+                            } else {
+                              if (!_checkPuzzleLimitAndUpsell(context, ref)) return;
+                              ref.read(storeProvider.notifier).recordPuzzle();
+                              notifier.nextPrescriptionPuzzle(silent: true);
+                            }
+                          },
+                        ),
+                      ],
                     ),
                   ),
               ],
@@ -567,6 +699,25 @@ class _PuzzleStatusHeader extends ConsumerWidget {
     return 'Expert';
   }
 
+  String _getInstructionText(rust_puzzles.Puzzle puzzle) {
+    final themesList = puzzle.themes.split(' ');
+    final mateTheme = themesList.firstWhere(
+      (t) => t.startsWith('mateIn'),
+      orElse: () => '',
+    );
+    if (mateTheme.isNotEmpty) {
+      final count = mateTheme.replaceAll('mateIn', '');
+      return 'Mate in $count';
+    }
+    
+    final playerMovesCount = (puzzle.moves.length / 2).ceil();
+    if (playerMovesCount == 1) {
+      return 'Find the winning move';
+    } else {
+      return 'Find the winning sequence ($playerMovesCount moves)';
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final p = state.currentPuzzle;
@@ -681,12 +832,40 @@ class _PuzzleStatusHeader extends ConsumerWidget {
                         ],
                       )
                     else if (p != null)
-                      Text(
-                        '${state.isPlayerWhite ? "White" : "Black"} to move',
-                        style: GoogleFonts.inter(
-                          fontSize: 9.5,
-                          color: ScholarlyTheme.textSubtle,
-                          fontWeight: FontWeight.w500,
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 10,
+                              height: 10,
+                              decoration: BoxDecoration(
+                                color: state.isPlayerWhite ? Colors.white : const Color(0xFF1E293B),
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.15),
+                                    blurRadius: 1.5,
+                                    spreadRadius: 0.2,
+                                  ),
+                                ],
+                                border: Border.all(
+                                  color: Colors.grey.shade400,
+                                  width: 0.8,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              '${state.isPlayerWhite ? "White" : "Black"} to play • ${_getInstructionText(p)}',
+                              style: GoogleFonts.inter(
+                                fontSize: 11.0,
+                                color: ScholarlyTheme.textPrimary,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                   ],

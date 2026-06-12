@@ -394,10 +394,11 @@ class MiniBoardPreview extends StatelessWidget {
                           child: Text(
                             _getPieceSymbol(piece),
                             style: TextStyle(
-                              fontSize: squareSize * 0.8,
+                              fontSize: squareSize * 0.95,
+                              fontWeight: FontWeight.bold,
                               color: piece.color == chess_lib.Color.WHITE
                                   ? Colors.white
-                                  : Colors.black87,
+                                  : const Color(0xFF1E293B),
                             ),
                           ),
                         ),
