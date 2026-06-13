@@ -6,8 +6,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lottie/lottie.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../application/chess_provider.dart';
-import '../application/tutorial_provider.dart';
+import '../services/play_games_sync_service.dart';
+import '../services/auth_service.dart';
+import '../services/device_info_service.dart';
 import 'mobile_navigation_shell.dart';
 import 'sign_in_page.dart';
 import 'scholarly_theme.dart';
@@ -36,10 +39,14 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     super.initState();
     final isMobile = !kIsWeb && (Platform.isAndroid || Platform.isIOS);
     if (isMobile) {
-      SystemChrome.setPreferredOrientations([
-        DeviceOrientation.portraitUp,
-        DeviceOrientation.portraitDown,
-      ]);
+      DeviceInfoService.shouldLockPortrait().then((lockPortrait) {
+        if (lockPortrait && mounted) {
+          SystemChrome.setPreferredOrientations([
+            DeviceOrientation.portraitUp,
+            DeviceOrientation.portraitDown,
+          ]);
+        }
+      });
     }
 
     _progressController = AnimationController(
@@ -111,20 +118,51 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     if (mounted) {
       final isMobile = !kIsWeb && (Platform.isAndroid || Platform.isIOS);
       if (isMobile) {
-        await SystemChrome.setPreferredOrientations([
-          DeviceOrientation.portraitUp,
-          DeviceOrientation.portraitDown,
-        ]);
+        final lockPortrait = await DeviceInfoService.shouldLockPortrait();
+        if (lockPortrait) {
+          await SystemChrome.setPreferredOrientations([
+            DeviceOrientation.portraitUp,
+            DeviceOrientation.portraitDown,
+          ]);
+        }
       }
 
       if (!mounted) return;
 
-      final repo = ref.read(tutorialProgressRepositoryProvider);
-      final isGoogleSignedIn = repo.getIsGoogleSignedIn();
+      User? user = FirebaseAuth.instance.currentUser;
+
+      if (user == null) {
+        // Attempt silent login via Play Games on startup
+        try {
+          final authService = ref.read(authServiceProvider);
+          final credential = await authService.signInWithPlayGames(silent: true);
+          if (credential != null) {
+            user = credential.user;
+          }
+        } catch (e) {
+          debugPrint('Silent Play Games sign-in failed: $e');
+        }
+      }
+
+      final hasSession = user != null;
+
+      if (hasSession) {
+        // Trigger silent restore from Play Games on startup (capped at 3 seconds)
+        try {
+          await ref
+              .read(googleDriveSyncProvider.notifier)
+              .restore()
+              .timeout(const Duration(seconds: 3));
+        } catch (e) {
+          debugPrint('Startup Play Games restore sync timed out or failed: $e');
+        }
+      }
+
+      if (!mounted) return;
 
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) => isGoogleSignedIn
+          pageBuilder: (context, animation, secondaryAnimation) => hasSession
               ? const MobileNavigationShell()
               : const SignInPage(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {

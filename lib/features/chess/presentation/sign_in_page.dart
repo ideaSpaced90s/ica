@@ -8,9 +8,11 @@ import 'widgets/ambient_flow_backdrop.dart';
 import 'widgets/ambient_scaffold.dart';
 import 'mobile_navigation_shell.dart';
 import '../services/chess_sound_service.dart';
+import '../services/auth_service.dart';
 import '../application/chess_provider.dart';
 import '../application/tutorial_provider.dart';
 import '../application/onboarding_provider.dart';
+import '../services/play_games_sync_service.dart';
 
 class SignInPage extends ConsumerStatefulWidget {
   const SignInPage({super.key});
@@ -53,22 +55,54 @@ class _SignInPageState extends ConsumerState<SignInPage>
       _isLoading = true;
     });
 
-    await Future.delayed(const Duration(milliseconds: 2000));
-    if (!mounted) return;
+    try {
+      final userCredential = await ref.read(authServiceProvider).signInWithPlayGames();
+      if (userCredential == null) {
+        // Sign-in canceled or failed silently
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
+      
+      if (!mounted) return;
 
-    final repo = ref.read(tutorialProgressRepositoryProvider);
-    await repo.setIsGoogleSignedIn(true);
-    await repo.setArenaIntroSeen(false);
-    await repo.setBattlegroundIntroSeen(false);
-    await repo.setPuzzlesIntroSeen(false);
-    await repo.setAcademyIntroSeen(false);
-    await repo.setAcademyAccessCount(0);
+      final repo = ref.read(tutorialProgressRepositoryProvider);
+      await repo.setIsGoogleSignedIn(true);
+      await repo.setArenaIntroSeen(false);
+      await repo.setBattlegroundIntroSeen(false);
+      await repo.setPuzzlesIntroSeen(false);
+      await repo.setAcademyIntroSeen(false);
+      await repo.setAcademyAccessCount(0);
 
-    ref.read(showArenaIntroProvider.notifier).state = true;
-    ref.read(showBattlegroundIntroProvider.notifier).state = true;
-    ref.read(showPuzzlesIntroProvider.notifier).state = true;
+      ref.read(showArenaIntroProvider.notifier).state = true;
+      ref.read(showBattlegroundIntroProvider.notifier).state = true;
+      ref.read(showPuzzlesIntroProvider.notifier).state = true;
 
-    _navigateToNext();
+      // Trigger automatic restore from Play Games on login (capped at 4 seconds)
+      try {
+        await ref
+            .read(googleDriveSyncProvider.notifier)
+            .restore()
+            .timeout(const Duration(seconds: 4));
+      } catch (e) {
+        debugPrint('Play Games Login restore sync timed out or failed: $e');
+      }
+
+      _navigateToNext();
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Play Games Sign-In failed: $e'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _handleGuestSignIn() async {
@@ -77,24 +111,45 @@ class _SignInPageState extends ConsumerState<SignInPage>
       _isLoading = true;
     });
 
-    await Future.delayed(const Duration(milliseconds: 1000));
-    if (!mounted) return;
+    try {
+      final userCredential = await ref.read(authServiceProvider).signInAnonymously();
+      if (userCredential == null) {
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
 
-    final repo = ref.read(tutorialProgressRepositoryProvider);
-    await repo.setIsGoogleSignedIn(false);
-    // Guest gets the onboarding every time they launch
-    await repo.setWelcomeGuideSeen(false);
-    await repo.setArenaIntroSeen(false);
-    await repo.setBattlegroundIntroSeen(false);
-    await repo.setPuzzlesIntroSeen(false);
-    await repo.setAcademyIntroSeen(false);
-    await repo.setAcademyAccessCount(0);
+      if (!mounted) return;
 
-    ref.read(showArenaIntroProvider.notifier).state = true;
-    ref.read(showBattlegroundIntroProvider.notifier).state = true;
-    ref.read(showPuzzlesIntroProvider.notifier).state = true;
+      final repo = ref.read(tutorialProgressRepositoryProvider);
+      await repo.setIsGoogleSignedIn(false);
+      // Guest gets the onboarding every time they launch
+      await repo.setWelcomeGuideSeen(false);
+      await repo.setArenaIntroSeen(false);
+      await repo.setBattlegroundIntroSeen(false);
+      await repo.setPuzzlesIntroSeen(false);
+      await repo.setAcademyIntroSeen(false);
+      await repo.setAcademyAccessCount(0);
 
-    _navigateToNext();
+      ref.read(showArenaIntroProvider.notifier).state = true;
+      ref.read(showBattlegroundIntroProvider.notifier).state = true;
+      ref.read(showPuzzlesIntroProvider.notifier).state = true;
+
+      _navigateToNext();
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Anonymous Sign-In failed: $e'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    }
   }
 
   void _navigateToNext() {
@@ -247,7 +302,7 @@ class _SignInPageState extends ConsumerState<SignInPage>
                             : [],
                       ),
                       child: Text(
-                        'Google Sign-in',
+                        'Play Games',
                         textAlign: TextAlign.center,
                         style: GoogleFonts.inter(
                           fontSize: 13,
@@ -316,15 +371,14 @@ class _SignInPageState extends ConsumerState<SignInPage>
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Image.network(
-                    'https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg',
-                    height: 20,
-                    errorBuilder: (context, error, stackTrace) =>
-                        const Icon(Icons.g_mobiledata_rounded, color: Colors.blue, size: 24),
+                  const Icon(
+                    Icons.sports_esports_rounded,
+                    color: Colors.green,
+                    size: 24,
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    'Sign In with Google',
+                    'Sign In with Play Games',
                     style: GoogleFonts.inter(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,

@@ -7,6 +7,9 @@ import '../application/battleground_provider.dart';
 import '../application/tutorial_provider.dart';
 import '../application/assignment_provider.dart';
 import '../services/chess_sound_service.dart';
+import '../services/auth_service.dart';
+import '../services/play_games_sync_service.dart';
+import 'package:intl/intl.dart';
 import 'scholarly_theme.dart';
 import 'widgets/ambient_scaffold.dart';
 import 'sign_in_page.dart';
@@ -28,6 +31,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   Widget build(BuildContext context) {
     final state = ref.watch(chessProvider);
     final notifier = ref.read(chessProvider.notifier);
+    final syncState = ref.watch(googleDriveSyncProvider);
+    final syncNotifier = ref.read(googleDriveSyncProvider.notifier);
 
     return AmbientScaffold(
       scaffoldKey: _scaffoldKey,
@@ -100,6 +105,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         icon: Icons.logout_rounded,
                         onTap: () async {
                           ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                          try {
+                            await ref.read(authServiceProvider).signOut();
+                          } catch (e) {
+                            debugPrint('Firebase signout error: $e');
+                          }
                           final repo = ref.read(tutorialProgressRepositoryProvider);
                           await repo.setIsGoogleSignedIn(false);
                           await repo.setWelcomeGuideSeen(false);
@@ -133,6 +143,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                           size: 18,
                         ),
                       ),
+                    ],
+                  ),
+
+                  // CLOUD SYNC
+                  _SettingsCategory(
+                    title: 'CLOUD SYNC',
+                    children: [
+                      _buildSyncStatusTile(context, syncState, syncNotifier),
                     ],
                   ),
 
@@ -181,6 +199,124 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildSyncStatusTile(
+    BuildContext context,
+    GoogleDriveSyncState syncState,
+    GoogleDriveSyncNotifier syncNotifier,
+  ) {
+    final authService = ref.watch(authServiceProvider);
+    final isPlayGamesUser = authService.isPlayGamesUser;
+
+    if (!isPlayGamesUser) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(
+                  Icons.cloud_off_rounded,
+                  color: ScholarlyTheme.textSubtle,
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'Cloud Sync Disabled',
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w600,
+                    color: ScholarlyTheme.textPrimary,
+                    fontSize: 15,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Sign in with Google Play Games to automatically sync your settings, saved games, and performance statistics to the cloud.',
+              style: GoogleFonts.inter(
+                color: ScholarlyTheme.textSubtle,
+                fontSize: 13,
+                height: 1.4,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    IconData statusIcon;
+    Color statusColor;
+
+    switch (syncState.status) {
+      case GoogleDriveSyncStatus.syncing:
+        statusIcon = Icons.sync_rounded;
+        statusColor = ScholarlyTheme.accentBlue;
+        break;
+      case GoogleDriveSyncStatus.success:
+        statusIcon = Icons.cloud_done_rounded;
+        statusColor = Colors.green;
+        break;
+      case GoogleDriveSyncStatus.error:
+        statusIcon = Icons.cloud_off_rounded;
+        statusColor = Colors.redAccent;
+        break;
+      case GoogleDriveSyncStatus.idle:
+        statusIcon = Icons.cloud_queue_rounded;
+        statusColor = ScholarlyTheme.textSubtle;
+        break;
+    }
+
+    Future<void> handleSync() async {
+      final success = await syncNotifier.restore();
+      if (context.mounted) {
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Successfully synced with Play Games cloud save!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Sync failed: ${syncState.errorMessage ?? "Unknown error"}'),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
+      }
+    }
+
+    return _SettingsTile(
+      label: 'Play Games Cloud Sync',
+      description: syncState.status == GoogleDriveSyncStatus.syncing
+          ? 'Syncing your data...'
+          : syncState.lastSyncedAt != null
+              ? 'Last synced: ${DateFormat.jm().format(syncState.lastSyncedAt!)}'
+              : 'Auto-syncs settings and game history',
+      icon: statusIcon,
+      accentColor: statusColor,
+      onTap: syncState.status == GoogleDriveSyncStatus.syncing ? () {} : handleSync,
+      trailing: syncState.status == GoogleDriveSyncStatus.syncing
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(ScholarlyTheme.accentBlue),
+              ),
+            )
+          : TextButton.icon(
+              onPressed: syncState.status == GoogleDriveSyncStatus.syncing ? null : handleSync,
+              icon: const Icon(Icons.sync_rounded, size: 16),
+              label: Text(
+                'Sync Now',
+                style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold),
+              ),
+            ),
     );
   }
 

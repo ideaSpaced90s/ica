@@ -10,6 +10,7 @@ import '../application/onboarding_provider.dart';
 import '../application/chess_provider.dart';
 import '../domain/models/tutorial_constants.dart';
 import '../services/chess_sound_service.dart';
+import '../services/device_info_service.dart';
 import 'scholarly_theme.dart';
 import 'tutorial_board_stage.dart';
 import 'widgets/chapter_completion_overlay.dart';
@@ -90,10 +91,14 @@ class _TutorialPageState extends ConsumerState<TutorialPage> {
     super.initState();
     final isMobile = !kIsWeb && (Platform.isAndroid || Platform.isIOS);
     if (isMobile) {
-      SystemChrome.setPreferredOrientations([
-        DeviceOrientation.portraitUp,
-        DeviceOrientation.portraitDown,
-      ]);
+      DeviceInfoService.shouldLockPortrait().then((lockPortrait) {
+        if (lockPortrait && mounted) {
+          SystemChrome.setPreferredOrientations([
+            DeviceOrientation.portraitUp,
+            DeviceOrientation.portraitDown,
+          ]);
+        }
+      });
     }
   }
 

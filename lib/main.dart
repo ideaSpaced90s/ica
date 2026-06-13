@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'features/chess/presentation/scholarly_theme.dart';
 import 'features/chess/presentation/splash_screen.dart';
 import 'src/rust/frb_generated.dart';
@@ -10,12 +11,14 @@ import 'src/rust/frb_generated.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'features/chess/application/tutorial_provider.dart';
 import 'features/chess/data/tutorial_progress_repository.dart';
+import 'features/chess/services/device_info_service.dart';
 
 late SharedPreferences sharedPrefs;
 
 void main() {
   runZonedGuarded(() async {
     WidgetsFlutterBinding.ensureInitialized();
+    await Firebase.initializeApp();
     sharedPrefs = await SharedPreferences.getInstance();
     try {
       await RustLib.init();
@@ -30,10 +33,20 @@ void main() {
     };
 
     if (Platform.isAndroid || Platform.isIOS) {
-      await SystemChrome.setPreferredOrientations([
-        DeviceOrientation.portraitUp,
-        DeviceOrientation.portraitDown,
-      ]);
+      final lockPortrait = await DeviceInfoService.shouldLockPortrait();
+      if (lockPortrait) {
+        await SystemChrome.setPreferredOrientations([
+          DeviceOrientation.portraitUp,
+          DeviceOrientation.portraitDown,
+        ]);
+      } else {
+        await SystemChrome.setPreferredOrientations([
+          DeviceOrientation.portraitUp,
+          DeviceOrientation.portraitDown,
+          DeviceOrientation.landscapeLeft,
+          DeviceOrientation.landscapeRight,
+        ]);
+      }
 
       await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
       SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
