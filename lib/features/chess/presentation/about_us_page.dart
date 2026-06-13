@@ -690,6 +690,18 @@ class _ManualTab extends StatelessWidget {
           'Zero microtransactions — all items unlocked solely via gameplay milestones.',
         ],
       },
+      {
+        'icon': Icons.privacy_tip_rounded,
+        'title': '🔒 Privacy Policy',
+        'description': 'IdeaSpace Chess Academy is committed to protecting your privacy. This policy outlines how we collect, use, and secure your personal and gameplay data, in full compliance with the Google Play Developer Policies.',
+        'bullets': [
+          'Data Collection: When using Google Sign-In, we collect your name, email, and profile picture to identify your account. Anonymous mode requires no personal info.',
+          'Gameplay & Progress: We store your chess ratings (ELO), game history, tactical analytics, completed assignments, and custom preferences.',
+          'Data Security & Sync: Your user profile and data are secured with Firebase Cloud services or stored locally. All transit data uses secure SSL/TLS encryption.',
+          'Third-Party & Ads: We do not sell, trade, or share user data with third-party advertising companies. There are no tracking SDKs or ad displays.',
+          'Your Rights & Contact: You have full control. You can request account deletion or data exports by emailing our support team at apps@ideaspaceapps.store.',
+        ],
+      },
     ];
 
     return ListView.builder(
