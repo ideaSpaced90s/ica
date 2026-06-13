@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "691615456515",
+    "project_id": "ideaspace-chess-academy",
+    "storage_bucket": "ideaspace-chess-academy.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:691615456515:android:995f944a5f94076eb81d36",
+        "android_client_info": {
+          "package_name": "com.dsamok.ideaspacechess"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "691615456515-iepqub1tigh0gfnlvqi588emn9fpp7jr.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAIlo4hYRAB27Td1nEGw0a9sEZY24kMK2g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "691615456515-iepqub1tigh0gfnlvqi588emn9fpp7jr.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
