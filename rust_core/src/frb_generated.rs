@@ -38,7 +38,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.12.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1991629989;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 552122714;
 
 // Section: executor
 
@@ -212,6 +212,37 @@ fn wire__crate__api__pgn_db__classify_opening_eco_impl(
         },
     )
 }
+fn wire__crate__api__pgn_db__clear_all_games_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "clear_all_games",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_db_path = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok =
+                    Result::<_, ()>::Ok(crate::api::pgn_db::clear_all_games(api_db_path))?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
 fn wire__crate__api__pgn_db__clear_all_studies_impl(
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -238,6 +269,40 @@ fn wire__crate__api__pgn_db__clear_all_studies_impl(
             transform_result_sse::<_, ()>((move || {
                 let output_ok =
                     Result::<_, ()>::Ok(crate::api::pgn_db::clear_all_studies(api_db_path))?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__pgn_db__delete_game_from_db_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "delete_game_from_db",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_db_path = <String>::sse_decode(&mut deserializer);
+            let api_id = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok = Result::<_, ()>::Ok(crate::api::pgn_db::delete_game_from_db(
+                    api_db_path,
+                    api_id,
+                ))?;
                 Ok(output_ok)
             })())
         },
@@ -666,6 +731,37 @@ fn wire__crate__api__simple__init_app_impl(
         },
     )
 }
+fn wire__crate__api__pgn_db__load_all_games_from_db_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "load_all_games_from_db",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_db_path = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok =
+                    Result::<_, ()>::Ok(crate::api::pgn_db::load_all_games_from_db(api_db_path))?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
 fn wire__crate__api__pgn_db__load_studies_from_db_impl(
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -790,6 +886,44 @@ fn wire__crate__api__commentary__reset_commentary_history_rust_impl(
                 let output_ok = Result::<_, ()>::Ok({
                     crate::api::commentary::reset_commentary_history_rust();
                 })?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__pgn_db__save_game_to_db_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "save_game_to_db",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_db_path = <String>::sse_decode(&mut deserializer);
+            let api_id = <String>::sse_decode(&mut deserializer);
+            let api_saved_at = <String>::sse_decode(&mut deserializer);
+            let api_json_data = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok = Result::<_, ()>::Ok(crate::api::pgn_db::save_game_to_db(
+                    api_db_path,
+                    api_id,
+                    api_saved_at,
+                    api_json_data,
+                ))?;
                 Ok(output_ok)
             })())
         },
@@ -1657,15 +1791,15 @@ fn pde_ffi_dispatcher_primary_impl(
 ) {
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
-        10 => wire__crate__api__cognitive__game_incidents_default_impl(
+        12 => wire__crate__api__cognitive__game_incidents_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        13 => wire__crate__api__puzzles__get_random_puzzle_impl(port, ptr, rust_vec_len, data_len),
-        18 => wire__crate__api__simple__init_app_impl(port, ptr, rust_vec_len, data_len),
-        24 => wire__crate__api__puzzles__search_puzzles_impl(port, ptr, rust_vec_len, data_len),
+        15 => wire__crate__api__puzzles__get_random_puzzle_impl(port, ptr, rust_vec_len, data_len),
+        20 => wire__crate__api__simple__init_app_impl(port, ptr, rust_vec_len, data_len),
+        28 => wire__crate__api__puzzles__search_puzzles_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -1687,37 +1821,43 @@ fn pde_ffi_dispatcher_sync_impl(
         ),
         4 => wire__crate__api__threats__analyze_tactical_threats_impl(ptr, rust_vec_len, data_len),
         5 => wire__crate__api__pgn_db__classify_opening_eco_impl(ptr, rust_vec_len, data_len),
-        6 => wire__crate__api__pgn_db__clear_all_studies_impl(ptr, rust_vec_len, data_len),
-        7 => wire__crate__api__status__evaluate_game_status_impl(ptr, rust_vec_len, data_len),
-        8 => wire__crate__api__context__evaluate_position_metrics_impl(ptr, rust_vec_len, data_len),
-        9 => wire__crate__api__pgn_db__export_pgn_with_headers_impl(ptr, rust_vec_len, data_len),
-        11 => {
+        6 => wire__crate__api__pgn_db__clear_all_games_impl(ptr, rust_vec_len, data_len),
+        7 => wire__crate__api__pgn_db__clear_all_studies_impl(ptr, rust_vec_len, data_len),
+        8 => wire__crate__api__pgn_db__delete_game_from_db_impl(ptr, rust_vec_len, data_len),
+        9 => wire__crate__api__status__evaluate_game_status_impl(ptr, rust_vec_len, data_len),
+        10 => {
+            wire__crate__api__context__evaluate_position_metrics_impl(ptr, rust_vec_len, data_len)
+        }
+        11 => wire__crate__api__pgn_db__export_pgn_with_headers_impl(ptr, rust_vec_len, data_len),
+        13 => {
             wire__crate__api__tactics__generate_tactics_analysis_impl(ptr, rust_vec_len, data_len)
         }
-        12 => wire__crate__api__moves__get_legal_destinations_impl(ptr, rust_vec_len, data_len),
-        14 => wire__crate__api__history__get_san_history_impl(ptr, rust_vec_len, data_len),
-        15 => wire__crate__api__threats__get_threatened_squares_impl(ptr, rust_vec_len, data_len),
-        16 => wire__crate__api__simple__greet_impl(ptr, rust_vec_len, data_len),
-        17 => wire__crate__api__humanizer__humanize_move_rust_impl(ptr, rust_vec_len, data_len),
-        19 => wire__crate__api__pgn_db__load_studies_from_db_impl(ptr, rust_vec_len, data_len),
-        20 => wire__crate__api__pgn_db__parse_pgn_database_impl(ptr, rust_vec_len, data_len),
-        21 => wire__crate__api__assignment__recommend_tasks_rust_impl(ptr, rust_vec_len, data_len),
-        22 => wire__crate__api__commentary__reset_commentary_history_rust_impl(
+        14 => wire__crate__api__moves__get_legal_destinations_impl(ptr, rust_vec_len, data_len),
+        16 => wire__crate__api__history__get_san_history_impl(ptr, rust_vec_len, data_len),
+        17 => wire__crate__api__threats__get_threatened_squares_impl(ptr, rust_vec_len, data_len),
+        18 => wire__crate__api__simple__greet_impl(ptr, rust_vec_len, data_len),
+        19 => wire__crate__api__humanizer__humanize_move_rust_impl(ptr, rust_vec_len, data_len),
+        21 => wire__crate__api__pgn_db__load_all_games_from_db_impl(ptr, rust_vec_len, data_len),
+        22 => wire__crate__api__pgn_db__load_studies_from_db_impl(ptr, rust_vec_len, data_len),
+        23 => wire__crate__api__pgn_db__parse_pgn_database_impl(ptr, rust_vec_len, data_len),
+        24 => wire__crate__api__assignment__recommend_tasks_rust_impl(ptr, rust_vec_len, data_len),
+        25 => wire__crate__api__commentary__reset_commentary_history_rust_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        23 => wire__crate__api__pgn_db__save_study_to_db_impl(ptr, rust_vec_len, data_len),
-        25 => {
+        26 => wire__crate__api__pgn_db__save_game_to_db_impl(ptr, rust_vec_len, data_len),
+        27 => wire__crate__api__pgn_db__save_study_to_db_impl(ptr, rust_vec_len, data_len),
+        29 => {
             wire__crate__api__chanakya__select_chanakya_move_rust_impl(ptr, rust_vec_len, data_len)
         }
-        26 => wire__crate__api__commentary__select_commentary_template_rust_impl(
+        30 => wire__crate__api__commentary__select_commentary_template_rust_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        27 => wire__crate__api__persona__select_persona_move_rust_impl(ptr, rust_vec_len, data_len),
-        28 => wire__crate__api__state__validate_and_apply_move_impl(ptr, rust_vec_len, data_len),
+        31 => wire__crate__api__persona__select_persona_move_rust_impl(ptr, rust_vec_len, data_len),
+        32 => wire__crate__api__state__validate_and_apply_move_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }

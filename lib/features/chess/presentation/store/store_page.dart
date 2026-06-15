@@ -64,56 +64,7 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
       body: SafeArea(
         child: Column(
           children: [
-            // Top App Bar/Header
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFD97706).withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.workspace_premium_rounded,
-                      color: Color(0xFFD97706),
-                      size: 22,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'PREMIUM UPGRADES',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.outfit(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.0,
-                            color: ScholarlyTheme.textPrimary,
-                          ),
-                        ),
-                        Text(
-                          'Unlock unlimited coaching, analysis and premium styles',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.inter(
-                            fontSize: 11,
-                            color: ScholarlyTheme.textMuted,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 8),
+            const SizedBox(height: 16),
 
             // TabBar in a beautiful container
             Padding(
@@ -234,29 +185,7 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
       slivers: [
-        // Intro Header
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: ScholarlyTheme.accentBlueSoft.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.15)),
-              ),
-              child: Text(
-                '🎨 Free themes are always available. Premium themes can be purchased individually or unlocked entirely with any Premium Subscription plan!',
-                style: GoogleFonts.inter(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                  color: ScholarlyTheme.textPrimary,
-                  height: 1.4,
-                ),
-              ),
-            ),
-          ),
-        ),
+
 
         // Section: Free Themes Header
         SliverToBoxAdapter(

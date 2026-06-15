@@ -61,15 +61,6 @@ class _AccountPageState extends ConsumerState<AccountPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'MY ACCOUNT',
-                      style: GoogleFonts.outfit(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.0,
-                        color: ScholarlyTheme.textPrimary,
-                      ),
-                    ),
-                    Text(
                       'Manage your membership, active themes, and cloud backup',
                       style: GoogleFonts.inter(
                         fontSize: 12,

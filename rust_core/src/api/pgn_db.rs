@@ -334,3 +334,81 @@ pub fn clear_all_studies(db_path: String) -> bool {
     };
     conn.execute("DROP TABLE IF EXISTS studies", []).is_ok()
 }
+
+// Played Games: Save game JSON to SQLite DB
+#[flutter_rust_bridge::frb(sync)]
+pub fn save_game_to_db(db_path: String, id: String, saved_at: String, json_data: String) -> bool {
+    let conn = match Connection::open(&db_path) {
+        Ok(c) => c,
+        Err(_) => return false,
+    };
+
+    let result = conn.execute(
+        "CREATE TABLE IF NOT EXISTS played_games (
+            id TEXT PRIMARY KEY,
+            saved_at TEXT,
+            json_data TEXT
+        )",
+        [],
+    );
+
+    if result.is_err() {
+        return false;
+    }
+
+    conn.execute(
+        "INSERT OR REPLACE INTO played_games (id, saved_at, json_data) VALUES (?1, ?2, ?3)",
+        params![id, saved_at, json_data],
+    )
+    .is_ok()
+}
+
+// Played Games: Load all games from SQLite DB
+#[flutter_rust_bridge::frb(sync)]
+pub fn load_all_games_from_db(db_path: String) -> Vec<String> {
+    let conn = match Connection::open(&db_path) {
+        Ok(c) => c,
+        Err(_) => return Vec::new(),
+    };
+
+    let _ = conn.execute(
+        "CREATE TABLE IF NOT EXISTS played_games (
+            id TEXT PRIMARY KEY,
+            saved_at TEXT,
+            json_data TEXT
+        )",
+        [],
+    );
+
+    let mut stmt = match conn.prepare("SELECT json_data FROM played_games ORDER BY saved_at DESC") {
+        Ok(s) => s,
+        Err(_) => return Vec::new(),
+    };
+
+    let iter = stmt.query_map([], |row| row.get::<_, String>(0));
+
+    match iter {
+        Ok(rows) => rows.filter_map(|r| r.ok()).collect(),
+        Err(_) => Vec::new(),
+    }
+}
+
+// Played Games: Delete a game from SQLite DB
+#[flutter_rust_bridge::frb(sync)]
+pub fn delete_game_from_db(db_path: String, id: String) -> bool {
+    let conn = match Connection::open(&db_path) {
+        Ok(c) => c,
+        Err(_) => return false,
+    };
+    conn.execute("DELETE FROM played_games WHERE id = ?1", params![id]).is_ok()
+}
+
+// Played Games: Clear all games from SQLite DB
+#[flutter_rust_bridge::frb(sync)]
+pub fn clear_all_games(db_path: String) -> bool {
+    let conn = match Connection::open(&db_path) {
+        Ok(c) => c,
+        Err(_) => return false,
+    };
+    conn.execute("DROP TABLE IF EXISTS played_games", []).is_ok()
+}

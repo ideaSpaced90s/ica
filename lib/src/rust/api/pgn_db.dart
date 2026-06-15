@@ -31,6 +31,27 @@ List<PgnGameRecord> loadStudiesFromDb({required String dbPath}) =>
 bool clearAllStudies({required String dbPath}) =>
     RustLib.instance.api.crateApiPgnDbClearAllStudies(dbPath: dbPath);
 
+bool saveGameToDb({
+  required String dbPath,
+  required String id,
+  required String savedAt,
+  required String jsonData,
+}) => RustLib.instance.api.crateApiPgnDbSaveGameToDb(
+  dbPath: dbPath,
+  id: id,
+  savedAt: savedAt,
+  jsonData: jsonData,
+);
+
+List<String> loadAllGamesFromDb({required String dbPath}) =>
+    RustLib.instance.api.crateApiPgnDbLoadAllGamesFromDb(dbPath: dbPath);
+
+bool deleteGameFromDb({required String dbPath, required String id}) =>
+    RustLib.instance.api.crateApiPgnDbDeleteGameFromDb(dbPath: dbPath, id: id);
+
+bool clearAllGames({required String dbPath}) =>
+    RustLib.instance.api.crateApiPgnDbClearAllGames(dbPath: dbPath);
+
 class PgnGameHeader {
   final String event;
   final String site;

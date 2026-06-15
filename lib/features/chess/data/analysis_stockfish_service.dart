@@ -15,7 +15,7 @@ class AnalysisStockfishService implements ChessEngineService {
   bool _isReady = false;
   bool _isDisposed = false;
   bool _isError = false;
-  Completer<void>? _readyCompleter;
+  Completer<void> _readyCompleter = Completer<void>();
   Process? _process;
   final StreamController<String> _outputController =
       StreamController<String>.broadcast();
@@ -33,28 +33,96 @@ class AnalysisStockfishService implements ChessEngineService {
   Future<void> init() async {
     if (_isDisposed) _isDisposed = false;
 
+    if (kIsWeb) {
+      debugPrint('AnalysisStockfishService: Web platform detected, disabling engine.');
+      _isError = true;
+      return;
+    }
+
     if (_process != null) {
       return;
     }
 
     _isReady = false;
     _isError = false;
-    _readyCompleter = Completer<void>();
+    if (_readyCompleter.isCompleted) {
+      _readyCompleter = Completer<void>();
+    }
 
     try {
-      final String libDir = await _channel.invokeMethod(
-        'getNativeLibraryDir',
-      );
-      final enginePath = p.join(libDir, 'libstockfish_chess_engine.so');
-      final success = await _tryLaunchEngine(enginePath, const Duration(seconds: 20));
-      if (!success) {
-        throw Exception('Failed to start Stockfish on Android for Analysis');
+      if (Platform.isAndroid) {
+        final String libDir = await _channel.invokeMethod(
+          'getNativeLibraryDir',
+        );
+        final enginePath = p.join(libDir, 'libstockfish.so');
+        final success = await _tryLaunchEngine(enginePath, const Duration(seconds: 20));
+        if (!success) {
+          throw Exception('Failed to start Stockfish on Android for Analysis');
+        }
+      } else if (Platform.isWindows) {
+        final exePath = Platform.resolvedExecutable;
+        final exeDir = p.dirname(exePath);
+        
+        const relPathAvx2 = 'assets/engine/wincessengines/stockfish-windows-x86-64-avx2/stockfish/stockfish-windows-x86-64-avx2.exe';
+        const relPathNonAvx2 = 'assets/engine/wincessengines/stockfish-windows-x86-64/stockfish/stockfish-windows-x86-64.exe';
+
+        final potentialPathsAvx2 = [
+          p.join(Directory.current.path, relPathAvx2),
+          p.join(exeDir, 'data', 'flutter_assets', relPathAvx2),
+          p.join(exeDir, relPathAvx2),
+          'C:\\Stockfish\\stockfish.exe',
+        ];
+
+        final potentialPathsNonAvx2 = [
+          p.join(Directory.current.path, relPathNonAvx2),
+          p.join(exeDir, 'data', 'flutter_assets', relPathNonAvx2),
+          p.join(exeDir, relPathNonAvx2),
+        ];
+
+        String? avx2Path;
+        for (final path in potentialPathsAvx2) {
+          if (await File(path).exists()) {
+            avx2Path = path;
+            break;
+          }
+        }
+
+        bool success = false;
+        if (avx2Path != null) {
+          debugPrint('AnalysisStockfishService: Attempting AVX2 primary engine -> $avx2Path');
+          success = await _tryLaunchEngine(avx2Path, const Duration(seconds: 3));
+          if (success) {
+            debugPrint('AnalysisStockfishService: AVX2 primary engine successfully launched and handshaked!');
+          }
+        }
+
+        if (!success) {
+          String? nonAvx2Path;
+          for (final path in potentialPathsNonAvx2) {
+            if (await File(path).exists()) {
+              nonAvx2Path = path;
+              break;
+            }
+          }
+
+          if (nonAvx2Path != null) {
+            debugPrint('AnalysisStockfishService: Attempting Non-AVX2 backup engine -> $nonAvx2Path');
+            success = await _tryLaunchEngine(nonAvx2Path, const Duration(seconds: 20));
+            if (success) {
+              debugPrint('AnalysisStockfishService: Non-AVX2 backup engine successfully launched and handshaked!');
+            }
+          }
+        }
+
+        if (!success) {
+          throw Exception('Stockfish binary NOT FOUND or failed to execute on Windows for Analysis.');
+        }
       }
     } catch (e) {
       debugPrint('AnalysisStockfishService: FAILED to start engine: $e');
       _isError = true;
-      if (_readyCompleter != null && !_readyCompleter!.isCompleted) {
-        _readyCompleter!.complete();
+      if (!_readyCompleter.isCompleted) {
+        _readyCompleter.complete();
       }
     }
   }
@@ -103,8 +171,8 @@ class AnalysisStockfishService implements ChessEngineService {
                   if (!completer.isCompleted) {
                     completer.complete(true);
                   }
-                  if (_readyCompleter != null && !_readyCompleter!.isCompleted) {
-                    _readyCompleter!.complete();
+                  if (!_readyCompleter.isCompleted) {
+                    _readyCompleter.complete();
                   }
                 }
               }
@@ -180,7 +248,7 @@ class AnalysisStockfishService implements ChessEngineService {
 
   /// Launch continuous infinite analysis on a FEN position.
   Future<void> infiniteAnalysis(String fen) async {
-    if (!_isReady) await _readyCompleter?.future;
+    if (!_isReady) await _readyCompleter.future;
     await sendCommand('stop');
     await sendCommand('position fen $fen');
     await sendCommand('go infinite');
@@ -195,7 +263,7 @@ class AnalysisStockfishService implements ChessEngineService {
     Duration? wInc,
     Duration? bInc,
   }) async {
-    if (!_isReady) await _readyCompleter?.future;
+    if (!_isReady) await _readyCompleter.future;
     await sendCommand('stop');
     await sendCommand('position fen $fen');
     if (wTime != null || bTime != null) {
@@ -217,12 +285,14 @@ class AnalysisStockfishService implements ChessEngineService {
 
   @override
   Future<void> setSkillLevel(int level, {int multiPV = 1}) async {
+    if (!_isReady) await _readyCompleter.future;
     // Keep it at full strength, but support setting MultiPV if requested.
     await sendCommand('setoption name MultiPV value $multiPV');
   }
 
   @override
   Future<void> setChess960Mode(bool isEnabled) async {
+    if (!_isReady) await _readyCompleter.future;
     await sendCommand(
       'setoption name UCI_Chess960 value ${isEnabled ? "true" : "false"}',
     );
