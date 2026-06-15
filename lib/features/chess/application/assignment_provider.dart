@@ -334,7 +334,7 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
             targetValue: 1,
           ),
           rust_assignment.ChanakyaTask(
-            title: "Tactical Prescription",
+            title: "Tactical Daily Challenge",
             description: "Solve 5 scotoma puzzles",
             taskType: rust_assignment.ChanakyaTaskType.puzzle,
             targetId: "ksb",
@@ -386,7 +386,7 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
     final puzzleRoutineTask = routine.tasks.firstWhere(
       (t) => t.taskType == rust_assignment.ChanakyaTaskType.puzzle,
       orElse: () => const rust_assignment.ChanakyaTask(
-        title: "Tactical Prescription",
+        title: "Tactical Daily Challenge",
         description: "Solve 3 scotoma puzzles",
         taskType: rust_assignment.ChanakyaTaskType.puzzle,
         targetId: "ksb",
@@ -394,7 +394,7 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
       ),
     );
     final puzzleTask = DailyTask(
-      title: puzzleRoutineTask.title,
+      title: puzzleRoutineTask.title == "Tactical Prescription" ? "Tactical Daily Challenge" : puzzleRoutineTask.title,
       description: "Solve 3 scotoma-targeted puzzles on axis '${puzzleRoutineTask.targetId}'.",
       taskType: DailyTaskType.puzzle,
       targetId: puzzleRoutineTask.targetId,

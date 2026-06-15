@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show File;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:chess/chess.dart' as chess_lib;
@@ -279,7 +280,22 @@ class StudyLabNotifier extends StateNotifier<StudyLabState> {
 
   Future<String> _getDbPath() async {
     final directory = await getApplicationDocumentsDirectory();
-    return '${directory.path}/kingslayer_studies.db';
+    final oldPath = '${directory.path}/kingslayer_studies.db';
+    final newPath = '${directory.path}/ideaspace_studies.db';
+    
+    // Auto-migration logic:
+    try {
+      final oldFile = File(oldPath);
+      final newFile = File(newPath);
+      if (await oldFile.exists() && !await newFile.exists()) {
+        await oldFile.rename(newPath);
+        debugPrint('IdeaSpace: Migrated studies database to $newPath');
+      }
+    } catch (e) {
+      debugPrint('IdeaSpace: Error migrating studies database: $e');
+    }
+    
+    return newPath;
   }
 
   void selectNode(int? index) {

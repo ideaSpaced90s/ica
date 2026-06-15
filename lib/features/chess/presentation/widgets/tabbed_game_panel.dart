@@ -10,8 +10,8 @@ import '../../services/chess_sound_service.dart';
 import '../scholarly_theme.dart';
 import 'commentary_history.dart';
 
-class ClassicWindowsTabs extends ConsumerStatefulWidget {
-  const ClassicWindowsTabs({
+class TabbedGamePanel extends ConsumerStatefulWidget {
+  const TabbedGamePanel({
     super.key,
     required this.recentMoves,
     required this.viewingMoveIndex,
@@ -37,10 +37,10 @@ class ClassicWindowsTabs extends ConsumerStatefulWidget {
   final ChessState? academyState;
 
   @override
-  ConsumerState<ClassicWindowsTabs> createState() => _ClassicWindowsTabsState();
+  ConsumerState<TabbedGamePanel> createState() => _TabbedGamePanelState();
 }
 
-class _ClassicWindowsTabsState extends ConsumerState<ClassicWindowsTabs> {
+class _TabbedGamePanelState extends ConsumerState<TabbedGamePanel> {
   int _activeTab = 0;
 
   @override

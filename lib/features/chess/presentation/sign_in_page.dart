@@ -56,7 +56,7 @@ class _SignInPageState extends ConsumerState<SignInPage>
     });
 
     try {
-      final userCredential = await ref.read(authServiceProvider).signInWithPlayGames();
+      final userCredential = await ref.read(authServiceProvider).signInWithGoogle();
       if (userCredential == null) {
         // Sign-in canceled or failed silently
         setState(() {
@@ -79,14 +79,14 @@ class _SignInPageState extends ConsumerState<SignInPage>
       ref.read(showBattlegroundIntroProvider.notifier).state = true;
       ref.read(showPuzzlesIntroProvider.notifier).state = true;
 
-      // Trigger automatic restore from Play Games on login (capped at 4 seconds)
+      // Trigger automatic restore from Google Drive on login (capped at 4 seconds)
       try {
         await ref
             .read(googleDriveSyncProvider.notifier)
             .restore()
             .timeout(const Duration(seconds: 4));
       } catch (e) {
-        debugPrint('Play Games Login restore sync timed out or failed: $e');
+        debugPrint('Google Drive Login restore sync timed out or failed: $e');
       }
 
       _navigateToNext();
@@ -97,7 +97,7 @@ class _SignInPageState extends ConsumerState<SignInPage>
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Play Games Sign-In failed: $e'),
+            content: Text('Google Sign-In failed: $e'),
             backgroundColor: Colors.redAccent,
           ),
         );
@@ -302,7 +302,7 @@ class _SignInPageState extends ConsumerState<SignInPage>
                             : [],
                       ),
                       child: Text(
-                        'Play Games',
+                        'Google',
                         textAlign: TextAlign.center,
                         style: GoogleFonts.inter(
                           fontSize: 13,
@@ -372,13 +372,13 @@ class _SignInPageState extends ConsumerState<SignInPage>
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Icon(
-                    Icons.sports_esports_rounded,
-                    color: Colors.green,
+                    Icons.account_circle_rounded,
+                    color: Colors.blueAccent,
                     size: 24,
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    'Sign In with Play Games',
+                    'Sign In with Google',
                     style: GoogleFonts.inter(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,

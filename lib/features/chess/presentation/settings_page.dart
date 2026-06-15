@@ -235,7 +235,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Sign in with Google Play Games to automatically sync your settings, saved games, and performance statistics to the cloud.',
+              'Sign in with your Google Account to automatically sync your settings, saved games, and performance statistics to Google Drive.',
               style: GoogleFonts.inter(
                 color: ScholarlyTheme.textSubtle,
                 fontSize: 13,
@@ -275,7 +275,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         if (success) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Successfully synced with Play Games cloud save!'),
+              content: Text('Successfully synced with Google Drive cloud save!'),
               backgroundColor: Colors.green,
             ),
           );
@@ -291,7 +291,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     }
 
     return _SettingsTile(
-      label: 'Play Games Cloud Sync',
+      label: 'Google Drive Cloud Sync',
       description: syncState.status == GoogleDriveSyncStatus.syncing
           ? 'Syncing your data...'
           : syncState.lastSyncedAt != null

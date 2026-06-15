@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,7 +10,6 @@ import 'src/rust/frb_generated.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'features/chess/application/tutorial_provider.dart';
 import 'features/chess/data/tutorial_progress_repository.dart';
-import 'features/chess/services/device_info_service.dart';
 
 late SharedPreferences sharedPrefs;
 
@@ -32,40 +30,28 @@ void main() {
       debugPrint('GLOBAL FLUTTER ERROR: ${details.exception}\n${details.stack}');
     };
 
-    if (Platform.isAndroid || Platform.isIOS) {
-      final lockPortrait = await DeviceInfoService.shouldLockPortrait();
-      if (lockPortrait) {
-        await SystemChrome.setPreferredOrientations([
-          DeviceOrientation.portraitUp,
-          DeviceOrientation.portraitDown,
-        ]);
-      } else {
-        await SystemChrome.setPreferredOrientations([
-          DeviceOrientation.portraitUp,
-          DeviceOrientation.portraitDown,
-          DeviceOrientation.landscapeLeft,
-          DeviceOrientation.landscapeRight,
-        ]);
-      }
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
 
-      await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-      SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-        systemNavigationBarColor: Colors.transparent,
-        systemNavigationBarDividerColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light,
-        systemNavigationBarIconBrightness: Brightness.light,
-      ));
-    }
+    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      systemNavigationBarColor: Colors.transparent,
+      systemNavigationBarDividerColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+      systemNavigationBarIconBrightness: Brightness.light,
+    ));
 
-    runApp(const KingslayerChessApp());
+    runApp(const IdeaSpaceChessApp());
   }, (error, stack) {
     debugPrint('UNHANDLED ASYNC ERROR: $error\n$stack');
   });
 }
 
-class KingslayerChessApp extends StatelessWidget {
-  const KingslayerChessApp({super.key});
+class IdeaSpaceChessApp extends StatelessWidget {
+  const IdeaSpaceChessApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -75,18 +61,18 @@ class KingslayerChessApp extends StatelessWidget {
           TutorialProgressRepository(sharedPrefs),
         ),
       ],
-      child: const _KingslayerAppView(),
+      child: const _IdeaSpaceAppView(),
     );
   }
 }
 
-class _KingslayerAppView extends StatelessWidget {
-  const _KingslayerAppView();
+class _IdeaSpaceAppView extends StatelessWidget {
+  const _IdeaSpaceAppView();
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'IdeaSpace Chess Academy',
+      title: 'Chess',
       debugShowCheckedModeBanner: false,
       theme: ScholarlyTheme.themeData,
       home: const SplashScreen(),

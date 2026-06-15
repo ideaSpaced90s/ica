@@ -1,10 +1,16 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_auth_games_services/firebase_auth_games_services.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    scopes: [
+      'email',
+      'https://www.googleapis.com/auth/drive.appdata',
+    ],
+  );
 
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
@@ -16,6 +22,8 @@ class AuthService {
     return !user.isAnonymous;
   }
 
+  GoogleSignIn get googleSignIn => _googleSignIn;
+
   Future<UserCredential?> signInAnonymously() async {
     try {
       return await _auth.signInAnonymously();
@@ -25,17 +33,45 @@ class AuthService {
     }
   }
 
-  Future<UserCredential?> signInWithPlayGames({bool silent = false}) async {
+  Future<UserCredential?> signInWithGoogle() async {
     try {
-      return await _auth.signInWithGamesServices(silent: silent);
+      final googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) return null;
+
+      final googleAuth = await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      return await _auth.signInWithCredential(credential);
     } catch (e) {
-      debugPrint('ERROR sign in with Play Games Services (silent: $silent): $e');
+      debugPrint('ERROR signing in with Google: $e');
       rethrow;
+    }
+  }
+
+  Future<UserCredential?> signInWithGoogleSilently() async {
+    try {
+      final googleUser = await _googleSignIn.signInSilently();
+      if (googleUser == null) return null;
+
+      final googleAuth = await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      return await _auth.signInWithCredential(credential);
+    } catch (e) {
+      debugPrint('ERROR signing in with Google silently: $e');
+      return null;
     }
   }
 
   Future<void> signOut() async {
     try {
+      await _googleSignIn.signOut();
       await _auth.signOut();
     } catch (e) {
       debugPrint('ERROR signing out: $e');

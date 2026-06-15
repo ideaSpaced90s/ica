@@ -9,7 +9,7 @@ class ChanakyaQuotes {
     ScotomaAxis.dgb: [
       "Apprentice, your eyes miss the long diagonal. Study this position — the retreating bishop is the weapon your opponent wields against you.",
       "I have reviewed your recent games. The retreating bishop on the long diagonal strikes when you least expect it. Today, we train your eye to see it coming.",
-      "The diagonal is your blind alley. A bishop retreating to safety looks passive — but it bites. We cure this pattern today.",
+      "The diagonal is your blind alley. A bishop retreating to safety looks passive — but it bites. We correct this pattern today.",
       "Your records reveal a recurring weakness: the long diagonal retreat eludes you. The bishop moves backward to strike forward. Learn to see through this illusion.",
     ],
     ScotomaAxis.hrz: [
@@ -21,7 +21,7 @@ class ChanakyaQuotes {
     ScotomaAxis.knf: [
       "The knight on the flank haunts your games. Learn to see the L-shaped threat from the edges before it forks your pieces.",
       "Knights do not announce their intentions — they strike in silence. Your records show you are frequently caught by the fork. We correct this today.",
-      "The L-shape is chess's most deceptive weapon. Your games show a pattern: you miss the knight fork until it is too late. This prescription begins the cure.",
+      "The L-shape is chess's most deceptive weapon. Your games show a pattern: you miss the knight fork until it is too late. This training plan begins your improvement.",
       "Apprentice, knights on the rim are not dim — they are dangerous. Your blind spot for knight forks has cost you material. Let us end that pattern.",
     ],
     ScotomaAxis.tmp: [
@@ -34,7 +34,7 @@ class ChanakyaQuotes {
       "Greed is your enemy. Before you capture, look at what the opponent prepares. This puzzle teaches discipline.",
       "Your games are filled with poisoned captures. The opponent offers material — you take it — and you suffer. Today we break the habit of unexamined greed.",
       "The free pawn is never truly free. Your loss history confirms it. Before you reach out to capture, ask: why is this piece being offered to me?",
-      "Material greed has blinded you to the opponent's hidden intentions. This prescription trains you to always ask — what does my opponent gain when I capture?",
+      "Material greed has blinded you to the opponent's hidden intentions. This training plan trains you to always ask — what does my opponent gain when I capture?",
     ],
     ScotomaAxis.tnl: [
       "You focus on one side, blind to the other. The decisive blow always comes from where you are not looking.",
@@ -43,16 +43,16 @@ class ChanakyaQuotes {
       "A great chess player sees all 64 squares at once. Your records show that you fixate. We open the vision today.",
     ],
     ScotomaAxis.pin: [
-      "A pinned piece is a ghost defender. You have been fooled by them before. This puzzle cures the hallucination.",
+      "A pinned piece is a ghost defender. You have been fooled by them before. This puzzle corrects the hallucination.",
       "Your games reveal that you have often relied on a pinned piece to defend — only to discover it cannot. Today we make this lesson permanent.",
-      "The pin removes a defender while leaving it on the board. This illusion has fooled you many times. Today's prescription cures the ghost-defender blindness.",
+      "The pin removes a defender while leaving it on the board. This illusion has fooled you many times. Today's training plan corrects the ghost-defender blindspot.",
       "You count pinned pieces as defenders. They are not. This fundamental error has cost you games. We correct it today — once and for all.",
     ],
     ScotomaAxis.ksb: [
       "Your king breathes easy while danger forms. I will show you mating nets until they become instinct.",
       "You have underestimated the danger to your king on multiple occasions. Today I show you the mating patterns that haunted your games, until you recognize them instantly.",
-      "King safety is not an option — it is a requirement. Your games show a recurring disregard for the king's shelter. We cure this with targeted pattern recognition.",
-      "The king hunt — your most common cause of defeat. Your king safety instincts need sharpening. This prescription gives you the positions that punish carelessness.",
+      "King safety is not an option — it is a requirement. Your games show a recurring disregard for the king's shelter. We correct this with targeted pattern recognition.",
+      "The king hunt — your most common cause of defeat. Your king safety instincts need sharpening. This training plan gives you the positions that punish carelessness.",
     ],
     ScotomaAxis.balanced: [
       "Your vision is balanced, Apprentice. Now we sharpen all edges. A well-rounded tactician fears nothing. Begin.",
@@ -118,19 +118,19 @@ class ChanakyaQuotes {
     "A moment of clarity. Sustain it. The final blow is within reach.",
   ];
 
-  // 4. Puzzle Solved / Dose Counters
+  // 4. Puzzle Solved / Training Counters
   static const Map<int, List<String>> progressQuotes = {
     1: [
-      "Well done. One step taken on the path. 4 puzzles remain to complete your prescription.",
+      "Well done. One step taken on the path. 4 puzzles remain to complete your daily training plan.",
       "First victory secured. Keep the vision sharp, 4 more to go.",
-      "The medicine begins to work. 4 puzzles remaining.",
+      "The training begins to show results. 4 puzzles remaining.",
       "A successful start. The mind begins to see. 4 to go.",
       "Good execution. Do not let your guard down now, 4 puzzles left.",
     ],
     2: [
       "Instinct is forming. 3 puzzles remaining.",
-      "A second blow delivered. 3 steps left to complete the dose.",
-      "The scotoma begins to clear. 3 puzzles left.",
+      "A second blow delivered. 3 steps left to complete this training set.",
+      "The blindspot begins to clear. 3 puzzles left.",
       "You calculate well today. Keep this pace for 3 more puzzles.",
       "Halfway to the target. 3 puzzles remain.",
     ],
@@ -145,19 +145,19 @@ class ChanakyaQuotes {
       "Excellent. One final puzzle to clear your visual field.",
       "The end is near. Focus all your energy on this last puzzle.",
       "Only 1 challenge left. Prove your mastery.",
-      "You have done well. Now, solve the final puzzle of your prescription.",
+      "You have done well. Now, solve the final puzzle of your daily training plan.",
       "One last step, Apprentice. Make it perfect.",
     ],
   };
 
-  // 5. Complete Prescription
+  // 5. Complete Training
   static const List<String> completions = [
-    "Prescription complete! Your visual fields are sharpening. Return to the Arena and let your games prove your sight.",
+    "Training plan complete! Your visual fields are sharpening. Return to the Arena and let your games prove your sight.",
     "Your mind is balanced, Apprentice. The training is done for now. Go test your sight in a rated battleground.",
-    "The visual scotoma is temporarily cleared. Go play a rated match to verify your progress.",
-    "Prescription dose complete. You have earned your rest — or your next victory in the Arena.",
+    "Your visual blindspot is temporarily cleared. Go play a rated match to verify your progress.",
+    "Daily training complete. You have earned your rest — or your next victory in the Arena.",
     "Excellent discipline. Your calculation is restored. Go, test your strength against the avatars now.",
-    "We have cured the blindness for today. Go play in the Arena and see the difference.",
+    "We have corrected the blindspot for today. Go play in the Arena and see the difference.",
   ];
 
   static String getIntro(ScotomaAxis axis) {

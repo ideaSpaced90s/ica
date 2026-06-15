@@ -51,8 +51,8 @@ enum GuidedTutorialLevel {
 class GuidedTutorialFlow {
   static const int firstChapter = 1;
 
-  /// The guided tour covers Foundations only: Chapters 1–8.
-  static const int lastGuidedChapter = 8;
+  /// The guided tour covers Foundations only: Chapters 1–9.
+  static const int lastGuidedChapter = 9;
 
   /// Total chapters in the curriculum (used for non-guided navigation).
   static const int totalChapters = kTutorialChapterCount;
@@ -90,7 +90,7 @@ class OnboardingService {
     ref.read(onboardingTargetChapterProvider.notifier).state =
         GuidedTutorialFlow.startChapterFor(level);
     ref.read(showChapterSelectionProvider.notifier).state = true;
-    ref.read(mobileNavIndexProvider.notifier).state = 6;
+    ref.read(mobileNavIndexProvider.notifier).state = 7;
   }
 
   void advanceGuidedTutorial(int currentChapterId) {

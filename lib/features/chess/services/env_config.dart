@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
-import 'package:path/path.dart' as p;
 
 class EnvConfig {
   static final Map<String, String> _env = {};
@@ -21,18 +20,11 @@ class EnvConfig {
       debugPrint('EnvConfig: Asset load from rootBundle failed (expected on desktop dev or unit tests): $e');
     }
 
-    // 2. Fallback to raw File loading (for desktop, development path, and unit tests)
+    // 2. Fallback to raw File loading (for development path and unit tests)
     final potentialPaths = [
       '.env',
       'assets/.env',
-      'C:\\Users\\Public\\Documents\\ideaspace\\kingslayer_flutter\\.env',
     ];
-
-    // Try to get next to running executable (e.g. build/windows/x64/runner/Debug/.env)
-    try {
-      final exeDir = p.dirname(Platform.resolvedExecutable);
-      potentialPaths.add(p.join(exeDir, '.env'));
-    } catch (_) {}
 
     for (final path in potentialPaths) {
       final file = File(path);

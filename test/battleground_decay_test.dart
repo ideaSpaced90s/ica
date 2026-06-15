@@ -11,6 +11,8 @@ import 'package:kingslayer_chess/features/chess/data/settings_repository.dart';
 import 'package:kingslayer_chess/features/chess/domain/performance_ledger_entry.dart';
 import 'package:kingslayer_chess/features/chess/data/saved_game.dart';
 import 'package:kingslayer_chess/features/chess/application/chess_provider.dart';
+import 'package:kingslayer_chess/features/chess/services/auth_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class FakeStockfishService extends Fake implements StockfishService {
   @override
@@ -50,6 +52,13 @@ class FakeChessHapticsService extends Fake implements ChessHapticsService {
   Future<void> selection() async {}
   @override
   void updateSettings({required bool hapticsEnabled}) {}
+}
+
+class FakeAuthService extends Fake implements AuthService {
+  @override
+  User? get currentUser => null;
+  @override
+  bool get isPlayGamesUser => false;
 }
 
 class FakePerformanceLedgerRepository extends Fake implements PerformanceLedgerRepository {
@@ -112,6 +121,7 @@ void main() {
           chessSoundServiceProvider.overrideWithValue(fakeSoundService),
           chessHapticsServiceProvider.overrideWithValue(fakeHapticsService),
           settingsRepositoryProvider.overrideWithValue(fakeSettingsRepo),
+          authServiceProvider.overrideWithValue(FakeAuthService()),
         ],
       );
       addTearDown(container.dispose);
@@ -145,6 +155,7 @@ void main() {
           chessSoundServiceProvider.overrideWithValue(fakeSoundService),
           chessHapticsServiceProvider.overrideWithValue(fakeHapticsService),
           settingsRepositoryProvider.overrideWithValue(fakeSettingsRepo),
+          authServiceProvider.overrideWithValue(FakeAuthService()),
         ],
       );
       addTearDown(container.dispose);
@@ -186,6 +197,7 @@ void main() {
           chessSoundServiceProvider.overrideWithValue(fakeSoundService),
           chessHapticsServiceProvider.overrideWithValue(fakeHapticsService),
           settingsRepositoryProvider.overrideWithValue(fakeSettingsRepo),
+          authServiceProvider.overrideWithValue(FakeAuthService()),
         ],
       );
       addTearDown(container.dispose);

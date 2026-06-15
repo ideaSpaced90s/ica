@@ -15,10 +15,10 @@ class PrescriptionBanner extends StatelessWidget {
       case ScotomaAxis.dgb:
       case ScotomaAxis.hrz:
       case ScotomaAxis.knf:
-        return const Color(0xFF2563EB); // Geometry Therapy (Blue)
+        return const Color(0xFF2563EB); // Geometry Training (Blue)
       case ScotomaAxis.tnl:
       case ScotomaAxis.pin:
-        return const Color(0xFF7C3AED); // Attentional Therapy (Violet)
+        return const Color(0xFF7C3AED); // Attentional Training (Violet)
       case ScotomaAxis.grd:
       case ScotomaAxis.ksb:
         return const Color(0xFFEF4444); // Impulse & Defense (Crimson)
@@ -34,10 +34,10 @@ class PrescriptionBanner extends StatelessWidget {
       case ScotomaAxis.dgb:
       case ScotomaAxis.hrz:
       case ScotomaAxis.knf:
-        return 'GEOMETRY THERAPY';
+        return 'GEOMETRY TRAINING';
       case ScotomaAxis.tnl:
       case ScotomaAxis.pin:
-        return 'ATTENTIONAL THERAPY';
+        return 'ATTENTIONAL TRAINING';
       case ScotomaAxis.grd:
       case ScotomaAxis.ksb:
         return 'IMPULSE & DEFENSE';
@@ -74,21 +74,21 @@ class PrescriptionBanner extends StatelessWidget {
   String _getDescription() {
     switch (axis) {
       case ScotomaAxis.dgb:
-        return 'Cures Diagonal Retreat Blindness (DGB)';
+        return 'Corrects Diagonal Retreat Blindness (DGB)';
       case ScotomaAxis.hrz:
-        return 'Cures Horizontal Swing Blindness (HRZ)';
+        return 'Corrects Horizontal Swing Blindness (HRZ)';
       case ScotomaAxis.knf:
-        return 'Cures Flank Knight Blindness (KNF)';
+        return 'Corrects Flank Knight Blindness (KNF)';
       case ScotomaAxis.tnl:
-        return 'Cures Flank Tunnel Vision (TNL)';
+        return 'Corrects Flank Tunnel Vision (TNL)';
       case ScotomaAxis.pin:
-        return 'Cures Pinned Piece Hallucination (PIN)';
+        return 'Corrects Pinned Piece Hallucination (PIN)';
       case ScotomaAxis.grd:
-        return 'Cures Material Greed Bias (GRD)';
+        return 'Corrects Material Greed Bias (GRD)';
       case ScotomaAxis.ksb:
-        return 'Cures King Safety Blindness (KSB)';
+        return 'Corrects King Safety Blindness (KSB)';
       case ScotomaAxis.tmp:
-        return 'Cures Time Pressure Distress (TMP)';
+        return 'Corrects Time Pressure Distress (TMP)';
       case ScotomaAxis.balanced:
         return 'Sharpens all cognitive-visual dimensions';
     }

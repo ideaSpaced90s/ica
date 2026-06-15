@@ -1174,8 +1174,21 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
     final newVal = !state.isEngineVsEngine;
     state = state.copyWith(isEngineVsEngine: newVal);
 
-    if (newVal && _isAiTurn() && !state.game.gameOver && !state.isPaused) {
-      unawaited(ensureGameServicesStarted(analyzeCurrentPosition: true));
+    if (newVal) {
+      if (_isAiTurn() && !state.game.gameOver && !state.isPaused) {
+        unawaited(ensureGameServicesStarted(analyzeCurrentPosition: true));
+      }
+    } else {
+      // Toggled off: check if it's the down side's turn (user's side).
+      final turn = state.game.turn;
+      final isBottomTurn = state.isPlayerWhite
+          ? (turn == chess_lib.Color.WHITE)
+          : (turn == chess_lib.Color.BLACK);
+      if (isBottomTurn) {
+        // Disconnect the bot
+        _stopAnalysisAndReset();
+        state = state.copyWith(isEngineThinking: false);
+      }
     }
     _soundService.playSfx(SoundEffect.uiClick);
   }

@@ -1,7 +1,5 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:local_notifier/local_notifier.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -21,79 +19,56 @@ class NotificationService {
 
   /// Initialise notifications for the current platform
   Future<void> initialize() async {
-    if (Platform.isAndroid) {
-      tz.initializeTimeZones();
-      
-      const AndroidInitializationSettings initializationSettingsAndroid =
-          AndroidInitializationSettings('@mipmap/ic_launcher');
-          
-      const InitializationSettings initializationSettings = InitializationSettings(
-        android: initializationSettingsAndroid,
-      );
+    tz.initializeTimeZones();
+    
+    const AndroidInitializationSettings initializationSettingsAndroid =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+        
+    const InitializationSettings initializationSettings = InitializationSettings(
+      android: initializationSettingsAndroid,
+    );
 
-      await _androidNotifications.initialize(
-        initializationSettings,
-        onDidReceiveNotificationResponse: (NotificationResponse response) {
-          if (onNotificationClicked != null) {
-            onNotificationClicked!(11); // Route to Assignment (11)
-          }
-        },
-      );
-    } else if (Platform.isWindows) {
-      await localNotifier.setup(
-        appName: 'IdeaSpace Chess Academy',
-        shortcutPolicy: ShortcutPolicy.requireCreate,
-      );
-    }
+    await _androidNotifications.initialize(
+      initializationSettings,
+      onDidReceiveNotificationResponse: (NotificationResponse response) {
+        if (onNotificationClicked != null) {
+          onNotificationClicked!(11); // Route to Assignment (11)
+        }
+      },
+    );
   }
 
   /// Show an immediate notification (works on Android and Windows)
   Future<void> showImmediateNotification(String title, String body) async {
-    if (Platform.isAndroid) {
-      const AndroidNotificationDetails androidPlatformChannelSpecifics =
-          AndroidNotificationDetails(
-        'immediate_alerts',
-        'Immediate Alerts',
-        channelDescription: 'Real-time achievement and lesson notifications',
-        importance: Importance.max,
-        priority: Priority.high,
-        ticker: 'ticker',
-      );
-      
-      const NotificationDetails platformChannelSpecifics = NotificationDetails(
-        android: androidPlatformChannelSpecifics,
-      );
-      
-      await _androidNotifications.show(
-        0,
-        title,
-        body,
-        platformChannelSpecifics,
-      );
-    } else if (Platform.isWindows) {
-      final notification = LocalNotification(
-        title: title,
-        body: body,
-      );
-      notification.onClick = () {
-        if (onNotificationClicked != null) {
-          onNotificationClicked!(11);
-        }
-      };
-      await notification.show();
-    }
+    const AndroidNotificationDetails androidPlatformChannelSpecifics =
+        AndroidNotificationDetails(
+      'immediate_alerts',
+      'Immediate Alerts',
+      channelDescription: 'Real-time achievement and lesson notifications',
+      importance: Importance.max,
+      priority: Priority.high,
+      ticker: 'ticker',
+    );
+    
+    const NotificationDetails platformChannelSpecifics = NotificationDetails(
+      android: androidPlatformChannelSpecifics,
+    );
+    
+    await _androidNotifications.show(
+      0,
+      title,
+      body,
+      platformChannelSpecifics,
+    );
   }
 
   /// Cancel all scheduled alarms
   Future<void> cancelAllNotifications() async {
-    if (Platform.isAndroid) {
-      await _androidNotifications.cancelAll();
-    }
+    await _androidNotifications.cancelAll();
   }
 
   /// Schedule the daily briefing at a specific time (Android only)
   Future<void> scheduleDailyBriefing(String timeStr) async {
-    if (!Platform.isAndroid) return;
 
     try {
       final parts = timeStr.split(':');
@@ -130,7 +105,6 @@ class NotificationService {
   /// Schedule the evening streak protection reminder (Android only)
   /// Calculates alert time based on warning hours before midnight (e.g. 4 hours = 8:00 PM)
   Future<void> scheduleStreakProtection(int hoursBeforeReset) async {
-    if (!Platform.isAndroid) return;
 
     try {
       final hour = 24 - hoursBeforeReset;

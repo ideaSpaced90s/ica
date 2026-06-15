@@ -12,6 +12,7 @@ import 'package:kingslayer_chess/features/chess/data/prescription_puzzle_reposit
 import 'package:kingslayer_chess/features/chess/application/store_provider.dart';
 import 'package:kingslayer_chess/features/chess/application/chess_provider.dart';
 import 'package:kingslayer_chess/src/rust/api/cognitive.dart' as rust_cognitive;
+import 'package:kingslayer_chess/features/chess/services/play_games_sync_service.dart';
 
 class FakeAssignmentRepository implements AssignmentRepository {
   AssignmentState? savedState;
@@ -160,6 +161,23 @@ class FakeStoreNotifier extends StoreNotifier {
   }
 }
 
+class FakePlayGamesSyncNotifier extends StateNotifier<PlayGamesSyncState> implements PlayGamesSyncNotifier {
+  FakePlayGamesSyncNotifier() : super(PlayGamesSyncState());
+
+  @override
+  Future<bool> backup({bool silent = false}) async {
+    return true;
+  }
+
+  @override
+  Future<bool> restore() async {
+    return true;
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -284,6 +302,7 @@ void main() {
           storeProvider.overrideWith((ref) {
             return FakeStoreNotifier(ref, createMockStoreState(isPremium: isPremium));
           }),
+          googleDriveSyncProvider.overrideWith((ref) => FakePlayGamesSyncNotifier()),
         ],
       );
       addTearDown(container.dispose);

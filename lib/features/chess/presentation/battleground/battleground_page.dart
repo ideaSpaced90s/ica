@@ -20,7 +20,7 @@ import '../widgets/captured_pieces_inline.dart';
 import '../widgets/dice_rolling_overlay.dart';
 import '../widgets/ambient_flow_backdrop.dart';
 import '../widgets/ambient_scaffold.dart';
-import '../widgets/classic_windows_tabs.dart';
+import '../widgets/tabbed_game_panel.dart';
 import 'package:confetti/confetti.dart';
 import '../dashboard_page.dart';
 import '../../application/onboarding_provider.dart';
@@ -330,9 +330,8 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
                 ),
                 const SizedBox(height: 12),
 
-                // Center Section: Classic Tabbed Panel
                 Expanded(
-                  child: ClassicWindowsTabs(
+                  child: TabbedGamePanel(
                     recentMoves: state.recentMoves,
                     viewingMoveIndex: state.viewingMoveIndex,
                     onMoveTap: (idx) {

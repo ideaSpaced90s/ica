@@ -657,7 +657,7 @@ class _PuzzlesPageState extends ConsumerState<PuzzlesPage> {
             if (showIntro)
               GMChanakyaIntroOverlay(
                 pageTitle: 'PUZZLES',
-                text: "The Puzzles chamber, Apprentice, is where we cure chess blindness and train your tactical sight. Chess is won in the details—the double attacks, the pins, the sudden checkmates that the untrained mind overlooks. In this room, you must solve a daily tailored prescription of hand-picked puzzle scenarios. Each puzzle is a tactical riddle designed to sharpen your pattern recognition and build muscle memory. The puzzles will help you even more if you play more rated games. Tap the thumbs up to begin your mental conditioning. Let us see how quickly you spot the winning line.",
+                text: "The Puzzles chamber, Apprentice, is where we address chess blindspots and train your tactical sight. Chess is won in the details—the double attacks, the pins, the sudden checkmates that the untrained mind overlooks. In this room, you must solve a daily tailored challenge of hand-picked puzzle scenarios. Each puzzle is a tactical riddle designed to sharpen your pattern recognition and build muscle memory. The puzzles will help you even more if you play more rated games. Tap the thumbs up to begin your mental training. Let us see how quickly you spot the winning line.",
                 onDismiss: () {
                   ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
                   ref.read(showPuzzlesIntroProvider.notifier).state = false;
@@ -769,9 +769,9 @@ class _PuzzleStatusHeader extends ConsumerWidget {
                   children: [
                     Text(
                       isSolved
-                          ? 'SOLVED (DOSE ${state.solvedCount}/5)'
+                          ? 'SOLVED (COUNT ${state.solvedCount}/5)'
                           : (p != null
-                              ? '${_getToughness(p.rating).toUpperCase()} TOUGHNESS (DOSE ${state.solvedCount}/5)'
+                              ? '${_getToughness(p.rating).toUpperCase()} TOUGHNESS (COUNT ${state.solvedCount}/5)'
                               : (state.commentaryError != null
                                   ? 'ERROR'
                                   : 'LOADING...')),

@@ -8,8 +8,6 @@ import '../../application/store_provider.dart';
 import '../../services/chess_sound_service.dart';
 import '../scholarly_theme.dart';
 import '../widgets/ambient_scaffold.dart';
-import '../arena/themes/theme_registry.dart';
-import '../widgets/theme_preview_dialog.dart';
 
 class StorePage extends ConsumerStatefulWidget {
   const StorePage({super.key});
@@ -18,72 +16,19 @@ class StorePage extends ConsumerStatefulWidget {
   ConsumerState<StorePage> createState() => _StorePageState();
 }
 
-class _StorePageState extends ConsumerState<StorePage> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-  late ScrollController _themesScrollController;
-
+class _StorePageState extends ConsumerState<StorePage> {
   @override
   void initState() {
     super.initState();
-    final initialTab = ref.read(storeTabProvider);
-    _tabController = TabController(length: 2, vsync: this, initialIndex: initialTab);
-    _tabController.addListener(() {
-      if (_tabController.indexIsChanging) return;
-      ref.read(storeTabProvider.notifier).state = _tabController.index;
-    });
-
-    _themesScrollController = ScrollController();
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
-    _themesScrollController.dispose();
     super.dispose();
-  }
-
-  void _scrollToTheme(String themeId) {
-    final freeThemeIds = {'classic', 'scholar', 'vector_wood', 'theme3', 'sprite_fairytale'};
-    final premiumThemes = ThemeRegistry.allThemes.where((t) => !freeThemeIds.contains(t.id)).toList();
-    final index = premiumThemes.indexWhere((t) => t.id == themeId);
-    if (index == -1) return;
-
-    final screenWidth = MediaQuery.of(context).size.width;
-    final crossAxisCount = (screenWidth / 180).floor().clamp(2, 6);
-    final rowIndex = index ~/ crossAxisCount;
-
-    final gridWidth = screenWidth - 32.0;
-    final itemWidth = (gridWidth - (12.0 * (crossAxisCount - 1))) / crossAxisCount;
-    final itemHeight = itemWidth / 0.8;
-    final rowHeight = itemHeight + 12.0;
-
-    final targetOffset = 150.0 + (rowIndex * rowHeight);
-
-    if (_themesScrollController.hasClients) {
-      _themesScrollController.animateTo(
-        targetOffset.clamp(0.0, _themesScrollController.position.maxScrollExtent),
-        duration: const Duration(milliseconds: 800),
-        curve: Curves.easeOutCubic,
-      );
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    ref.listen<int>(storeTabProvider, (previous, next) {
-      if (_tabController.index != next) {
-        _tabController.animateTo(next);
-      }
-    });
-
-    ref.listen<String?>(storeHighlightThemeIdProvider, (previous, next) {
-      if (next != null) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _scrollToTheme(next);
-        });
-      }
-    });
-
     final storeState = ref.watch(storeProvider);
     final storeNotifier = ref.read(storeProvider.notifier);
 
@@ -110,7 +55,7 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'KINGSLAYER STORE',
+                          'IDEASPACE PREMIUM',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.outfit(
@@ -121,7 +66,7 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
                           ),
                         ),
                         Text(
-                          'Subscriptions and Chessboard Customizations',
+                          'Subscriptions and Account Status',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.inter(
@@ -136,56 +81,11 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
               ),
             ),
 
-            const SizedBox(height: 8),
-
-            // TabBar in a beautiful container
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Container(
-                height: 48,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.8), width: 1.5),
-                ),
-                child: TabBar(
-                  controller: _tabController,
-                  indicator: BoxDecoration(
-                    color: ScholarlyTheme.accentBlue,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  indicatorSize: TabBarIndicatorSize.tab,
-                  labelColor: Colors.white,
-                  unselectedLabelColor: ScholarlyTheme.textPrimary,
-                  labelStyle: GoogleFonts.outfit(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                    letterSpacing: 0.5,
-                  ),
-                  unselectedLabelStyle: GoogleFonts.outfit(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                    letterSpacing: 0.5,
-                  ),
-                  tabs: const [
-                    Tab(text: 'PLANS'),
-                    Tab(text: 'BOARD THEMES'),
-                  ],
-                ),
-              ),
-            ),
-
             const SizedBox(height: 12),
 
             // TabBarView content
             Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  _buildPlansTab(context, storeState, storeNotifier),
-                  _buildThemesTab(context, storeState, storeNotifier),
-                ],
-              ),
+              child: _buildPlansTab(context, storeState, storeNotifier),
             ),
           ],
         ),
@@ -561,357 +461,6 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
     );
   }
 
-  Widget _buildThemesTab(
-    BuildContext context,
-    StoreState storeState,
-    StoreNotifier storeNotifier,
-  ) {
-    final chessState = ref.watch(chessProvider);
-    final chessNotifier = ref.read(chessProvider.notifier);
-
-    // Grouping themes
-    final freeThemeIds = {'classic', 'scholar', 'vector_wood', 'theme3', 'sprite_fairytale'};
-    final premiumThemes = ThemeRegistry.allThemes.where((t) => !freeThemeIds.contains(t.id)).toList();
-
-    final screenWidth = MediaQuery.of(context).size.width;
-    final crossAxisCount = (screenWidth / 180).floor().clamp(2, 6);
-
-    return CustomScrollView(
-      controller: _themesScrollController,
-      physics: const BouncingScrollPhysics(),
-      slivers: [
-        // Intro Header
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: ScholarlyTheme.accentBlueSoft.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.15)),
-              ),
-              child: Text(
-                '🎨 All free themes are always available in Arena Settings! Premium themes can be purchased individually below or unlocked entirely with any Premium Subscription plan!',
-                style: GoogleFonts.inter(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                  color: ScholarlyTheme.textPrimary,
-                  height: 1.4,
-                ),
-              ),
-            ),
-          ),
-        ),
-
-        // Section: Premium Themes Header
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Text(
-              'PREMIUM THEMES',
-              style: GoogleFonts.outfit(
-                fontSize: 12,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 1.5,
-                color: ScholarlyTheme.textMuted,
-              ),
-            ),
-          ),
-        ),
-
-        // Grid for Premium Themes
-        SliverPadding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          sliver: SliverGrid(
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: crossAxisCount,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 0.8,
-            ),
-            delegate: SliverChildBuilderDelegate(
-              (context, index) {
-                final theme = premiumThemes[index];
-                final isSelected = theme.id == chessState.boardThemeId;
-                return _buildThemeShopCard(context, theme, false, isSelected, storeState, storeNotifier, chessNotifier);
-              },
-              childCount: premiumThemes.length,
-            ),
-          ),
-        ),
-
-        // Spacing at the bottom
-        const SliverToBoxAdapter(
-          child: SizedBox(height: 32),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildThemeShopCard(
-    BuildContext context,
-    dynamic theme, // ChessTheme
-    bool isFree,
-    bool isSelected,
-    StoreState storeState,
-    StoreNotifier storeNotifier,
-    dynamic chessNotifier,
-  ) {
-    final isOwned = isFree || storeState.isPremium || storeState.purchasedBoardThemes.contains(theme.id);
-    final highlightThemeId = ref.watch(storeHighlightThemeIdProvider);
-    final isHighlighted = theme.id == highlightThemeId;
-
-    return GestureDetector(
-      onTap: () {
-        if (isHighlighted) {
-          ref.read(storeHighlightThemeIdProvider.notifier).state = null;
-        }
-        ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-        showDialog(
-          context: context,
-          builder: (context) => ThemePreviewDialog(
-            theme: theme,
-            isFree: isFree,
-            isOwned: isOwned,
-            isSelected: isSelected,
-            storeNotifier: storeNotifier,
-            chessNotifier: chessNotifier,
-          ),
-        );
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.65),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected
-                ? ScholarlyTheme.accentBlue
-                : Colors.white.withValues(alpha: 0.8),
-            width: isSelected ? 2.5 : 1.5,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.02),
-              blurRadius: 6,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Preview box
-              Expanded(
-                child: Stack(
-                  children: [
-                    Positioned.fill(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              theme.lightSquare,
-                              theme.darkSquare,
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Center(
-                          child: FractionallySizedBox(
-                            widthFactor: 0.65,
-                            heightFactor: 0.65,
-                            child: theme.buildPiece(
-                              context,
-                              'N',
-                              true,
-                              false,
-                              0.0,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    
-                    // Status badge on preview
-                    Positioned(
-                      top: 6,
-                      left: 6,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: isFree
-                              ? Colors.green.withValues(alpha: 0.85)
-                              : (isOwned
-                                  ? ScholarlyTheme.accentBlue.withValues(alpha: 0.85)
-                                  : Colors.black.withValues(alpha: 0.65)),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          isFree ? 'FREE' : (isOwned ? 'OWNED' : '₹49'),
-                          style: GoogleFonts.outfit(
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    // Locked icon overlay if not owned
-                    if (!isOwned)
-                      Positioned.fill(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.25),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: const Center(
-                            child: Icon(Icons.lock_rounded, color: Colors.white, size: 24),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              
-              const SizedBox(height: 8),
-
-              // Theme name
-              Text(
-                theme.name,
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.outfit(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: ScholarlyTheme.textPrimary,
-                ),
-              ),
-
-              const SizedBox(height: 6),
-
-              SizedBox(
-                height: 28,
-                child: isOwned
-                    ? Container(
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFDCFCE7), // Premium light green-100
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: const Color(0xFFBBF7D0), width: 1.5), // green-200 border
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.check_circle_rounded, color: Color(0xFF15803D), size: 14), // green-700
-                            const SizedBox(width: 4),
-                            Text(
-                              'OWNED',
-                              style: GoogleFonts.outfit(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: const Color(0xFF15803D), // green-700
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    : BeatingWidget(
-                        enabled: isHighlighted,
-                        child: ElevatedButton(
-                          onPressed: () {
-                            if (isHighlighted) {
-                              ref.read(storeHighlightThemeIdProvider.notifier).state = null;
-                            }
-                            ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                            _showThemePurchaseConfirmation(context, theme, storeNotifier, chessNotifier);
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.amber.shade700,
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                            padding: EdgeInsets.zero,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                          child: Text(
-                            'BUY ₹49',
-                            style: GoogleFonts.outfit(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ),
-                      ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showThemePurchaseConfirmation(
-    BuildContext context,
-    dynamic theme,
-    StoreNotifier storeNotifier,
-    dynamic chessNotifier,
-  ) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: Colors.white,
-          surfaceTintColor: Colors.transparent,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          title: Text(
-            'Confirm Purchase',
-            style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary),
-          ),
-          content: Text(
-            'Would you like to buy the premium theme "${theme.name}" for ₹49 (Simulated)? It will be unlocked permanently.',
-            style: GoogleFonts.inter(fontSize: 13, color: ScholarlyTheme.textPrimary, height: 1.4),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('Cancel', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted)),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                storeNotifier.purchaseBoardTheme(theme.id);
-                chessNotifier.setBoardTheme(theme.id);
-                ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('⚡ Purchased and applied ${theme.name} theme!'),
-                    behavior: SnackBarBehavior.floating,
-                    backgroundColor: Colors.green,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              child: Text('Buy Now', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   // Membership & Subscription Header Card
   Widget _buildSubscriptionCard(
     BuildContext context,
@@ -1224,7 +773,7 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
               
               const SizedBox(height: 12),
               Text(
-                '💡 This is a simulated store page. Clicking "Pay" will charge ₹0.00 and immediately grant full Kingslayer Premium status for the selected duration.',
+                '💡 This is a simulated store page. Clicking "Pay" will charge ₹0.00 and immediately grant full IdeaSpace Premium status for the selected duration.',
                 style: GoogleFonts.inter(
                   fontSize: 11,
                   color: Colors.amber[850],

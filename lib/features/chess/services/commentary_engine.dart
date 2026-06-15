@@ -60,7 +60,7 @@ class CommentaryEngine {
   static const _puzzleLoaders = [
     'GM Chanakya is consulting the puzzle archives...',
     'Searching the training vaults for a fitting exercise...',
-    'Retrieving a prescription from the tactical library...',
+    'Retrieving a training plan from the tactical library...',
     'The archives are being searched. A fitting puzzle shall emerge.',
   ];
 

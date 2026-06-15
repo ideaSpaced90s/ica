@@ -33,12 +33,6 @@ class AnalysisStockfishService implements ChessEngineService {
   Future<void> init() async {
     if (_isDisposed) _isDisposed = false;
 
-    if (kIsWeb) {
-      debugPrint('AnalysisStockfishService: Web platform detected, disabling engine.');
-      _isError = true;
-      return;
-    }
-
     if (_process != null) {
       return;
     }
@@ -48,75 +42,13 @@ class AnalysisStockfishService implements ChessEngineService {
     _readyCompleter = Completer<void>();
 
     try {
-      if (Platform.isAndroid) {
-        final String libDir = await _channel.invokeMethod(
-          'getNativeLibraryDir',
-        );
-        final enginePath = p.join(libDir, 'libstockfish.so');
-        final success = await _tryLaunchEngine(enginePath, const Duration(seconds: 20));
-        if (!success) {
-          throw Exception('Failed to start Stockfish on Android for Analysis');
-        }
-      } else if (Platform.isWindows) {
-        final exePath = Platform.resolvedExecutable;
-        final exeDir = p.dirname(exePath);
-        
-        const relPathAvx2 = 'assets/engine/wincessengines/stockfish-windows-x86-64-avx2/stockfish/stockfish-windows-x86-64-avx2.exe';
-        const relPathNonAvx2 = 'assets/engine/wincessengines/stockfish-windows-x86-64/stockfish/stockfish-windows-x86-64.exe';
-
-        final potentialPathsAvx2 = [
-          p.join(Directory.current.path, relPathAvx2),
-          p.join(exeDir, 'data', 'flutter_assets', relPathAvx2),
-          p.join(exeDir, relPathAvx2),
-          'C:\\Stockfish\\stockfish.exe',
-        ];
-
-        final potentialPathsNonAvx2 = [
-          p.join(Directory.current.path, relPathNonAvx2),
-          p.join(exeDir, 'data', 'flutter_assets', relPathNonAvx2),
-          p.join(exeDir, relPathNonAvx2),
-        ];
-
-        String? avx2Path;
-        for (final path in potentialPathsAvx2) {
-          if (await File(path).exists()) {
-            avx2Path = path;
-            break;
-          }
-        }
-
-        bool success = false;
-        if (avx2Path != null) {
-          debugPrint('AnalysisStockfishService: Attempting AVX2 primary engine -> $avx2Path');
-          success = await _tryLaunchEngine(avx2Path, const Duration(seconds: 3));
-          if (success) {
-            debugPrint('AnalysisStockfishService: AVX2 primary engine successfully launched and handshaked!');
-          } else {
-            debugPrint('AnalysisStockfishService WARNING: AVX2 primary engine failed/crashed. Falling back to non-AVX2...');
-          }
-        }
-
-        if (!success) {
-          String? nonAvx2Path;
-          for (final path in potentialPathsNonAvx2) {
-            if (await File(path).exists()) {
-              nonAvx2Path = path;
-              break;
-            }
-          }
-
-          if (nonAvx2Path != null) {
-            debugPrint('AnalysisStockfishService: Attempting Non-AVX2 backup engine -> $nonAvx2Path');
-            success = await _tryLaunchEngine(nonAvx2Path, const Duration(seconds: 20));
-            if (success) {
-              debugPrint('AnalysisStockfishService: Non-AVX2 backup engine successfully launched and handshaked!');
-            }
-          }
-        }
-
-        if (!success) {
-          throw Exception('Stockfish binary NOT FOUND or failed to execute on Windows for Analysis.');
-        }
+      final String libDir = await _channel.invokeMethod(
+        'getNativeLibraryDir',
+      );
+      final enginePath = p.join(libDir, 'libstockfish_chess_engine.so');
+      final success = await _tryLaunchEngine(enginePath, const Duration(seconds: 20));
+      if (!success) {
+        throw Exception('Failed to start Stockfish on Android for Analysis');
       }
     } catch (e) {
       debugPrint('AnalysisStockfishService: FAILED to start engine: $e');

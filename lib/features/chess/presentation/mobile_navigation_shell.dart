@@ -51,9 +51,9 @@ class MobileNavigationShell extends ConsumerWidget {
     final isAcademyMatchActive = currentIndex == 3 && academyState.recentMoves.isNotEmpty && !academyState.game.gameOver;
     final isDrawerDisabled = isBgMatchActive || isAcademyMatchActive;
 
-    // Mute background music when in Arena (1), Battleground (2), Academy (3), Puzzles (4), or Assignment (11)
+    // Mute background music when in Battleground (2)
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final isMuted = currentIndex == 1 || currentIndex == 2 || currentIndex == 3 || currentIndex == 4 || currentIndex == 11;
+      final isMuted = currentIndex == 2;
       ref.read(chessSoundServiceProvider).setMutedTabState(isMuted);
     });
 
@@ -97,7 +97,7 @@ class MobileNavigationShell extends ConsumerWidget {
         case 9:
           return 'SETTINGS';
         case 10:
-          return 'STORE';
+          return 'ACCOUNT';
         case 11:
           return 'ASSIGNMENT';
         default:
@@ -566,8 +566,8 @@ class _MobileSidebarDrawer extends ConsumerWidget {
                   },
                 ),
                 _DrawerTile(
-                  label: 'Store',
-                  icon: Icons.storefront_rounded,
+                  label: 'Account',
+                  icon: Icons.manage_accounts_rounded,
                   isSelected: currentIndex == 10,
                   onTap: () {
                     _navigate(ref, context, 10);

@@ -1156,7 +1156,7 @@ class TutorialLessonsDatabase {
     TutorialLesson(
       chapterId: 22,
       title: 'The Skewer',
-      setupFen: '8/8/2k5/8/8/8/4B3/7r w - - 0 1',
+      setupFen: '8/8/2k5/8/8/8/K3B3/7r w - - 0 1',
       steps: [
         TutorialStep(
           type: TutorialStepType.dialogue,
@@ -2716,7 +2716,7 @@ class TutorialLessonsDatabase {
     TutorialLesson(
       chapterId: 49,
       title: 'The Windmill',
-      setupFen: '5rk1/pp3ppp/5B2/4p2q/8/1P1P2R1/P1P5/6K1 w - - 0 1',
+      setupFen: '5rk1/pp3pp1/5B2/4p2q/8/1P1P2R1/P1P5/6K1 w - - 0 1',
       steps: [
         TutorialStep(
           type: TutorialStepType.dialogue,
@@ -2809,15 +2809,15 @@ class TutorialLessonsDatabase {
           highlightSquares: ['g7', 'g5'],
           expectedMove: 'g7g5',
           reactionCorrect: MentorReaction(
-            dialogue: "Perfect. King goes back to g8, and the Queen is trapped.",
+            dialogue: "Perfect. King goes to h7, and the Queen is trapped.",
             mood: MentorMood.encouraging,
           ),
         ),
         TutorialStep(
           type: TutorialStepType.demonstrate,
-          dialogue: "Black King returns to g8.",
-          scriptedMove: 'h8g8',
-          animatePathSquares: ['h8', 'g8'],
+          dialogue: "Black King escapes to h7.",
+          scriptedMove: 'h8h7',
+          animatePathSquares: ['h8', 'h7'],
         ),
         TutorialStep(
           type: TutorialStepType.awaitMove,

@@ -3,15 +3,16 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
-import 'package:games_services/games_services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:googleapis/drive/v3.dart' as drive;
+import 'package:http/http.dart' as http;
 import 'auth_service.dart';
 import '../application/chess_provider.dart';
 
-/// Sync statuses for Play Games UI integration.
+/// Sync statuses for UI integration.
 enum PlayGamesSyncStatus { idle, syncing, success, error }
 
-/// Represents the state of the Play Games Cloud Sync process.
+/// Represents the state of the Cloud Sync process.
 class PlayGamesSyncState {
   final PlayGamesSyncStatus status;
   final String? errorMessage;
@@ -36,6 +37,19 @@ class PlayGamesSyncState {
   }
 }
 
+class GoogleAuthClient extends http.BaseClient {
+  final Map<String, String> _headers;
+  final http.Client _client = http.Client();
+
+  GoogleAuthClient(this._headers);
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) {
+    request.headers.addAll(_headers);
+    return _client.send(request);
+  }
+}
+
 /// StateNotifier to manage sync triggers, automatic debounce, and progress states.
 class PlayGamesSyncNotifier extends StateNotifier<PlayGamesSyncState> {
   final Ref _ref;
@@ -43,21 +57,20 @@ class PlayGamesSyncNotifier extends StateNotifier<PlayGamesSyncState> {
 
   PlayGamesSyncNotifier(this._ref) : super(PlayGamesSyncState());
 
-  /// Triggers backup of local settings and progress files to Play Games Cloud Save (Saved Games).
-  /// If [silent] is true, errors and states are updated, but it won't force UI loading indicators.
+  /// Triggers backup of local settings and progress files to Google Drive appDataFolder.
   Future<bool> backup({bool silent = false}) async {
     final authService = _ref.read(authServiceProvider);
     
     // Skip if user is not signed in
     if (authService.currentUser == null) {
-      debugPrint("Play Games Sync: User not signed in, skipping automatic backup");
+      debugPrint("Google Drive Sync: User not signed in, skipping automatic backup");
       return false;
     }
 
-    // Debounce checks for rapid successive changes (e.g. within 2 seconds)
+    // Debounce checks for rapid successive changes
     final now = DateTime.now();
     if (_lastBackupRequestTime != null && now.difference(_lastBackupRequestTime!).inSeconds < 2) {
-      debugPrint("Play Games Sync: Debounced backup request");
+      debugPrint("Google Drive Sync: Debounced backup request");
       return false;
     }
     _lastBackupRequestTime = now;
@@ -87,11 +100,44 @@ class PlayGamesSyncNotifier extends StateNotifier<PlayGamesSyncState> {
 
       final String jsonString = jsonEncode(payload);
 
-      // Save to Play Games cloud save slot
-      await SaveGame.saveGame(
-        data: jsonString,
-        name: 'kingslayer_chess_save',
+      final googleUser = authService.googleSignIn.currentUser ?? 
+          await authService.googleSignIn.signInSilently();
+      if (googleUser == null) {
+        throw Exception("Failed to get Google Sign-In user for Drive Sync");
+      }
+      
+      final authHeaders = await googleUser.authHeaders;
+      final client = GoogleAuthClient(authHeaders);
+      final driveApi = drive.DriveApi(client);
+
+      final fileList = await driveApi.files.list(
+        q: "name = 'kingslayer_chess_save.json' and 'appDataFolder' in parents and trashed = false",
+        spaces: 'appDataFolder',
       );
+
+      final media = drive.Media(
+        Stream.value(utf8.encode(jsonString)),
+        jsonString.length,
+      );
+
+      if (fileList.files != null && fileList.files!.isNotEmpty) {
+        final fileId = fileList.files!.first.id!;
+        await driveApi.files.update(
+          drive.File(),
+          fileId,
+          uploadMedia: media,
+        );
+        debugPrint("Google Drive Sync: Successfully updated existing backup");
+      } else {
+        final driveFile = drive.File()
+          ..name = 'kingslayer_chess_save.json'
+          ..parents = ['appDataFolder'];
+        await driveApi.files.create(
+          driveFile,
+          uploadMedia: media,
+        );
+        debugPrint("Google Drive Sync: Successfully created new backup");
+      }
 
       state = state.copyWith(
         status: PlayGamesSyncStatus.success,
@@ -99,7 +145,7 @@ class PlayGamesSyncNotifier extends StateNotifier<PlayGamesSyncState> {
       );
       return true;
     } catch (e) {
-      debugPrint("Play Games Sync Backup Error: $e");
+      debugPrint("Google Drive Sync Backup Error: $e");
       state = state.copyWith(
         status: PlayGamesSyncStatus.error,
         errorMessage: e.toString(),
@@ -108,19 +154,48 @@ class PlayGamesSyncNotifier extends StateNotifier<PlayGamesSyncState> {
     }
   }
 
-  /// Triggers restore of settings and progress files from Play Games Cloud Save.
+  /// Triggers restore of settings and progress files from Google Drive appDataFolder.
   Future<bool> restore() async {
     final authService = _ref.read(authServiceProvider);
     
     if (authService.currentUser == null) {
-      debugPrint("Play Games Sync: User not signed in, skipping restore");
+      debugPrint("Google Drive Sync: User not signed in, skipping restore");
       return false;
     }
 
     state = state.copyWith(status: PlayGamesSyncStatus.syncing);
 
     try {
-      final String? data = await SaveGame.loadGame(name: 'kingslayer_chess_save');
+      String? data;
+      final googleUser = authService.googleSignIn.currentUser ?? 
+          await authService.googleSignIn.signInSilently();
+      if (googleUser == null) {
+        throw Exception("Failed to get Google Sign-In user for Drive Sync");
+      }
+
+      final authHeaders = await googleUser.authHeaders;
+      final client = GoogleAuthClient(authHeaders);
+      final driveApi = drive.DriveApi(client);
+
+      final fileList = await driveApi.files.list(
+        q: "name = 'kingslayer_chess_save.json' and 'appDataFolder' in parents and trashed = false",
+        spaces: 'appDataFolder',
+      );
+
+      if (fileList.files != null && fileList.files!.isNotEmpty) {
+        final fileId = fileList.files!.first.id!;
+        final media = await driveApi.files.get(
+          fileId,
+          downloadOptions: drive.DownloadOptions.fullMedia,
+        ) as drive.Media;
+
+        final List<int> bytes = [];
+        await for (final chunk in media.stream) {
+          bytes.addAll(chunk);
+        }
+        data = utf8.decode(bytes);
+        debugPrint("Google Drive Sync: Successfully loaded backup from Drive");
+      }
       
       if (data != null && data.isNotEmpty) {
         final Map<String, dynamic> payload = jsonDecode(data);
@@ -152,7 +227,7 @@ class PlayGamesSyncNotifier extends StateNotifier<PlayGamesSyncState> {
       );
       return true;
     } catch (e) {
-      debugPrint("Play Games Sync Restore Error: $e");
+      debugPrint("Google Drive Sync Restore Error: $e");
       state = state.copyWith(
         status: PlayGamesSyncStatus.error,
         errorMessage: e.toString(),

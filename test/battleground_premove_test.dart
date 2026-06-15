@@ -12,6 +12,8 @@ import 'package:kingslayer_chess/features/chess/domain/performance_ledger_entry.
 import 'package:kingslayer_chess/features/chess/data/saved_game.dart';
 import 'package:kingslayer_chess/features/chess/application/chess_provider.dart';
 import 'package:chess/chess.dart' as chess_lib;
+import 'package:kingslayer_chess/features/chess/services/auth_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class FakeStockfishService extends Fake implements StockfishService {
   final _controller = StreamController<String>.broadcast();
@@ -75,6 +77,13 @@ class FakeChessHapticsService extends Fake implements ChessHapticsService {
   void updateSettings({required bool hapticsEnabled}) {}
 }
 
+class FakeAuthService extends Fake implements AuthService {
+  @override
+  User? get currentUser => null;
+  @override
+  bool get isPlayGamesUser => false;
+}
+
 class FakePerformanceLedgerRepository extends Fake implements PerformanceLedgerRepository {
   @override
   Future<List<PerformanceLedgerEntry>> listEntries() async => [];
@@ -113,6 +122,7 @@ void main() {
         chessSoundServiceProvider.overrideWithValue(fakeSoundService),
         chessHapticsServiceProvider.overrideWithValue(fakeHapticsService),
         settingsRepositoryProvider.overrideWithValue(fakeSettingsRepo),
+        authServiceProvider.overrideWithValue(FakeAuthService()),
       ],
     );
     addTearDown(container.dispose);

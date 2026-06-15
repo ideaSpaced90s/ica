@@ -75,14 +75,14 @@ void main() {
     expect(GuidedTutorialFlow.isCompleteAfter(GuidedTutorialFlow.lastGuidedChapter), isTrue);
   });
 
-  test('total chapter count is 52 (Practice Challenges and Graduation Match removed)', () {
-    expect(kTutorialChapterCount, 52);
-    expect(TutorialLessonsDatabase.lessons.length, 52);
+  test('total chapter count is 55 (Practice Challenges and Graduation Match removed)', () {
+    expect(kTutorialChapterCount, 55);
+    expect(TutorialLessonsDatabase.lessons.length, 55);
   });
 
-  test('final chapter is Steinitz\'s Majority (chapter 52)', () {
+  test('final chapter is Steinitz\'s Majority (chapter 55)', () {
     final lastLesson = TutorialLessonsDatabase.lessons.last;
-    expect(lastLesson.chapterId, 52);
+    expect(lastLesson.chapterId, 55);
     expect(lastLesson.title, "Steinitz's Majority");
   });
 }

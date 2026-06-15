@@ -388,6 +388,7 @@ class ChessState {
 
 
   bool get isChess960 => gameMode == 'chess960';
+  bool get isRatedMode => activeRatedMatchId != null;
 
   String get currentBoardFen {
     if (viewingMoveIndex == null || viewingMoveIndex! >= recentMoves.length) {
@@ -666,12 +667,12 @@ String _pickWelcomeMessage() {
   const welcomePool = [
     "Welcome to the Academy, Apprentice. I am GM Chanakya. Place your pieces on the board or ask me for strategic counsel, and we shall prepare for the coming trials against the machine collective.",
     "A true master acts on plan, not on instinct. I am GM Chanakya, and this Academy is where instincts are replaced by understanding. Make your first move — and let the study begin.",
-    "Every champion was once a student who refused to stop learning. Welcome, Apprentice. I am GM Chanakya. Describe your weakness, and I will build your prescription.",
+    "Every champion was once a student who refused to stop learning. Welcome, Apprentice. I am GM Chanakya. Describe your weakness, and I will build your training plan.",
     "The board remembers nothing — but your mind must remember everything. I am GM Chanakya. In this Academy, we train the mind to see what the eye misses. Begin.",
     "Strategy without preparation is merely improvisation. I am GM Chanakya. This chamber is where we turn your reactive play into disciplined mastery. The pieces await.",
     "Chanakya once said: know your enemy and know yourself. I know the engine collective — now let us uncover your blind spots. Place your first move, Apprentice.",
     "The difference between a good player and a great one is not talent — it is the willingness to identify and correct weakness. Welcome to the Academy. I am GM Chanakya. Let us find yours.",
-    "Defeat is only permanent if you learn nothing from it. I am GM Chanakya. Tell me where the board has betrayed you, and I shall design your cure. Begin, Apprentice.",
+    "Defeat is only permanent if you learn nothing from it. I am GM Chanakya. Tell me where the board has betrayed you, and I shall design your training regimen. Begin, Apprentice.",
   ];
   return welcomePool[math.Random().nextInt(welcomePool.length)];
 }
@@ -725,6 +726,7 @@ String _pickSideChoiceResponseBlack(String modeStr) {
 
 class ChessNotifier extends StateNotifier<ChessState> {
   final Ref ref;
+  bool _bgmDelayActive = false;
 
   ChessNotifier(
     this.ref,
@@ -808,9 +810,30 @@ class ChessNotifier extends StateNotifier<ChessState> {
         avatar.skillLevel,
         multiPV: (avatar.name == 'King' || avatar.name == 'Kingslayer') ? 1 : 4,
       );
+
+      final musicInitiallyEnabled = s.isMusicEnabled;
+      if (musicInitiallyEnabled) {
+        _bgmDelayActive = true;
+        Future.delayed(const Duration(seconds: 5), () {
+          _bgmDelayActive = false;
+          if (state.isMusicEnabled) {
+            _soundService.updateSettings(
+              sfxEnabled: state.isSoundEnabled,
+              bgmEnabled: true,
+              gameSoundEnabled: state.isGameSoundEnabled,
+              soundSettings: state.soundSettings,
+              academySoundEnabled: state.isAcademySoundEnabled,
+              academySoundSettings: state.academySoundSettings,
+              isAcademyActive: state.isAcademyActive,
+              isRatedMode: state.isRatedMode,
+            );
+          }
+        });
+      }
+
       _soundService.updateSettings(
         sfxEnabled: s.isSoundEnabled,
-        bgmEnabled: s.isMusicEnabled,
+        bgmEnabled: _bgmDelayActive ? false : s.isMusicEnabled,
         gameSoundEnabled: s.isGameSoundEnabled,
         soundSettings: s.soundSettings,
         academySoundEnabled: s.isAcademySoundEnabled,
@@ -895,7 +918,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
     state = state.copyWith(isSoundEnabled: newEnabled);
     _soundService.updateSettings(
       sfxEnabled: newEnabled,
-      bgmEnabled: state.isMusicEnabled,
+      bgmEnabled: _bgmDelayActive ? false : state.isMusicEnabled,
       gameSoundEnabled: state.isGameSoundEnabled,
       soundSettings: state.soundSettings,
       academySoundEnabled: state.isAcademySoundEnabled,
@@ -907,6 +930,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
   }
 
   void toggleMusic() {
+    _bgmDelayActive = false; // Cancel delay on manual toggle
     final newEnabled = !state.isMusicEnabled;
     state = state.copyWith(isMusicEnabled: newEnabled);
     _soundService.updateSettings(
@@ -975,7 +999,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
     state = state.copyWith(isGameSoundEnabled: newEnabled);
     _soundService.updateSettings(
       sfxEnabled: state.isSoundEnabled,
-      bgmEnabled: state.isMusicEnabled,
+      bgmEnabled: _bgmDelayActive ? false : state.isMusicEnabled,
       gameSoundEnabled: newEnabled,
       soundSettings: state.soundSettings,
       academySoundEnabled: state.isAcademySoundEnabled,
@@ -992,7 +1016,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
     state = state.copyWith(soundSettings: newSettings);
     _soundService.updateSettings(
       sfxEnabled: state.isSoundEnabled,
-      bgmEnabled: state.isMusicEnabled,
+      bgmEnabled: _bgmDelayActive ? false : state.isMusicEnabled,
       gameSoundEnabled: state.isGameSoundEnabled,
       soundSettings: newSettings,
       academySoundEnabled: state.isAcademySoundEnabled,
@@ -1012,7 +1036,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
     state = state.copyWith(isAcademySoundEnabled: newEnabled);
     _soundService.updateSettings(
       sfxEnabled: state.isSoundEnabled,
-      bgmEnabled: state.isMusicEnabled,
+      bgmEnabled: _bgmDelayActive ? false : state.isMusicEnabled,
       gameSoundEnabled: state.isGameSoundEnabled,
       soundSettings: state.soundSettings,
       academySoundEnabled: newEnabled,
@@ -1029,7 +1053,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
     state = state.copyWith(academySoundSettings: newSettings);
     _soundService.updateSettings(
       sfxEnabled: state.isSoundEnabled,
-      bgmEnabled: state.isMusicEnabled,
+      bgmEnabled: _bgmDelayActive ? false : state.isMusicEnabled,
       gameSoundEnabled: state.isGameSoundEnabled,
       soundSettings: state.soundSettings,
       academySoundEnabled: state.isAcademySoundEnabled,
@@ -3154,7 +3178,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
         );
         _aiContextService.setLastContext(context);
       } catch (e) {
-        debugPrint('KingSlayer: Context injection failed: $e');
+        debugPrint('IdeaSpace: Context injection failed: $e');
       }
 
       final previousQuality = _aiContextService.lastContext?.quality ?? '';
@@ -3215,7 +3239,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
         }
       }
     } catch (e) {
-      debugPrint('KingSlayer: AI sequence failed: $e');
+      debugPrint('IdeaSpace: AI sequence failed: $e');
       if (!_isDisposed) {
         state = state.copyWith(isCommentaryLoading: false);
         // Fallback: Reveal robot move if AI failed
@@ -3552,7 +3576,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
     _soundService.updateSettings(
       sfxEnabled: state.isSoundEnabled,
-      bgmEnabled: state.isMusicEnabled,
+      bgmEnabled: _bgmDelayActive ? false : state.isMusicEnabled,
       gameSoundEnabled: state.isGameSoundEnabled,
       soundSettings: state.soundSettings,
       academySoundEnabled: state.isAcademySoundEnabled,
@@ -3648,7 +3672,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
     _soundService.updateSettings(
       sfxEnabled: state.isSoundEnabled,
-      bgmEnabled: state.isMusicEnabled,
+      bgmEnabled: _bgmDelayActive ? false : state.isMusicEnabled,
       gameSoundEnabled: state.isGameSoundEnabled,
       soundSettings: state.soundSettings,
       academySoundEnabled: state.isAcademySoundEnabled,

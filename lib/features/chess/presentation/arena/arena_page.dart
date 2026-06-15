@@ -19,7 +19,7 @@ import '../widgets/arena_turn_indicator.dart';
 import '../widgets/evaluation_bar.dart';
 import '../widgets/user_avatar_indicator.dart';
 import '../widgets/ambient_flow_backdrop.dart';
-import '../widgets/classic_windows_tabs.dart';
+import '../widgets/tabbed_game_panel.dart';
 import '../widgets/premium_limit_sheet.dart';
 import '../dashboard_page.dart';
 import 'arena_settings_page.dart';
@@ -363,9 +363,8 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                 ),
                 const SizedBox(height: 12),
 
-                // Center Section: Classic Tabbed Panel
                 Expanded(
-                  child: ClassicWindowsTabs(
+                  child: TabbedGamePanel(
                     recentMoves: state.recentMoves,
                     viewingMoveIndex: state.viewingMoveIndex,
                     onMoveTap: (idx) => ref.read(arenaProvider.notifier).setViewingMoveIndex(idx),
@@ -609,7 +608,50 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                 ActionIconButton(
                   icon: state.isEngineVsEngine ? Icons.smart_toy_rounded : Icons.smart_toy_outlined,
                   isActive: state.isEngineVsEngine,
-                  onTap: () => ref.read(arenaProvider.notifier).toggleEngineVsEngine(),
+                  onTap: () {
+                    ref.read(arenaProvider.notifier).toggleEngineVsEngine();
+                    final updatedState = ref.read(arenaProvider);
+                    final isEvE = updatedState.isEngineVsEngine;
+                    final upEngineName = AiAvatar.getAvatar(updatedState.engineLevel).name;
+                    
+                    String message = '';
+                    if (isEvE) {
+                      final downEngineName = AiAvatar.getAvatar(updatedState.bottomAvatarId).name;
+                      message = 'The game will now be played between $upEngineName vs $downEngineName. The game will be played immediately by the bot the side is on!';
+                    } else {
+                      final userName = ref.read(chessProvider).userName;
+                      message = 'The game will now be played between $upEngineName vs $userName.';
+                    }
+
+                    ScaffoldMessenger.of(context).clearSnackBars();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        behavior: SnackBarBehavior.floating,
+                        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                        backgroundColor: ScholarlyTheme.panelBase.withValues(alpha: 0.95),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          side: const BorderSide(color: ScholarlyTheme.accentBlue, width: 1.5),
+                        ),
+                        content: Row(
+                          children: [
+                            const Icon(Icons.smart_toy_rounded, color: ScholarlyTheme.accentBlue),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                message,
+                                style: GoogleFonts.inter(
+                                  color: ScholarlyTheme.textPrimary,
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(width: 8),
                 GestureDetector(

@@ -14,6 +14,30 @@
       },
       "oauth_client": [
         {
+          "client_id": "691615456515-e2teku9nvb9rahs2at6ds1mk318hfa79.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.dsamok.ideaspacechess",
+            "certificate_hash": "cac1bf1866513bca3919b1aba307afa73a9ce95a"
+          }
+        },
+        {
+          "client_id": "691615456515-lq8q29e11vdh52bv8lq5b2o68uoob4qo.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.dsamok.ideaspacechess",
+            "certificate_hash": "dcf90922177651c03261d45fe7c8afeef515ad0d"
+          }
+        },
+        {
+          "client_id": "691615456515-tblm73bddppmn9tk983ruhu279oamong.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.dsamok.ideaspacechess",
+            "certificate_hash": "aee42733c3c7bd83c647237363da18bcd9d1accc"
+          }
+        },
+        {
           "client_id": "691615456515-iepqub1tigh0gfnlvqi588emn9fpp7jr.apps.googleusercontent.com",
           "client_type": 3
         }

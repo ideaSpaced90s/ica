@@ -11,17 +11,17 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kingslayer_chess/main.dart';
 
 void main() {
-  testWidgets('KingslayerChessApp smoke test', (WidgetTester tester) async {
+  testWidgets('IdeaSpaceChessApp smoke test', (WidgetTester tester) async {
     SharedPreferences.setMockInitialValues({});
     sharedPrefs = await SharedPreferences.getInstance();
 
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const KingslayerChessApp());
+    await tester.pumpWidget(const IdeaSpaceChessApp());
 
     // Allow splash screen initialization flow to run and navigate to Dashboard.
     await tester.pump(const Duration(seconds: 5));
 
     // Verify that the app title or some initial widget is present.
-    expect(find.byType(KingslayerChessApp), findsOneWidget);
+    expect(find.byType(IdeaSpaceChessApp), findsOneWidget);
   });
 }
