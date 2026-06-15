@@ -8,7 +8,7 @@ import '../../application/store_provider.dart';
 import '../mobile_navigation_shell.dart';
 import '../scholarly_theme.dart';
 import '../widgets/game_controls.dart';
-import '../widgets/premium_limit_sheet.dart';
+import '../widgets/premium_nudge_overlay.dart';
 import 'battleground_board.dart';
 import '../../domain/models/ai_avatar.dart';
 import '../widgets/opponent_avatar_indicator.dart';
@@ -796,10 +796,11 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
   bool _checkRatedLimitAndUpsell(BuildContext context, WidgetRef ref) {
     final storeNotifier = ref.read(storeProvider.notifier);
     if (!storeNotifier.canPlayRatedGame()) {
-      PremiumLimitSheet.show(
+      PremiumNudgeOverlay.show(
         context,
-        'Daily Rated Game Limit Reached',
-        'You have played your 1 free Rated/Battleground game for today. Upgrade to unlock unlimited games.',
+        ref,
+        title: 'Daily Rated Game Limit Reached',
+        description: 'You have played your 1 free Rated/Battleground game for today. Upgrade to unlock unlimited games.',
       );
       return false;
     }

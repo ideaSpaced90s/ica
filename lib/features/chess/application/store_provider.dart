@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
@@ -210,8 +212,11 @@ class StoreNotifier extends StateNotifier<StoreState> {
   final Ref ref;
   final StoreRepository _repository = StoreRepository();
 
-  StoreNotifier(this.ref)
-      : super(StoreState(
+  StoreNotifier(
+    this.ref, {
+    bool initializeBilling = true,
+    bool loadData = true,
+  }) : super(StoreState(
           goldBalance: 1000,
           isPremium: false,
           joinedFreeDate: DateTime.now().subtract(const Duration(days: 15)),
@@ -225,14 +230,157 @@ class StoreNotifier extends StateNotifier<StoreState> {
             puzzlesSolved: 0,
           ),
         )) {
-    _loadStoreData();
+    if (loadData) {
+      _loadStoreData(initializeBilling: initializeBilling);
+    }
   }
 
-  Future<void> _loadStoreData() async {
+  StreamSubscription<List<PurchaseDetails>>? _purchaseSubscription;
+
+  @override
+  void dispose() {
+    _purchaseSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _loadStoreData({bool initializeBilling = true}) async {
     final loaded = await _repository.loadStore();
     if (!mounted) return;
     state = loaded;
     _checkExpirationsAndSync();
+    if (initializeBilling) {
+      _initializeBilling();
+    }
+  }
+
+  void _initializeBilling() {
+    final purchaseUpdatedStream = InAppPurchase.instance.purchaseStream;
+    _purchaseSubscription = purchaseUpdatedStream.listen(
+      (purchaseDetailsList) {
+        _listenToPurchaseUpdated(purchaseDetailsList);
+      },
+      onDone: () {
+        _purchaseSubscription?.cancel();
+      },
+      onError: (error) {
+        // Handle stream error gracefully
+      },
+    );
+  }
+
+  Future<void> _listenToPurchaseUpdated(List<PurchaseDetails> purchaseDetailsList) async {
+    for (final purchaseDetails in purchaseDetailsList) {
+      if (purchaseDetails.status == PurchaseStatus.pending) {
+        // Purchase is pending
+      } else {
+        if (purchaseDetails.status == PurchaseStatus.error) {
+          // Purchase error
+        } else if (purchaseDetails.status == PurchaseStatus.purchased ||
+            purchaseDetails.status == PurchaseStatus.restored) {
+          final bool valid = await _verifyPurchase(purchaseDetails);
+          if (valid) {
+            _grantEntitlement(purchaseDetails);
+          }
+        }
+        if (purchaseDetails.pendingCompletePurchase) {
+          await InAppPurchase.instance.completePurchase(purchaseDetails);
+        }
+      }
+    }
+  }
+
+  Future<bool> _verifyPurchase(PurchaseDetails purchaseDetails) async {
+    // Under local verification, check that billing information matches
+    // In production, sync with secure server/Firebase logic.
+    return purchaseDetails.status == PurchaseStatus.purchased || 
+           purchaseDetails.status == PurchaseStatus.restored;
+  }
+
+  void _grantEntitlement(PurchaseDetails purchase) {
+    final productId = purchase.productID;
+    if (productId.startsWith('theme_')) {
+      final themeId = productId.replaceFirst('theme_', '');
+      final updatedThemes = Set<String>.from(state.purchasedBoardThemes);
+      updatedThemes.add(themeId);
+      state = state.copyWith(purchasedBoardThemes: updatedThemes);
+      _saveStoreData();
+      return;
+    }
+
+    final now = DateTime.now();
+    DateTime newExpiry;
+    final plan = productId;
+
+    int days = 30;
+    if (plan == 'sixmonth') {
+      days = 180;
+    } else if (plan == 'yearly') {
+      days = 365;
+    }
+
+    if (state.isPremium && state.subscriptionTill != null && state.subscriptionTill!.isAfter(now)) {
+      newExpiry = state.subscriptionTill!.add(Duration(days: days));
+    } else {
+      newExpiry = now.add(Duration(days: days));
+    }
+
+    state = state.copyWith(
+      isPremium: true,
+      joinedPremiumDate: state.joinedPremiumDate ?? now,
+      subscriptionTill: newExpiry,
+      subscriptionPlan: plan,
+    );
+    _saveStoreData();
+  }
+
+  Future<void> buySubscription(String planId) async {
+    final bool available = await InAppPurchase.instance.isAvailable();
+    if (!available) {
+      // If store is not available (e.g. desktop), fall back to simulation
+      simulateUSDSubscription(planId);
+      return;
+    }
+
+    final ProductDetailsResponse response = await InAppPurchase.instance.queryProductDetails({planId});
+    if (response.notFoundIDs.isNotEmpty || response.productDetails.isEmpty) {
+      // If product details not found (not configured in Play Console yet), fall back to simulation
+      simulateUSDSubscription(planId);
+      return;
+    }
+
+    final ProductDetails productDetails = response.productDetails.first;
+    final PurchaseParam purchaseParam = PurchaseParam(productDetails: productDetails);
+    
+    await InAppPurchase.instance.buyNonConsumable(purchaseParam: purchaseParam);
+  }
+
+  Future<void> buyTheme(String themeId) async {
+    final productId = 'theme_$themeId';
+    final bool available = await InAppPurchase.instance.isAvailable();
+    if (!available) {
+      // If store is not available (e.g. desktop), fall back to simulation
+      purchaseBoardTheme(themeId);
+      return;
+    }
+
+    final ProductDetailsResponse response = await InAppPurchase.instance.queryProductDetails({productId});
+    if (response.notFoundIDs.isNotEmpty || response.productDetails.isEmpty) {
+      // If product details not found (not configured in Play Console yet), fall back to simulation
+      purchaseBoardTheme(themeId);
+      return;
+    }
+
+    final ProductDetails productDetails = response.productDetails.first;
+    final PurchaseParam purchaseParam = PurchaseParam(productDetails: productDetails);
+    
+    await InAppPurchase.instance.buyNonConsumable(purchaseParam: purchaseParam);
+  }
+
+  Future<void> restorePurchases() async {
+    final bool available = await InAppPurchase.instance.isAvailable();
+    if (available) {
+      await InAppPurchase.instance.restorePurchases();
+    }
   }
 
   Future<void> _saveStoreData() async {

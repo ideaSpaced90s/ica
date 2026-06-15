@@ -12,7 +12,7 @@ import '../../data/saved_game.dart';
 import '../../services/chess_sound_service.dart';
 import '../scholarly_theme.dart';
 import '../mobile_navigation_shell.dart';
-import 'premium_limit_sheet.dart';
+import 'premium_nudge_overlay.dart';
 
 class CommentaryHistory extends ConsumerStatefulWidget {
   const CommentaryHistory({super.key, required this.state, this.physics, this.controller});
@@ -408,10 +408,11 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
   void _handlePromptTap(String label) {
     final storeNotifier = ref.read(storeProvider.notifier);
     if (!storeNotifier.canUseChipPrompt()) {
-      PremiumLimitSheet.show(
+      PremiumNudgeOverlay.show(
         context,
-        'Daily AI Coach Limit Reached',
-        'You have used your 5 free AI coaching prompts for today. Upgrade to unlock unlimited coaching.',
+        ref,
+        title: 'Daily AI Coach Limit Reached',
+        description: 'You have used your 5 free AI coaching prompts for today. Upgrade to unlock unlimited coaching.',
       );
       return;
     }

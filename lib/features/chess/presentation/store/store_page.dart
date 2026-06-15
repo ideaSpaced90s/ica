@@ -8,6 +8,11 @@ import '../../application/store_provider.dart';
 import '../../services/chess_sound_service.dart';
 import '../scholarly_theme.dart';
 import '../widgets/ambient_scaffold.dart';
+import '../shared/themes/chess_theme.dart';
+import '../arena/themes/theme_registry.dart';
+import '../widgets/theme_preview_dialog.dart';
+import '../../services/auth_service.dart';
+import '../widgets/sign_in_prompt_dialog.dart';
 
 class StorePage extends ConsumerStatefulWidget {
   const StorePage({super.key});
@@ -16,14 +21,23 @@ class StorePage extends ConsumerStatefulWidget {
   ConsumerState<StorePage> createState() => _StorePageState();
 }
 
-class _StorePageState extends ConsumerState<StorePage> {
+class _StorePageState extends ConsumerState<StorePage> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
   @override
   void initState() {
     super.initState();
+    final initialTab = ref.read(storeTabProvider);
+    _tabController = TabController(length: 2, vsync: this, initialIndex: initialTab);
+    _tabController.addListener(() {
+      if (_tabController.indexIsChanging) return;
+      ref.read(storeTabProvider.notifier).state = _tabController.index;
+    });
   }
 
   @override
   void dispose() {
+    _tabController.dispose();
     super.dispose();
   }
 
@@ -37,6 +51,12 @@ class _StorePageState extends ConsumerState<StorePage> {
       storeNotifier.verifyActiveSelections();
     });
 
+    ref.listen<int>(storeTabProvider, (previous, next) {
+      if (_tabController.index != next) {
+        _tabController.animateTo(next);
+      }
+    });
+
     return AmbientScaffold(
       blob1Color: const Color(0xFFE0F2FE), // Soft cyan/blue
       blob2Color: const Color(0xFFF3E8FF), // Soft purple
@@ -48,29 +68,41 @@ class _StorePageState extends ConsumerState<StorePage> {
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFD97706).withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.workspace_premium_rounded,
+                      color: Color(0xFFD97706),
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'IDEASPACE PREMIUM',
+                          'PREMIUM UPGRADES',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.outfit(
-                            fontSize: 22,
+                            fontSize: 18,
                             fontWeight: FontWeight.bold,
                             letterSpacing: 1.0,
                             color: ScholarlyTheme.textPrimary,
                           ),
                         ),
                         Text(
-                          'Subscriptions and Account Status',
+                          'Unlock unlimited coaching, analysis and premium styles',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.inter(
-                            fontSize: 12,
+                            fontSize: 11,
                             color: ScholarlyTheme.textMuted,
                           ),
                         ),
@@ -81,11 +113,56 @@ class _StorePageState extends ConsumerState<StorePage> {
               ),
             ),
 
+            const SizedBox(height: 8),
+
+            // TabBar in a beautiful container
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Container(
+                height: 48,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.8), width: 1.5),
+                ),
+                child: TabBar(
+                  controller: _tabController,
+                  indicator: BoxDecoration(
+                    color: ScholarlyTheme.accentBlue,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  indicatorSize: TabBarIndicatorSize.tab,
+                  labelColor: Colors.white,
+                  unselectedLabelColor: ScholarlyTheme.textPrimary,
+                  labelStyle: GoogleFonts.outfit(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                    letterSpacing: 0.5,
+                  ),
+                  unselectedLabelStyle: GoogleFonts.outfit(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                    letterSpacing: 0.5,
+                  ),
+                  tabs: const [
+                    Tab(text: 'PLANS'),
+                    Tab(text: 'BOARD THEMES'),
+                  ],
+                ),
+              ),
+            ),
+
             const SizedBox(height: 12),
 
             // TabBarView content
             Expanded(
-              child: _buildPlansTab(context, storeState, storeNotifier),
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildPlansTab(context, storeState, storeNotifier),
+                  _buildThemesTab(context, storeState, storeNotifier),
+                ],
+              ),
             ),
           ],
         ),
@@ -137,6 +214,409 @@ class _StorePageState extends ConsumerState<StorePage> {
     );
   }
 
+  Widget _buildThemesTab(
+    BuildContext context,
+    StoreState storeState,
+    StoreNotifier storeNotifier,
+  ) {
+    final chessState = ref.watch(chessProvider);
+    final chessNotifier = ref.read(chessProvider.notifier);
+
+    // Grouping themes
+    final freeThemeIds = {'classic', 'scholar', 'vector_wood', 'theme3', 'sprite_fairytale'};
+
+    final freeThemes = ThemeRegistry.allThemes.where((t) => freeThemeIds.contains(t.id)).toList();
+    final premiumThemes = ThemeRegistry.allThemes.where((t) => !freeThemeIds.contains(t.id)).toList();
+
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final int crossAxisCount = (screenWidth / 160).floor().clamp(2, 6);
+
+    return CustomScrollView(
+      physics: const BouncingScrollPhysics(),
+      slivers: [
+        // Intro Header
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: ScholarlyTheme.accentBlueSoft.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.15)),
+              ),
+              child: Text(
+                '🎨 Free themes are always available. Premium themes can be purchased individually or unlocked entirely with any Premium Subscription plan!',
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: ScholarlyTheme.textPrimary,
+                  height: 1.4,
+                ),
+              ),
+            ),
+          ),
+        ),
+
+        // Section: Free Themes Header
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Text(
+              'FREE THEMES',
+              style: GoogleFonts.outfit(
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.5,
+                color: ScholarlyTheme.textMuted,
+              ),
+            ),
+          ),
+        ),
+
+        // Grid for Free Themes
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          sliver: SliverGrid(
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 0.8,
+            ),
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                final theme = freeThemes[index];
+                final isSelected = theme.id == chessState.boardThemeId;
+                return _buildThemeShopCard(context, theme, true, isSelected, storeState, storeNotifier, chessNotifier);
+              },
+              childCount: freeThemes.length,
+            ),
+          ),
+        ),
+
+        // Section: Premium Themes Header
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Text(
+              'PREMIUM THEMES',
+              style: GoogleFonts.outfit(
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.5,
+                color: ScholarlyTheme.textMuted,
+              ),
+            ),
+          ),
+        ),
+
+        // Grid for Premium Themes
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          sliver: SliverGrid(
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 0.8,
+            ),
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                final theme = premiumThemes[index];
+                final isSelected = theme.id == chessState.boardThemeId;
+                return _buildThemeShopCard(context, theme, false, isSelected, storeState, storeNotifier, chessNotifier);
+              },
+              childCount: premiumThemes.length,
+            ),
+          ),
+        ),
+
+        // Spacing at the bottom
+        const SliverToBoxAdapter(
+          child: SizedBox(height: 32),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildThemeShopCard(
+    BuildContext context,
+    ChessTheme theme,
+    bool isFree,
+    bool isSelected,
+    StoreState storeState,
+    StoreNotifier storeNotifier,
+    dynamic chessNotifier,
+  ) {
+    final isOwned = isFree || storeState.isPremium || storeState.purchasedBoardThemes.contains(theme.id);
+    final highlightThemeId = ref.watch(storeHighlightThemeIdProvider);
+    final isHighlighted = theme.id == highlightThemeId;
+
+    return GestureDetector(
+      onTap: () {
+        if (isHighlighted) {
+          ref.read(storeHighlightThemeIdProvider.notifier).state = null;
+        }
+        ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+        showDialog(
+          context: context,
+          builder: (context) => ThemePreviewDialog(
+            theme: theme,
+            isFree: isFree,
+            isOwned: isOwned,
+            isSelected: isSelected,
+            storeNotifier: storeNotifier,
+            chessNotifier: chessNotifier,
+          ),
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.65),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected
+                ? ScholarlyTheme.accentBlue
+                : Colors.white.withValues(alpha: 0.8),
+            width: isSelected ? 2.5 : 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.02),
+              blurRadius: 6,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Preview box
+              Expanded(
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              theme.lightSquare,
+                              theme.darkSquare,
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Center(
+                          child: FractionallySizedBox(
+                            widthFactor: 0.65,
+                            heightFactor: 0.65,
+                            child: theme.buildPiece(
+                              context,
+                              'N',
+                              true,
+                              false,
+                              0.0,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    
+                    // Status badge on preview
+                    Positioned(
+                      top: 6,
+                      left: 6,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: isFree
+                              ? Colors.green.withValues(alpha: 0.85)
+                              : (isOwned
+                                  ? ScholarlyTheme.accentBlue.withValues(alpha: 0.85)
+                                  : Colors.black.withValues(alpha: 0.65)),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          isFree ? 'FREE' : (isOwned ? 'OWNED' : '\$0.99'),
+                          style: GoogleFonts.outfit(
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // Locked icon overlay if not owned
+                    if (!isOwned)
+                      Positioned.fill(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.25),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: const Center(
+                            child: Icon(Icons.lock_rounded, color: Colors.white, size: 24),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              
+              const SizedBox(height: 8),
+
+              // Theme name
+              Text(
+                theme.name,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.outfit(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: ScholarlyTheme.textPrimary,
+                ),
+              ),
+
+              const SizedBox(height: 6),
+
+              // Action button
+              SizedBox(
+                height: 28,
+                child: isOwned
+                    ? Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFDCFCE7), // Premium light green-100
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFFBBF7D0), width: 1.5), // green-200 border
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.check_circle_rounded, color: Color(0xFF15803D), size: 14), // green-700
+                            const SizedBox(width: 4),
+                            Text(
+                              'OWNED',
+                              style: GoogleFonts.outfit(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF15803D), // green-700
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : BeatingWidget(
+                        enabled: isHighlighted,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            if (isHighlighted) {
+                              ref.read(storeHighlightThemeIdProvider.notifier).state = null;
+                            }
+                            ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                            
+                            final authService = ref.read(authServiceProvider);
+                            if (!authService.isPlayGamesUser) {
+                              SignInPromptDialog.show(
+                                context: context,
+                                title: 'Sign In Required',
+                                description: 'To buy premium board themes and sync them to your account, please sign in with Google.',
+                                onSignInSuccess: () {
+                                  _showThemePurchaseConfirmation(context, theme, storeNotifier, chessNotifier);
+                                },
+                              );
+                            } else {
+                              _showThemePurchaseConfirmation(context, theme, storeNotifier, chessNotifier);
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.amber.shade700,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            padding: EdgeInsets.zero,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: const Text(
+                            'BUY \$0.99',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showThemePurchaseConfirmation(
+    BuildContext context,
+    ChessTheme theme,
+    StoreNotifier storeNotifier,
+    dynamic chessNotifier,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: Text(
+            'Confirm Purchase',
+            style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary),
+          ),
+          content: Text(
+            'Would you like to buy the premium theme "${theme.name}" for \$0.99 (Simulated)? It will be unlocked permanently.',
+            style: GoogleFonts.inter(fontSize: 13, color: ScholarlyTheme.textPrimary, height: 1.4),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                storeNotifier.purchaseBoardTheme(theme.id);
+                chessNotifier.setBoardTheme(theme.id);
+                ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('⚡ Purchased and applied ${theme.name} theme!'),
+                    behavior: SnackBarBehavior.floating,
+                    backgroundColor: Colors.green,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: Text('Buy Now', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildFreePlanCard(BuildContext context, StoreState storeState) {
     final isPremium = storeState.isPremium;
     final usage = storeState.freeTierUsage;
@@ -149,16 +629,16 @@ class _StorePageState extends ConsumerState<StorePage> {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: isPremium ? 0.35 : 0.6),
+        color: Colors.white.withValues(alpha: isPremium ? 0.35 : 0.65),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: isPremium ? Colors.white.withValues(alpha: 0.4) : Colors.grey.shade400,
+          color: isPremium ? Colors.white.withValues(alpha: 0.4) : ScholarlyTheme.accentBlue.withValues(alpha: 0.25),
           width: isPremium ? 1.5 : 2.0,
         ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 8,
+            blurRadius: 10,
             offset: const Offset(0, 4),
           ),
         ],
@@ -184,7 +664,7 @@ class _StorePageState extends ConsumerState<StorePage> {
                   textBaseline: TextBaseline.alphabetic,
                   children: [
                     Text(
-                      '₹0',
+                      '\$0',
                       style: GoogleFonts.jetBrainsMono(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -236,16 +716,17 @@ class _StorePageState extends ConsumerState<StorePage> {
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
                 decoration: BoxDecoration(
-                  color: Colors.grey.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(12),
+                  color: ScholarlyTheme.accentBlueSoft.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.15)),
                 ),
                 child: Center(
                   child: Text(
-                    'CURRENT BASIC TIER',
+                    'CURRENT ACTIVE TIER',
                     style: GoogleFonts.outfit(
                       fontWeight: FontWeight.bold,
                       fontSize: 11,
-                      color: Colors.grey.shade700,
+                      color: ScholarlyTheme.accentBlue,
                       letterSpacing: 1.0,
                     ),
                   ),
@@ -304,18 +785,37 @@ class _StorePageState extends ConsumerState<StorePage> {
     StoreState storeState,
     StoreNotifier storeNotifier,
   ) {
+    final isYearly = plan.id == 'yearly';
+    final titleColor = isYearly ? Colors.white : ScholarlyTheme.textPrimary;
+    final descColor = isYearly ? Colors.white.withValues(alpha: 0.65) : ScholarlyTheme.textMuted;
+    final featureTextColor = isYearly ? Colors.white.withValues(alpha: 0.9) : ScholarlyTheme.textPrimary;
+    final Color planAccentColor = isYearly ? const Color(0xFFF59E0B) : plan.color;
+
     return Container(
       margin: const EdgeInsets.only(top: 16),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: isActive ? 0.85 : 0.6),
+        gradient: isYearly
+            ? const LinearGradient(
+                colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : null,
+        color: isYearly ? null : Colors.white.withValues(alpha: isActive ? 0.85 : 0.6),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: isActive ? plan.color : Colors.white.withValues(alpha: 0.8),
+          color: isActive
+              ? planAccentColor
+              : (isYearly
+                  ? const Color(0xFFF59E0B).withValues(alpha: 0.3)
+                  : Colors.white.withValues(alpha: 0.8)),
           width: isActive ? 2.5 : 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: isActive ? 0.06 : 0.02),
+            color: isActive
+                ? planAccentColor.withValues(alpha: 0.15)
+                : Colors.black.withValues(alpha: 0.02),
             blurRadius: isActive ? 16 : 8,
             offset: const Offset(0, 4),
           ),
@@ -330,7 +830,7 @@ class _StorePageState extends ConsumerState<StorePage> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: plan.color,
+                  color: planAccentColor,
                   borderRadius: const BorderRadius.only(
                     bottomLeft: Radius.circular(10),
                     bottomRight: Radius.circular(10),
@@ -339,7 +839,7 @@ class _StorePageState extends ConsumerState<StorePage> {
                 child: Text(
                   'POPULAR',
                   style: GoogleFonts.outfit(
-                    color: Colors.white,
+                    color: isYearly ? const Color(0xFF0F172A) : Colors.white,
                     fontSize: 9,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 1.0,
@@ -360,7 +860,7 @@ class _StorePageState extends ConsumerState<StorePage> {
                       style: GoogleFonts.outfit(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: ScholarlyTheme.textPrimary,
+                        color: titleColor,
                       ),
                     ),
                     Row(
@@ -368,18 +868,18 @@ class _StorePageState extends ConsumerState<StorePage> {
                       textBaseline: TextBaseline.alphabetic,
                       children: [
                         Text(
-                          '₹${plan.price.toStringAsFixed(0)}',
+                          '\$${plan.price.toStringAsFixed(2)}',
                           style: GoogleFonts.jetBrainsMono(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
-                            color: plan.color,
+                            color: planAccentColor,
                           ),
                         ),
                         Text(
                           ' / ${plan.period}',
                           style: GoogleFonts.inter(
                             fontSize: 11,
-                            color: ScholarlyTheme.textMuted,
+                            color: isYearly ? Colors.white60 : ScholarlyTheme.textMuted,
                           ),
                         ),
                       ],
@@ -391,11 +891,11 @@ class _StorePageState extends ConsumerState<StorePage> {
                   plan.description,
                   style: GoogleFonts.inter(
                     fontSize: 12,
-                    color: ScholarlyTheme.textMuted,
+                    color: descColor,
                   ),
                 ),
                 const SizedBox(height: 12),
-                const Divider(height: 1),
+                Divider(height: 1, color: isYearly ? Colors.white.withValues(alpha: 0.15) : ScholarlyTheme.panelStroke),
                 const SizedBox(height: 12),
 
                 // Features list
@@ -405,7 +905,7 @@ class _StorePageState extends ConsumerState<StorePage> {
                         children: [
                           Icon(
                             Icons.check_circle_rounded,
-                            color: plan.color,
+                            color: planAccentColor,
                             size: 16,
                           ),
                           const SizedBox(width: 8),
@@ -414,7 +914,7 @@ class _StorePageState extends ConsumerState<StorePage> {
                               feature,
                               style: GoogleFonts.inter(
                                 fontSize: 12,
-                                color: ScholarlyTheme.textPrimary,
+                                color: featureTextColor,
                               ),
                             ),
                           ),
@@ -430,13 +930,29 @@ class _StorePageState extends ConsumerState<StorePage> {
                         ? null
                         : () {
                             ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                            _showSimulationCheckout(context, plan, storeNotifier);
+                            final authService = ref.read(authServiceProvider);
+                            if (!authService.isPlayGamesUser) {
+                              SignInPromptDialog.show(
+                                context: context,
+                                title: 'Sign In Required',
+                                description: 'To buy premium subscriptions and sync benefits across devices, please sign in with Google.',
+                                onSignInSuccess: () {
+                                  storeNotifier.buySubscription(plan.id);
+                                },
+                              );
+                            } else {
+                              storeNotifier.buySubscription(plan.id);
+                            }
                           },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: isActive ? Colors.grey : plan.color,
-                      foregroundColor: Colors.white,
-                      disabledBackgroundColor: Colors.grey.withValues(alpha: 0.1),
-                      disabledForegroundColor: ScholarlyTheme.textMuted,
+                      backgroundColor: isActive ? Colors.grey : planAccentColor,
+                      foregroundColor: isYearly ? const Color(0xFF0F172A) : Colors.white,
+                      disabledBackgroundColor: isYearly
+                          ? Colors.white.withValues(alpha: 0.1)
+                          : Colors.grey.withValues(alpha: 0.1),
+                      disabledForegroundColor: isYearly
+                          ? Colors.white.withValues(alpha: 0.4)
+                          : ScholarlyTheme.textMuted,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
@@ -636,191 +1152,7 @@ class _StorePageState extends ConsumerState<StorePage> {
     );
   }
 
-  // Simulation Checkout Bottom Sheet
-  void _showSimulationCheckout(
-    BuildContext context,
-    SubscriptionPlan plan,
-    StoreNotifier storeNotifier,
-  ) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(28),
-          topRight: Radius.circular(28),
-        ),
-      ),
-      builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-            top: 24,
-            left: 24,
-            right: 24,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Secure Simulation Pay',
-                    style: GoogleFonts.outfit(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: ScholarlyTheme.textPrimary,
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: plan.color.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: plan.color.withValues(alpha: 0.2)),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            plan.title,
-                            style: GoogleFonts.outfit(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                              color: ScholarlyTheme.textPrimary,
-                            ),
-                          ),
-                          Text(
-                            'Includes all features & premium themes',
-                            style: GoogleFonts.inter(
-                              fontSize: 11,
-                              color: ScholarlyTheme.textMuted,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Text(
-                      '₹${plan.price.toStringAsFixed(0)}',
-                      style: GoogleFonts.jetBrainsMono(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: plan.color,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
 
-              // Mock Card Details
-              Text(
-                'CREDIT CARD DETAILS (SIMULATED)',
-                style: GoogleFonts.outfit(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1.0,
-                  color: ScholarlyTheme.textMuted,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.grey.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.credit_card_rounded, color: ScholarlyTheme.textMuted, size: 20),
-                        const SizedBox(width: 12),
-                        Text(
-                          '••••  ••••  ••••  4242',
-                          style: GoogleFonts.jetBrainsMono(
-                            fontSize: 14,
-                            color: ScholarlyTheme.textPrimary,
-                          ),
-                        ),
-                        const Spacer(),
-                        Text(
-                          '12/29',
-                          style: GoogleFonts.jetBrainsMono(
-                            fontSize: 14,
-                            color: ScholarlyTheme.textPrimary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              
-              const SizedBox(height: 12),
-              Text(
-                '💡 This is a simulated store page. Clicking "Pay" will charge ₹0.00 and immediately grant full IdeaSpace Premium status for the selected duration.',
-                style: GoogleFonts.inter(
-                  fontSize: 11,
-                  color: Colors.amber[850],
-                  height: 1.4,
-                ),
-              ),
-
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () {
-                  storeNotifier.simulateUSDSubscription(plan.id);
-                  Navigator.pop(context);
-                  
-                  ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('⚡ Subscribed to ${plan.title} successfully!'),
-                      behavior: SnackBarBehavior.floating,
-                      backgroundColor: Colors.green,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: plan.color,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-                child: Text(
-                  'PAY ₹${plan.price.toStringAsFixed(0)}',
-                  style: GoogleFonts.outfit(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-            ],
-          ),
-        );
-      },
-    );
-  }
 
   // Cancel Dialog
   void _showCancelDialog(BuildContext context, StoreNotifier storeNotifier) {
@@ -899,7 +1231,7 @@ const List<SubscriptionPlan> plans = [
     id: 'monthly',
     title: 'Monthly Plan',
     description: 'Perfect for short-term learners.',
-    price: 199.00,
+    price: 4.99,
     period: 'month',
     color: ScholarlyTheme.accentBlue,
     features: [
@@ -917,7 +1249,7 @@ const List<SubscriptionPlan> plans = [
     id: 'sixmonth',
     title: '6-Month Plan',
     description: 'Great balance of value & commitment.',
-    price: 999.00,
+    price: 22.00,
     period: '6 months',
     color: Colors.purple,
     features: [
@@ -929,14 +1261,14 @@ const List<SubscriptionPlan> plans = [
       'All board themes included',
       '50 Cloud AI prompts/day',
       'Exclusive premium profile badge',
-      'Save 16% vs Monthly rate',
+      'Save 26% vs Monthly rate',
     ],
   ),
   SubscriptionPlan(
     id: 'yearly',
     title: 'Yearly Plan',
     description: 'Best value for serious scholars.',
-    price: 1699.00,
+    price: 39.99,
     period: 'year',
     isPopular: true,
     color: Color(0xFFB45309), // Amber 700
@@ -949,7 +1281,7 @@ const List<SubscriptionPlan> plans = [
       'All board themes included',
       '50 Cloud AI prompts/day',
       'Exclusive premium profile badge',
-      'Save 29% vs Monthly rate',
+      'Save 33% vs Monthly rate',
     ],
   ),
 ];

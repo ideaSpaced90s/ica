@@ -24,6 +24,7 @@ import 'tutorial_page.dart';
 import 'about_us_page.dart';
 import 'settings_page.dart';
 import 'store/store_page.dart';
+import 'account_page.dart';
 
 import 'widgets/welcome_guide_page.dart';
 import 'widgets/sidebar_dynamic_bg.dart';
@@ -71,6 +72,7 @@ class MobileNavigationShell extends ConsumerWidget {
       const SettingsPage(),
       const StorePage(),
       const AssignmentPage(),
+      const AccountPage(),
     ];
 
     // Determine logical title based on active tab
@@ -97,9 +99,11 @@ class MobileNavigationShell extends ConsumerWidget {
         case 9:
           return 'SETTINGS';
         case 10:
-          return 'ACCOUNT';
+          return 'STORE';
         case 11:
           return 'ASSIGNMENT';
+        case 12:
+          return 'ACCOUNT';
         default:
           return 'IDEASPACE CHESS ACADEMY';
       }
@@ -568,6 +572,14 @@ class _MobileSidebarDrawer extends ConsumerWidget {
                 _DrawerTile(
                   label: 'Account',
                   icon: Icons.manage_accounts_rounded,
+                  isSelected: currentIndex == 12,
+                  onTap: () {
+                    _navigate(ref, context, 12);
+                  },
+                ),
+                _DrawerTile(
+                  label: 'Store',
+                  icon: Icons.storefront_rounded,
                   isSelected: currentIndex == 10,
                   onTap: () {
                     _navigate(ref, context, 10);

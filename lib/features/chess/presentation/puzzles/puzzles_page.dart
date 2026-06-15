@@ -18,7 +18,7 @@ import '../../application/tutorial_provider.dart';
 import '../../application/store_provider.dart';
 import '../../services/chess_sound_service.dart';
 import '../widgets/gm_chanakya_intro_overlay.dart';
-import '../widgets/premium_limit_sheet.dart';
+import '../widgets/premium_nudge_overlay.dart';
 
 class PuzzlesPage extends ConsumerStatefulWidget {
   const PuzzlesPage({super.key});
@@ -675,10 +675,11 @@ class _PuzzlesPageState extends ConsumerState<PuzzlesPage> {
   bool _checkPuzzleLimitAndUpsell(BuildContext context, WidgetRef ref) {
     final storeNotifier = ref.read(storeProvider.notifier);
     if (!storeNotifier.canSolvePuzzle()) {
-      PremiumLimitSheet.show(
+      PremiumNudgeOverlay.show(
         context,
-        'Daily Puzzle Limit Reached',
-        'You have solved/attempted your 3 free Puzzles for today. Upgrade to unlock unlimited puzzles.',
+        ref,
+        title: 'Daily Puzzle Limit Reached',
+        description: 'You have solved/attempted your 3 free Puzzles for today. Upgrade to unlock unlimited puzzles.',
       );
       return false;
     }

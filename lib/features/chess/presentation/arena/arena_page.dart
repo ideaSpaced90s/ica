@@ -20,7 +20,7 @@ import '../widgets/evaluation_bar.dart';
 import '../widgets/user_avatar_indicator.dart';
 import '../widgets/ambient_flow_backdrop.dart';
 import '../widgets/tabbed_game_panel.dart';
-import '../widgets/premium_limit_sheet.dart';
+import '../widgets/premium_nudge_overlay.dart';
 import '../dashboard_page.dart';
 import 'arena_settings_page.dart';
 import '../../application/onboarding_provider.dart';
@@ -61,6 +61,22 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
     _confettiBottomController.dispose();
     _gameOverDelayTimer?.cancel();
     super.dispose();
+  }
+
+  void _exitWithNudgeCheck(BuildContext context, WidgetRef ref) {
+    void exitAction() => exitToDashboardWithSidebar(context, ref);
+    final storeState = ref.read(storeProvider);
+    if (!storeState.isPremium) {
+      PremiumNudgeOverlay.show(
+        context,
+        ref,
+        title: 'IDEASPACE PREMIUM',
+        description: 'Keep mastering chess! Upgrade to unlock unlimited games, coaching, and custom themes.',
+        onDismiss: exitAction,
+      );
+    } else {
+      exitAction();
+    }
   }
 
   @override
@@ -115,7 +131,7 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
         final bool? confirm = await _showExitConfirmation(context);
         if (confirm == true) {
           if (context.mounted) {
-            exitToDashboardWithSidebar(context, ref);
+            _exitWithNudgeCheck(context, ref);
           }
         }
       },
@@ -948,12 +964,26 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                           child: FilledButton(
                             onPressed: () async {
                               if (!_checkArenaLimitAndUpsell(context, ref)) return;
-                              setState(() {
-                                _hasTriggeredConfetti = false;
-                              });
-                              await ref.read(arenaProvider.notifier).saveCurrentGame();
-                              ref.read(storeProvider.notifier).recordArenaGame();
-                              ref.read(arenaProvider.notifier).reset();
+                              Future<void> startNewGameAction() async {
+                                setState(() {
+                                  _hasTriggeredConfetti = false;
+                                });
+                                await ref.read(arenaProvider.notifier).saveCurrentGame();
+                                ref.read(storeProvider.notifier).recordArenaGame();
+                                ref.read(arenaProvider.notifier).reset();
+                              }
+                              final storeState = ref.read(storeProvider);
+                              if (!storeState.isPremium) {
+                                PremiumNudgeOverlay.show(
+                                  context,
+                                  ref,
+                                  title: 'IDEASPACE PREMIUM',
+                                  description: 'Keep the momentum going! Upgrade to unlock unlimited Arena games, puzzles, and elite themes.',
+                                  onDismiss: startNewGameAction,
+                                );
+                              } else {
+                                await startNewGameAction();
+                              }
                             },
                             style: FilledButton.styleFrom(
                               backgroundColor: Colors.transparent,
@@ -1033,7 +1063,7 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                         height: 58,
                         child: OutlinedButton(
                           onPressed: () {
-                            exitToDashboardWithSidebar(context, ref);
+                            _exitWithNudgeCheck(context, ref);
                           },
                           style: OutlinedButton.styleFrom(
                             foregroundColor: ScholarlyTheme.textMuted,
@@ -1331,7 +1361,7 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                         height: 58,
                         child: OutlinedButton(
                           onPressed: () {
-                            exitToDashboardWithSidebar(context, ref);
+                            _exitWithNudgeCheck(context, ref);
                           },
                           style: OutlinedButton.styleFrom(
                             foregroundColor: ScholarlyTheme.textMuted,
@@ -1430,10 +1460,11 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
   bool _checkArenaLimitAndUpsell(BuildContext context, WidgetRef ref) {
     final storeNotifier = ref.read(storeProvider.notifier);
     if (!storeNotifier.canPlayArenaGame()) {
-      PremiumLimitSheet.show(
+      PremiumNudgeOverlay.show(
         context,
-        'Daily Arena Game Limit Reached',
-        'You have played your 3 free Arena games for today. Upgrade to unlock unlimited games.',
+        ref,
+        title: 'Daily Arena Game Limit Reached',
+        description: 'You have played your 3 free Arena games for today. Upgrade to unlock unlimited games.',
       );
       return false;
     }

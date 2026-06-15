@@ -87,9 +87,10 @@ class OnboardingService {
   void startGuidedTour(GuidedTutorialLevel level) {
     ref.read(isOnboardingProvider.notifier).state = true;
     ref.read(showWelcomeDialogProvider.notifier).state = false;
-    ref.read(onboardingTargetChapterProvider.notifier).state =
-        GuidedTutorialFlow.startChapterFor(level);
-    ref.read(showChapterSelectionProvider.notifier).state = true;
+    final startChap = GuidedTutorialFlow.startChapterFor(level);
+    ref.read(onboardingTargetChapterProvider.notifier).state = startChap;
+    ref.read(tutorialProvider.notifier).loadChapter(startChap);
+    ref.read(showChapterSelectionProvider.notifier).state = false;
     ref.read(mobileNavIndexProvider.notifier).state = 7;
   }
 

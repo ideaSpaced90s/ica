@@ -140,7 +140,7 @@ class FakeChessNotifier extends StateNotifier<ChessState> implements ChessNotifi
 class FakeStoreNotifier extends StoreNotifier {
   bool _allowStateSet = false;
 
-  FakeStoreNotifier(Ref ref, StoreState initialState) : super(FakeRef(ref)) {
+  FakeStoreNotifier(Ref ref, StoreState initialState) : super(FakeRef(ref), loadData: false) {
     _allowStateSet = true;
     state = initialState;
     _allowStateSet = false;

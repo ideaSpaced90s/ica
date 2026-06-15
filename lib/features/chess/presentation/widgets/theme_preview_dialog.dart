@@ -8,6 +8,8 @@ import '../scholarly_theme.dart';
 import '../../application/store_provider.dart';
 import '../../application/chess_provider.dart';
 import '../../services/chess_sound_service.dart';
+import '../../services/auth_service.dart';
+import 'sign_in_prompt_dialog.dart';
 
 class PreviewPiece {
   final String id;
@@ -167,7 +169,7 @@ class _ThemePreviewDialogState extends ConsumerState<ThemePreviewDialog> {
             style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary),
           ),
           content: Text(
-            'Would you like to buy the premium theme "${widget.theme.name}" for ₹49 (Simulated)? It will be unlocked permanently.',
+            'Would you like to buy the premium theme "${widget.theme.name}" for \$0.99 (Simulated)? It will be unlocked permanently.',
             style: GoogleFonts.inter(fontSize: 13, color: ScholarlyTheme.textPrimary, height: 1.4),
           ),
           actions: [
@@ -179,7 +181,7 @@ class _ThemePreviewDialogState extends ConsumerState<ThemePreviewDialog> {
               onPressed: () {
                 Navigator.pop(context); // close confirm dialog
                 Navigator.pop(context); // close preview dialog
-                widget.storeNotifier.purchaseBoardTheme(widget.theme.id);
+                widget.storeNotifier.buyTheme(widget.theme.id);
                 widget.chessNotifier.setBoardTheme(widget.theme.id);
                 ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -520,8 +522,19 @@ class _ThemePreviewDialogState extends ConsumerState<ThemePreviewDialog> {
                   ),
                 );
               } else {
-                // Show purchase confirmation
-                _confirmPurchase(context);
+                final authService = ref.read(authServiceProvider);
+                if (!authService.isPlayGamesUser) {
+                  SignInPromptDialog.show(
+                    context: context,
+                    title: 'Sign In Required',
+                    description: 'To buy premium board themes and sync them to your account, please sign in with Google.',
+                    onSignInSuccess: () {
+                      _confirmPurchase(context);
+                    },
+                  );
+                } else {
+                  _confirmPurchase(context);
+                }
               }
             },
             style: ElevatedButton.styleFrom(
@@ -534,7 +547,7 @@ class _ThemePreviewDialogState extends ConsumerState<ThemePreviewDialog> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             ),
             child: Text(
-              widget.isSelected ? 'APPLIED' : (widget.isOwned ? 'APPLY' : 'BUY ₹49'),
+              widget.isSelected ? 'APPLIED' : (widget.isOwned ? 'APPLY' : 'BUY \$0.99'),
               style: GoogleFonts.outfit(
                 fontWeight: FontWeight.bold,
                 fontSize: 14,
