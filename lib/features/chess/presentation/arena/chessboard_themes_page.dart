@@ -156,7 +156,7 @@ class ChessboardThemesPage extends ConsumerWidget {
             crossAxisCount: (MediaQuery.of(context).size.width / 130).floor().clamp(3, 10),
             crossAxisSpacing: 16,
             mainAxisSpacing: 16,
-            childAspectRatio: 0.72,
+            childAspectRatio: 0.82,
           ),
           delegate: SliverChildBuilderDelegate(
             (context, index) {
@@ -196,116 +196,134 @@ class ChessboardThemesPage extends ConsumerWidget {
           Navigator.of(context).popUntil((route) => route.isFirst);
         }
       },
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: AspectRatio(
-              aspectRatio: 1.0,
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Positioned.fill(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            theme.lightSquare,
-                            theme.darkSquare,
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: isSelected
-                              ? ScholarlyTheme.accentBlue
-                              : ScholarlyTheme.panelStroke.withValues(alpha: 0.5),
-                          width: isSelected ? 3 : 1.5,
-                        ),
-                        boxShadow: isSelected
-                            ? [
-                                BoxShadow(
-                                  color: ScholarlyTheme.accentBlue.withValues(alpha: 0.35),
-                                  blurRadius: 10,
-                                  spreadRadius: 2,
-                                ),
-                              ]
-                            : [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.05),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
+      child: Container(
+        decoration: BoxDecoration(
+          color: isSelected
+              ? ScholarlyTheme.accentBlueSoft.withValues(alpha: 0.5)
+              : Colors.white.withValues(alpha: 0.45),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected
+                ? ScholarlyTheme.accentBlue
+                : Colors.white.withValues(alpha: 0.65),
+            width: isSelected ? 2.0 : 1.0,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: isSelected
+                  ? ScholarlyTheme.accentBlue.withValues(alpha: 0.15)
+                  : Colors.black.withValues(alpha: 0.02),
+              blurRadius: isSelected ? 8 : 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Expanded(
+                child: AspectRatio(
+                  aspectRatio: 1.0,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.3),
+                        width: 1,
                       ),
-                      child: Center(
-                        child: FractionallySizedBox(
-                          widthFactor: 0.65,
-                          heightFactor: 0.65,
-                          child: theme.buildPiece(
-                            context,
-                            'N',
-                            true,
-                            false,
-                            0.0,
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: Stack(
+                      children: [
+                        Positioned.fill(
+                          child: Column(
+                            children: [
+                              Expanded(
+                                child: Row(
+                                  children: [
+                                    Expanded(child: Container(color: theme.lightSquare)),
+                                    Expanded(child: Container(color: theme.darkSquare)),
+                                  ],
+                                ),
+                              ),
+                              Expanded(
+                                child: Row(
+                                  children: [
+                                    Expanded(child: Container(color: theme.darkSquare)),
+                                    Expanded(child: Container(color: theme.lightSquare)),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ),
+                        Center(
+                          child: FractionallySizedBox(
+                            widthFactor: 0.50,
+                            heightFactor: 0.50,
+                            child: theme.buildPiece(
+                              context,
+                              'N',
+                              true,
+                              false,
+                              0.0,
+                            ),
+                          ),
+                        ),
+                        if (!isOwned)
+                          Positioned.fill(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.25),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Center(
+                                child: Icon(
+                                  Icons.lock_rounded,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                              ),
+                            ),
+                          ),
+                        if (isSelected)
+                          Positioned(
+                            top: 4,
+                            right: 4,
+                            child: Container(
+                              padding: const EdgeInsets.all(2),
+                              decoration: const BoxDecoration(
+                                color: Colors.green,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.check,
+                                color: Colors.white,
+                                size: 10,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
-                  if (!isOwned)
-                    Positioned.fill(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.25),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: const Center(
-                          child: Icon(
-                            Icons.lock_rounded,
-                            color: Colors.white,
-                            size: 20,
-                          ),
-                        ),
-                      ),
-                    ),
-                  if (isSelected)
-                    Positioned(
-                      top: -4,
-                      right: -4,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(
-                          color: ScholarlyTheme.accentBlue,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.check,
-                          color: Colors.white,
-                          size: 12,
-                        ),
-                      ),
-                    ),
-                ],
+                ),
               ),
-            ),
+              const SizedBox(height: 6),
+              Text(
+                theme.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.outfit(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: isSelected ? ScholarlyTheme.accentBlue : ScholarlyTheme.textPrimary,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 6),
-          Text(
-            theme.name,
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.inter(
-              fontSize: 11,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-              color: isSelected ? ScholarlyTheme.accentBlue : ScholarlyTheme.textPrimary,
-              height: 1.2,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

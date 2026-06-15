@@ -1351,7 +1351,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
       return;
     }
 
-    if (state.servicesStarted) {
+    if (state.servicesStarted && _stockfishEngine.isReady) {
       if (analyzeCurrentPosition) {
         _startAnalysis(depth: depth);
       }

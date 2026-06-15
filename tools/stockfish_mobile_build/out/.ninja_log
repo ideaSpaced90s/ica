@@ -1,0 +1,26 @@
+# ninja log v5
+16	5874	8032328127165131	CMakeFiles/stockfish.dir/src/fixes/small_fixes.cpp.o	84c9ee18ab39894a
+127	6426	8032328130816964	CMakeFiles/stockfish.dir/src/Stockfish/src/memory.cpp.o	7782ec1a41ffd1db
+2	6696	8032328135083860	CMakeFiles/stockfish.dir/src/fixes/stream_fix.cpp.o	e3f072e2b841fd05
+47	8544	8032328153239798	CMakeFiles/stockfish.dir/src/Stockfish/src/bitboard.cpp.o	50513dcedb04a48f
+82	9867	8032328166622127	CMakeFiles/stockfish.dir/src/Stockfish/src/evaluate.cpp.o	c159db8e86d1b065
+64	9977	8032328167562283	CMakeFiles/stockfish.dir/src/Stockfish/src/benchmark.cpp.o	b5536068fce28267
+181	10279	8032328169720171	CMakeFiles/stockfish.dir/src/Stockfish/src/misc.cpp.o	8b7029c19d318a83
+101	10752	8032328174633389	CMakeFiles/stockfish.dir/src/Stockfish/src/main.cpp.o	c706de891d70b5e7
+145	14137	8032328209019432	CMakeFiles/stockfish.dir/src/Stockfish/src/position.cpp.o	d4706d37cf800ba1
+5952	16034	8032328228452602	CMakeFiles/stockfish.dir/src/Stockfish/src/movepick.cpp.o	4cf02da2372d7dfb
+8548	17279	8032328241095615	CMakeFiles/stockfish.dir/src/Stockfish/src/nnue/features/half_ka_v2_hm.cpp.o	dcff5086fc6acb1f
+6429	17676	8032328244832177	CMakeFiles/stockfish.dir/src/Stockfish/src/movegen.cpp.o	ea18a5892a43e7ee
+6699	18462	8032328252734384	CMakeFiles/stockfish.dir/src/Stockfish/src/nnue/nnue_misc.cpp.o	938f4478d9962f0d
+31	19698	8032328264597869	CMakeFiles/stockfish.dir/src/Stockfish/src/engine.cpp.o	9958640dd1e6ae03
+10755	21742	8032328285775962	CMakeFiles/stockfish.dir/src/Stockfish/src/score.cpp.o	9f805c44cb90ad36
+9872	24280	8032328311042231	CMakeFiles/stockfish.dir/src/Stockfish/src/nnue/network.cpp.o	cb77f49c1df5b224
+16036	26239	8032328330624153	CMakeFiles/stockfish.dir/src/Stockfish/src/timeman.cpp.o	6032573c4624d000
+17678	27480	8032328343151425	CMakeFiles/stockfish.dir/src/Stockfish/src/tune.cpp.o	4a5ddd43616139be
+17281	27588	8032328344250591	CMakeFiles/stockfish.dir/src/Stockfish/src/tt.cpp.o	1fb792274d6010c0
+19701	29207	8032328360531651	CMakeFiles/stockfish.dir/src/Stockfish/src/ucioption.cpp.o	546e4152b7c383df
+14139	29460	8032328362982451	CMakeFiles/stockfish.dir/src/Stockfish/src/thread.cpp.o	24f3c7004223be9c
+10282	31516	8032328383517257	CMakeFiles/stockfish.dir/src/Stockfish/src/syzygy/tbprobe.cpp.o	4765b8cdf0b68337
+9982	31609	8032328384557371	CMakeFiles/stockfish.dir/src/Stockfish/src/search.cpp.o	49733a0ddb16126
+18463	32115	8032328389491737	CMakeFiles/stockfish.dir/src/Stockfish/src/uci.cpp.o	575e8905457f81df
+32116	32519	8032328393230917	libstockfish.so	8eb1ec0879a9730b

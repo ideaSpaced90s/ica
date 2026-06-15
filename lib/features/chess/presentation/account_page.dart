@@ -30,8 +30,6 @@ class _AccountPageState extends ConsumerState<AccountPage> {
   Widget build(BuildContext context) {
     final storeState = ref.watch(storeProvider);
     final storeNotifier = ref.read(storeProvider.notifier);
-    final chessState = ref.watch(chessProvider);
-    final chessNotifier = ref.read(chessProvider.notifier);
     final syncState = ref.watch(googleDriveSyncProvider);
     final syncNotifier = ref.read(googleDriveSyncProvider.notifier);
 
@@ -108,132 +106,94 @@ class _AccountPageState extends ConsumerState<AccountPage> {
                 delegate: SliverChildBuilderDelegate(
                   (context, index) {
                     final theme = ownedThemes[index];
-                    final isSelected = theme.id == chessState.boardThemeId;
 
-                    return GestureDetector(
-                      onTap: () {
-                        ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                        chessNotifier.setBoardTheme(theme.id);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('🎨 Applied ${theme.name} theme!'),
-                            behavior: SnackBarBehavior.floating,
-                            backgroundColor: ScholarlyTheme.accentBlue,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                        );
-                      },
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? ScholarlyTheme.accentBlueSoft.withValues(alpha: 0.5)
-                              : Colors.white.withValues(alpha: 0.45),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: isSelected
-                                ? ScholarlyTheme.accentBlue
-                                : Colors.white.withValues(alpha: 0.65),
-                            width: isSelected ? 2.0 : 1.0,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: isSelected
-                                  ? ScholarlyTheme.accentBlue.withValues(alpha: 0.15)
-                                  : Colors.black.withValues(alpha: 0.02),
-                              blurRadius: isSelected ? 8 : 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.45),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.65),
+                          width: 1.0,
                         ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Expanded(
-                                child: AspectRatio(
-                                  aspectRatio: 1.0,
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: Colors.white.withValues(alpha: 0.3),
-                                        width: 1,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.02),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Expanded(
+                              child: AspectRatio(
+                                aspectRatio: 1.0,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: Colors.white.withValues(alpha: 0.3),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  clipBehavior: Clip.antiAlias,
+                                  child: Stack(
+                                    children: [
+                                      Positioned.fill(
+                                        child: Column(
+                                          children: [
+                                            Expanded(
+                                              child: Row(
+                                                children: [
+                                                  Expanded(child: Container(color: theme.lightSquare)),
+                                                  Expanded(child: Container(color: theme.darkSquare)),
+                                                ],
+                                              ),
+                                            ),
+                                            Expanded(
+                                              child: Row(
+                                                children: [
+                                                  Expanded(child: Container(color: theme.darkSquare)),
+                                                  Expanded(child: Container(color: theme.lightSquare)),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
-                                    ),
-                                    clipBehavior: Clip.antiAlias,
-                                    child: Stack(
-                                      children: [
-                                        Positioned.fill(
-                                          child: Column(
-                                            children: [
-                                              Expanded(
-                                                child: Row(
-                                                  children: [
-                                                    Expanded(child: Container(color: theme.lightSquare)),
-                                                    Expanded(child: Container(color: theme.darkSquare)),
-                                                  ],
-                                                ),
-                                              ),
-                                              Expanded(
-                                                child: Row(
-                                                  children: [
-                                                    Expanded(child: Container(color: theme.darkSquare)),
-                                                    Expanded(child: Container(color: theme.lightSquare)),
-                                                  ],
-                                                ),
-                                              ),
-                                            ],
+                                      Center(
+                                        child: FractionallySizedBox(
+                                          widthFactor: 0.50,
+                                          heightFactor: 0.50,
+                                          child: theme.buildPiece(
+                                            context,
+                                            'N',
+                                            true,
+                                            false,
+                                            0.0,
                                           ),
                                         ),
-                                        Center(
-                                          child: FractionallySizedBox(
-                                            widthFactor: 0.50,
-                                            heightFactor: 0.50,
-                                            child: theme.buildPiece(
-                                              context,
-                                              'N',
-                                              true,
-                                              false,
-                                              0.0,
-                                            ),
-                                          ),
-                                        ),
-                                        if (isSelected)
-                                          Positioned(
-                                            top: 4,
-                                            right: 4,
-                                            child: Container(
-                                              padding: const EdgeInsets.all(2),
-                                              decoration: const BoxDecoration(
-                                                color: Colors.green,
-                                                shape: BoxShape.circle,
-                                              ),
-                                              child: const Icon(
-                                                Icons.check,
-                                                color: Colors.white,
-                                                size: 10,
-                                              ),
-                                            ),
-                                          ),
-                                      ],
-                                    ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ),
-                              const SizedBox(height: 6),
-                              Text(
-                                theme.name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: GoogleFonts.outfit(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                  color: ScholarlyTheme.textPrimary,
-                                ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              theme.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.outfit(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: ScholarlyTheme.textPrimary,
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
                     );

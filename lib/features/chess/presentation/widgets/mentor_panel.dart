@@ -215,11 +215,10 @@ class _TutorialMentorPanelState extends ConsumerState<TutorialMentorPanel> with 
             children: [
               Row(
                 children: [
-                  Text(
+                  PremiumGradientText(
                     'GM CHANAKYA',
                     style: GoogleFonts.inter(
-                      color: moodColor,
-                  fontSize: 12,
+                      fontSize: 12,
                       fontWeight: FontWeight.w900,
                       letterSpacing: 1.5,
                     ),
@@ -268,34 +267,47 @@ class _TutorialMentorPanelState extends ConsumerState<TutorialMentorPanel> with 
         onTap: _isTyping ? _completeTypingInstantly : null,
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 48),
-          child: AnimatedSize(
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeOutCubic,
-            alignment: Alignment.topCenter,
-            child: Text.rich(
-              TextSpan(
-                children: [
-                  TextSpan(
-                    text: _displayedText,
-                    style: GoogleFonts.inter(
-                      color: ScholarlyTheme.textPrimary,
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w500,
-                      height: 1.6,
-                    ),
+          child: Stack(
+            children: [
+              // Invisible full text to reserve layout space and prevent container size jumps during typing
+              Opacity(
+                opacity: 0.0,
+                child: Text(
+                  _targetText,
+                  style: GoogleFonts.inter(
+                    color: ScholarlyTheme.textPrimary,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w500,
+                    height: 1.6,
                   ),
-                  if (_isTyping)
+                ),
+              ),
+              // Visible animated typing text
+              Text.rich(
+                TextSpan(
+                  children: [
                     TextSpan(
-                      text: ' |',
+                      text: _displayedText,
                       style: GoogleFonts.inter(
-                        color: moodColor,
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
+                        color: ScholarlyTheme.textPrimary,
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w500,
+                        height: 1.6,
                       ),
                     ),
-                ],
+                    if (_isTyping)
+                      TextSpan(
+                        text: ' |',
+                        style: GoogleFonts.inter(
+                          color: moodColor,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                  ],
+                ),
               ),
-            ),
+            ],
           ),
         ),
       ),

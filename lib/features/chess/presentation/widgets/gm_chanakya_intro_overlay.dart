@@ -124,10 +124,9 @@ class _GMChanakyaIntroOverlayState extends ConsumerState<GMChanakyaIntroOverlay>
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
+                                PremiumGradientText(
                                   'GM CHANAKYA',
                                   style: GoogleFonts.outfit(
-                                    color: ScholarlyTheme.accentBlue,
                                     fontSize: 14,
                                     fontWeight: FontWeight.w900,
                                     letterSpacing: 1.5,

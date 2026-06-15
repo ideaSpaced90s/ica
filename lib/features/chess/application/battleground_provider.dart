@@ -492,7 +492,7 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
     int? depth,
   }) async {
     if (_isDisposed) return;
-    if (state.servicesStarted) {
+    if (state.servicesStarted && _stockfishEngine.isReady) {
       if (analyzeCurrentPosition) {
         _startAnalysis(depth: depth);
       }
@@ -1448,7 +1448,7 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
     }
   }
 
-  void startGame() {
+  Future<void> startGame() async {
     if (state.game.gameOver || state.isTimeOut) return;
 
     final aiMovesFirst = !state.isPlayerWhite;
@@ -1457,7 +1457,9 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
       clockStarted: true,
       activeClockSide: _clockWhite,
       isEngineThinking: aiMovesFirst && state.servicesStarted && state.engineReady,
+      activeRatedMatchId: DateTime.now().millisecondsSinceEpoch.toString(),
     );
+    await _saveSettings();
 
     _startClockTicker();
 

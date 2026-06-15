@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../domain/models/tutorial_constants.dart';
 import '../presentation/mobile_navigation_shell.dart';
+import 'chess_provider.dart';
 import 'tutorial_provider.dart';
 
 /// Provider tracking whether the user is currently in the active onboarding tutorial flow.
@@ -14,6 +15,15 @@ final onboardingTargetChapterProvider = StateProvider<int>((ref) => 1);
 
 /// Provider tracking whether the chapter selection screen should be visible.
 final showChapterSelectionProvider = StateProvider<bool>((ref) => true);
+
+/// Provider tracking whether the notification prompt should be shown.
+final showNotificationPromptProvider = StateProvider<bool>((ref) {
+  final repo = ref.watch(tutorialProgressRepositoryProvider);
+  final chessState = ref.watch(chessProvider);
+  return !repo.hasSeenWelcomeGuide() &&
+      !repo.hasPromptedNotification() &&
+      !chessState.isNotificationsEnabled;
+});
 
 /// Provider tracking whether the welcome guide dialog should be displayed.
 final showWelcomeDialogProvider = StateProvider<bool>((ref) {
@@ -83,6 +93,12 @@ class OnboardingService {
   final WidgetRef ref;
 
   OnboardingService(this.ref);
+
+  Future<void> dismissNotificationPrompt() async {
+    final repo = ref.read(tutorialProgressRepositoryProvider);
+    await repo.setPromptedNotification(true);
+    ref.read(showNotificationPromptProvider.notifier).state = false;
+  }
 
   void startGuidedTour(GuidedTutorialLevel level) {
     ref.read(isOnboardingProvider.notifier).state = true;

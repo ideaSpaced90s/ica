@@ -101,6 +101,7 @@ class ArenaState {
   final String? startupError;
   final String? premoveFrom;
   final String? premoveTo;
+  final bool isTemporaryQuickPlay;
 
   ArenaState({
     required this.game,
@@ -149,6 +150,7 @@ class ArenaState {
     this.startupError,
     this.premoveFrom,
     this.premoveTo,
+    this.isTemporaryQuickPlay = false,
   });
 
   bool get isChess960 => gameMode == 'chess960';
@@ -223,6 +225,7 @@ class ArenaState {
     Object? startupError = const Object(),
     Object? premoveFrom = const Object(),
     Object? premoveTo = const Object(),
+    bool? isTemporaryQuickPlay,
   }) {
     return ArenaState(
       game: game ?? this.game,
@@ -271,6 +274,7 @@ class ArenaState {
       isGameOver: isGameOver ?? this.isGameOver,
       premoveFrom: premoveFrom == const Object() ? this.premoveFrom : premoveFrom as String?,
       premoveTo: premoveTo == const Object() ? this.premoveTo : premoveTo as String?,
+      isTemporaryQuickPlay: isTemporaryQuickPlay ?? this.isTemporaryQuickPlay,
     );
   }
 }
@@ -286,6 +290,7 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
 
   Timer? _clockTimer;
   Timer? _engineMoveTimer;
+  String? _scheduledMove;
   StreamSubscription<String>? _stockfishSubscription;
 
   Future<void>? _startupFuture;
@@ -323,6 +328,7 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
     _stopClockTimer();
     _engineMoveTimer?.cancel();
     _engineMoveTimer = null;
+    _scheduledMove = null;
     _stopAnalysisAndReset();
     _undoStack.clear();
     _redoStack.clear();
@@ -408,7 +414,7 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
     int? depth,
   }) async {
     if (_isDisposed) return;
-    if (state.servicesStarted) {
+    if (state.servicesStarted && _stockfishEngine.isReady) {
       if (analyzeCurrentPosition) {
         _startAnalysis(depth: depth);
       }
@@ -478,7 +484,7 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
   }
 
   void _startAnalysis({int? depth}) async {
-    if (!state.servicesStarted || !state.engineReady || state.game.gameOver || state.isPaused) return;
+    if (!state.servicesStarted || !state.engineReady || _waitingForReady || state.game.gameOver || state.isPaused) return;
 
     _currentCandidates.clear();
     final is960 = state.gameMode == 'chess960';
@@ -490,7 +496,7 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
 
     _searchFen = state.game.fen;
     final targetDepth = depth ?? avatar.depth;
-    final quickPlayEnabled = ref.read(chessProvider).quickPlay;
+    final quickPlayEnabled = ref.read(chessProvider).quickPlay || state.isTemporaryQuickPlay;
 
     if (quickPlayEnabled && _isAiTurn()) {
       _engine.analyzePosition(state.game.fen, depth: 1);
@@ -515,6 +521,9 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
     if (trimmed == 'readyok') {
       _waitingForReady = false;
       state = state.copyWith(engineReady: true);
+      if (_isAiTurn() && !state.game.gameOver && !state.isPaused) {
+        _startAnalysis();
+      }
       return;
     }
 
@@ -612,8 +621,9 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
           !state.isPaused) {
         _engineMoveTimer?.cancel();
         final finalMove = bestMoveToPlay;
-        final quickPlayEnabled = ref.read(chessProvider).quickPlay;
+        final quickPlayEnabled = ref.read(chessProvider).quickPlay || state.isTemporaryQuickPlay;
         if (ref.read(chessProvider).isAnimationsEnabled && !quickPlayEnabled) {
+          _scheduledMove = finalMove;
           _engineMoveTimer = Timer(const Duration(milliseconds: 1500), () {
             if (!_isDisposed && !state.isPaused && _searchFen == state.game.fen) {
               _makeEngineMove(finalMove);
@@ -627,6 +637,9 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
   }
 
   void _makeEngineMove(String move) {
+    _engineMoveTimer?.cancel();
+    _engineMoveTimer = null;
+    _scheduledMove = null;
     if (move.length < 4 || state.game.gameOver || state.isPaused) return;
     final from = move.substring(0, 2);
     final to = move.substring(2, 4);
@@ -680,6 +693,9 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
     if (moveMade) {
       final wasClockStarted = state.clockStarted;
       _onMoveCompleted('$from$to$promotion');
+      if (state.isTemporaryQuickPlay) {
+        state = state.copyWith(isTemporaryQuickPlay: false);
+      }
       if (!wasClockStarted) {
         state = state.copyWith(
           clockStarted: true,
@@ -777,7 +793,7 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
 
     final isAi = _isAiTurn();
     state = state.copyWith(
-      isEngineThinking: isAi && state.servicesStarted && state.engineReady,
+      isEngineThinking: isAi,
     );
 
     if (state.clockStarted) {
@@ -910,6 +926,9 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
     state = state.copyWith(activeClockSide: _clockSideForTurn());
     _startClockTicker();
 
+    if (_isAiTurn()) {
+      state = state.copyWith(isEngineThinking: true);
+    }
     await ensureGameServicesStarted(analyzeCurrentPosition: true);
     state = state.copyWith(isEngineThinking: state.engineReady);
   }
@@ -1112,10 +1131,32 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
     if (_undoStack.isEmpty) return;
     _engineMoveTimer?.cancel();
     _engineMoveTimer = null;
+    _scheduledMove = null;
     _stopAnalysisAndReset();
+
     _redoStack.add(_captureCurrentSnapshot());
-    final snapshot = _undoStack.removeLast();
-    _restoreSnapshot(snapshot);
+
+    _ArenaSnapshot? snapshot;
+    while (_undoStack.isNotEmpty) {
+      snapshot = _undoStack.removeLast();
+      if (state.isEngineVsEngine) {
+        break;
+      }
+      final tempGame = chess_lib.Chess.fromFEN(snapshot.fen);
+      final turn = tempGame.turn;
+      final isPlayerTurn = snapshot.isPlayerWhite
+          ? (turn == chess_lib.Color.WHITE)
+          : (turn == chess_lib.Color.BLACK);
+      if (isPlayerTurn) {
+        break;
+      } else {
+        _redoStack.add(snapshot);
+      }
+    }
+
+    if (snapshot != null) {
+      _restoreSnapshot(snapshot);
+    }
     _syncUndoRedoFlags();
     _soundService.playSfx(SoundEffect.uiClick);
   }
@@ -1124,6 +1165,7 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
     if (_redoStack.isEmpty) return;
     _engineMoveTimer?.cancel();
     _engineMoveTimer = null;
+    _scheduledMove = null;
     _stopAnalysisAndReset();
     _undoStack.add(_captureCurrentSnapshot());
     final snapshot = _redoStack.removeLast();
@@ -1140,6 +1182,7 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
       _stopClockTimer();
       _engineMoveTimer?.cancel();
       _engineMoveTimer = null;
+      _scheduledMove = null;
       _stopAnalysisAndReset();
       state = state.copyWith(isEngineThinking: false);
     } else {
@@ -1155,16 +1198,41 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
 
   void forcePlay() {
     if (!_isAiTurn() || state.game.gameOver || state.isPaused) return;
+    if (_scheduledMove != null) {
+      final move = _scheduledMove!;
+      _engineMoveTimer?.cancel();
+      _engineMoveTimer = null;
+      _scheduledMove = null;
+      _makeEngineMove(move);
+      _soundService.playSfx(SoundEffect.uiClick);
+      return;
+    }
     _engineMoveTimer?.cancel();
     _engineMoveTimer = null;
+    _scheduledMove = null;
     _engine.sendCommand('stop');
     _soundService.playSfx(SoundEffect.uiClick);
+  }
+
+  void activateTemporaryQuickPlay() {
+    if (state.game.gameOver || state.isPaused) return;
+    state = state.copyWith(isTemporaryQuickPlay: true);
+    _soundService.playSfx(SoundEffect.switchToggle);
+    if (_isAiTurn()) {
+      if (state.isEngineThinking) {
+        forcePlay();
+      } else {
+        state = state.copyWith(isEngineThinking: true);
+        unawaited(ensureGameServicesStarted(analyzeCurrentPosition: true));
+      }
+    }
   }
 
   void restartNormalAnalysis() {
     if (!_isAiTurn() || state.game.gameOver || state.isPaused) return;
     _engineMoveTimer?.cancel();
     _engineMoveTimer = null;
+    _scheduledMove = null;
     _stopAnalysisAndReset();
     _startAnalysis();
     state = state.copyWith(isEngineThinking: true);
@@ -1176,6 +1244,7 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
 
     if (newVal) {
       if (_isAiTurn() && !state.game.gameOver && !state.isPaused) {
+        state = state.copyWith(isEngineThinking: true);
         unawaited(ensureGameServicesStarted(analyzeCurrentPosition: true));
       }
     } else {
@@ -1477,6 +1546,7 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
   Future<void> loadSavedGame(SavedGameEntry entry) async {
     _engineMoveTimer?.cancel();
     _engineMoveTimer = null;
+    _scheduledMove = null;
     _stopAnalysisAndReset();
     _undoStack.clear();
     _redoStack.clear();
@@ -1500,6 +1570,19 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
       loadedGameId: entry.id,
       isGameOver: restoredGame.gameOver,
     );
+
+    final isAi = _isAiTurn();
+    state = state.copyWith(
+      isEngineThinking: isAi,
+    );
+
+    if (state.clockStarted) {
+      _startClockTicker();
+    }
+
+    if (isAi && !restoredGame.gameOver && !state.isPaused) {
+      unawaited(ensureGameServicesStarted(analyzeCurrentPosition: true));
+    }
   }
 
   @override
@@ -1507,6 +1590,7 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
     _isDisposed = true;
     _clockTimer?.cancel();
     _engineMoveTimer?.cancel();
+    _scheduledMove = null;
     _stockfishSubscription?.cancel();
     super.dispose();
   }

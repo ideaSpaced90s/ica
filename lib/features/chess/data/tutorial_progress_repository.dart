@@ -15,6 +15,7 @@ class TutorialProgressRepository {
   static const String _kActiveFen = 'tutorial_active_fen';
   static const String _kSettings = 'tutorial_settings';
   static const String _kWelcomeSeen = 'tutorial_welcome_guide_seen';
+  static const String _kNotificationPromptSeen = 'tutorial_notification_prompt_seen';
   static const String _kIsGoogleSignedIn = 'user_is_google_signed_in';
   static const String _kArenaIntroSeen = 'intro_seen_arena';
   static const String _kBattlegroundIntroSeen = 'intro_seen_battleground';
@@ -224,5 +225,13 @@ class TutorialProgressRepository {
 
   Future<void> setAcademyAccessCount(int value) async {
     await _prefs.setInt(_kAcademyAccessCount, value);
+  }
+
+  bool hasPromptedNotification() {
+    return _prefs.getBool(_kNotificationPromptSeen) ?? false;
+  }
+
+  Future<void> setPromptedNotification(bool value) async {
+    await _prefs.setBool(_kNotificationPromptSeen, value);
   }
 }

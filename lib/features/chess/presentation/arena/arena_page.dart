@@ -26,6 +26,7 @@ import 'arena_settings_page.dart';
 import '../../application/onboarding_provider.dart';
 import '../../application/tutorial_provider.dart';
 import '../widgets/gm_chanakya_intro_overlay.dart';
+import '../widgets/gm_chanakya_new_game_overlay.dart';
 import '../widgets/neural_connectivity_mesh.dart';
 
 class ArenaPage extends ConsumerStatefulWidget {
@@ -41,6 +42,7 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
   late ConfettiController _confettiBottomController;
   bool _hasTriggeredConfetti = false;
   bool _showGameOverOverlayDelayed = false;
+  bool _showNewGameConfirmOverlay = false;
   Timer? _gameOverDelayTimer;
 
   @override
@@ -128,6 +130,12 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
       canPop: false,
       onPopInvokedWithResult: (bool didPop, Object? result) async {
         if (didPop) return;
+        if (_showNewGameConfirmOverlay) {
+          setState(() {
+            _showNewGameConfirmOverlay = false;
+          });
+          return;
+        }
         final bool? confirm = await _showExitConfirmation(context);
         if (confirm == true) {
           if (context.mounted) {
@@ -150,6 +158,34 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
               state.isTimeOut && !state.isGameOver
                   ? _buildTimeOutOverlay(context, ref, state)
                   : _buildGameOverOverlay(context, ref, state),
+            if (_showNewGameConfirmOverlay)
+              GMChanakyaNewGameOverlay(
+                onConfirm: () async {
+                  if (ref.read(arenaProvider).recentMoves.isNotEmpty) {
+                    await ref.read(arenaProvider.notifier).saveCurrentGame();
+                  }
+                  ref.read(storeProvider.notifier).recordArenaGame();
+                  ref.read(arenaProvider.notifier).reset();
+                  setState(() {
+                    _showNewGameConfirmOverlay = false;
+                  });
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).clearSnackBars();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('New Match Started'),
+                        duration: Duration(milliseconds: 1500),
+                        backgroundColor: ScholarlyTheme.accentBlue,
+                      ),
+                    );
+                  }
+                },
+                onCancel: () {
+                  setState(() {
+                    _showNewGameConfirmOverlay = false;
+                  });
+                },
+              ),
             
             // Confetti Layer
             Align(
@@ -651,10 +687,10 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                     String message = '';
                     if (isEvE) {
                       final downEngineName = AiAvatar.getAvatar(updatedState.bottomAvatarId).name;
-                      message = 'The game will now be played between $upEngineName vs $downEngineName. The game will be played immediately by the bot the side is on!';
+                      message = 'The game will now be played between $upEngineName and $downEngineName.';
                     } else {
                       final userName = ref.read(chessProvider).userName;
-                      message = 'The game will now be played between $upEngineName vs $userName.';
+                      message = 'The game will now be played between $upEngineName and $userName.';
                     }
 
                     ScaffoldMessenger.of(context).clearSnackBars();
@@ -688,32 +724,16 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                   },
                 ),
                 const SizedBox(width: 8),
-                GestureDetector(
-                  onLongPress: () {
-                    final currentQuickPlay = ref.read(chessProvider).quickPlay;
-                    ref.read(chessSoundServiceProvider).playSfx(SoundEffect.switchToggle);
-                    ref.read(chessProvider.notifier).toggleQuickPlay(!currentQuickPlay);
-                    if (!currentQuickPlay) {
-                      ref.read(arenaProvider.notifier).forcePlay();
-                    } else {
-                      ref.read(arenaProvider.notifier).restartNormalAnalysis();
-                    }
-                  },
-                  child: ActionIconButton(
-                    icon: Icons.flash_on_rounded,
-                    isActive: state.isEngineThinking && !_isPlayerTurn(state),
-                    activeColor: Colors.amber,
-                    activeIconColor: Colors.black,
-                    baseColor: ref.watch(chessProvider).quickPlay ? Colors.amber : Colors.white.withValues(alpha: 0.12),
-                    iconColor: ref.watch(chessProvider).quickPlay ? Colors.black : Colors.white.withValues(alpha: 0.35),
-                    onTap: (state.isEngineThinking && !_isPlayerTurn(state))
-                        ? () => ref.read(arenaProvider.notifier).forcePlay()
-                        : () {
-                            final currentQuickPlay = ref.read(chessProvider).quickPlay;
-                            ref.read(chessSoundServiceProvider).playSfx(SoundEffect.switchToggle);
-                            ref.read(chessProvider.notifier).toggleQuickPlay(!currentQuickPlay);
-                          },
-                  ),
+                ActionIconButton(
+                  icon: Icons.flash_on_rounded,
+                  isBlinkingContinuous: ref.watch(chessProvider).quickPlay || state.isTemporaryQuickPlay,
+                  isActive: state.isEngineThinking && (!_isPlayerTurn(state) || state.isEngineVsEngine),
+                  isEnabled: !_isPlayerTurn(state) || state.isEngineVsEngine,
+                  activeColor: Colors.amber,
+                  activeIconColor: Colors.black,
+                  baseColor: (ref.watch(chessProvider).quickPlay || state.isTemporaryQuickPlay) ? Colors.amber : Colors.white.withValues(alpha: 0.12),
+                  iconColor: (ref.watch(chessProvider).quickPlay || state.isTemporaryQuickPlay) ? Colors.black : Colors.white.withValues(alpha: 0.35),
+                  onTap: () => ref.read(arenaProvider.notifier).activateTemporaryQuickPlay(),
                 ),
                 const SizedBox(width: 8),
                 ActionIconButton(
@@ -1513,33 +1533,9 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
   Future<void> _handleNewGame(BuildContext context, WidgetRef ref) async {
     if (!_checkArenaLimitAndUpsell(context, ref)) return;
 
-    if (ref.read(arenaProvider).recentMoves.isNotEmpty) {
-      final confirm = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          backgroundColor: ScholarlyTheme.panelBase,
-          title: const Text('New Game?'),
-          content: const Text('Start a new game? Progress will be saved.'),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-            FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('New Game')),
-          ],
-        ),
-      );
-      if (confirm != true) return;
-    }
-    ref.read(storeProvider.notifier).recordArenaGame();
-    ref.read(arenaProvider.notifier).reset();
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).clearSnackBars();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('New Match Started'),
-          duration: Duration(milliseconds: 1500),
-          backgroundColor: ScholarlyTheme.accentBlue,
-        ),
-      );
-    }
+    setState(() {
+      _showNewGameConfirmOverlay = true;
+    });
   }
 
   Future<void> _handleSaveGame(BuildContext context, WidgetRef ref) async {

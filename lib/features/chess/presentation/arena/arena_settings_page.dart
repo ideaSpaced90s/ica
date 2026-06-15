@@ -212,8 +212,8 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
                         _SettingsSwitchTile(
                           label: 'Quick play',
                           description: state.quickPlay
-                              ? 'Force to play immediately'
-                              : 'Tap and hold the flash icon to force play immediately',
+                              ? 'Keep quick play active across all moves'
+                              : 'Tap the flash icon once on the board to force play immediately',
                           icon: Icons.flash_on_rounded,
                           value: state.quickPlay,
                           onChanged: (v) => notifier.toggleQuickPlay(v),

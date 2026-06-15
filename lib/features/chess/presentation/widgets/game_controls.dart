@@ -138,10 +138,12 @@ class ActionIconButton extends ConsumerStatefulWidget {
     this.size,
     this.shouldBlink = false,
     this.onBlinkComplete,
+    this.isBlinkingContinuous = false,
   });
 
   final bool shouldBlink;
   final VoidCallback? onBlinkComplete;
+  final bool isBlinkingContinuous;
 
   final IconData icon;
   final VoidCallback? onTap;
@@ -163,6 +165,8 @@ class _ActionIconButtonState extends ConsumerState<ActionIconButton> with Ticker
   late Animation<double> _glowAnimation;
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
+  late AnimationController _continuousBlinkController;
+  late Animation<double> _continuousBlinkAnimation;
 
   @override
   void initState() {
@@ -187,12 +191,26 @@ class _ActionIconButtonState extends ConsumerState<ActionIconButton> with Ticker
       TweenSequenceItem(tween: Tween<double>(begin: 1.0, end: 0.4), weight: 50),
     ]).animate(CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut));
 
+    _continuousBlinkController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+
+    _continuousBlinkAnimation = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween<double>(begin: 1.0, end: 0.15), weight: 50),
+      TweenSequenceItem(tween: Tween<double>(begin: 0.15, end: 1.0), weight: 50),
+    ]).animate(CurvedAnimation(parent: _continuousBlinkController, curve: Curves.easeInOut));
+
     if (widget.shouldBlink) {
       _startBlink();
     }
 
     if (widget.isActive) {
       _pulseController.repeat();
+    }
+
+    if (widget.isBlinkingContinuous) {
+      _continuousBlinkController.repeat();
     }
   }
 
@@ -208,6 +226,13 @@ class _ActionIconButtonState extends ConsumerState<ActionIconButton> with Ticker
     } else if (!widget.isActive && oldWidget.isActive) {
       _pulseController.stop();
       _pulseController.reset();
+    }
+
+    if (widget.isBlinkingContinuous && !oldWidget.isBlinkingContinuous) {
+      _continuousBlinkController.repeat();
+    } else if (!widget.isBlinkingContinuous && oldWidget.isBlinkingContinuous) {
+      _continuousBlinkController.stop();
+      _continuousBlinkController.reset();
     }
   }
 
@@ -233,6 +258,7 @@ class _ActionIconButtonState extends ConsumerState<ActionIconButton> with Ticker
   void dispose() {
     _blinkController.dispose();
     _pulseController.dispose();
+    _continuousBlinkController.dispose();
     super.dispose();
   }
 
@@ -273,7 +299,7 @@ class _ActionIconButtonState extends ConsumerState<ActionIconButton> with Ticker
         duration: const Duration(milliseconds: 100),
         curve: _isPressed ? Curves.easeOutCubic : Curves.elasticOut,
         child: AnimatedBuilder(
-          animation: Listenable.merge([_glowAnimation, _pulseAnimation]),
+          animation: Listenable.merge([_glowAnimation, _pulseAnimation, _continuousBlinkAnimation]),
           builder: (context, child) {
             final double blinkVal = _glowAnimation.value;
             final double pulseVal = _pulseAnimation.value;
@@ -291,7 +317,7 @@ class _ActionIconButtonState extends ConsumerState<ActionIconButton> with Ticker
                 ? (2.0 + 2.0 * pulseVal)
                 : (blinkVal > 0.0 ? blinkVal * 8.0 : (_isPressed ? 3.0 : 1.0));
 
-            return AnimatedContainer(
+            Widget buttonContainer = AnimatedContainer(
               duration: const Duration(milliseconds: 150),
               width: size + 16,
               height: size + 16,
@@ -357,6 +383,15 @@ class _ActionIconButtonState extends ConsumerState<ActionIconButton> with Ticker
                 ),
               ),
             );
+
+            if (widget.isBlinkingContinuous) {
+              buttonContainer = Opacity(
+                opacity: _continuousBlinkAnimation.value,
+                child: buttonContainer,
+              );
+            }
+
+            return buttonContainer;
           },
         ),
       ),

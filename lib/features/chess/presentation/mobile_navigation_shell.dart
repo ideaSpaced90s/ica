@@ -27,6 +27,7 @@ import 'store/store_page.dart';
 import 'account_page.dart';
 
 import 'widgets/welcome_guide_page.dart';
+import 'widgets/notification_prompt_page.dart';
 import 'widgets/sidebar_dynamic_bg.dart';
 import 'widgets/hover_scale_effect.dart';
 import '../application/onboarding_provider.dart';
@@ -110,6 +111,7 @@ class MobileNavigationShell extends ConsumerWidget {
     }
 
     final showWelcome = ref.watch(showWelcomeDialogProvider);
+    final showNotificationPrompt = ref.watch(showNotificationPromptProvider);
 
     Widget result = Scaffold(
       backgroundColor: ScholarlyTheme.backgroundStart,
@@ -208,7 +210,10 @@ class MobileNavigationShell extends ConsumerWidget {
       result = Stack(
         children: [
           result,
-          const WelcomeGuidePage(),
+          if (showNotificationPrompt)
+            const NotificationPromptPage()
+          else
+            const WelcomeGuidePage(),
         ],
       );
     }

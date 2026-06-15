@@ -108,10 +108,11 @@ class _WelcomeGuidePageState extends ConsumerState<WelcomeGuidePage>
                 children: [
                   const Spacer(),
                   _buildChanakyaBubble(),
-                  if (_introComplete) ...[
-                    const SizedBox(height: 24),
-                    _buildActions(),
-                  ],
+                  const SizedBox(height: 24),
+                  IgnorePointer(
+                    ignoring: !_introComplete,
+                    child: _buildActions(),
+                  ),
                   const Spacer(),
                   TextButton.icon(
                     onPressed: _skipGuide,
@@ -175,10 +176,9 @@ class _WelcomeGuidePageState extends ConsumerState<WelcomeGuidePage>
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  PremiumGradientText(
                     'GM CHANAKYA',
                     style: GoogleFonts.inter(
-                      color: ScholarlyTheme.accentBlue,
                       fontSize: 12,
                       fontWeight: FontWeight.w900,
                       letterSpacing: 1.5,
@@ -200,19 +200,39 @@ class _WelcomeGuidePageState extends ConsumerState<WelcomeGuidePage>
           GestureDetector(
             onTap: _isTyping ? _skipTypewriter : null,
             behavior: HitTestBehavior.opaque,
-            child: Text(
-              _displayedText + (_isTyping ? ' |' : ''),
-              style: GoogleFonts.inter(
-                color: ScholarlyTheme.textPrimary,
-                fontSize: 13.5,
-                fontWeight: FontWeight.w500,
-                height: 1.6,
-              ),
+            child: Stack(
+              children: [
+                // Invisible full text to reserve layout space and prevent container size jumps
+                Opacity(
+                  opacity: 0.0,
+                  child: Text(
+                    _introText,
+                    style: GoogleFonts.inter(
+                      color: ScholarlyTheme.textPrimary,
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w500,
+                      height: 1.6,
+                    ),
+                  ),
+                ),
+                // Visible animated typing text
+                Text(
+                  _displayedText + (_isTyping ? ' |' : ''),
+                  style: GoogleFonts.inter(
+                    color: ScholarlyTheme.textPrimary,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w500,
+                    height: 1.6,
+                  ),
+                ),
+              ],
             ),
           ),
-          if (_isTyping) ...[
-            const SizedBox(height: 10),
-            Text(
+          const SizedBox(height: 10),
+          AnimatedOpacity(
+            opacity: _isTyping ? 1.0 : 0.0,
+            duration: const Duration(milliseconds: 300),
+            child: Text(
               'Tap to read faster',
               style: GoogleFonts.inter(
                 color: ScholarlyTheme.textSubtle,
@@ -220,7 +240,7 @@ class _WelcomeGuidePageState extends ConsumerState<WelcomeGuidePage>
                 fontWeight: FontWeight.w500,
               ),
             ),
-          ],
+          ),
         ],
       ),
     );
@@ -228,7 +248,7 @@ class _WelcomeGuidePageState extends ConsumerState<WelcomeGuidePage>
 
   Widget _buildActions() {
     return TweenAnimationBuilder<double>(
-      tween: Tween<double>(begin: 0.0, end: 1.0),
+      tween: Tween<double>(begin: 0.0, end: _introComplete ? 1.0 : 0.0),
       duration: const Duration(milliseconds: 500),
       curve: Curves.easeOutBack,
       builder: (context, value, child) {

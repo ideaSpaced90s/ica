@@ -200,3 +200,38 @@ class GlassPanel extends StatelessWidget {
     );
   }
 }
+
+class PremiumGradientText extends StatelessWidget {
+  final String text;
+  final TextStyle style;
+  final Gradient gradient;
+
+  const PremiumGradientText(
+    this.text, {
+    super.key,
+    required this.style,
+    this.gradient = const LinearGradient(
+      colors: [
+        Color(0xFF0D6EFD), // Accent Blue
+        Color(0xFF8B5CF6), // Royal Purple
+        Color(0xFFD97706), // Dark Amber / Gold
+      ],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    ),
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ShaderMask(
+      blendMode: BlendMode.srcIn,
+      shaderCallback: (bounds) => gradient.createShader(
+        Rect.fromLTWH(0, 0, bounds.width, bounds.height),
+      ),
+      child: Text(
+        text,
+        style: style.copyWith(color: Colors.white),
+      ),
+    );
+  }
+}
