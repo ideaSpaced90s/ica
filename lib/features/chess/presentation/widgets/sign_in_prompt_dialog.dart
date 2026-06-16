@@ -5,7 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../scholarly_theme.dart';
 import '../../services/auth_service.dart';
 import '../../services/chess_sound_service.dart';
-import '../../services/play_games_sync_service.dart';
+import '../../services/cloud_sync_service.dart';
 import '../../application/tutorial_provider.dart';
 import '../../application/onboarding_provider.dart';
 import '../../application/chess_provider.dart';
@@ -72,14 +72,14 @@ class _SignInPromptDialogState extends State<SignInPromptDialog> {
         ref.read(showBattlegroundIntroProvider.notifier).state = true;
         ref.read(showPuzzlesIntroProvider.notifier).state = true;
 
-        // Restore Google Drive progress (timeout to ensure UI responsiveness)
+        // Restore Cloud Sync progress (timeout to ensure UI responsiveness)
         try {
           await ref
-              .read(googleDriveSyncProvider.notifier)
+              .read(cloudSyncProvider.notifier)
               .restore()
               .timeout(const Duration(seconds: 4));
         } catch (e) {
-          debugPrint('Google Drive restore sync timed out or failed: $e');
+          debugPrint('Cloud Sync restore sync timed out or failed: $e');
         }
 
         if (mounted) {

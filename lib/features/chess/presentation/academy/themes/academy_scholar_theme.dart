@@ -115,7 +115,7 @@ class AcademyScholarTheme extends ChessTheme {
   Widget buildLastMoveHighlight(BuildContext context, double opacity) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF0056B3).withValues(alpha: opacity),
+        color: const Color(0xFFFFB800).withValues(alpha: opacity),
       ),
     );
   }

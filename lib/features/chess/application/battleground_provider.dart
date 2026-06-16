@@ -24,7 +24,7 @@ import '../domain/models/dashboard_stats.dart';
 import 'package:kingslayer_chess/src/rust/api/cognitive.dart';
 import 'package:kingslayer_chess/src/rust/api/persona.dart' as rust_persona;
 import 'chess_provider.dart';
-import '../services/play_games_sync_service.dart';
+import '../services/cloud_sync_service.dart';
 
 const _initialClock = Duration(minutes: 10);
 const _clockWhite = 'white';
@@ -1698,7 +1698,7 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
       decayIntervalsApplied: state.decayIntervalsApplied,
     );
     await _settingsRepository.saveSettings(updated);
-    ref.read(googleDriveSyncProvider.notifier).backup(silent: true);
+    ref.read(cloudSyncProvider.notifier).backup(silent: true);
   }
 
   Future<SavedGameEntry?> saveCurrentGame({
@@ -1781,7 +1781,7 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
             ? null
             : state.activeRatedMatchId,
       );
-      ref.read(googleDriveSyncProvider.notifier).backup(silent: true);
+      ref.read(cloudSyncProvider.notifier).backup(silent: true);
 
       if (entry.result != null) {
         await _saveSettings();

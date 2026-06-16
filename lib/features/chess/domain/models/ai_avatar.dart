@@ -57,7 +57,7 @@ class AiAvatar {
   String get randomMoveProbability {
     if (name == 'Sparky') return '50%';
     if (name == 'Pawzy') return '35%';
-    if (name == 'Coward') return '25%';
+    if (name == 'Timorous') return '25%';
     if (name == 'Rookie') return '18%';
     if (name == 'Scholar') return '12%';
     if (name == 'Molly') return '8%';
@@ -75,7 +75,7 @@ class AiAvatar {
   String get heuristicJitteriness {
     if (name == 'Sparky') return '85%';
     if (name == 'Pawzy') return '70%';
-    if (name == 'Coward') return '55%';
+    if (name == 'Timorous') return '55%';
     if (name == 'Rookie') return '45%';
     if (name == 'Scholar') return '35%';
     if (name == 'Molly') return '25%';
@@ -117,7 +117,7 @@ class AiAvatar {
     ),
     AiAvatar(
       id: 'avatar_2',
-      name: 'Coward',
+      name: 'Timorous',
       title: 'Extreme Defender',
       fideRatingRange: '800 - 900',
       playingStyle: 'Extreme defender who retreats pieces at the first sign of danger and plays extremely passive.',
@@ -125,7 +125,7 @@ class AiAvatar {
       depth: 2,
       icon: Icons.shield_rounded,
       color: Color(0xFF90CAF9), // Pale blue
-      imagePath: 'assets/persona_vector/coward.svg',
+      imagePath: 'assets/persona_vector/timorous.svg',
     ),
     AiAvatar(
       id: 'avatar_3',

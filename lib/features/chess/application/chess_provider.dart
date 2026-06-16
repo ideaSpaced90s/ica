@@ -37,7 +37,7 @@ import '../domain/models/candidate_move.dart';
 import '../domain/chess_persona_evaluator.dart';
 import 'battleground_provider.dart';
 import '../services/notification_service.dart';
-import '../services/play_games_sync_service.dart';
+import '../services/cloud_sync_service.dart';
 
 
 const _sentinel = Object();
@@ -900,7 +900,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
       );
       await _settingsRepository.saveSettings(updated);
       _syncScheduledNotifications();
-      ref.read(googleDriveSyncProvider.notifier).backup(silent: true);
+      ref.read(cloudSyncProvider.notifier).backup(silent: true);
     } catch (e) {
       debugPrint('Failed to save settings: $e');
     }
@@ -1800,7 +1800,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
         loadedSaveId: entry.id,
       );
       debugPrint('Game saved successfully: ${entry.id}');
-      ref.read(googleDriveSyncProvider.notifier).backup(silent: true);
+      ref.read(cloudSyncProvider.notifier).backup(silent: true);
       return entry;
     } catch (error, stackTrace) {
       debugPrint('Failed to save game: $error');
@@ -1823,7 +1823,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
       final saves = await _savedGameRepository.delete(id);
       state = state.copyWith(savedGames: saves);
       ref.read(battlegroundProvider.notifier).refreshDashboardStats();
-      ref.read(googleDriveSyncProvider.notifier).backup(silent: true);
+      ref.read(cloudSyncProvider.notifier).backup(silent: true);
     } catch (error, stackTrace) {
       debugPrint('Failed to delete save: $error');
       debugPrintStack(stackTrace: stackTrace);
@@ -1837,7 +1837,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
     try {
       final saves = await _savedGameRepository.update(updated);
       state = state.copyWith(savedGames: saves);
-      ref.read(googleDriveSyncProvider.notifier).backup(silent: true);
+      ref.read(cloudSyncProvider.notifier).backup(silent: true);
     } catch (e) {
       debugPrint('Failed to toggle favorite: $e');
     }
@@ -1849,7 +1849,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
     try {
       final saves = await _savedGameRepository.update(updated);
       state = state.copyWith(savedGames: saves);
-      ref.read(googleDriveSyncProvider.notifier).backup(silent: true);
+      ref.read(cloudSyncProvider.notifier).backup(silent: true);
     } catch (e) {
       debugPrint('Failed to rename game: $e');
     }
@@ -1864,7 +1864,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
       final saves = await _savedGameRepository.update(updated);
       state = state.copyWith(savedGames: saves);
       ref.read(battlegroundProvider.notifier).refreshDashboardStats();
-      ref.read(googleDriveSyncProvider.notifier).backup(silent: true);
+      ref.read(cloudSyncProvider.notifier).backup(silent: true);
     } catch (e) {
       debugPrint('Failed to lock game for analysis: $e');
     }
@@ -1878,7 +1878,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
         savedGames: const [],
       );
       ref.read(battlegroundProvider.notifier).refreshDashboardStats();
-      ref.read(googleDriveSyncProvider.notifier).backup(silent: true);
+      ref.read(cloudSyncProvider.notifier).backup(silent: true);
     } catch (e) {
       debugPrint('Failed to clear history: $e');
     }
@@ -1890,7 +1890,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
       await _savedGameRepository.writeAll(ratedGames);
       state = state.copyWith(savedGames: ratedGames);
       ref.read(battlegroundProvider.notifier).refreshDashboardStats();
-      ref.read(googleDriveSyncProvider.notifier).backup(silent: true);
+      ref.read(cloudSyncProvider.notifier).backup(silent: true);
     } catch (e) {
       debugPrint('Failed to clear unrated history: $e');
     }

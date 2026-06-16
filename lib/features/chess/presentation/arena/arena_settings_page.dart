@@ -12,7 +12,7 @@ import '../widgets/ambient_scaffold.dart';
 import 'dart:ui';
 import 'arena_personas_selection_page.dart';
 import 'chessboard_themes_page.dart';
-
+import 'arena_random_persona_page.dart';
 
 class ArenaSettingsPage extends ConsumerStatefulWidget {
   const ArenaSettingsPage({super.key});
@@ -41,19 +41,29 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
             slivers: [
               // Extra top padding since app bar is gone
               SliverToBoxAdapter(
-                child: SizedBox(height: MediaQuery.of(context).padding.top + 32),
+                child: SizedBox(
+                  height: MediaQuery.of(context).padding.top + 32,
+                ),
               ),
 
               // Title with back button
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   child: Row(
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.arrow_back_rounded, color: ScholarlyTheme.textPrimary),
+                        icon: const Icon(
+                          Icons.arrow_back_rounded,
+                          color: ScholarlyTheme.textPrimary,
+                        ),
                         onPressed: () {
-                          ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
+                          ref
+                              .read(chessSoundServiceProvider)
+                              .playSfx(SoundEffect.uiNavigate);
                           Navigator.of(context).pop();
                         },
                       ),
@@ -81,7 +91,8 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
                     children: [
                       _SettingsTile(
                         label: 'Classic Chess',
-                        description: 'Standard starting position and orthodox rules',
+                        description:
+                            'Standard starting position and orthodox rules',
                         icon: Icons.grid_on_rounded,
                         onTap: () => notifier.setGameMode('classic'),
                         trailing: state.gameMode == 'classic'
@@ -93,7 +104,8 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
                       ),
                       _SettingsTile(
                         label: 'Chess 960',
-                        description: 'Randomized back-rank setup for dynamic play',
+                        description:
+                            'Randomized back-rank setup for dynamic play',
                         icon: Icons.shuffle_rounded,
                         onTap: () => notifier.setGameMode('chess960'),
                         trailing: state.gameMode == 'chess960'
@@ -106,38 +118,37 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
                     ],
                   ),
 
-
-
                   // VISUALS
                   _SettingsCategory(
-                      title: 'VISUALS',
-                      children: [
-                        _SettingsTile(
-                          label: 'Chessboard Themes',
-                          description: 'Current: ${ThemeRegistry.getTheme(state.boardThemeId).name}',
-                          icon: Icons.palette_rounded,
-                          onTap: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => const ChessboardThemesPage(),
-                              ),
-                            );
-                          },
-                          trailing: _ThemeMiniPreview(
-                            theme: ThemeRegistry.getTheme(state.boardThemeId),
-                          ),
+                    title: 'VISUALS',
+                    children: [
+                      _SettingsTile(
+                        label: 'Chessboard Themes',
+                        description:
+                            'Current: ${ThemeRegistry.getTheme(state.boardThemeId).name}',
+                        icon: Icons.palette_rounded,
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const ChessboardThemesPage(),
+                            ),
+                          );
+                        },
+                        trailing: _ThemeMiniPreview(
+                          theme: ThemeRegistry.getTheme(state.boardThemeId),
                         ),
-                        _SettingsSwitchTile(
-                          label: 'Animations State',
-                          icon: state.isAnimationsEnabled
-                              ? Icons.auto_awesome_rounded
-                              : Icons.auto_awesome_outlined,
-                          value: state.isAnimationsEnabled,
-                          onChanged: (v) => notifier.toggleAnimations(),
-                          enabled: true,
-                        ),
-                      ],
-                    ),
+                      ),
+                      _SettingsSwitchTile(
+                        label: 'Animations State',
+                        icon: state.isAnimationsEnabled
+                            ? Icons.auto_awesome_rounded
+                            : Icons.auto_awesome_outlined,
+                        value: state.isAnimationsEnabled,
+                        onChanged: (v) => notifier.toggleAnimations(),
+                        enabled: true,
+                      ),
+                    ],
+                  ),
 
                   // SOUNDS
                   _SettingsCategory(
@@ -157,113 +168,45 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
 
                   // GAMEPLAY
                   _SettingsCategory(
-                      title: 'GAMEPLAY',
-                      children: [
-                        _SettingsTile(
-                          label: 'Time',
-                          description: (() {
-                            final baseSecs = state.baseTimeDuration.inSeconds;
-                            final mins = baseSecs ~/ 60;
-                            final secs = baseSecs % 60;
-                            final timeStr = secs == 0 ? '$mins' : '$mins:${secs.toString().padLeft(2, '0')}';
-                            return '$timeStr+${state.incrementDuration.inSeconds} • Tap to change';
-                          })(),
-                          icon: Icons.timer_rounded,
-                          onTap: () => _showTimeControlSelector(context, ref),
-                          trailing: const Icon(
-                            Icons.edit_rounded,
-                            size: 18,
-                            color: ScholarlyTheme.accentBlue,
-                          ),
+                    title: 'GAMEPLAY',
+                    children: [
+                      _SettingsTile(
+                        label: 'Time',
+                        description: (() {
+                          final baseSecs = state.baseTimeDuration.inSeconds;
+                          final mins = baseSecs ~/ 60;
+                          final secs = baseSecs % 60;
+                          final timeStr = secs == 0
+                              ? '$mins'
+                              : '$mins:${secs.toString().padLeft(2, '0')}';
+                          return '$timeStr+${state.incrementDuration.inSeconds} • Tap to change';
+                        })(),
+                        icon: Icons.timer_rounded,
+                        onTap: () => _showTimeControlSelector(context, ref),
+                        trailing: const Icon(
+                          Icons.edit_rounded,
+                          size: 18,
+                          color: ScholarlyTheme.accentBlue,
                         ),
-                        _SettingsTile(
-                          label: 'Personas',
-                          description: 'Swipe and select Up & Down engine profiles',
-                          icon: Icons.people_rounded,
-                          onTap: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => const ArenaPersonasSelectionPage(),
-                              ),
-                            );
-                          },
-                          trailing: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: ScholarlyTheme.accentBlueSoft,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.5), width: 1.5),
-                            ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      AiAvatar.getAvatar(state.engineLevel).name,
-                                      style: GoogleFonts.inter(
-                                        color: ScholarlyTheme.accentBlue,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 11,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 4),
-                                    const Text(
-                                      '↑',
-                                      style: TextStyle(
-                                        color: ScholarlyTheme.accentBlue,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 11,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 2),
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      AiAvatar.getAvatar(state.bottomAvatarId).name,
-                                      style: GoogleFonts.inter(
-                                        color: ScholarlyTheme.accentBlue,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 11,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 4),
-                                    const Text(
-                                      '↓',
-                                      style: TextStyle(
-                                        color: ScholarlyTheme.accentBlue,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 11,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        _SettingsSwitchTile(
-                          label: 'Quick play',
-                          description: state.quickPlay
-                              ? 'Keep quick play active across all moves'
-                              : 'Tap the flash icon once on the board to force play immediately',
-                          icon: Icons.flash_on_rounded,
-                          value: state.quickPlay,
-                          onChanged: (v) => notifier.toggleQuickPlay(v),
-                          enabled: true,
-                        ),
-                      ],
-                    ),
-
-
+                      ),
+                      _buildPremiumPersonaManagementCard(
+                        context,
+                        ref,
+                        state,
+                        notifier,
+                      ),
+                      _SettingsSwitchTile(
+                        label: 'Quick play',
+                        description: state.quickPlay
+                            ? 'Keep quick play active across all moves'
+                            : 'Tap the flash icon once on the board to force play immediately',
+                        icon: Icons.flash_on_rounded,
+                        value: state.quickPlay,
+                        onChanged: (v) => notifier.toggleQuickPlay(v),
+                        enabled: true,
+                      ),
+                    ],
+                  ),
 
                   const SizedBox(height: 120), // Bottom padding
                 ]),
@@ -274,7 +217,6 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
       ),
     );
   }
-
 
   void _showTimeControlSelector(BuildContext context, WidgetRef ref) {
     showModalBottomSheet(
@@ -302,7 +244,11 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
               {'label': '30+0', 'min': 30, 'sec': 0, 'inc': 0},
             ];
 
-            Widget buildGroup(String title, IconData icon, List<Map<String, dynamic>> group) {
+            Widget buildGroup(
+              String title,
+              IconData icon,
+              List<Map<String, dynamic>> group,
+            ) {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -326,7 +272,8 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
                     spacing: 8,
                     runSpacing: 8,
                     children: group.map((p) {
-                      final isSelected = state.baseTimeDuration.inMinutes == p['min'] &&
+                      final isSelected =
+                          state.baseTimeDuration.inMinutes == p['min'] &&
                           state.baseTimeDuration.inSeconds % 60 == p['sec'] &&
                           state.incrementDuration.inSeconds == p['inc'];
                       return ChoiceChip(
@@ -334,17 +281,26 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
                         selected: isSelected,
                         onSelected: (selected) {
                           if (selected) {
-                            ref.read(arenaProvider.notifier).setTimeControl(
-                              Duration(minutes: p['min'] as int, seconds: p['sec'] as int),
-                              Duration(seconds: p['inc'] as int),
-                            );
+                            ref
+                                .read(arenaProvider.notifier)
+                                .setTimeControl(
+                                  Duration(
+                                    minutes: p['min'] as int,
+                                    seconds: p['sec'] as int,
+                                  ),
+                                  Duration(seconds: p['inc'] as int),
+                                );
                             Navigator.pop(context);
                           }
                         },
                         selectedColor: ScholarlyTheme.accentBlueSoft,
                         labelStyle: GoogleFonts.inter(
-                          color: isSelected ? ScholarlyTheme.accentBlue : ScholarlyTheme.textPrimary,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          color: isSelected
+                              ? ScholarlyTheme.accentBlue
+                              : ScholarlyTheme.textPrimary,
+                          fontWeight: isSelected
+                              ? FontWeight.bold
+                              : FontWeight.normal,
                           fontSize: 13,
                         ),
                       );
@@ -398,9 +354,21 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
                           ),
                         ),
                         const SizedBox(height: 20),
-                        buildGroup('Bullet Arena', Icons.bolt_rounded, bulletPresets),
-                        buildGroup('Blitz Arena', Icons.local_fire_department_rounded, blitzPresets),
-                        buildGroup('Rapid Arena', Icons.timer_rounded, rapidPresets),
+                        buildGroup(
+                          'Bullet Arena',
+                          Icons.bolt_rounded,
+                          bulletPresets,
+                        ),
+                        buildGroup(
+                          'Blitz Arena',
+                          Icons.local_fire_department_rounded,
+                          blitzPresets,
+                        ),
+                        buildGroup(
+                          'Rapid Arena',
+                          Icons.timer_rounded,
+                          rapidPresets,
+                        ),
                         const SizedBox(height: 8),
                         Text(
                           'Custom',
@@ -448,15 +416,20 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
               value: incrementSeconds.toDouble(),
               min: 0,
               max: 60,
-              onChanged: (v) => setDialogState(() => incrementSeconds = v.toInt()),
+              onChanged: (v) =>
+                  setDialogState(() => incrementSeconds = v.toInt()),
             ),
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
               child: FilledButton(
                 onPressed: () {
-                  ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                  ref.read(arenaProvider.notifier).setTimeControl(
+                  ref
+                      .read(chessSoundServiceProvider)
+                      .playSfx(SoundEffect.uiClick);
+                  ref
+                      .read(arenaProvider.notifier)
+                      .setTimeControl(
                         Duration(minutes: totalMinutes),
                         Duration(seconds: incrementSeconds),
                       );
@@ -474,6 +447,217 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
           ],
         );
       },
+    );
+  }
+
+  Widget _buildPremiumPersonaManagementCard(
+    BuildContext context,
+    WidgetRef ref,
+    ChessState state,
+    ChessNotifier notifier,
+  ) {
+    final upAvatar = AiAvatar.getAvatar(state.engineLevel);
+    final downAvatar = AiAvatar.getAvatar(state.bottomAvatarId);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.6),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Persona Management',
+            style: GoogleFonts.outfit(
+              fontSize: 13,
+              fontWeight: FontWeight.w900,
+              color: ScholarlyTheme.textPrimary,
+              letterSpacing: 0.4,
+            ),
+          ),
+          const SizedBox(height: 14),
+          // Up engine slot
+          _buildEnginePersonaRow(label: 'UP ENGINE (WHITE)', avatar: upAvatar),
+          const SizedBox(height: 12),
+          const Divider(height: 1),
+          const SizedBox(height: 12),
+          // Down engine slot
+          _buildEnginePersonaRow(
+            label: 'DOWN ENGINE (BLACK)',
+            avatar: downAvatar,
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    ref
+                        .read(chessSoundServiceProvider)
+                        .playSfx(SoundEffect.uiClick);
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const ArenaPersonasSelectionPage(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.style_rounded, size: 16),
+                  label: Text(
+                    'Explore',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: ScholarlyTheme.accentBlue,
+                    side: const BorderSide(color: ScholarlyTheme.accentBlue),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    ref
+                        .read(chessSoundServiceProvider)
+                        .playSfx(SoundEffect.uiClick);
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const ArenaRandomPersonaPage(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.shuffle_rounded, size: 16),
+                  label: Text(
+                    'Random Match',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: ScholarlyTheme.accentBlue,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEnginePersonaRow({
+    required String label,
+    required AiAvatar avatar,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.outfit(
+            fontSize: 10,
+            fontWeight: FontWeight.w900,
+            color: ScholarlyTheme.textMuted,
+            letterSpacing: 0.8,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: avatar.color.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: avatar.color.withValues(alpha: 0.3),
+                  width: 1.5,
+                ),
+              ),
+              child: buildAvatarImage(avatar.imagePath, fit: BoxFit.contain),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        avatar.name,
+                        style: GoogleFonts.outfit(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: ScholarlyTheme.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: avatar.color.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          '${avatar.fideRatingRange} ELO',
+                          style: GoogleFonts.jetBrainsMono(
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                            color: avatar.color,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    avatar.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      color: ScholarlyTheme.textMuted,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
@@ -564,7 +748,8 @@ class _SettingsTile extends ConsumerWidget {
         description,
         style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 11),
       ),
-      trailing: trailing ??
+      trailing:
+          trailing ??
           Icon(
             Icons.chevron_right_rounded,
             color: ScholarlyTheme.textSubtle,
@@ -611,14 +796,16 @@ class _SettingsSwitchTile extends ConsumerWidget {
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: value
-                   ? ScholarlyTheme.accentBlue.withValues(alpha: 0.25)
+                  ? ScholarlyTheme.accentBlue.withValues(alpha: 0.25)
                   : Colors.white.withValues(alpha: 0.5),
               width: 1,
             ),
           ),
           child: Icon(
             icon,
-            color: value ? ScholarlyTheme.accentBlue : ScholarlyTheme.textPrimary,
+            color: value
+                ? ScholarlyTheme.accentBlue
+                : ScholarlyTheme.textPrimary,
             size: 20,
           ),
         ),
@@ -632,29 +819,41 @@ class _SettingsSwitchTile extends ConsumerWidget {
         ),
         subtitle: description != null && description!.isNotEmpty
             ? (label == 'Quick play'
-                ? GestureDetector(
-                    onTap: () {
-                      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                      ScaffoldMessenger.of(context).clearSnackBars();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Text('⚠️ Opponents may not play at full strength!'),
-                          backgroundColor: Colors.orangeAccent,
-                          duration: const Duration(seconds: 2),
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ? GestureDetector(
+                      onTap: () {
+                        ref
+                            .read(chessSoundServiceProvider)
+                            .playSfx(SoundEffect.uiClick);
+                        ScaffoldMessenger.of(context).clearSnackBars();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: const Text(
+                              '⚠️ Opponents may not play at full strength!',
+                            ),
+                            backgroundColor: Colors.orangeAccent,
+                            duration: const Duration(seconds: 2),
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        );
+                      },
+                      child: Text(
+                        description!,
+                        style: GoogleFonts.inter(
+                          color: ScholarlyTheme.textMuted,
+                          fontSize: 11,
                         ),
-                      );
-                    },
-                    child: Text(
+                      ),
+                    )
+                  : Text(
                       description!,
-                      style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 11),
-                    ),
-                  )
-                : Text(
-                    description!,
-                    style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 11),
-                  ))
+                      style: GoogleFonts.inter(
+                        color: ScholarlyTheme.textMuted,
+                        fontSize: 11,
+                      ),
+                    ))
             : null,
         activeThumbColor: ScholarlyTheme.accentBlue,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -693,7 +892,6 @@ class _ThemeMiniPreview extends StatelessWidget {
     );
   }
 }
-
 
 class _TimeSliderRow extends StatelessWidget {
   final String label;

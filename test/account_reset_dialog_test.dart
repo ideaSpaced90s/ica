@@ -8,7 +8,7 @@ import 'package:kingslayer_chess/features/chess/application/store_provider.dart'
 import 'package:kingslayer_chess/features/chess/services/auth_service.dart';
 import 'package:kingslayer_chess/features/chess/services/chess_sound_service.dart';
 import 'package:kingslayer_chess/features/chess/services/chess_haptics_service.dart';
-import 'package:kingslayer_chess/features/chess/services/play_games_sync_service.dart';
+import 'package:kingslayer_chess/features/chess/services/cloud_sync_service.dart';
 import 'package:kingslayer_chess/main.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -42,8 +42,8 @@ class FakeChessHapticsService extends Fake implements ChessHapticsService {
   void updateSettings({required bool hapticsEnabled}) {}
 }
 
-class FakePlayGamesSyncNotifier extends PlayGamesSyncNotifier {
-  FakePlayGamesSyncNotifier(super.ref);
+class FakeCloudSyncNotifier extends CloudSyncNotifier {
+  FakeCloudSyncNotifier(super.ref);
 
   @override
   Future<bool> backup({bool silent = false}) async {
@@ -69,7 +69,7 @@ void main() {
           authServiceProvider.overrideWithValue(FakeAuthService()),
           chessSoundServiceProvider.overrideWithValue(FakeChessSoundService()),
           chessHapticsServiceProvider.overrideWithValue(FakeChessHapticsService()),
-          playGamesSyncProvider.overrideWith((ref) => FakePlayGamesSyncNotifier(ref)),
+          cloudSyncProvider.overrideWith((ref) => FakeCloudSyncNotifier(ref)),
           storeProvider.overrideWith((ref) => StoreNotifier(ref, loadData: false)),
         ],
         child: const MaterialApp(

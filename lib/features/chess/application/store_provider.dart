@@ -3,6 +3,9 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
+import 'package:in_app_purchase_android/in_app_purchase_android.dart';
+import 'package:in_app_purchase_android/billing_client_wrappers.dart';
+import 'package:kingslayer_chess/main.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
@@ -298,6 +301,22 @@ class StoreNotifier extends StateNotifier<StoreState> {
 
   void _grantEntitlement(PurchaseDetails purchase) {
     final productId = purchase.productID;
+    
+    if (productId == 'themes') {
+      final pendingThemeId = sharedPrefs.getString('pending_theme_id');
+      if (pendingThemeId != null) {
+        final updatedThemes = Set<String>.from(state.purchasedBoardThemes);
+        updatedThemes.add(pendingThemeId);
+        state = state.copyWith(purchasedBoardThemes: updatedThemes);
+        _saveStoreData();
+        
+        // Auto-apply the theme
+        ref.read(chessProvider.notifier).setBoardTheme(pendingThemeId);
+      }
+      sharedPrefs.remove('pending_theme_id');
+      return;
+    }
+
     if (productId.startsWith('theme_')) {
       final themeId = productId.replaceFirst('theme_', '');
       final updatedThemes = Set<String>.from(state.purchasedBoardThemes);
@@ -309,7 +328,18 @@ class StoreNotifier extends StateNotifier<StoreState> {
 
     final now = DateTime.now();
     DateTime newExpiry;
-    final plan = productId;
+    String plan = productId;
+
+    if (productId == 'ica_saas_1') {
+      final pendingPlan = sharedPrefs.getString('pending_plan_id');
+      if (pendingPlan != null) {
+        plan = pendingPlan;
+      } else if (state.subscriptionPlan != null) {
+        plan = state.subscriptionPlan!;
+      } else {
+        plan = 'yearly';
+      }
+    }
 
     int days = 30;
     if (plan == 'sixmonth') {
@@ -331,49 +361,109 @@ class StoreNotifier extends StateNotifier<StoreState> {
       subscriptionPlan: plan,
     );
     _saveStoreData();
+
+    if (productId == 'ica_saas_1') {
+      sharedPrefs.remove('pending_plan_id');
+    }
   }
 
   Future<void> buySubscription(String planId) async {
     final bool available = await InAppPurchase.instance.isAvailable();
     if (!available) {
-      // If store is not available (e.g. desktop), fall back to simulation
-      simulateUSDSubscription(planId);
-      return;
+      throw StateError('Google Play Store is not available on this device.');
     }
 
-    final ProductDetailsResponse response = await InAppPurchase.instance.queryProductDetails({planId});
-    if (response.notFoundIDs.isNotEmpty || response.productDetails.isEmpty) {
-      // If product details not found (not configured in Play Console yet), fall back to simulation
-      simulateUSDSubscription(planId);
-      return;
-    }
+    if (Platform.isAndroid) {
+      final ProductDetailsResponse response = await InAppPurchase.instance.queryProductDetails({'ica_saas_1'});
+      if (response.productDetails.isEmpty) {
+        throw StateError('Subscription product "ica_saas_1" not found in store.');
+      }
 
-    final ProductDetails productDetails = response.productDetails.first;
-    final PurchaseParam purchaseParam = PurchaseParam(productDetails: productDetails);
-    
-    await InAppPurchase.instance.buyNonConsumable(purchaseParam: purchaseParam);
+      final ProductDetails productDetails = response.productDetails.first;
+      if (productDetails is GooglePlayProductDetails) {
+        SubscriptionOfferDetailsWrapper? selectedOffer;
+        String targetBasePlanId;
+        String? targetOfferId;
+        if (planId == 'yearly') {
+          targetBasePlanId = 'annual-premium';
+          targetOfferId = 'free-trial-7-days';
+        } else if (planId == 'sixmonth') {
+          targetBasePlanId = 'six-monthly-premium';
+          targetOfferId = 'free-trial';
+        } else if (planId == 'monthly') {
+          targetBasePlanId = 'monthly-premium';
+          targetOfferId = 'first3monthdiscounted';
+        } else {
+          throw ArgumentError('Invalid plan ID: $planId');
+        }
+
+        final offers = productDetails.productDetails.subscriptionOfferDetails;
+        if (offers != null) {
+          for (final offer in offers) {
+            if (offer.basePlanId == targetBasePlanId && offer.offerId == targetOfferId) {
+              selectedOffer = offer;
+              break;
+            }
+          }
+          if (selectedOffer == null) {
+            for (final offer in offers) {
+              if (offer.basePlanId == targetBasePlanId) {
+                selectedOffer = offer;
+                break;
+              }
+            }
+          }
+        }
+
+        if (selectedOffer == null) {
+          throw StateError('No billing plan found on Google Play for $planId ($targetBasePlanId).');
+        }
+
+        await sharedPrefs.setString('pending_plan_id', planId);
+
+        final GooglePlayPurchaseParam purchaseParam = GooglePlayPurchaseParam(
+          productDetails: productDetails,
+          offerToken: selectedOffer.offerIdToken,
+        );
+
+        await InAppPurchase.instance.buyNonConsumable(purchaseParam: purchaseParam);
+      } else {
+        throw StateError('Product details are not GooglePlayProductDetails on Android.');
+      }
+    } else {
+      // Platform is not Android (e.g. iOS), query the planId directly
+      final ProductDetailsResponse response = await InAppPurchase.instance.queryProductDetails({planId});
+      if (response.productDetails.isEmpty) {
+        throw StateError('Product "$planId" not found in store.');
+      }
+
+      final ProductDetails productDetails = response.productDetails.first;
+      final PurchaseParam purchaseParam = PurchaseParam(productDetails: productDetails);
+      await InAppPurchase.instance.buyNonConsumable(purchaseParam: purchaseParam);
+    }
   }
 
   Future<void> buyTheme(String themeId) async {
-    final productId = 'theme_$themeId';
+    const productId = 'themes';
     final bool available = await InAppPurchase.instance.isAvailable();
     if (!available) {
-      // If store is not available (e.g. desktop), fall back to simulation
-      purchaseBoardTheme(themeId);
-      return;
+      throw StateError('Google Play Store is not available on this device.');
     }
 
     final ProductDetailsResponse response = await InAppPurchase.instance.queryProductDetails({productId});
-    if (response.notFoundIDs.isNotEmpty || response.productDetails.isEmpty) {
-      // If product details not found (not configured in Play Console yet), fall back to simulation
-      purchaseBoardTheme(themeId);
-      return;
+    if (response.productDetails.isEmpty) {
+      throw StateError('Theme product "$productId" not found in store.');
     }
 
     final ProductDetails productDetails = response.productDetails.first;
+
+    // Save pending theme ID so we know which specific theme to unlock on successful purchase callback
+    await sharedPrefs.setString('pending_theme_id', themeId);
+
     final PurchaseParam purchaseParam = PurchaseParam(productDetails: productDetails);
     
-    await InAppPurchase.instance.buyNonConsumable(purchaseParam: purchaseParam);
+    // Launch purchase as a consumable so it can be repeatedly bought for other themes
+    await InAppPurchase.instance.buyConsumable(purchaseParam: purchaseParam, autoConsume: true);
   }
 
   Future<void> restorePurchases() async {

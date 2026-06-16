@@ -309,6 +309,17 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
     this._hapticsService,
   ) : super(ArenaState(game: ChessGame())) {
     _loadInitialState();
+    ref.listen<ChessState>(chessProvider, (previous, next) {
+      if (state.recentMoves.isEmpty && !state.isGameOver) {
+        state = state.copyWith(
+          engineLevel: next.engineLevel,
+          bottomAvatarId: next.bottomAvatarId,
+          whiteTimeLeft: next.baseTimeDuration,
+          blackTimeLeft: next.baseTimeDuration,
+          baseTimeDuration: next.baseTimeDuration,
+        );
+      }
+    });
   }
 
   void _loadInitialState() {

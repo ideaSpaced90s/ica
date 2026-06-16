@@ -99,28 +99,28 @@ The Arena hosts rated matches against 20 custom AI personas. It also supports st
 ### Persona Roster
 The 20 personas, ordered from lowest to highest difficulty, are:
 
-| ID | Name | Title | ELO Range | Depth | Playing Style | Color Accent |
-|---|---|---|---|---|---|---|
-| 0 | Sparky | The Absolute Beginner | 400 - 500 | 1 | Random moves, constant blunders, zero board vision. | Soft Earth |
-| 1 | Pawnzy | The Novice | 600 - 750 | 1 | Obsessed with advancing pawns toward promotion. | Soft Green |
-| 2 | Coward | Extreme Defender | 800 - 900 | 2 | Extremely passive, retreats at the first sight of threat. | Pale Blue |
-| 3 | Rookie | Casual Woodpusher | 900 - 1000 | 3 | Grabs undefended pieces immediately with no safety checks. | Light Blue |
-| 4 | Scholar | Tactical Trickster | 1000 - 1100 | 3 | Constantly attempts cheap tactical traps and fast attacks. | Yellow |
-| 5 | Molly | Introvert Defender | 1100 - 1200 | 4 | Builds deep pawn structures, locking positions. | Muted Slate |
-| 6 | Berserker | Reckless Attacker | 1200 - 1350 | 4 | Sacrifices material early to force immediate king attacks. | Orange |
-| 7 | Blaire | Tactical Blitzer | 1350 - 1500 | 5 | Rapid tactical moves targeting the king; leaves loose gaps. | Soft Orange |
-| 8 | Python | Positional Squeezer | 1500 - 1600 | 6 | Restricts space slowly, loves maneuvers and closed files. | Olive Green |
-| 9 | Gambit | Dynamic Trickster | 1600 - 1700 | 7 | Sacrifices material to create dynamic imbalances. | Muted Purple |
-| 10 | Trapper | Opening Trap Specialist | 1700 - 1800 | 8 | Prefers tricky opening lines and poisoned pawns. | Purple |
-| 11 | Assassin | Relentless Hunter | 1800 - 1900 | 9 | Sacrifices pieces to expose and hunt the opponent's king. | Deep Red |
-| 12 | Vala | Seasoned Tactician | 1900 - 2000 | 10 | Sharp tactical vision, exploits loose pieces instantly. | Teal |
-| 13 | Magician | Creative Attacker | 2000 - 2150 | 12 | Imaginative attacking style, sacrificing pieces for compensation. | Magenta |
-| 14 | Sentinel | Candidate Master | 2150 - 2300 | 14 | Subtle positional traps, high-level structural play. | Indigo |
-| 15 | Murphy | Sea Storm Strategist | 2300 - 2450 | 15 | Coordinates swift, board-wide pawn storms and attacks. | Soft Red |
-| 16 | Titan | Grandmaster | 2450 - 2600 | 18 | Strong positional squeeze, relentless technical pressure. | Amber |
-| 17 | Alien | Algorithmic Entity | 2600 - 2750 | 19 | AlphaZero-style moves, highly positionally complex. | Neon Green |
-| 18 | Champ | Universal Legend | 2750 - 2900 | 20 | Complete player, flawless endgame and opening book. | Gold |
-| 19 | King | The Ultimate Apex | 2850 - 3200+ | 22 | Near-perfect computational engine, zero tactical errors. | Platinum |
+| ID | Name | ELO Range | Skill Level | MultiPV | Depth | Random Move % | Heuristic Jitter % | Playing Style | Color Accent |
+|---|---|---|---|---|---|---|---|---|---|
+| 0 | Sparky | 400 - 500 | 0 | 45 | 1 | 50% | 85% | Random moves, constant blunders, zero board vision. | Soft Earth |
+| 1 | Pawzy | 600 - 750 | 1 | 30 | 1 | 35% | 70% | Erratic novice obsessed with pawn promotions. Plays only pawns hoping one will queen. | Soft Green |
+| 2 | Coward | 800 - 900 | 2 | 20 | 2 | 25% | 55% | Retreats pieces at first threat; plays extremely passive. | Pale Blue |
+| 3 | Rookie | 900 - 1000 | 3 | 15 | 3 | 18% | 45% | Captures undefended pieces immediately with no safety checks. | Light Blue |
+| 4 | Scholar | 1000 - 1100 | 4 | 12 | 3 | 12% | 35% | Constantly attempts cheap tactical traps and fast attacks. | Yellow |
+| 5 | Molly | 1100 - 1200 | 5 | 10 | 4 | 8% | 25% | Ultra-conservative. Locks positions with deep pawn walls. | Muted Slate |
+| 6 | Berkserker | 1200 - 1350 | 6 | 10 | 4 | 6% | 20% | Highly aggressive, sacrifices units early to attack the king. | Orange |
+| 7 | Blaire | 1350 - 1500 | 7 | 8 | 5 | 4% | 15% | Tactical rapid attacker targeting the king; leaves loose gaps. | Soft Orange |
+| 8 | Python | 1500 - 1600 | 8 | 8 | 6 | 2% | 10% | Positional squeezer, loves closed positions and maneuvers. | Olive Green |
+| 9 | Gambit | 1600 - 1700 | 9 | 6 | 7 | 8% | 20% | Chaos lover, makes wild sacrifices for dynamic imbalances. | Muted Purple |
+| 10 | Trapper | 1700 - 1800 | 10 | 6 | 8 | 8% | 20% | Lays opening traps, tricky lines, and poisoned pawns. | Purple |
+| 11 | Assassin | 1800 - 1900 | 11 | 6 | 9 | 2% | 8% | Relentlessly hunts the king, sacrificing pieces to open lines. | Deep Red |
+| 12 | Vala | 1900 - 2000 | 12 | 6 | 10 | 2% | 8% | Seasoned tactician, exploits uncoordinated units instantly. | Teal |
+| 13 | Magician | 2000 - 2150 | 13 | 6 | 12 | 2% | 8% | Imaginative attacker, finds brilliant sacrifices and compensation. | Magenta |
+| 14 | Sentinel | 2150 - 2300 | 14 | 4 | 14 | 2% | 8% | Positional trap specialist, lulls opponents with solid play. | Indigo |
+| 15 | Murphy | 2300 - 2450 | 16 | 4 | 15 | 0.5% | 2% | Board-wide pawn storms, opens files for rapid rook attacks. | Soft Red |
+| 16 | Titan | 2450 - 2600 | 18 | 1 | 18 | 0.5% | 2% | Grandmaster precision, strong relentless positional squeeze. | Amber |
+| 17 | Alien | 2600 - 2750 | 18 | 12 | 19 | 0.5% | 2% | AlphaZero-style bot, highly complex and unintuitive moves. | Neon Green |
+| 18 | Champ | 2750 - 2900 | 18 | 1 | 20 | 0.5% | 2% | Complete universal player, flawless openings/endgame book. | Gold |
+| 19 | King | 2850 - 3200+ | 20 | 1 | 22 | 0% | 0% | Ultimate apex, near-perfect computational engine, zero error. | Platinum |
 
 ---
 
@@ -204,11 +204,13 @@ Lessons include interactive tests where GM Chanakya guides and corrects the play
 ---
 
 ## 13. Mode: Settings
-Allows customization of gameplay parameters:
-- **Engine Control**: Set Stockfish threads ($1-4$) and calculation time limit ($100\text{ms} - 3000\text{ms}$).
-- **Visuals**: Selection of 26 board themes and multiple piece styles.
-- **Audio**: Sound effects toggle and background music (BGM) volume.
-- **Safety toggles**: Move confirmation prompts and clock warning flash alerts.
+The settings interface is divided into Global Preferences and Arena/Gameplay Settings:
+- **Global Preferences**: Toggles for background music (BGM), sound effects (SFX), haptic feedback, and a dedicated notifications sub-panel (managing daily briefings, streak alerts, quiet hours, and milestone logs).
+- **Arena / Gameplay Settings**:
+  - **Game Mode**: Toggle between Classic Chess and Chess 960 (Fischer Random).
+  - **Visuals**: Modular board theme selection with interactive theme preview card, and a master animation switch.
+  - **Gameplay**: Configurable time control presets (Bullet, Blitz, Rapid) with customizable base times and increment seconds; dual persona selector for active Arena and bottom-level robot engine profiles; quick play toggle.
+  - **Sounds**: Switch for in-game move sounds and capture notifications.
 
 ---
 
@@ -364,7 +366,7 @@ Tracks tactical slip-ups across 8 visual-spatial channels using coordinate-delta
 ## 21. Technology Stack Detail
 - **Core Framework**: Flutter (Dart 3.x)
 - **State Management**: Riverpod (for app state, game loop coordination)
-- **Local Database**: SharedPreferences (settings, themes, logs)
+- **Local Database / Storage**: JSON File (`app_settings.json` for settings, themes, and tutorial progress), SQLite (`ideaspace_games.db` via Rust FFI for game logs and puzzles)
 - **Native Engine FFI**: Stockfish 18 (compiled C++ for Android/Windows ARMv8)
 - **Bare-Metal Core**: Rust + `shakmaty` library via `flutter_rust_bridge`
 - **Typography**: Outfit, Inter, JetBrains Mono, Pirata One (loaded via Google Fonts)

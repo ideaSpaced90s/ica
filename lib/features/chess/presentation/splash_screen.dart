@@ -3,14 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lottie/lottie.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../application/chess_provider.dart';
-import '../services/play_games_sync_service.dart';
+import '../services/cloud_sync_service.dart';
 import '../services/auth_service.dart';
 import 'mobile_navigation_shell.dart';
 import 'sign_in_page.dart';
-import 'scholarly_theme.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -23,7 +21,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     with TickerProviderStateMixin {
   late AnimationController _progressController;
   late Animation<double> _progressAnimation;
-  late Animation<double> _lottieProgress;
   late AnimationController _shimmerController;
   double _loadingValue = 0;
 
@@ -60,10 +57,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
         }
       });
 
-    // Stop Lottie at 0.75 progress (frame 90, where the full icon builds and settles,
-    // rather than continuing into the exit/erasure animation phase)
-    _lottieProgress = Tween<double>(begin: 0.0, end: 0.75).animate(curvedAnimation);
-
     _shimmerController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1800),
@@ -74,13 +67,14 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       if (mounted) {
         final notifier = ref.read(chessProvider.notifier);
         _servicesInitFuture = _initServices(notifier);
+        _progressController.forward();
       }
     });
 
     // 2. Safety fallback: transition to next screen if loading hangs (8s timeout)
     _fallbackTimer = Timer(const Duration(seconds: 8), () {
       if (mounted && !_hasTransitioned) {
-        debugPrint('Splash Lottie: Fallback triggered due to timeout.');
+        debugPrint('Splash loading fallback triggered due to timeout.');
         _progressController.duration = const Duration(milliseconds: 1000);
         _progressController.forward();
         _checkTransition();
@@ -131,14 +125,14 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       final hasSession = user != null;
 
       if (hasSession) {
-        // Trigger silent restore from Google Drive on startup (capped at 3 seconds)
+        // Trigger silent restore from Cloud Sync on startup (capped at 3 seconds)
         try {
           await ref
-              .read(googleDriveSyncProvider.notifier)
+              .read(cloudSyncProvider.notifier)
               .restore()
               .timeout(const Duration(seconds: 3));
         } catch (e) {
-          debugPrint('Startup Google Drive restore sync timed out or failed: $e');
+          debugPrint('Startup Cloud Sync restore sync timed out or failed: $e');
         }
       }
 
@@ -174,38 +168,45 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F2EA), // Cream off-white to match the Lottie background
+      backgroundColor: const Color(0xFFFFFFFF), // Solid white background
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // 1. Centered Lottie Splash Animation (stops at full icon build completion)
+          // 1. Centered static app icon and title
           Center(
-            child: SizedBox(
-              width: 320,
-              height: 340,
-              child: Lottie.asset(
-                'assets/splash/splash_animation.json',
-                controller: _lottieProgress,
-                onLoaded: (composition) {
-                  if (mounted && !_progressController.isAnimating && !_progressController.isCompleted) {
-                    // Slow down the build build to 3.0 seconds (as requested by user)
-                    _progressController.duration = const Duration(milliseconds: 3000);
-                    _progressController.forward();
-                  }
-                },
-              ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: 320,
+                  height: 300,
+                  child: Image.asset(
+                    'assets/splash/appicon.png',
+                    fit: BoxFit.contain,
+                  ),
+                ),
+                Text(
+                  'Chess Academy',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(
+                    fontSize: 28,
+                    color: const Color(0xFF1E293B),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 28),
+                _buildLoadingIndicator(),
+              ],
             ),
           ),
 
-          // 2. Overlays: Loading Bar & Footer
+          // 2. Footer
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 30),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  _buildLoadingIndicator(),
-                  const SizedBox(height: 24),
                   _buildFooter(),
                 ],
               ),
@@ -224,7 +225,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
           '${_loadingValue.toInt()}%',
           style: GoogleFonts.inter(
             fontSize: 14,
-            color: const Color(0xFF475569), // Dark slate grey for readability
+            color: const Color(0xFFC3A555), // Premium gold text color
             fontWeight: FontWeight.w600,
             letterSpacing: 1,
           ),
@@ -242,11 +243,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
             widthFactor: _loadingValue / 100,
             child: Container(
               decoration: BoxDecoration(
-                color: ScholarlyTheme.accentBlue,
+                color: const Color(0xFFC3A555), // Gold progress indicator
                 borderRadius: BorderRadius.circular(3),
                 boxShadow: [
                   BoxShadow(
-                    color: ScholarlyTheme.accentBlue.withValues(alpha: 0.45),
+                    color: const Color(0xFFC3A555).withValues(alpha: 0.35),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -321,7 +322,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
               errorBuilder: (context, error, stackTrace) => Text(
                 'ideaspace',
                 style: GoogleFonts.inter(
-                  color: const Color(0xFF334155), // Dark slate
+                  color: const Color(0xFF334155), // Dark slate fallback text
                   fontWeight: FontWeight.bold,
                   fontSize: 12,
                 ),

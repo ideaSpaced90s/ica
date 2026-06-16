@@ -659,7 +659,8 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
                                     _cleanTacticsText(entry.text),
                                     widget.state,
                                     entry.text,
-                                    isBubbleActive: entry.associatedFen == widget.state.currentBoardFen,
+                                    isBubbleActive: entry.associatedFen == widget.state.currentBoardFen ||
+                                        (widget.state.isAcademyBlunderActive && entry == widget.state.commentaryHistory.last),
                                   ),
                                   if (!entry.isComplete && !isStreaming)
                                     TextSpan(
@@ -955,8 +956,13 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
     );
 
     int lastIndex = 0;
+
+    Color adjustColor(Color c) {
+      return isBubbleActive ? c : c.withValues(alpha: 0.45);
+    }
+
     final baseStyle = GoogleFonts.fraunces(
-      color: ScholarlyTheme.textPrimary,
+      color: adjustColor(ScholarlyTheme.textPrimary),
       fontSize: 14,
       height: 1.5,
     );
@@ -991,7 +997,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
           spans.add(TextSpan(
             text: '$userName: ',
             style: baseStyle.copyWith(
-              color: const Color(0xFFD4AF37), // Academy Gold
+              color: adjustColor(const Color(0xFFD4AF37)), // Academy Gold
               fontWeight: FontWeight.bold,
             ),
           ));
@@ -1000,7 +1006,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
           spans.add(TextSpan(
             text: '$pieceName ',
             style: baseStyle.copyWith(
-              color: Colors.redAccent,
+              color: adjustColor(Colors.redAccent),
               fontWeight: FontWeight.bold,
             ),
           ));
@@ -1029,8 +1035,8 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
           text: name,
           style: baseStyle.copyWith(
             color: state.academyHouseColorFonts
-                ? color
-                : ScholarlyTheme.textPrimary,
+                ? adjustColor(color)
+                : adjustColor(ScholarlyTheme.textPrimary),
             fontWeight: FontWeight.bold,
           ),
         ));
@@ -1040,8 +1046,8 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
           text: match.group(0),
           style: baseStyle.copyWith(
             color: state.academyHouseColorFonts
-                ? ScholarlyTheme.accentBlue
-                : ScholarlyTheme.textPrimary,
+                ? adjustColor(ScholarlyTheme.accentBlue)
+                : adjustColor(ScholarlyTheme.textPrimary),
             fontWeight: FontWeight.bold,
           ),
           recognizer: TapGestureRecognizer()
@@ -1073,7 +1079,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
         spans.add(TextSpan(
           text: word,
           style: baseStyle.copyWith(
-            color: state.academyHouseColorFonts ? color : ScholarlyTheme.textPrimary,
+            color: state.academyHouseColorFonts ? adjustColor(color) : adjustColor(ScholarlyTheme.textPrimary),
             fontWeight: FontWeight.w900,
             fontStyle: FontStyle.italic,
           ),

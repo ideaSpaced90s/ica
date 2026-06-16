@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
@@ -9,11 +10,26 @@ import '../../application/battleground_provider.dart';
 import '../../domain/performance_ledger_entry.dart';
 import 'ambient_scaffold.dart';
 
-class EloAscentChart extends ConsumerWidget {
+class EloAscentChart extends ConsumerStatefulWidget {
   const EloAscentChart({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<EloAscentChart> createState() => _EloAscentChartState();
+}
+
+class _EloAscentChartState extends ConsumerState<EloAscentChart> {
+  String _selectedPeriod = 'ALL';
+  List<ShowingTooltipIndicators> showingTooltipIndicators = [];
+  Timer? _tooltipTimer;
+
+  @override
+  void dispose() {
+    _tooltipTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final bgState = ref.watch(battlegroundProvider);
     final ledger = bgState.cachedLedgerEntries;
     final ratedSaves = List<PerformanceLedgerEntry>.from(ledger);
@@ -25,14 +41,61 @@ class EloAscentChart extends ConsumerWidget {
       );
     }
 
-    final bulletSpots = _getSpots(ratedSaves, 'bullet');
-    final blitzSpots = _getSpots(ratedSaves, 'blitz');
-    final rapidSpots = _getSpots(ratedSaves, 'rapid');
+    // Filter by period
+    final now = DateTime.now();
+    DateTime cutoff;
+    switch (_selectedPeriod) {
+      case '1W':
+        cutoff = now.subtract(const Duration(days: 7));
+        break;
+      case '1M':
+        cutoff = now.subtract(const Duration(days: 30));
+        break;
+      case '3M':
+        cutoff = now.subtract(const Duration(days: 90));
+        break;
+      case '6M':
+        cutoff = now.subtract(const Duration(days: 180));
+        break;
+      case '1Y':
+        cutoff = now.subtract(const Duration(days: 365));
+        break;
+      default:
+        cutoff = DateTime.fromMillisecondsSinceEpoch(0);
+    }
+
+    final filteredSaves = ratedSaves.where((s) => s.timestamp.isAfter(cutoff)).toList();
+
+    if (filteredSaves.isEmpty) {
+      return JuicyGlassCard(
+        borderColor: const Color(0xFF06B6D4),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            _buildPeriodSelector(),
+            const Spacer(),
+            Center(
+              child: Text(
+                'No matches played in this period.',
+                style: GoogleFonts.inter(
+                  color: ScholarlyTheme.textMuted,
+                  fontSize: 12,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            const Spacer(),
+          ],
+        ),
+      );
+    }
+
+    final bulletSpots = _getSpots(filteredSaves, 'bullet');
+    final blitzSpots = _getSpots(filteredSaves, 'blitz');
+    final rapidSpots = _getSpots(filteredSaves, 'rapid');
 
     final allSpots = [...bulletSpots, ...blitzSpots, ...rapidSpots];
-    // Build a timestamp index for all rated games (sorted by timestamp)
-    // Used to map X-axis index → date label
-    final List<DateTime> allTimestamps = ratedSaves.map((e) => e.timestamp).toList();
+    final List<DateTime> allTimestamps = filteredSaves.map((e) => e.timestamp).toList();
 
     double minYVal = 200.0;
     double maxYVal = 700.0;
@@ -55,136 +118,242 @@ class EloAscentChart extends ConsumerWidget {
 
     return JuicyGlassCard(
       borderColor: const Color(0xFF06B6D4), // Vibrant Electric Cyan Border
-      padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
-      child: SizedBox(
-        height: 200,
-        child: LineChart(
-          LineChartData(
-            minX: 0,
-            maxX: maxXVal,
-            minY: minYVal,
-            maxY: maxYVal,
-            clipData: const FlClipData.all(),
-            gridData: FlGridData(
-              show: true,
-              drawVerticalLine: false,
-              getDrawingHorizontalLine: (value) => FlLine(
-                color: ScholarlyTheme.panelStroke.withValues(alpha: 0.5),
-                strokeWidth: 1,
-              ),
-            ),
-            titlesData: FlTitlesData(
-              show: true,
-              rightTitles: const AxisTitles(
-                sideTitles: SideTitles(showTitles: false),
-              ),
-              topTitles: const AxisTitles(
-                sideTitles: SideTitles(showTitles: false),
-              ),
-              bottomTitles: AxisTitles(
-                sideTitles: SideTitles(
-                  showTitles: true,
-                  reservedSize: 26,
-                  interval: 1,
-                  getTitlesWidget: (value, meta) {
-                    final idx = value.toInt();
-                    // Show at most 5 date labels at equally spaced intervals
-                    final maxLen = allTimestamps.length;
-                    if (maxLen == 0) return const SizedBox.shrink();
-                    final interval = math.max(1, (maxLen / 5).ceil());
-                    // Only show label at index 0 or multiples of interval
-                    if (idx < 0 || idx >= maxLen) return const SizedBox.shrink();
-                    if (idx != 0 && idx % interval != 0) return const SizedBox.shrink();
-                    final date = allTimestamps[idx];
-                    final label = DateFormat('MMM d').format(date);
-                    return Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(
-                        label,
-                        style: GoogleFonts.jetBrainsMono(
-                          color: ScholarlyTheme.textMuted,
-                          fontSize: 9,
-                        ),
-                      ),
-                    );
-                  },
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      child: Column(
+        children: [
+          _buildPeriodSelector(),
+          const SizedBox(height: 12),
+          Expanded(
+            child: LineChart(
+              LineChartData(
+                minX: 0,
+                maxX: maxXVal,
+                minY: minYVal,
+                maxY: maxYVal,
+                clipData: const FlClipData.all(),
+                showingTooltipIndicators: showingTooltipIndicators,
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  getDrawingHorizontalLine: (value) => FlLine(
+                    color: ScholarlyTheme.panelStroke.withValues(alpha: 0.5),
+                    strokeWidth: 1,
+                  ),
                 ),
-              ),
-              leftTitles: AxisTitles(
-                sideTitles: SideTitles(
-                  showTitles: true,
-                  getTitlesWidget: (value, meta) => Text(
-                    value.toInt().toString(),
-                    style: GoogleFonts.jetBrainsMono(
-                      color: ScholarlyTheme.textMuted,
-                      fontSize: 10,
+                titlesData: FlTitlesData(
+                  show: true,
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 26,
+                      interval: 1,
+                      getTitlesWidget: (value, meta) {
+                        final idx = value.toInt();
+                        final maxLen = allTimestamps.length;
+                        if (maxLen == 0) return const SizedBox.shrink();
+                        final interval = math.max(1, (maxLen / 5).ceil());
+                        if (idx < 0 || idx >= maxLen) return const SizedBox.shrink();
+                        if (idx != 0 && idx % interval != 0) return const SizedBox.shrink();
+                        final date = allTimestamps[idx];
+                        final label = DateFormat('MMM d').format(date);
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            label,
+                            style: GoogleFonts.jetBrainsMono(
+                              color: ScholarlyTheme.textMuted,
+                              fontSize: 9,
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ),
-                  reservedSize: 35,
-                ),
-              ),
-            ),
-            borderData: FlBorderData(show: false),
-            lineBarsData: [
-              if (bulletSpots.isNotEmpty)
-                _lineBarData(
-                  bulletSpots,
-                  const Color(0xFF00F0FF),
-                ), // Electric Neon Cyan
-              if (blitzSpots.isNotEmpty)
-                _lineBarData(
-                  blitzSpots,
-                  const Color(0xFFEC4899),
-                ), // Electric Neon Hot Pink
-              if (rapidSpots.isNotEmpty)
-                _lineBarData(
-                  rapidSpots,
-                  const Color(0xFF10B981),
-                ), // Electric Neon Emerald
-            ],
-            lineTouchData: LineTouchData(
-              handleBuiltInTouches: true,
-              getTouchedSpotIndicator:
-                  (LineChartBarData barData, List<int> spotIndexes) {
-                    return spotIndexes.map((spotIndex) {
-                      return TouchedSpotIndicatorData(
-                        FlLine(
-                          color: (barData.color ?? Colors.blue).withValues(
-                            alpha: 0.5,
-                          ),
-                          strokeWidth: 2,
-                          dashArray: [4, 4],
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      getTitlesWidget: (value, meta) => Text(
+                        value.toInt().toString(),
+                        style: GoogleFonts.jetBrainsMono(
+                          color: ScholarlyTheme.textMuted,
+                          fontSize: 10,
                         ),
-                        FlDotData(
-                          getDotPainter: (spot, percent, barData, index) {
-                            return FlDotCirclePainter(
-                              radius: 6,
-                              color: barData.color ?? Colors.blue,
-                              strokeWidth: 2,
-                              strokeColor: Colors.white,
-                            );
-                          },
-                        ),
-                      );
-                    }).toList();
-                  },
-              touchTooltipData: LineTouchTooltipData(
-                getTooltipColor: (_) => ScholarlyTheme.panelBase,
-                getTooltipItems: (touchedSpots) {
-                  return touchedSpots.map((spot) {
-                    return LineTooltipItem(
-                      '${spot.y.toInt()}',
-                      GoogleFonts.jetBrainsMono(
-                        color: spot.bar.color ?? ScholarlyTheme.textPrimary,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
                       ),
-                    );
-                  }).toList();
-                },
+                      reservedSize: 35,
+                    ),
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+                lineBarsData: [
+                  if (bulletSpots.isNotEmpty)
+                    _lineBarData(
+                      bulletSpots,
+                      const Color(0xFF00F0FF),
+                    ), // Electric Neon Cyan
+                  if (blitzSpots.isNotEmpty)
+                    _lineBarData(
+                      blitzSpots,
+                      const Color(0xFFEC4899),
+                    ), // Electric Neon Hot Pink
+                  if (rapidSpots.isNotEmpty)
+                    _lineBarData(
+                      rapidSpots,
+                      const Color(0xFF10B981),
+                    ), // Electric Neon Emerald
+                ],
+                lineTouchData: LineTouchData(
+                  handleBuiltInTouches: false,
+                  touchCallback: (FlTouchEvent event, LineTouchResponse? response) {
+                    if (response == null || response.lineBarSpots == null || response.lineBarSpots!.isEmpty) {
+                      return;
+                    }
+                    if (event is FlTapDownEvent || event is FlPanDownEvent || event is FlPanStartEvent) {
+                      _tooltipTimer?.cancel();
+                      setState(() {
+                        showingTooltipIndicators = [
+                          ShowingTooltipIndicators(
+                            response.lineBarSpots!,
+                          ),
+                        ];
+                      });
+                      _tooltipTimer = Timer(const Duration(seconds: 2), () {
+                        if (mounted) {
+                          setState(() {
+                            showingTooltipIndicators = [];
+                          });
+                        }
+                      });
+                    }
+                  },
+                  getTouchedSpotIndicator:
+                      (LineChartBarData barData, List<int> spotIndexes) {
+                        return spotIndexes.map((spotIndex) {
+                          return TouchedSpotIndicatorData(
+                            FlLine(
+                              color: (barData.color ?? Colors.blue).withValues(
+                                alpha: 0.5,
+                              ),
+                              strokeWidth: 2,
+                              dashArray: [4, 4],
+                            ),
+                            FlDotData(
+                              getDotPainter: (spot, percent, barData, index) {
+                                return FlDotCirclePainter(
+                                  radius: 6,
+                                  color: barData.color ?? Colors.blue,
+                                  strokeWidth: 2,
+                                  strokeColor: Colors.white,
+                                );
+                              },
+                            ),
+                          );
+                        }).toList();
+                      },
+                  touchTooltipData: LineTouchTooltipData(
+                    getTooltipColor: (_) => ScholarlyTheme.panelBase,
+                    getTooltipItems: (touchedSpots) {
+                      return touchedSpots.map((spot) {
+                        final barColor = spot.bar.color;
+                        String category = 'rapid';
+                        if (barColor == const Color(0xFF00F0FF)) {
+                          category = 'bullet';
+                        } else if (barColor == const Color(0xFFEC4899)) {
+                          category = 'blitz';
+                        }
+                        
+                        final categoryEntries = filteredSaves.where((s) => s.ratingCategory == category).toList();
+                        DateTime date;
+                        if (spot.x == 0) {
+                          date = categoryEntries.isNotEmpty ? categoryEntries.first.timestamp.subtract(const Duration(days: 1)) : DateTime.now();
+                        } else {
+                          final idx = spot.x.toInt() - 1;
+                          if (idx >= 0 && idx < categoryEntries.length) {
+                            date = categoryEntries[idx].timestamp;
+                          } else {
+                            date = DateTime.now();
+                          }
+                        }
+                        final formattedDate = DateFormat('dd/MM/yyyy').format(date);
+
+                        return LineTooltipItem(
+                          '${spot.y.toInt()} ELO\n[$formattedDate]',
+                          GoogleFonts.jetBrainsMono(
+                            color: spot.bar.color ?? ScholarlyTheme.textPrimary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 10,
+                          ),
+                        );
+                      }).toList();
+                    },
+                  ),
+                ),
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPeriodSelector() {
+    final periods = ['1W', '1M', '3M', '6M', '1Y', 'ALL'];
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: periods.map((p) {
+        final isSelected = _selectedPeriod == p;
+        return GestureDetector(
+          onTap: () {
+            setState(() {
+              _selectedPeriod = p;
+              showingTooltipIndicators = [];
+            });
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: isSelected 
+                  ? ScholarlyTheme.accentBlue.withValues(alpha: 0.15) 
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: isSelected 
+                    ? ScholarlyTheme.accentBlue.withValues(alpha: 0.3) 
+                    : Colors.transparent,
+                width: 1,
+              ),
+            ),
+            child: Text(
+              p,
+              style: GoogleFonts.outfit(
+                color: isSelected ? ScholarlyTheme.accentBlue : ScholarlyTheme.textMuted,
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildEmptyState(String msg) {
+    return Container(
+      height: 200,
+      decoration: ScholarlyTheme.modernDecoration(),
+      child: Center(
+        child: Text(
+          msg,
+          style: GoogleFonts.inter(
+            color: ScholarlyTheme.textMuted,
+            fontSize: 12,
+          ),
+          textAlign: TextAlign.center,
         ),
       ),
     );
@@ -218,23 +387,6 @@ class EloAscentChart extends ConsumerWidget {
           colors: [color.withValues(alpha: 0.2), color.withValues(alpha: 0)],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEmptyState(String msg) {
-    return Container(
-      height: 200,
-      decoration: ScholarlyTheme.modernDecoration(),
-      child: Center(
-        child: Text(
-          msg,
-          style: GoogleFonts.inter(
-            color: ScholarlyTheme.textMuted,
-            fontSize: 12,
-          ),
-          textAlign: TextAlign.center,
         ),
       ),
     );
@@ -718,71 +870,87 @@ class ModeDistributionChart extends ConsumerWidget {
     final classicPct = total > 0 ? (classic / total * 100).toInt() : 0;
     final nineSixtyPct = total > 0 ? (nineSixty / total * 100).toInt() : 0;
 
-    return Column(
+    return Row(
       children: [
         Expanded(
-          child: PieChart(
-            PieChartData(
-              sectionsSpace: 4,
-              centerSpaceRadius: 26,
-              sections: [
-                PieChartSectionData(
-                  color: const Color(0xFF8B5CF6), // Electric Violet
-                  value: classic.toDouble(),
-                  title: '',
-                  radius: 18,
-                ),
-                PieChartSectionData(
-                  color: const Color(0xFFF59E0B), // Sunny Gold
-                  value: nineSixty.toDouble(),
-                  title: '',
-                  radius: 18,
-                ),
-              ],
-            ),
+          flex: 4,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildLegendItem(const Color(0xFF8B5CF6), 'Classic', '$classicPct%'),
+              const SizedBox(height: 12),
+              _buildLegendItem(const Color(0xFFF59E0B), '960', '$nineSixtyPct%'),
+            ],
           ),
         ),
-        const SizedBox(height: 10),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _buildLegendItem(const Color(0xFF8B5CF6), 'Classic', '$classicPct%'),
-            const SizedBox(width: 12),
-            _buildLegendItem(const Color(0xFFF59E0B), '960', '$nineSixtyPct%'),
-          ],
+        Expanded(
+          flex: 5,
+          child: Padding(
+            padding: const EdgeInsets.all(4.0),
+            child: PieChart(
+              PieChartData(
+                sectionsSpace: 3,
+                centerSpaceRadius: 22,
+                sections: [
+                  PieChartSectionData(
+                    color: const Color(0xFF8B5CF6), // Electric Violet
+                    value: classic.toDouble(),
+                    title: '',
+                    radius: 14,
+                  ),
+                  PieChartSectionData(
+                    color: const Color(0xFFF59E0B), // Sunny Gold
+                    value: nineSixty.toDouble(),
+                    title: '',
+                    radius: 14,
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ],
     );
   }
 
   Widget _buildLegendItem(Color color, String label, String percentage) {
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: color,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                color: ScholarlyTheme.textPrimary,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: 6),
-        Text(
-          label,
-          style: GoogleFonts.inter(
-            color: ScholarlyTheme.textPrimary,
-            fontSize: 10,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(width: 4),
-        Text(
-          percentage,
-          style: GoogleFonts.jetBrainsMono(
-            color: ScholarlyTheme.textMuted,
-            fontSize: 9.5,
-            fontWeight: FontWeight.bold,
+        const SizedBox(height: 2),
+        Padding(
+          padding: const EdgeInsets.only(left: 14),
+          child: Text(
+            percentage,
+            style: GoogleFonts.jetBrainsMono(
+              color: ScholarlyTheme.textMuted,
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+            ),
           ),
         ),
       ],

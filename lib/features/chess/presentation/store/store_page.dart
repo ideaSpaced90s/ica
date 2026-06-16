@@ -175,9 +175,19 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
 
     // Grouping themes
     final freeThemeIds = {'classic', 'scholar', 'vector_wood', 'theme3', 'sprite_fairytale'};
+    final featuredThemeIds = {
+      'sprite_diamonds',
+      'sprite_lightning',
+      'sprite_plasma',
+      'sprite_arc',
+      'sprite_seasons',
+    };
 
     final freeThemes = ThemeRegistry.allThemes.where((t) => freeThemeIds.contains(t.id)).toList();
     final premiumThemes = ThemeRegistry.allThemes.where((t) => !freeThemeIds.contains(t.id)).toList();
+    
+    final featuredThemes = premiumThemes.where((t) => featuredThemeIds.contains(t.id)).toList();
+    final otherPremiumThemes = premiumThemes.where((t) => !featuredThemeIds.contains(t.id)).toList();
 
     final double screenWidth = MediaQuery.of(context).size.width;
     final int crossAxisCount = (screenWidth / 160).floor().clamp(2, 6);
@@ -185,7 +195,79 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
       slivers: [
+        // Section: Featured Premium Themes Header
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Text(
+              'FEATURED PREMIUM THEMES',
+              style: GoogleFonts.outfit(
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.5,
+                color: ScholarlyTheme.accentGold,
+              ),
+            ),
+          ),
+        ),
 
+        // Grid for Featured Premium Themes
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          sliver: SliverGrid(
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 0.8,
+            ),
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                final theme = featuredThemes[index];
+                final isSelected = theme.id == chessState.boardThemeId;
+                return _buildThemeShopCard(context, theme, false, isSelected, storeState, storeNotifier, chessNotifier, isFeatured: true);
+              },
+              childCount: featuredThemes.length,
+            ),
+          ),
+        ),
+
+        // Section: Other Premium Themes Header
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Text(
+              'PREMIUM THEMES',
+              style: GoogleFonts.outfit(
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.5,
+                color: ScholarlyTheme.textMuted,
+              ),
+            ),
+          ),
+        ),
+
+        // Grid for Other Premium Themes
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          sliver: SliverGrid(
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 0.8,
+            ),
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                final theme = otherPremiumThemes[index];
+                final isSelected = theme.id == chessState.boardThemeId;
+                return _buildThemeShopCard(context, theme, false, isSelected, storeState, storeNotifier, chessNotifier);
+              },
+              childCount: otherPremiumThemes.length,
+            ),
+          ),
+        ),
 
         // Section: Free Themes Header
         SliverToBoxAdapter(
@@ -224,43 +306,6 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
           ),
         ),
 
-        // Section: Premium Themes Header
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Text(
-              'PREMIUM THEMES',
-              style: GoogleFonts.outfit(
-                fontSize: 12,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 1.5,
-                color: ScholarlyTheme.textMuted,
-              ),
-            ),
-          ),
-        ),
-
-        // Grid for Premium Themes
-        SliverPadding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          sliver: SliverGrid(
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: crossAxisCount,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 0.8,
-            ),
-            delegate: SliverChildBuilderDelegate(
-              (context, index) {
-                final theme = premiumThemes[index];
-                final isSelected = theme.id == chessState.boardThemeId;
-                return _buildThemeShopCard(context, theme, false, isSelected, storeState, storeNotifier, chessNotifier);
-              },
-              childCount: premiumThemes.length,
-            ),
-          ),
-        ),
-
         // Spacing at the bottom
         const SliverToBoxAdapter(
           child: SizedBox(height: 32),
@@ -276,8 +321,9 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
     bool isSelected,
     StoreState storeState,
     StoreNotifier storeNotifier,
-    dynamic chessNotifier,
-  ) {
+    dynamic chessNotifier, {
+    bool isFeatured = false,
+  }) {
     final isOwned = isFree || storeState.isPremium || storeState.purchasedBoardThemes.contains(theme.id);
     final highlightThemeId = ref.watch(storeHighlightThemeIdProvider);
     final isHighlighted = theme.id == highlightThemeId;
@@ -380,6 +426,36 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
                         ),
                       ),
                     ),
+
+                    // Featured badge on preview
+                    if (isFeatured)
+                      Positioned(
+                        top: 6,
+                        right: 6,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: ScholarlyTheme.accentGold,
+                            borderRadius: BorderRadius.circular(6),
+                            boxShadow: [
+                              BoxShadow(
+                                color: ScholarlyTheme.accentGold.withValues(alpha: 0.3),
+                                blurRadius: 4,
+                                spreadRadius: 1,
+                              ),
+                            ],
+                          ),
+                          child: Text(
+                            'FEATURED',
+                            style: GoogleFonts.outfit(
+                              fontSize: 8,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.black,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      ),
 
                     // Locked icon overlay if not owned
                     if (!isOwned)
@@ -510,7 +586,7 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
             style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary),
           ),
           content: Text(
-            'Would you like to buy the premium theme "${theme.name}" for \$0.99 (Simulated)? It will be unlocked permanently.',
+            'Would you like to buy the premium theme "${theme.name}" for \$0.99? It will be unlocked permanently.',
             style: GoogleFonts.inter(fontSize: 13, color: ScholarlyTheme.textPrimary, height: 1.4),
           ),
           actions: [
@@ -521,17 +597,8 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(context);
-                storeNotifier.purchaseBoardTheme(theme.id);
-                chessNotifier.setBoardTheme(theme.id);
+                storeNotifier.buyTheme(theme.id);
                 ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('⚡ Purchased and applied ${theme.name} theme!'),
-                    behavior: SnackBarBehavior.floating,
-                    backgroundColor: Colors.green,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.green,
@@ -548,13 +615,6 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
 
   Widget _buildFreePlanCard(BuildContext context, StoreState storeState) {
     final isPremium = storeState.isPremium;
-    final usage = storeState.freeTierUsage;
-
-    // Remaining counts
-    final ratedRemaining = (1 - usage.ratedGamesPlayed).clamp(0, 1);
-    final arenaRemaining = (3 - usage.arenaGamesPlayed).clamp(0, 3);
-    final promptsRemaining = (5 - usage.chipPromptsUsed).clamp(0, 5);
-    final puzzlesRemaining = (3 - usage.puzzlesSolved).clamp(0, 3);
 
     return Container(
       decoration: BoxDecoration(
@@ -623,17 +683,16 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
             const Divider(height: 1),
             const SizedBox(height: 12),
 
-            // Daily limits and features with their remaining counters (if not premium)
             _buildFreeFeatureRow('1 Rated / Battleground game per 24h', 
-                isPremium ? null : '($ratedRemaining left)', isPremium),
+                null, isPremium),
             _buildFreeFeatureRow('3 Arena games per 24h', 
-                isPremium ? null : '($arenaRemaining left)', isPremium),
-            _buildFreeFeatureRow('5 Chip prompts in Academy per 24h', 
-                isPremium ? null : '($promptsRemaining left)', isPremium),
+                null, isPremium),
+            _buildFreeFeatureRow('5 Academy Coaching prompts per 24h', 
+                null, isPremium),
             _buildFreeFeatureRow('GM Chanakya: unlimited library search', 
                 null, isPremium),
             _buildFreeFeatureRow('3 Puzzles per 24h', 
-                isPremium ? null : '($puzzlesRemaining left)', isPremium),
+                null, isPremium),
             _buildFreeFeatureRow('Assignment page visible (calibration locked)', 
                 null, isPremium),
             _buildFreeFeatureRow('5 Free board themes (Classic, Scholar, Wood, Calligraphy, Fairytale)', 
@@ -1159,7 +1218,7 @@ const List<SubscriptionPlan> plans = [
   SubscriptionPlan(
     id: 'monthly',
     title: 'Monthly Plan',
-    description: 'Perfect for short-term learners.',
+    description: 'First 3 months 15% discount, thereafter \$4.99/mo.',
     price: 4.99,
     period: 'month',
     color: ScholarlyTheme.accentBlue,
@@ -1170,15 +1229,15 @@ const List<SubscriptionPlan> plans = [
       'Unlimited Puzzles',
       'Full Assignment calibration tracking',
       'All board themes included',
-      '50 Cloud AI prompts/day',
+      'Unlimited GM Chanakya Academy coaching',
       'Exclusive premium profile badge',
     ],
   ),
   SubscriptionPlan(
     id: 'sixmonth',
     title: '6-Month Plan',
-    description: 'Great balance of value & commitment.',
-    price: 22.00,
+    description: '3-day free trial, then \$21.99 every 6 months.',
+    price: 21.99,
     period: '6 months',
     color: Colors.purple,
     features: [
@@ -1188,7 +1247,7 @@ const List<SubscriptionPlan> plans = [
       'Unlimited Puzzles',
       'Full Assignment calibration tracking',
       'All board themes included',
-      '50 Cloud AI prompts/day',
+      'Unlimited GM Chanakya Academy coaching',
       'Exclusive premium profile badge',
       'Save 26% vs Monthly rate',
     ],
@@ -1196,7 +1255,7 @@ const List<SubscriptionPlan> plans = [
   SubscriptionPlan(
     id: 'yearly',
     title: 'Yearly Plan',
-    description: 'Best value for serious scholars.',
+    description: '7-day free trial, then \$39.99/yr.',
     price: 39.99,
     period: 'year',
     isPopular: true,
@@ -1208,7 +1267,7 @@ const List<SubscriptionPlan> plans = [
       'Unlimited Puzzles',
       'Full Assignment calibration tracking',
       'All board themes included',
-      '50 Cloud AI prompts/day',
+      'Unlimited GM Chanakya Academy coaching',
       'Exclusive premium profile badge',
       'Save 33% vs Monthly rate',
     ],

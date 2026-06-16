@@ -200,7 +200,7 @@ class OverviewTab extends StatelessWidget {
 
   Widget _buildThemeChips() {
     final themes = [
-      'Classic', 'Scholar', 'BnW/Glass', 'Champions', 'Forest', 'Copper',
+      'Classic', 'Scholar', 'B&W/Glass', 'Champions', 'Forest', 'Copper',
       'Calligraphy/Ink', 'Overgrown', 'Wood', 'Ivory', 'Steampunk', 'Seasons',
       'Sand', 'Timber', 'Platinum', 'Fairytale', 'Shadow', 'Royal', 'Bubblegum',
       'Silver & Gold', 'Marble', 'Desert', 'Plasma', 'Lightning', 'Diamonds', 'Arc'
@@ -340,7 +340,7 @@ class _PersonaSectionState extends State<PersonaSection> {
     switch (name) {
       case 'Sparky': return 'Frequent Blunders & Random Play';
       case 'Pawzy': return 'Pawn Storm Obsession';
-      case 'Coward': return 'Passive Retreats & Extreme Defense';
+      case 'Timorous': return 'Passive Retreats & Extreme Defense';
       case 'Rookie': return 'Immediate Undefended Piece Captures';
       case 'Scholar': return 'Early Scholar\'s Mate Tactics';
       case 'Molly': return 'Closed Files & Iron Pawn Walls';

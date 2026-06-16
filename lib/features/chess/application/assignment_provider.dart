@@ -14,7 +14,7 @@ import '../data/tutorial_lessons.dart';
 import '../domain/models/tutorial_lesson.dart';
 import 'store_provider.dart';
 import 'chess_provider.dart';
-import '../services/play_games_sync_service.dart';
+import '../services/cloud_sync_service.dart';
 import 'package:kingslayer_chess/src/rust/api/assignment.dart'
     as rust_assignment;
 import 'package:kingslayer_chess/src/rust/api/cognitive.dart' as rust_cognitive;
@@ -765,7 +765,7 @@ class AssignmentNotifier extends StateNotifier<AssignmentState> {
 
   Future<void> _saveState() async {
     await _repository.saveAssignment(state);
-    ref.read(googleDriveSyncProvider.notifier).backup(silent: true);
+    ref.read(cloudSyncProvider.notifier).backup(silent: true);
   }
 }
 

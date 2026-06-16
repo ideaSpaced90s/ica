@@ -10,7 +10,7 @@ import '../application/tutorial_provider.dart';
 import '../application/assignment_provider.dart';
 import '../services/chess_sound_service.dart';
 import '../services/auth_service.dart';
-import '../services/play_games_sync_service.dart';
+import '../services/cloud_sync_service.dart';
 import '../application/onboarding_provider.dart';
 import 'scholarly_theme.dart';
 import 'widgets/ambient_scaffold.dart';
@@ -30,17 +30,23 @@ class _AccountPageState extends ConsumerState<AccountPage> {
   Widget build(BuildContext context) {
     final storeState = ref.watch(storeProvider);
     final storeNotifier = ref.read(storeProvider.notifier);
-    final syncState = ref.watch(googleDriveSyncProvider);
-    final syncNotifier = ref.read(googleDriveSyncProvider.notifier);
+    final syncState = ref.watch(cloudSyncProvider);
+    final syncNotifier = ref.read(cloudSyncProvider.notifier);
 
     // Grouping themes for ownership checking
-    final freeThemeIds = {'classic', 'scholar', 'vector_wood', 'theme3', 'sprite_fairytale'};
-    
+    final freeThemeIds = {
+      'classic',
+      'scholar',
+      'vector_wood',
+      'theme3',
+      'sprite_fairytale',
+    };
+
     // Filter registry for owned themes
     final ownedThemes = ThemeRegistry.allThemes.where((theme) {
       return freeThemeIds.contains(theme.id) ||
-             storeState.isPremium ||
-             storeState.purchasedBoardThemes.contains(theme.id);
+          storeState.isPremium ||
+          storeState.purchasedBoardThemes.contains(theme.id);
     }).toList();
 
     return AmbientScaffold(
@@ -76,7 +82,11 @@ class _AccountPageState extends ConsumerState<AccountPage> {
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               sliver: SliverToBoxAdapter(
-                child: _buildSubscriptionCard(context, storeState, storeNotifier),
+                child: _buildSubscriptionCard(
+                  context,
+                  storeState,
+                  storeNotifier,
+                ),
               ),
             ),
 
@@ -85,7 +95,10 @@ class _AccountPageState extends ConsumerState<AccountPage> {
             // Themes Section Header
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 4,
+                ),
                 child: JuicySectionHeader(
                   title: 'MY THEMES (${ownedThemes.length})',
                   color: ScholarlyTheme.accentBlue,
@@ -103,103 +116,116 @@ class _AccountPageState extends ConsumerState<AccountPage> {
                   crossAxisSpacing: 10,
                   childAspectRatio: 0.82,
                 ),
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final theme = ownedThemes[index];
+                delegate: SliverChildBuilderDelegate((context, index) {
+                  final theme = ownedThemes[index];
 
-                    return Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.45),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.65),
-                          width: 1.0,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.02),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
+                  return Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.45),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.65),
+                        width: 1.0,
                       ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Expanded(
-                              child: AspectRatio(
-                                aspectRatio: 1.0,
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: Colors.white.withValues(alpha: 0.3),
-                                      width: 1,
-                                    ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.02),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: AspectRatio(
+                              aspectRatio: 1.0,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.3),
+                                    width: 1,
                                   ),
-                                  clipBehavior: Clip.antiAlias,
-                                  child: Stack(
-                                    children: [
-                                      Positioned.fill(
-                                        child: Column(
-                                          children: [
-                                            Expanded(
-                                              child: Row(
-                                                children: [
-                                                  Expanded(child: Container(color: theme.lightSquare)),
-                                                  Expanded(child: Container(color: theme.darkSquare)),
-                                                ],
-                                              ),
+                                ),
+                                clipBehavior: Clip.antiAlias,
+                                child: Stack(
+                                  children: [
+                                    Positioned.fill(
+                                      child: Column(
+                                        children: [
+                                          Expanded(
+                                            child: Row(
+                                              children: [
+                                                Expanded(
+                                                  child: Container(
+                                                    color: theme.lightSquare,
+                                                  ),
+                                                ),
+                                                Expanded(
+                                                  child: Container(
+                                                    color: theme.darkSquare,
+                                                  ),
+                                                ),
+                                              ],
                                             ),
-                                            Expanded(
-                                              child: Row(
-                                                children: [
-                                                  Expanded(child: Container(color: theme.darkSquare)),
-                                                  Expanded(child: Container(color: theme.lightSquare)),
-                                                ],
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      Center(
-                                        child: FractionallySizedBox(
-                                          widthFactor: 0.50,
-                                          heightFactor: 0.50,
-                                          child: theme.buildPiece(
-                                            context,
-                                            'N',
-                                            true,
-                                            false,
-                                            0.0,
                                           ),
+                                          Expanded(
+                                            child: Row(
+                                              children: [
+                                                Expanded(
+                                                  child: Container(
+                                                    color: theme.darkSquare,
+                                                  ),
+                                                ),
+                                                Expanded(
+                                                  child: Container(
+                                                    color: theme.lightSquare,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Center(
+                                      child: FractionallySizedBox(
+                                        widthFactor: 0.50,
+                                        heightFactor: 0.50,
+                                        child: theme.buildPiece(
+                                          context,
+                                          'N',
+                                          true,
+                                          false,
+                                          0.0,
                                         ),
                                       ),
-                                    ],
-                                  ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 6),
-                            Text(
-                              theme.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.outfit(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: ScholarlyTheme.textPrimary,
-                              ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            theme.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.outfit(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: ScholarlyTheme.textPrimary,
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                    );
-                  },
-                  childCount: ownedThemes.length,
-                ),
+                    ),
+                  );
+                }, childCount: ownedThemes.length),
               ),
             ),
 
@@ -253,13 +279,17 @@ class _AccountPageState extends ConsumerState<AccountPage> {
                         description: 'Return to the sign in screen',
                         icon: Icons.logout_rounded,
                         onTap: () async {
-                          ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                          ref
+                              .read(chessSoundServiceProvider)
+                              .playSfx(SoundEffect.uiClick);
                           try {
                             await ref.read(authServiceProvider).signOut();
                           } catch (e) {
                             debugPrint('Firebase signout error: $e');
                           }
-                          final repo = ref.read(tutorialProgressRepositoryProvider);
+                          final repo = ref.read(
+                            tutorialProgressRepositoryProvider,
+                          );
                           await repo.setIsGoogleSignedIn(false);
                           await repo.setWelcomeGuideSeen(false);
                           await repo.setArenaIntroSeen(false);
@@ -268,19 +298,37 @@ class _AccountPageState extends ConsumerState<AccountPage> {
                           await repo.setAcademyIntroSeen(false);
                           await repo.setAcademyAccessCount(0);
 
-                          ref.read(showArenaIntroProvider.notifier).state = true;
-                          ref.read(showBattlegroundIntroProvider.notifier).state = true;
-                          ref.read(showPuzzlesIntroProvider.notifier).state = true;
+                          ref.read(showArenaIntroProvider.notifier).state =
+                              true;
+                          ref
+                                  .read(showBattlegroundIntroProvider.notifier)
+                                  .state =
+                              true;
+                          ref.read(showPuzzlesIntroProvider.notifier).state =
+                              true;
 
                           ref.read(mobileNavIndexProvider.notifier).state = 0;
                           if (context.mounted) {
                             Navigator.of(context).pushReplacement(
                               PageRouteBuilder(
-                                pageBuilder: (context, animation, secondaryAnimation) => const SignInPage(),
-                                transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                                  return FadeTransition(opacity: animation, child: child);
-                                },
-                                transitionDuration: const Duration(milliseconds: 800),
+                                pageBuilder:
+                                    (context, animation, secondaryAnimation) =>
+                                        const SignInPage(),
+                                transitionsBuilder:
+                                    (
+                                      context,
+                                      animation,
+                                      secondaryAnimation,
+                                      child,
+                                    ) {
+                                      return FadeTransition(
+                                        opacity: animation,
+                                        child: child,
+                                      );
+                                    },
+                                transitionDuration: const Duration(
+                                  milliseconds: 800,
+                                ),
                               ),
                             );
                           }
@@ -313,13 +361,16 @@ class _AccountPageState extends ConsumerState<AccountPage> {
                 child: JuicyGlassCard(
                   padding: EdgeInsets.zero,
                   borderRadius: 24,
-                  backgroundColor: const Color(0xFF1E1E24), // Obsidian dark contrasting background
+                  backgroundColor: const Color(
+                    0xFF1E1E24,
+                  ), // Obsidian dark contrasting background
                   borderColor: Colors.redAccent.withValues(alpha: 0.35),
                   child: Column(
                     children: [
                       _buildSettingsTile(
                         label: 'Reset Progress',
-                        description: 'Wipe ratings, match history, and tutorial progress',
+                        description:
+                            'Wipe ratings, match history, and tutorial progress',
                         icon: Icons.delete_forever_rounded,
                         accentColor: Colors.redAccent,
                         onTap: () => _showResetConfirmationDialog(context, ref),
@@ -338,17 +389,27 @@ class _AccountPageState extends ConsumerState<AccountPage> {
                 child: Center(
                   child: TextButton.icon(
                     onPressed: () {
-                      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                      ref
+                          .read(chessSoundServiceProvider)
+                          .playSfx(SoundEffect.uiClick);
                       storeNotifier.restorePurchases();
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: const Text('Checking Google Play for previous purchases...'),
+                          content: const Text(
+                            'Checking Google Play for previous purchases...',
+                          ),
                           behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                       );
                     },
-                    icon: const Icon(Icons.restore_rounded, size: 18, color: ScholarlyTheme.accentBlue),
+                    icon: const Icon(
+                      Icons.restore_rounded,
+                      size: 18,
+                      color: ScholarlyTheme.accentBlue,
+                    ),
                     label: Text(
                       'RESTORE PREVIOUS PURCHASES',
                       style: GoogleFonts.outfit(
@@ -381,9 +442,12 @@ class _AccountPageState extends ConsumerState<AccountPage> {
 
     if (storeState.isPremium && storeState.subscriptionTill != null) {
       final rawPlan = storeState.subscriptionPlan ?? 'Premium';
-      final planName = (rawPlan == 'sixmonth' ? '6-Month' : rawPlan).toUpperCase();
+      final planName = (rawPlan == 'sixmonth' ? '6-Month' : rawPlan)
+          .toUpperCase();
       final expiryStr = dateFormat.format(storeState.subscriptionTill!);
-      final daysLeft = storeState.subscriptionTill!.difference(DateTime.now()).inDays;
+      final daysLeft = storeState.subscriptionTill!
+          .difference(DateTime.now())
+          .inDays;
 
       return Container(
         width: double.infinity,
@@ -395,7 +459,10 @@ class _AccountPageState extends ConsumerState<AccountPage> {
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: Colors.cyan.withValues(alpha: 0.3), width: 1.5),
+          border: Border.all(
+            color: Colors.cyan.withValues(alpha: 0.3),
+            width: 1.5,
+          ),
           boxShadow: [
             BoxShadow(
               color: Colors.cyan.withValues(alpha: 0.1),
@@ -412,7 +479,11 @@ class _AccountPageState extends ConsumerState<AccountPage> {
                 color: Colors.cyan.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.verified_user_rounded, color: Colors.cyan, size: 28),
+              child: const Icon(
+                Icons.verified_user_rounded,
+                color: Colors.cyan,
+                size: 28,
+              ),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -434,7 +505,10 @@ class _AccountPageState extends ConsumerState<AccountPage> {
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.green.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(6),
@@ -462,14 +536,19 @@ class _AccountPageState extends ConsumerState<AccountPage> {
                   const SizedBox(height: 2),
                   Text(
                     '✓ All app features and themes unlocked',
-                    style: GoogleFonts.inter(fontSize: 10, color: Colors.white70),
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      color: Colors.white70,
+                    ),
                   ),
                 ],
               ),
             ),
             TextButton(
               onPressed: () {
-                ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                ref
+                    .read(chessSoundServiceProvider)
+                    .playSfx(SoundEffect.uiClick);
                 _showCancelDialog(context, storeNotifier);
               },
               child: Text(
@@ -487,56 +566,147 @@ class _AccountPageState extends ConsumerState<AccountPage> {
     }
 
     // Free Tier Layout
+    final usage = storeState.freeTierUsage;
+    final ratedRemaining = (1 - usage.ratedGamesPlayed).clamp(0, 1);
+    final arenaRemaining = (3 - usage.arenaGamesPlayed).clamp(0, 3);
+    final promptsRemaining = (5 - usage.chipPromptsUsed).clamp(0, 5);
+    final puzzlesRemaining = (3 - usage.puzzlesSolved).clamp(0, 3);
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.45),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.6), width: 1.5),
+        gradient: LinearGradient(
+          colors: [
+            Colors.white.withValues(alpha: 0.74),
+            const Color(0xFFEFF6FF).withValues(alpha: 0.68),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.78),
+          width: 1.5,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+            color: ScholarlyTheme.accentBlue.withValues(alpha: 0.08),
+            blurRadius: 22,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: ScholarlyTheme.accentBlueSoft.withValues(alpha: 0.62),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: ScholarlyTheme.accentBlue.withValues(alpha: 0.18),
+                width: 1.4,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: ScholarlyTheme.accentBlue.withValues(alpha: 0.12),
+                  blurRadius: 18,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: const Icon(
+              Icons.workspace_premium_rounded,
+              color: ScholarlyTheme.accentBlue,
+              size: 30,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'FREE ACCOUNT',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.outfit(
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              color: ScholarlyTheme.textPrimary,
+              letterSpacing: 0.8,
+            ),
+          ),
+          const SizedBox(height: 6),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 360),
+            child: Text(
+              'All AI opponents are unlocked and free. Upgrade for unlimited games, puzzles, and coaching.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                height: 1.35,
+                color: ScholarlyTheme.textMuted,
+              ),
+            ),
+          ),
+          const SizedBox(height: 18),
+          Container(
+            width: double.infinity,
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: ScholarlyTheme.accentBlueSoft.withValues(alpha: 0.5),
-              shape: BoxShape.circle,
+              color: Colors.white.withValues(alpha: 0.52),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.72)),
             ),
-            child: const Icon(Icons.workspace_premium_rounded, color: ScholarlyTheme.accentBlue, size: 28),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'FREE ACCOUNT',
+                  'DAILY LIMITS REMAINING',
+                  textAlign: TextAlign.center,
                   style: GoogleFonts.outfit(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: ScholarlyTheme.textPrimary,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    color: ScholarlyTheme.textMuted,
+                    letterSpacing: 1.1,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'All AI opponents are unlocked & free.',
-                  style: GoogleFonts.inter(fontSize: 11, color: ScholarlyTheme.textMuted),
-                ),
-                Text(
-                  'Upgrade to unlock unlimited games, puzzles & coaching.',
-                  style: GoogleFonts.inter(
-                    fontSize: 11,
-                    color: ScholarlyTheme.accentBlue,
-                    fontWeight: FontWeight.w600,
-                  ),
+                const SizedBox(height: 12),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final crossAxisCount = constraints.maxWidth >= 420 ? 4 : 2;
+                    return GridView.count(
+                      crossAxisCount: crossAxisCount,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      mainAxisSpacing: 10,
+                      crossAxisSpacing: 10,
+                      childAspectRatio: crossAxisCount == 4 ? 1.05 : 1.55,
+                      children: [
+                        _buildUsageTile(
+                          'Rated Match',
+                          ratedRemaining,
+                          1,
+                          Icons.emoji_events_rounded,
+                        ),
+                        _buildUsageTile(
+                          'Arena Game',
+                          arenaRemaining,
+                          3,
+                          Icons.sports_martial_arts_rounded,
+                        ),
+                        _buildUsageTile(
+                          'Coaching',
+                          promptsRemaining,
+                          5,
+                          Icons.psychology_rounded,
+                        ),
+                        _buildUsageTile(
+                          'Puzzles',
+                          puzzlesRemaining,
+                          3,
+                          Icons.extension_rounded,
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ],
             ),
@@ -554,40 +724,61 @@ class _AccountPageState extends ConsumerState<AccountPage> {
         return AlertDialog(
           backgroundColor: Colors.white,
           surfaceTintColor: Colors.transparent,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
           title: Text(
             'Cancel Subscription',
-            style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary),
+            style: GoogleFonts.outfit(
+              fontWeight: FontWeight.bold,
+              color: ScholarlyTheme.textPrimary,
+            ),
           ),
           content: Text(
             'Are you sure you want to cancel your simulated subscription? You will lose access to premium AI coaching limits immediately.',
-            style: GoogleFonts.inter(fontSize: 13, color: ScholarlyTheme.textPrimary, height: 1.4),
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              color: ScholarlyTheme.textPrimary,
+              height: 1.4,
+            ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text('Keep Subscription', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted)),
+              child: Text(
+                'Keep Subscription',
+                style: GoogleFonts.inter(color: ScholarlyTheme.textMuted),
+              ),
             ),
             ElevatedButton(
               onPressed: () {
                 storeNotifier.cancelSubscription();
                 Navigator.pop(context);
-                ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                ref
+                    .read(chessSoundServiceProvider)
+                    .playSfx(SoundEffect.uiClick);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: const Text('Subscription cancelled successfully.'),
                     behavior: SnackBarBehavior.floating,
                     backgroundColor: Colors.redAccent,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.redAccent,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
-              child: Text('Yes, Cancel', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+              child: Text(
+                'Yes, Cancel',
+                style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+              ),
             ),
           ],
         );
@@ -597,22 +788,24 @@ class _AccountPageState extends ConsumerState<AccountPage> {
 
   Widget _buildSyncStatusTile(
     BuildContext context,
-    GoogleDriveSyncState syncState,
-    GoogleDriveSyncNotifier syncNotifier,
+    CloudSyncState syncState,
+    CloudSyncNotifier syncNotifier,
   ) {
     final authService = ref.watch(authServiceProvider);
     final isPlayGamesUser = authService.isPlayGamesUser;
 
     if (!isPlayGamesUser) {
       return _buildSettingsTile(
-        label: 'Google Drive Cloud Sync',
+        label: 'Cloud Backup Sync',
         description: 'Sign in to sync your progress.',
         icon: Icons.cloud_off_rounded,
         accentColor: ScholarlyTheme.textSubtle,
         onTap: () {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Please sign in from the main menu to enable Cloud Sync.'),
+              content: Text(
+                'Please sign in from the main menu to enable Cloud Sync.',
+              ),
               behavior: SnackBarBehavior.floating,
             ),
           );
@@ -629,19 +822,19 @@ class _AccountPageState extends ConsumerState<AccountPage> {
     Color statusColor;
 
     switch (syncState.status) {
-      case GoogleDriveSyncStatus.syncing:
+      case CloudSyncStatus.syncing:
         statusIcon = Icons.sync_rounded;
         statusColor = ScholarlyTheme.accentBlue;
         break;
-      case GoogleDriveSyncStatus.success:
+      case CloudSyncStatus.success:
         statusIcon = Icons.cloud_done_rounded;
         statusColor = Colors.green;
         break;
-      case GoogleDriveSyncStatus.error:
+      case CloudSyncStatus.error:
         statusIcon = Icons.cloud_off_rounded;
         statusColor = Colors.redAccent;
         break;
-      case GoogleDriveSyncStatus.idle:
+      case CloudSyncStatus.idle:
         statusIcon = Icons.cloud_queue_rounded;
         statusColor = ScholarlyTheme.textSubtle;
         break;
@@ -653,14 +846,16 @@ class _AccountPageState extends ConsumerState<AccountPage> {
         if (success) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Successfully synced with Google Drive cloud save!'),
+              content: Text('Successfully synced with cloud save!'),
               backgroundColor: Colors.green,
             ),
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Sync failed: ${syncState.errorMessage ?? "Unknown error"}'),
+              content: Text(
+                'Sync failed: ${syncState.errorMessage ?? "Unknown error"}',
+              ),
               backgroundColor: Colors.redAccent,
             ),
           );
@@ -669,36 +864,46 @@ class _AccountPageState extends ConsumerState<AccountPage> {
     }
 
     return _buildSettingsTile(
-      label: 'Google Drive Cloud Sync',
-      description: syncState.status == GoogleDriveSyncStatus.syncing
+      label: 'Cloud Backup Sync',
+      description: syncState.status == CloudSyncStatus.syncing
           ? 'Syncing your data...'
           : syncState.lastSyncedAt != null
-              ? 'Last synced: ${DateFormat.jm().format(syncState.lastSyncedAt!)}'
-              : 'Auto-syncs settings and game history',
+          ? 'Last synced: ${DateFormat.jm().format(syncState.lastSyncedAt!)}'
+          : 'Auto-syncs settings and game history',
       icon: statusIcon,
       accentColor: statusColor,
-      onTap: syncState.status == GoogleDriveSyncStatus.syncing ? () {} : handleSync,
-      trailing: syncState.status == GoogleDriveSyncStatus.syncing
+      onTap: syncState.status == CloudSyncStatus.syncing ? () {} : handleSync,
+      trailing: syncState.status == CloudSyncStatus.syncing
           ? const SizedBox(
               width: 20,
               height: 20,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(ScholarlyTheme.accentBlue),
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  ScholarlyTheme.accentBlue,
+                ),
               ),
             )
           : TextButton.icon(
-              onPressed: syncState.status == GoogleDriveSyncStatus.syncing ? null : handleSync,
+              onPressed: syncState.status == CloudSyncStatus.syncing
+                  ? null
+                  : handleSync,
               icon: const Icon(Icons.sync_rounded, size: 16),
               label: Text(
                 'Sync Now',
-                style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold),
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
     );
   }
 
-  Future<void> _showResetConfirmationDialog(BuildContext context, WidgetRef ref) async {
+  Future<void> _showResetConfirmationDialog(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => const ResetConfirmationDialog(),
@@ -712,7 +917,9 @@ class _AccountPageState extends ConsumerState<AccountPage> {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('All progress, rated stats, match history, assignment data, and tutorial records have been reset.'),
+            content: Text(
+              'All progress, rated stats, match history, assignment data, and tutorial records have been reset.',
+            ),
             backgroundColor: Colors.redAccent,
           ),
         );
@@ -753,14 +960,18 @@ class _AccountPageState extends ConsumerState<AccountPage> {
           ),
           child: Icon(
             icon,
-            color: effectiveAccent ?? (isDarkBg ? Colors.white : ScholarlyTheme.textPrimary),
+            color:
+                effectiveAccent ??
+                (isDarkBg ? Colors.white : ScholarlyTheme.textPrimary),
             size: 20,
           ),
         ),
         title: Text(
           label,
           style: GoogleFonts.inter(
-            color: effectiveAccent ?? (isDarkBg ? Colors.white : ScholarlyTheme.textPrimary),
+            color:
+                effectiveAccent ??
+                (isDarkBg ? Colors.white : ScholarlyTheme.textPrimary),
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
@@ -772,11 +983,94 @@ class _AccountPageState extends ConsumerState<AccountPage> {
             fontSize: 11,
           ),
         ),
-        trailing: trailing ?? Icon(
-          Icons.chevron_right_rounded,
-          color: isDarkBg ? Colors.white38 : ScholarlyTheme.textSubtle,
-          size: 20,
-        ),
+        trailing:
+            trailing ??
+            Icon(
+              Icons.chevron_right_rounded,
+              color: isDarkBg ? Colors.white38 : ScholarlyTheme.textSubtle,
+              size: 20,
+            ),
+      ),
+    );
+  }
+
+  Widget _buildUsageTile(
+    String label,
+    int remaining,
+    int limit,
+    IconData icon,
+  ) {
+    final percent = limit > 0 ? remaining / limit : 0.0;
+    Color progressColor;
+    if (percent > 0.5) {
+      progressColor = Colors.green;
+    } else if (percent > 0.2) {
+      progressColor = Colors.orange;
+    } else {
+      progressColor = Colors.red;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.82),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: progressColor.withValues(alpha: 0.14)),
+        boxShadow: [
+          BoxShadow(
+            color: progressColor.withValues(alpha: 0.06),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: progressColor.withValues(alpha: 0.12),
+            ),
+            child: Icon(icon, color: progressColor, size: 16),
+          ),
+          const SizedBox(height: 7),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.inter(
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              color: ScholarlyTheme.textMuted,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            '$remaining / $limit',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.jetBrainsMono(
+              fontSize: 13,
+              fontWeight: FontWeight.w900,
+              color: ScholarlyTheme.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 6),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              minHeight: 4,
+              value: percent.clamp(0.0, 1.0).toDouble(),
+              color: progressColor,
+              backgroundColor: ScholarlyTheme.panelStroke.withValues(
+                alpha: 0.55,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -786,7 +1080,8 @@ class ResetConfirmationDialog extends StatefulWidget {
   const ResetConfirmationDialog({super.key});
 
   @override
-  State<ResetConfirmationDialog> createState() => _ResetConfirmationDialogState();
+  State<ResetConfirmationDialog> createState() =>
+      _ResetConfirmationDialogState();
 }
 
 class _ResetConfirmationDialogState extends State<ResetConfirmationDialog> {
@@ -812,7 +1107,10 @@ class _ResetConfirmationDialogState extends State<ResetConfirmationDialog> {
       surfaceTintColor: Colors.redAccent,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(28),
-        side: BorderSide(color: Colors.redAccent.withValues(alpha: 0.2), width: 1),
+        side: BorderSide(
+          color: Colors.redAccent.withValues(alpha: 0.2),
+          width: 1,
+        ),
       ),
       title: Column(
         mainAxisSize: MainAxisSize.min,
@@ -823,7 +1121,11 @@ class _ResetConfirmationDialogState extends State<ResetConfirmationDialog> {
               color: Colors.redAccent.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 28),
+            child: const Icon(
+              Icons.warning_amber_rounded,
+              color: Colors.redAccent,
+              size: 28,
+            ),
           ),
           const SizedBox(height: 16),
           Text(
@@ -865,20 +1167,30 @@ class _ResetConfirmationDialogState extends State<ResetConfirmationDialog> {
               decoration: InputDecoration(
                 hintText: 'Type reset',
                 hintStyle: GoogleFonts.inter(color: ScholarlyTheme.textSubtle),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 filled: true,
                 fillColor: ScholarlyTheme.backgroundStart,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: ScholarlyTheme.panelStroke),
+                  borderSide: const BorderSide(
+                    color: ScholarlyTheme.panelStroke,
+                  ),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: ScholarlyTheme.panelStroke),
+                  borderSide: const BorderSide(
+                    color: ScholarlyTheme.panelStroke,
+                  ),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Colors.redAccent, width: 2),
+                  borderSide: const BorderSide(
+                    color: Colors.redAccent,
+                    width: 2,
+                  ),
                 ),
               ),
               style: GoogleFonts.inter(
@@ -896,7 +1208,9 @@ class _ResetConfirmationDialogState extends State<ResetConfirmationDialog> {
           child: const Text('CANCEL'),
         ),
         FilledButton(
-          onPressed: _isResetEnabled ? () => Navigator.pop(context, true) : null,
+          onPressed: _isResetEnabled
+              ? () => Navigator.pop(context, true)
+              : null,
           style: FilledButton.styleFrom(
             backgroundColor: Colors.redAccent,
             foregroundColor: Colors.white,

@@ -801,9 +801,9 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
                     icon: Icons.undo_rounded,
                     tooltip: 'Undo',
                     baseColor: const Color(0xFFF59E0B),
-                    isEnabled: !state.isTacticsModeActive && state.canUndo,
+                    isEnabled: !state.isTacticsModeActive && state.isAcademyBlunderActive,
                     isBlinking: !state.isTacticsModeActive && state.isAcademyBlunderActive,
-                    onTap: (!state.isTacticsModeActive && state.canUndo) ? () => notifier.undo() : null,
+                    onTap: (!state.isTacticsModeActive && state.isAcademyBlunderActive) ? () => notifier.undo() : null,
                   ),
                   const SizedBox(height: 12),
                   _PremiumActionIcon(
@@ -889,9 +889,9 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
                     icon: Icons.undo_rounded,
                     tooltip: 'Undo',
                     baseColor: const Color(0xFFF59E0B),
-                    isEnabled: !state.isTacticsModeActive && state.canUndo,
+                    isEnabled: !state.isTacticsModeActive && state.isAcademyBlunderActive,
                     isBlinking: !state.isTacticsModeActive && state.isAcademyBlunderActive,
-                    onTap: (!state.isTacticsModeActive && state.canUndo) ? () => notifier.undo() : null,
+                    onTap: (!state.isTacticsModeActive && state.isAcademyBlunderActive) ? () => notifier.undo() : null,
                   ),
                   const SizedBox(width: 12),
                   _PremiumActionIcon(

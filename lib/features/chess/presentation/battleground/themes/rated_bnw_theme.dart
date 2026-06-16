@@ -9,7 +9,7 @@ class RatedBnwTheme extends BnwChessTheme {
   const RatedBnwTheme()
       : super(
           id: 'rated_bnw',
-          name: 'BNW',
+          name: 'B&W',
           packageTheme: assets_lib.ChessThemes.glassMorphic,
         );
 

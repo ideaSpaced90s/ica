@@ -38,7 +38,7 @@ class ThemeRegistry {
     ),
     'vector_glass': const BnwChessTheme(
       id: 'vector_glass',
-      name: 'bnw',
+      name: 'B&W',
       packageTheme: assets_lib.ChessThemes.glassMorphic,
     ),
     'vector_championship': const VectorChessTheme(

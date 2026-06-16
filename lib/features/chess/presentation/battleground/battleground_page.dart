@@ -43,6 +43,7 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
   bool _isDiceRolling = false;
   bool _assignedWhite = true;
   late ConfettiController _confettiController;
+  late ConfettiController _confettiBottomController;
   bool _hasTriggeredConfetti = false;
   bool _isCountdownActive = false;
 
@@ -51,12 +52,14 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _confettiController = ConfettiController(duration: const Duration(seconds: 3));
+    _confettiBottomController = ConfettiController(duration: const Duration(seconds: 3));
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _confettiController.dispose();
+    _confettiBottomController.dispose();
     super.dispose();
   }
 
@@ -75,6 +78,28 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(battlegroundProvider);
+
+    ref.listen<BattlegroundState>(battlegroundProvider, (previous, next) {
+      final wasGameOver = (previous?.game.gameOver ?? false) || (previous?.isTimeOut ?? false);
+      final isGameOver = next.game.gameOver || next.isTimeOut;
+      final isDismissed = next.isGameOverDismissed;
+      final wasDismissed = previous?.isGameOverDismissed ?? false;
+
+      if (isGameOver && !wasGameOver) {
+        if (_didPlayerWin(next) && !_hasTriggeredConfetti) {
+          setState(() {
+            _hasTriggeredConfetti = true;
+          });
+          _confettiController.play();
+          _confettiBottomController.play();
+        }
+      } else if (!isGameOver || (isDismissed && !wasDismissed)) {
+        setState(() {
+          _hasTriggeredConfetti = false;
+        });
+      }
+    });
+
     final showIntro = ref.watch(showBattlegroundIntroProvider);
     final isLandscape = MediaQuery.of(context).size.width > MediaQuery.of(context).size.height;
     final currentNavIndex = ref.watch(mobileNavIndexProvider);
@@ -159,8 +184,26 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
                   Colors.blueAccent,
                   Colors.orangeAccent,
                 ],
-                numberOfParticles: 20,
+                numberOfParticles: 60,
                 gravity: 0.2,
+              ),
+            ),
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: ConfettiWidget(
+                confettiController: _confettiBottomController,
+                blastDirectionality: BlastDirectionality.explosive,
+                blastDirection: -3.14 / 2, // upward
+                shouldLoop: false,
+                numberOfParticles: 60,
+                gravity: 0.05,
+                colors: const [
+                  ScholarlyTheme.accentBlue,
+                  ScholarlyTheme.accentGold,
+                  Colors.white,
+                  Colors.blueAccent,
+                  Colors.orangeAccent,
+                ],
               ),
             ),
             if (showIntro)
@@ -554,11 +597,6 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
   Widget _buildGameOverOverlay(BuildContext context, WidgetRef ref, BattlegroundState state) {
     final isDraw = state.game.inDraw;
     final didWin = _didPlayerWin(state);
-    
-    if (didWin && !_hasTriggeredConfetti) {
-      _hasTriggeredConfetti = true;
-      _confettiController.play();
-    }
 
     String title = '';
     String msg = '';

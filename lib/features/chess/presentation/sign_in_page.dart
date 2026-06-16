@@ -12,7 +12,7 @@ import '../services/auth_service.dart';
 import '../application/chess_provider.dart';
 import '../application/tutorial_provider.dart';
 import '../application/onboarding_provider.dart';
-import '../services/play_games_sync_service.dart';
+import '../services/cloud_sync_service.dart';
 
 class SignInPage extends ConsumerStatefulWidget {
   const SignInPage({super.key});
@@ -79,14 +79,14 @@ class _SignInPageState extends ConsumerState<SignInPage>
       ref.read(showBattlegroundIntroProvider.notifier).state = true;
       ref.read(showPuzzlesIntroProvider.notifier).state = true;
 
-      // Trigger automatic restore from Google Drive on login (capped at 4 seconds)
+      // Trigger automatic restore from Cloud Sync on login (capped at 4 seconds)
       try {
         await ref
-            .read(googleDriveSyncProvider.notifier)
+            .read(cloudSyncProvider.notifier)
             .restore()
             .timeout(const Duration(seconds: 4));
       } catch (e) {
-        debugPrint('Google Drive Login restore sync timed out or failed: $e');
+        debugPrint('Cloud Sync Login restore sync timed out or failed: $e');
       }
 
       _navigateToNext();
