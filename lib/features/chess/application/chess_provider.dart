@@ -13,6 +13,7 @@ import 'package:kingslayer_chess/src/rust/api/humanizer.dart';
 import 'package:kingslayer_chess/src/rust/api/context.dart';
 import 'package:kingslayer_chess/src/rust/api/chanakya.dart' as rust_chanakya;
 import 'package:kingslayer_chess/src/rust/api/commentary.dart' show resetCommentaryHistoryRust;
+import 'package:kingslayer_chess/src/rust/api/persona.dart' as rust_persona;
 import '../domain/models/precomputed_rust_context.dart';
 import '../domain/models/position_context.dart';
 import '../services/position_context_builder.dart';
@@ -279,7 +280,7 @@ class ChessState {
     this.activeTacticMoves,
     this.tacticPlaybackPosition = 0,
     this.isBoardInChampionsTheme = false,
-
+    this.chanakyaEloOffset = 0,
   });
 
   final ChessGame game;
@@ -374,6 +375,7 @@ class ChessState {
   final List<String>? activeTacticMoves;
   final int tacticPlaybackPosition;
   final bool isBoardInChampionsTheme;
+  final int chanakyaEloOffset;
 
   final bool isNotificationsEnabled;
   final bool dailyBriefingEnabled;
@@ -504,7 +506,7 @@ class ChessState {
     bool? quietHoursEnabled,
     String? quietHoursStart,
     String? quietHoursEnd,
-
+    int? chanakyaEloOffset,
   }) {
     return ChessState(
       game: game ?? this.game,
@@ -658,7 +660,7 @@ class ChessState {
       quietHoursEnabled: quietHoursEnabled ?? this.quietHoursEnabled,
       quietHoursStart: quietHoursStart ?? this.quietHoursStart,
       quietHoursEnd: quietHoursEnd ?? this.quietHoursEnd,
-
+      chanakyaEloOffset: chanakyaEloOffset ?? this.chanakyaEloOffset,
     );
   }
 }
@@ -806,9 +808,10 @@ class ChessNotifier extends StateNotifier<ChessState> {
       _soundService.isThemeSoundEnabled = true;
       await _engine.setChess960Mode(is960);
       final avatar = AiAvatar.getAvatar(s.engineLevel);
+      final config = rust_persona.getPersonaConfig(avatarName: avatar.name);
       await _engine.setSkillLevel(
-        avatar.skillLevel,
-        multiPV: (avatar.name == 'King' || avatar.name == 'Kingslayer') ? 1 : 4,
+        config.skillLevel,
+        multiPV: config.multiPv,
       );
 
       final musicInitiallyEnabled = s.isMusicEnabled;
@@ -1323,7 +1326,6 @@ class ChessNotifier extends StateNotifier<ChessState> {
   Timer? _commentaryRevealTimer;
   Timer? _maxThinkingTimer;
   Timer? _playbackTimer;
-  DateTime? _engineStartTime;
   StreamSubscription<String>? _stockfishSubscription;
   Completer<void>? _queryAnalysisCompleter;
 
@@ -1392,10 +1394,11 @@ class ChessNotifier extends StateNotifier<ChessState> {
       await _stockfishEngine.init();
 
       final avatar = AiAvatar.getAvatar(state.engineLevel);
-      final multiPV = state.isAcademyActive ? 3 : ((avatar.name == 'King' || avatar.name == 'Kingslayer') ? 1 : 4);
+      final config = rust_persona.getPersonaConfig(avatarName: avatar.name);
+      final multiPV = state.isAcademyActive ? 3 : config.multiPv;
       
       await _stockfishEngine.setSkillLevel(
-        avatar.skillLevel,
+        config.skillLevel,
         multiPV: multiPV,
       );
 
@@ -1569,20 +1572,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
         _maxThinkingTimer?.cancel();
         _maxThinkingTimer = null;
         _engineMoveTimer?.cancel();
+        _engineMoveTimer = null;
 
-        final finalMove = bestMoveToPlay;
-        final now = DateTime.now();
-        final elapsed = now
-            .difference(_engineStartTime ?? now)
-            .inMilliseconds;
-        final randomDelayMs = 1500 + math.Random().nextInt(3000); // 1.5s to 4.5s
-        final remainingDelay = math.max(0, randomDelayMs - elapsed);
-
-        _engineMoveTimer = Timer(Duration(milliseconds: remainingDelay), () {
-          if (!_isDisposed && !state.isPaused) {
-            _makeEngineMove(finalMove);
-          }
-        });
+        _makeEngineMove(bestMoveToPlay);
       }
       return; // Bypasses the general info copyWith below!
     }
@@ -2435,14 +2427,14 @@ class ChessNotifier extends StateNotifier<ChessState> {
     if (state.isAcademyActive) {
       final bgState = ref.read(battlegroundProvider);
       final userElo = bgState.consolidatedRating;
-      const chanakyaEloGap = 200;
-      final targetElo = (userElo + chanakyaEloGap).clamp(400, 3200);
+      final targetElo = (userElo + state.chanakyaEloOffset).clamp(400, 3200);
       final chanakyaAvatar = AiAvatar.getBestMatch(targetElo);
-      await _engine.setSkillLevel(chanakyaAvatar.skillLevel, multiPV: 3);
+      final config = rust_persona.getPersonaConfig(avatarName: chanakyaAvatar.name);
+      await _engine.setSkillLevel(config.skillLevel, multiPV: 3);
     } else {
       final avatar = AiAvatar.getAvatar(state.engineLevel);
-      final multiPV = (avatar.name == 'King' || avatar.name == 'Kingslayer') ? 1 : 4;
-      await _engine.setSkillLevel(avatar.skillLevel, multiPV: multiPV);
+      final config = rust_persona.getPersonaConfig(avatarName: avatar.name);
+      await _engine.setSkillLevel(config.skillLevel, multiPV: config.multiPv);
     }
   }
 
@@ -2496,16 +2488,16 @@ class ChessNotifier extends StateNotifier<ChessState> {
         : state.engineLevel;
 
     AiAvatar avatar = AiAvatar.getAvatar(activeAvatarId);
-    int targetDepth = depth ?? avatar.depth;
+    final config = rust_persona.getPersonaConfig(avatarName: avatar.name);
+    int targetDepth = depth ?? config.depth;
 
     // ── Academy Mode: dynamic Elo-based difficulty calibration ─────────────
     if (state.isAcademyActive) {
       final bgState = ref.read(battlegroundProvider);
       final userElo = bgState.consolidatedRating;
 
-      // Chanakya targets User ELO + 200 (clamped to range of known avatars)
-      const chanakyaEloGap = 200;
-      final targetElo = (userElo + chanakyaEloGap).clamp(400, 3200);
+      // Chanakya targets User ELO + dynamic random offset (clamped to range of known avatars)
+      final targetElo = (userElo + state.chanakyaEloOffset).clamp(400, 3200);
       final chanakyaAvatar = AiAvatar.getBestMatch(targetElo);
 
       // Tight-fight detection: game is close (eval within ±1.5) past move 20
@@ -2514,15 +2506,16 @@ class ChessNotifier extends StateNotifier<ChessState> {
       final isTightFight = halfMoveCount >= 20 && evalAbs <= 1.5;
 
       // Apply boosted depth in tight-fight mode
-      final baseDepth = chanakyaAvatar.depth;
+      final chanakyaConfig = rust_persona.getPersonaConfig(avatarName: chanakyaAvatar.name);
+      final baseDepth = chanakyaConfig.depth;
       final chanakyaDepth = isTightFight ? (baseDepth + 2) : baseDepth;
 
       avatar = chanakyaAvatar;
       targetDepth = depth ?? chanakyaDepth;
 
       debugPrint(
-        '🧠 Chanakya level calibration: userElo=$userElo → target=${chanakyaAvatar.name} '
-        '(skillLevel=${chanakyaAvatar.skillLevel}, depth=$chanakyaDepth) '
+        '🧠 Chanakya level calibration: userElo=$userElo, offset=${state.chanakyaEloOffset} → target=${chanakyaAvatar.name} '
+        '(skillLevel=${chanakyaConfig.skillLevel}, depth=$chanakyaDepth) '
         '| tightFight=$isTightFight | evalAbs=${evalAbs.toStringAsFixed(2)}',
       );
     }
@@ -2530,13 +2523,11 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
     // Dynamically apply current moving engine's skill level constraints
     _currentCandidates.clear();
+    final configForMoving = rust_persona.getPersonaConfig(avatarName: avatar.name);
     _engine.setSkillLevel(
-      avatar.skillLevel,
-      multiPV: state.isAcademyActive ? 3 : ((avatar.name == 'King' || avatar.name == 'Kingslayer') ? 1 : 4),
+      configForMoving.skillLevel,
+      multiPV: state.isAcademyActive ? 3 : configForMoving.multiPv,
     );
-
-    // Record start time for the 2s minimum delay logic
-    _engineStartTime = DateTime.now();
 
     // Cancel any existing max thinking timer
     _maxThinkingTimer?.cancel();
@@ -2639,14 +2630,15 @@ class ChessNotifier extends StateNotifier<ChessState> {
     final avatar = AiAvatar.getAvatar(level);
     state = state.copyWith(engineLevel: level);
 
+    final config = rust_persona.getPersonaConfig(avatarName: avatar.name);
     await _engine.setSkillLevel(
-      avatar.skillLevel,
-      multiPV: (avatar.name == 'King' || avatar.name == 'Kingslayer') ? 1 : 4,
+      config.skillLevel,
+      multiPV: config.multiPv,
     );
     _saveSettings();
     if (state.servicesStarted && _isAiTurn()) {
       _currentCandidates.clear();
-      _engine.analyzePosition(state.game.fen, depth: avatar.depth);
+      _engine.analyzePosition(state.game.fen, depth: config.depth);
     }
   }
 
@@ -2665,12 +2657,13 @@ class ChessNotifier extends StateNotifier<ChessState> {
         isBottomTurn = (state.isPlayerWhite == turnWhite);
       }
       if (isBottomTurn) {
+        final config = rust_persona.getPersonaConfig(avatarName: avatar.name);
         await _engine.setSkillLevel(
-          avatar.skillLevel,
-          multiPV: (avatar.name == 'King' || avatar.name == 'Kingslayer') ? 1 : 4,
+          config.skillLevel,
+          multiPV: config.multiPv,
         );
         _currentCandidates.clear();
-        _engine.analyzePosition(state.game.fen, depth: avatar.depth);
+        _engine.analyzePosition(state.game.fen, depth: config.depth);
       }
     }
   }
@@ -3569,8 +3562,10 @@ class ChessNotifier extends StateNotifier<ChessState> {
     // Always start thinking if Robot Mode is on OR if it's currently the Engine's turn
     if (preserveEvE || !preservePlayerWhite) {
       await ensureGameServicesStarted(analyzeCurrentPosition: true);
-      await _engine.setSkillLevel(AiAvatar.getAvatar(preserveLevel).skillLevel,
-          multiPV: 1); // Reset MultiPV for normal play
+      final avatar = AiAvatar.getAvatar(preserveLevel);
+      final config = rust_persona.getPersonaConfig(avatarName: avatar.name);
+      await _engine.setSkillLevel(config.skillLevel,
+          multiPV: config.multiPv); // Reset MultiPV to persona config
       state = state.copyWith(isEngineThinking: state.engineReady);
     }
 
@@ -3614,6 +3609,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
     final preserveBottomLevel = state.bottomAvatarId;
 
     final bool waitingForChoice = customFen == null;
+    final randomOffset = -50 + math.Random().nextInt(151); // -50 to +100 inclusive
 
     state = ChessState(
       game: ChessGame(fen: customFen, isChess960: false),
@@ -3644,6 +3640,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
       commentaryError: _commentaryEngine.lastError,
       savedGames: state.savedGames,
       isAcademyActive: true,
+      chanakyaEloOffset: randomOffset,
       userName: state.userName,
       userAvatarPath: state.userAvatarPath,
       isWaitingForSideChoice: waitingForChoice,
@@ -3665,7 +3662,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
     if (!waitingForChoice) {
       // Start analysis which will trigger the engine move for custom positions
       await ensureGameServicesStarted(analyzeCurrentPosition: true);
-      await _engine.setSkillLevel(AiAvatar.getAvatar(preserveLevel).skillLevel,
+      final avatar = AiAvatar.getAvatar(preserveLevel);
+      final config = rust_persona.getPersonaConfig(avatarName: avatar.name);
+      await _engine.setSkillLevel(config.skillLevel,
           multiPV: 3); // Academy uses MultiPV=3
       state = state.copyWith(isEngineThinking: state.engineReady);
     }
@@ -3761,7 +3760,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
     // 5. Start engine services
     await ensureGameServicesStarted(analyzeCurrentPosition: true);
-    await _engine.setSkillLevel(AiAvatar.getAvatar(state.engineLevel).skillLevel,
+    final avatar = AiAvatar.getAvatar(state.engineLevel);
+    final config = rust_persona.getPersonaConfig(avatarName: avatar.name);
+    await _engine.setSkillLevel(config.skillLevel,
         multiPV: 3); // Academy uses MultiPV=3
 
     // 6. If playing as Black, the engine (White) must think/make the first move!

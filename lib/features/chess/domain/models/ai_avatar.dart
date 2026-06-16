@@ -54,6 +54,42 @@ class AiAvatar {
     return 1500;
   }
 
+  String get randomMoveProbability {
+    if (name == 'Sparky') return '50%';
+    if (name == 'Pawzy') return '35%';
+    if (name == 'Coward') return '25%';
+    if (name == 'Rookie') return '18%';
+    if (name == 'Scholar') return '12%';
+    if (name == 'Molly') return '8%';
+    if (name == 'Berkserker') return '6%';
+    if (name == 'Blaire') return '4%';
+    if (name == 'Python') return '2%';
+    if (name == 'King') return '0%';
+    final level = skillLevel;
+    if (level <= 5) return '20%';
+    if (level <= 10) return '8%';
+    if (level <= 15) return '2%';
+    return '0.5%';
+  }
+
+  String get heuristicJitteriness {
+    if (name == 'Sparky') return '85%';
+    if (name == 'Pawzy') return '70%';
+    if (name == 'Coward') return '55%';
+    if (name == 'Rookie') return '45%';
+    if (name == 'Scholar') return '35%';
+    if (name == 'Molly') return '25%';
+    if (name == 'Berkserker') return '20%';
+    if (name == 'Blaire') return '15%';
+    if (name == 'Python') return '10%';
+    if (name == 'King') return '0%';
+    final level = skillLevel;
+    if (level <= 5) return '40%';
+    if (level <= 10) return '20%';
+    if (level <= 15) return '8%';
+    return '2%';
+  }
+
   static const List<AiAvatar> avatars = [
     AiAvatar(
       id: 'avatar_0',
@@ -69,7 +105,7 @@ class AiAvatar {
     ),
     AiAvatar(
       id: 'avatar_1',
-      name: 'Pawnzy',
+      name: 'Pawzy',
       title: 'The Novice',
       fideRatingRange: '600 - 750',
       playingStyle: 'Erratic novice obsessed with pawn promotions. Plays only pawns hoping one will queen.',
@@ -129,7 +165,7 @@ class AiAvatar {
     ),
     AiAvatar(
       id: 'avatar_6',
-      name: 'Berserker',
+      name: 'Berkserker',
       title: 'Reckless Attacker',
       fideRatingRange: '1200 - 1350',
       playingStyle: 'Highly aggressive and reckless attacker who sacrifices units early to attack the opponent\'s king.',

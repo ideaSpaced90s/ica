@@ -147,6 +147,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PersonaCandidate dco_decode_persona_candidate(dynamic raw);
 
   @protected
+  PersonaConfig dco_decode_persona_config(dynamic raw);
+
+  @protected
   PgnGameHeader dco_decode_pgn_game_header(dynamic raw);
 
   @protected
@@ -324,6 +327,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   PersonaCandidate sse_decode_persona_candidate(SseDeserializer deserializer);
+
+  @protected
+  PersonaConfig sse_decode_persona_config(SseDeserializer deserializer);
 
   @protected
   PgnGameHeader sse_decode_pgn_game_header(SseDeserializer deserializer);
@@ -556,6 +562,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     PersonaCandidate self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_persona_config(PersonaConfig self, SseSerializer serializer);
 
   @protected
   void sse_encode_pgn_game_header(PgnGameHeader self, SseSerializer serializer);

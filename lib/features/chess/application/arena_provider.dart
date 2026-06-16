@@ -15,6 +15,7 @@ import '../data/chess_engine_service.dart';
 import '../data/uci_parser.dart';
 import '../data/saved_game.dart';
 import 'chess_provider.dart';
+import 'package:kingslayer_chess/src/rust/api/persona.dart' as rust_persona;
 
 const _initialClock = Duration(minutes: 10);
 const _clockWhite = 'white';
@@ -452,8 +453,9 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
       await _stockfishEngine.init();
 
       final avatar = AiAvatar.getAvatar(state.engineLevel);
-      await _stockfishEngine.setSkillLevel(avatar.skillLevel, multiPV: (avatar.name == 'King' || avatar.name == 'Kingslayer') ? 1 : 4);
-      _stockfishEngine.sendCommand('setoption name MultiPV value ${(avatar.name == 'King' || avatar.name == 'Kingslayer') ? 1 : 4}');
+      final config = rust_persona.getPersonaConfig(avatarName: avatar.name);
+      await _stockfishEngine.setSkillLevel(config.skillLevel, multiPV: config.multiPv);
+      _stockfishEngine.sendCommand('setoption name MultiPV value ${config.multiPv}');
 
       state = state.copyWith(
         servicesStarted: true,
@@ -491,16 +493,17 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
     await _engine.setChess960Mode(is960);
 
     final avatar = AiAvatar.getAvatar(_activeAvatarId);
-    await _engine.setSkillLevel(avatar.skillLevel, multiPV: (avatar.name == 'King' || avatar.name == 'Kingslayer') ? 1 : 4);
-    _engine.sendCommand('setoption name MultiPV value ${(avatar.name == 'King' || avatar.name == 'Kingslayer') ? 1 : 4}');
+    final config = rust_persona.getPersonaConfig(avatarName: avatar.name);
+    await _engine.setSkillLevel(config.skillLevel, multiPV: config.multiPv);
+    _engine.sendCommand('setoption name MultiPV value ${config.multiPv}');
 
     _searchFen = state.game.fen;
-    final targetDepth = depth ?? avatar.depth;
+    final targetDepth = depth ?? config.depth;
     final quickPlayEnabled = ref.read(chessProvider).quickPlay || state.isTemporaryQuickPlay;
 
     if (quickPlayEnabled && _isAiTurn()) {
       _engine.analyzePosition(state.game.fen, depth: 1);
-    } else if (state.clockStarted && !state.game.gameOver) {
+    } else if (!state.game.gameOver) {
       _engine.analyzePosition(
         state.game.fen,
         depth: targetDepth,
@@ -509,6 +512,17 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
         wInc: state.incrementDuration,
         bInc: state.incrementDuration,
       );
+
+      // Safety fallback timer: if the engine doesn't return a move, force stop
+      _engineMoveTimer?.cancel();
+      final aiTimeLeft = state.isPlayerWhite ? state.blackTimeLeft : state.whiteTimeLeft;
+      final safetyTimeoutMs = (aiTimeLeft.inMilliseconds * 0.2).clamp(1000.0, 5000.0).toInt();
+      _engineMoveTimer = Timer(Duration(milliseconds: safetyTimeoutMs), () {
+        if (!_isDisposed && _searchFen == state.game.fen && _isAiTurn()) {
+          debugPrint('ArenaNotifier: Safety timer fired after ${safetyTimeoutMs}ms. Forcing bestmove.');
+          _engine.stopAnalysis();
+        }
+      });
     } else {
       _engine.analyzePosition(state.game.fen, depth: targetDepth);
     }
@@ -620,18 +634,9 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
           !state.game.gameOver &&
           !state.isPaused) {
         _engineMoveTimer?.cancel();
-        final finalMove = bestMoveToPlay;
-        final quickPlayEnabled = ref.read(chessProvider).quickPlay || state.isTemporaryQuickPlay;
-        if (ref.read(chessProvider).isAnimationsEnabled && !quickPlayEnabled) {
-          _scheduledMove = finalMove;
-          _engineMoveTimer = Timer(const Duration(milliseconds: 1500), () {
-            if (!_isDisposed && !state.isPaused && _searchFen == state.game.fen) {
-              _makeEngineMove(finalMove);
-            }
-          });
-        } else {
-          _makeEngineMove(finalMove);
-        }
+        _engineMoveTimer = null;
+        _scheduledMove = null;
+        _makeEngineMove(bestMoveToPlay);
       }
     }
   }

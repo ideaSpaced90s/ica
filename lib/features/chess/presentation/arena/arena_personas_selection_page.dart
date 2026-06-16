@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../application/chess_provider.dart';
 import '../../services/chess_sound_service.dart';
 import '../../domain/models/ai_avatar.dart';
+import 'package:kingslayer_chess/src/rust/api/persona.dart' as rust_persona;
 import '../scholarly_theme.dart';
 import '../widgets/ambient_scaffold.dart';
 
@@ -818,29 +819,69 @@ class _ArenaPersonasSelectionPageState extends ConsumerState<ArenaPersonasSelect
               ),
             ),
 
-            // Bottom Card Overlay with flip instruction
+            // Name Overlay at Top Center (below active/rating row)
+            Positioned(
+              top: 42,
+              left: 12,
+              right: 12,
+              child: Center(
+                child: Text(
+                  avatar.name,
+                  style: GoogleFonts.outfit(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.5,
+                    shadows: [
+                      Shadow(
+                        color: Colors.black.withValues(alpha: 0.8),
+                        offset: const Offset(0, 2),
+                        blurRadius: 6,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // Bottom Card Overlay with Title and flip instruction
             Positioned(
               bottom: 0,
               left: 0,
               right: 0,
-              height: 40,
+              height: 75,
               child: Container(
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Colors.transparent, Colors.black54],
+                    colors: [Colors.transparent, Colors.black.withValues(alpha: 0.85)],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                   ),
                 ),
-                padding: const EdgeInsets.only(bottom: 8),
-                alignment: Alignment.bottomCenter,
-                child: Text(
-                  'Tap to see details',
-                  style: GoogleFonts.inter(
-                    fontSize: 10,
-                    color: Colors.white70,
-                    fontWeight: FontWeight.bold,
-                  ),
+                padding: const EdgeInsets.only(bottom: 8, left: 12, right: 12),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Text(
+                      avatar.title.toUpperCase(),
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.outfit(
+                        color: avatar.color,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Tap to see details',
+                      style: GoogleFonts.inter(
+                        fontSize: 9,
+                        color: Colors.white70,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -886,6 +927,7 @@ class _ArenaPersonasSelectionPageState extends ConsumerState<ArenaPersonasSelect
 
   // Backend of the persona card
   Widget _buildCardBack(AiAvatar avatar) {
+    final config = rust_persona.getPersonaConfig(avatarName: avatar.name);
     return Container(
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.95),
@@ -962,60 +1004,86 @@ class _ArenaPersonasSelectionPageState extends ConsumerState<ArenaPersonasSelect
                 const Divider(height: 1),
                 const SizedBox(height: 16),
 
-                Text(
-                  'ENGINE SPECIFICATIONS',
-                  style: GoogleFonts.outfit(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1.0,
-                    color: avatar.color,
+                Expanded(
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          'ENGINE SPECIFICATIONS',
+                          style: GoogleFonts.outfit(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.0,
+                            color: avatar.color,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Specs Rows
+                        _buildSpecRow(
+                          icon: Icons.bar_chart_rounded,
+                          label: 'FIDE Rating Range',
+                          value: avatar.fideRatingRange,
+                        ),
+                        const SizedBox(height: 10),
+                        _buildSpecRow(
+                          icon: Icons.speed_rounded,
+                          label: 'Stockfish Skill Level',
+                          value: '${config.skillLevel} / 20',
+                        ),
+                        const SizedBox(height: 10),
+                        _buildSpecRow(
+                          icon: Icons.search_rounded,
+                          label: 'Search Depth Limit',
+                          value: '${config.depth} moves',
+                        ),
+                        const SizedBox(height: 10),
+                        _buildSpecRow(
+                          icon: Icons.alt_route_rounded,
+                          label: 'MultiPV Candidates',
+                          value: '${config.multiPv} lines',
+                        ),
+                        const SizedBox(height: 10),
+                        _buildSpecRow(
+                          icon: Icons.casino_rounded,
+                          label: 'Random Move Probability',
+                          value: avatar.randomMoveProbability,
+                        ),
+                        const SizedBox(height: 10),
+                        _buildSpecRow(
+                          icon: Icons.query_stats_rounded,
+                          label: 'Heuristic Jitteriness',
+                          value: avatar.heuristicJitteriness,
+                        ),
+                        const SizedBox(height: 20),
+
+                        // Playing Style Label
+                        Text(
+                          'PLAYING STYLE & BIO',
+                          style: GoogleFonts.outfit(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.0,
+                            color: avatar.color,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          avatar.playingStyle,
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            height: 1.4,
+                            color: ScholarlyTheme.textPrimary,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
-
-                // Specs Rows
-                _buildSpecRow(
-                  icon: Icons.bar_chart_rounded,
-                  label: 'FIDE Rating Range',
-                  value: avatar.fideRatingRange,
-                ),
-                const SizedBox(height: 10),
-                _buildSpecRow(
-                  icon: Icons.speed_rounded,
-                  label: 'Stockfish Skill Level',
-                  value: '${avatar.skillLevel} / 20',
-                ),
-                const SizedBox(height: 10),
-                _buildSpecRow(
-                  icon: Icons.search_rounded,
-                  label: 'Search Depth Limit',
-                  value: '${avatar.depth} moves',
-                ),
-                
-                const Spacer(),
-
-                // Playing Style Label
-                Text(
-                  'PLAYING STYLE & BIO',
-                  style: GoogleFonts.outfit(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1.0,
-                    color: avatar.color,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  avatar.playingStyle,
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    height: 1.4,
-                    color: ScholarlyTheme.textPrimary,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-
-                const Spacer(),
                 Center(
                   child: Text(
                     'Tap to show photo',

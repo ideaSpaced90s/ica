@@ -339,12 +339,12 @@ class _PersonaSectionState extends State<PersonaSection> {
   static String _getPersonaTrait(String name) {
     switch (name) {
       case 'Sparky': return 'Frequent Blunders & Random Play';
-      case 'Pawnzy': return 'Pawn Storm Obsession';
+      case 'Pawzy': return 'Pawn Storm Obsession';
       case 'Coward': return 'Passive Retreats & Extreme Defense';
       case 'Rookie': return 'Immediate Undefended Piece Captures';
       case 'Scholar': return 'Early Scholar\'s Mate Tactics';
       case 'Molly': return 'Closed Files & Iron Pawn Walls';
-      case 'Berserker': return 'Reckless Attacking & Early Sacrifices';
+      case 'Berkserker': return 'Reckless Attacking & Early Sacrifices';
       case 'Blaire': return 'Rapid King-side Tactical Assault';
       case 'Python': return 'Subtle Maneuvers & Positional Squeezes';
       case 'Gambit': return 'Chaos Inducement & Material Imbalance';

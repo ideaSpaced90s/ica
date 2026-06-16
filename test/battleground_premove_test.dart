@@ -37,7 +37,11 @@ class FakeStockfishService extends Fake implements StockfishService {
   @override
   Future<void> stopAnalysis() async {}
   @override
-  Future<void> sendCommand(String command) async {}
+  Future<void> sendCommand(String command) async {
+    if (command.trim() == 'isready') {
+      _controller.add('readyok');
+    }
+  }
   @override
   Future<void> analyzePosition(
     String fen, {

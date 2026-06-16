@@ -146,7 +146,7 @@ class AnalysisStockfishService implements ChessEngineService {
         if (code != 0) {
           debugPrint('AnalysisStockfishService: Process exited abnormally with code $code');
         }
-        _isReady = false;
+        _cleanupCurrentProcess();
         if (!completer.isCompleted && !isTimedOut) {
           completer.complete(false);
         }
@@ -271,7 +271,7 @@ class AnalysisStockfishService implements ChessEngineService {
       final bt = bTime?.inMilliseconds ?? 0;
       final wi = wInc?.inMilliseconds ?? 0;
       final bi = bInc?.inMilliseconds ?? 0;
-      await sendCommand('go wtime $wt btime $bt winc $wi binc $bi');
+      await sendCommand('go depth $depth wtime $wt btime $bt winc $wi binc $bi');
     } else {
       await sendCommand('go depth $depth');
     }

@@ -147,7 +147,7 @@ class StockfishService implements ChessEngineService {
         if (code != 0) {
           debugPrint('StockfishService: Process exited abnormally with code $code');
         }
-        _isReady = false;
+        _cleanupCurrentProcess();
         if (!completer.isCompleted && !isTimedOut) {
           completer.complete(false);
         }
@@ -160,6 +160,7 @@ class StockfishService implements ChessEngineService {
             (line) {
               final trimmed = line.trim();
               if (trimmed.isNotEmpty) {
+                debugPrint('StockfishService [RECV] -> $trimmed');
                 _outputController.add(trimmed);
 
                 if (trimmed == 'uciok') {
@@ -240,6 +241,7 @@ class StockfishService implements ChessEngineService {
       return;
     }
     try {
+      debugPrint('StockfishService [SEND] -> $command');
       _process!.stdin.writeln(command.trim());
     } catch (e) {
       debugPrint('StockfishService: Failed to send command "$command": $e');
@@ -264,7 +266,7 @@ class StockfishService implements ChessEngineService {
       final bt = bTime?.inMilliseconds ?? 0;
       final wi = wInc?.inMilliseconds ?? 0;
       final bi = bInc?.inMilliseconds ?? 0;
-      await sendCommand('go wtime $wt btime $bt winc $wi binc $bi');
+      await sendCommand('go depth $depth wtime $wt btime $bt winc $wi binc $bi');
     } else {
       await sendCommand('go depth $depth');
     }

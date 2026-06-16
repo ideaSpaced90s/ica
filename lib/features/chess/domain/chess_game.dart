@@ -174,76 +174,59 @@ class ChessGame {
 
               if (rookFileIdx != -1) {
                 final isKingside = rookFileIdx > fromFileIdx;
-                final kingFinalFile = isKingside ? 'g' : 'c';
-                final rookFinalFile = isKingside ? 'f' : 'd';
+                final resultingFen = _generateChess960CastlingFen(
+                  currentFen: fen,
+                  from: from,
+                  to: to,
+                  isWhite: isWhite,
+                  rookFileIdx: rookFileIdx,
+                  isKingside: isKingside,
+                );
 
-                final fenParts = fen.split(' ');
-                final ranksStr = fenParts[0].split('/');
-                final rankIdx = isWhite ? 7 : 0;
+                // Preserve history and append castling move
+                final oldHistory = List<chess_lib.State>.from(_chess.history);
 
-                // Expand rank to 8 individual character slots
-                final rankChars = List<String>.filled(8, '.');
-                int fileCursor = 0;
-                for (final char in ranksStr[rankIdx].split('')) {
-                  final code = char.codeUnitAt(0);
-                  if (code >= '1'.codeUnitAt(0) && code <= '8'.codeUnitAt(0)) {
-                    fileCursor += int.parse(char);
-                  } else {
-                    rankChars[fileCursor] = char;
-                    fileCursor++;
-                  }
-                }
+                final prevKings = chess_lib.ColorMap<int>(0);
+                prevKings[chess_lib.Color.WHITE] = _chess.kings[chess_lib.Color.WHITE];
+                prevKings[chess_lib.Color.BLACK] = _chess.kings[chess_lib.Color.BLACK];
 
-                final kingChar = rankChars[fromFileIdx];
-                final rookChar = rankChars[rookFileIdx];
+                final prevCastling = chess_lib.ColorMap<int>(0);
+                prevCastling[chess_lib.Color.WHITE] = _chess.castling[chess_lib.Color.WHITE];
+                prevCastling[chess_lib.Color.BLACK] = _chess.castling[chess_lib.Color.BLACK];
 
-                // Clear original locations
-                rankChars[fromFileIdx] = '.';
-                rankChars[rookFileIdx] = '.';
+                final prevTurn = _chess.turn;
+                final prevEp = _chess.ep_square;
+                final prevHalfMoves = _chess.half_moves;
+                final prevMoveNumber = _chess.move_number;
 
-                // Place at target castling locations
-                final kFinalIdx = files.indexOf(kingFinalFile);
-                final rFinalIdx = files.indexOf(rookFinalFile);
-                rankChars[kFinalIdx] = kingChar;
-                rankChars[rFinalIdx] = rookChar;
+                final flags = isKingside ? 32 : 64; // BITS_KSIDE_CASTLE = 32, BITS_QSIDE_CASTLE = 64
+                final fakeMove = chess_lib.Move(
+                  prevTurn,
+                  chess_lib.Chess.SQUARES[from]!,
+                  chess_lib.Chess.SQUARES[to]!,
+                  flags,
+                  chess_lib.PieceType.KING,
+                  null,
+                  null,
+                );
 
-                // Re-compact rank layout
-                final buffer = StringBuffer();
-                int emptyCount = 0;
-                for (final c in rankChars) {
-                  if (c == '.') {
-                    emptyCount++;
-                  } else {
-                    if (emptyCount > 0) {
-                      buffer.write(emptyCount);
-                      emptyCount = 0;
-                    }
-                    buffer.write(c);
-                  }
-                }
-                if (emptyCount > 0) {
-                  buffer.write(emptyCount);
-                }
-                ranksStr[rankIdx] = buffer.toString();
+                final fakeState = chess_lib.State(
+                  fakeMove,
+                  prevKings,
+                  prevTurn,
+                  prevCastling,
+                  prevEp,
+                  prevHalfMoves,
+                  prevMoveNumber,
+                );
 
-                final newPlacement = ranksStr.join('/');
-                final newTurn = isWhite ? 'b' : 'w';
-
-                String newRights = fenParts[2];
-                if (isWhite) {
-                  newRights = newRights.replaceAll(RegExp(r'[KQ]'), '');
-                } else {
-                  newRights = newRights.replaceAll(RegExp(r'[kq]'), '');
-                }
-                if (newRights.isEmpty) newRights = '-';
-
-                final newEnPassant = '-';
-                final halfmove = 0;
-                final fullmove = int.parse(fenParts[5]) + (isWhite ? 0 : 1);
-
-                final resultingFen =
-                    '$newPlacement $newTurn $newRights $newEnPassant $halfmove $fullmove';
                 _chess.load(resultingFen);
+                _chess.history.addAll(oldHistory);
+                _chess.history.add(fakeState);
+
+                _cachedSanLabels = null;
+                _cachedHistoryLength = 0;
+
                 return true;
               }
             }
@@ -396,12 +379,17 @@ class ChessGame {
     if (currentHistory.length > _cachedHistoryLength) {
       final tempGame = chess_lib.Chess.fromFEN(initialFen);
       for (int i = 0; i < _cachedHistoryLength; i++) {
-        tempGame.move(currentHistory[i].move);
+        _executeMoveOrChess960Castle(tempGame, currentHistory[i].move);
       }
       for (int i = _cachedHistoryLength; i < currentHistory.length; i++) {
         final move = currentHistory[i].move;
-        _cachedSanLabels!.add(tempGame.move_to_san(move));
-        tempGame.move(move);
+        final isCastling = (move.flags & 32) != 0 || (move.flags & 64) != 0;
+        final isKing = move.piece == chess_lib.PieceType.KING;
+        final san = (isChess960 && isKing && isCastling)
+            ? ((move.flags & 32) != 0 ? 'O-O' : 'O-O-O')
+            : tempGame.move_to_san(move);
+        _cachedSanLabels!.add(san);
+        _executeMoveOrChess960Castle(tempGame, move);
       }
       _cachedHistoryLength = currentHistory.length;
     } else if (currentHistory.length < _cachedHistoryLength) {
@@ -409,8 +397,13 @@ class ChessGame {
       final tempGame = chess_lib.Chess.fromFEN(initialFen);
       for (final h in currentHistory) {
         final move = h.move;
-        _cachedSanLabels!.add(tempGame.move_to_san(move));
-        tempGame.move(move);
+        final isCastling = (move.flags & 32) != 0 || (move.flags & 64) != 0;
+        final isKing = move.piece == chess_lib.PieceType.KING;
+        final san = (isChess960 && isKing && isCastling)
+            ? ((move.flags & 32) != 0 ? 'O-O' : 'O-O-O')
+            : tempGame.move_to_san(move);
+        _cachedSanLabels!.add(san);
+        _executeMoveOrChess960Castle(tempGame, move);
       }
       _cachedHistoryLength = currentHistory.length;
     }
@@ -421,8 +414,13 @@ class ChessGame {
       final debugLabels = <String>[];
       for (final h in currentHistory) {
         final move = h.move;
-        debugLabels.add(tempGame.move_to_san(move));
-        tempGame.move(move);
+        final isCastling = (move.flags & 32) != 0 || (move.flags & 64) != 0;
+        final isKing = move.piece == chess_lib.PieceType.KING;
+        final san = (isChess960 && isKing && isCastling)
+            ? ((move.flags & 32) != 0 ? 'O-O' : 'O-O-O')
+            : tempGame.move_to_san(move);
+        debugLabels.add(san);
+        _executeMoveOrChess960Castle(tempGame, move);
       }
       stopwatchDart.stop();
 
@@ -543,6 +541,148 @@ class ChessGame {
         return 9.0;
       default:
         return 0.0;
+    }
+  }
+
+  String _generateChess960CastlingFen({
+    required String currentFen,
+    required String from,
+    required String to,
+    required bool isWhite,
+    required int rookFileIdx,
+    required bool isKingside,
+  }) {
+    final kingFinalFile = isKingside ? 'g' : 'c';
+    final rookFinalFile = isKingside ? 'f' : 'd';
+
+    final fenParts = currentFen.split(' ');
+    final ranksStr = fenParts[0].split('/');
+    final rankIdx = isWhite ? 7 : 0;
+
+    // Expand rank to 8 individual character slots
+    final rankChars = List<String>.filled(8, '.');
+    int fileCursor = 0;
+    for (final char in ranksStr[rankIdx].split('')) {
+      final code = char.codeUnitAt(0);
+      if (code >= '1'.codeUnitAt(0) && code <= '8'.codeUnitAt(0)) {
+        fileCursor += int.parse(char);
+      } else {
+        rankChars[fileCursor] = char;
+        fileCursor++;
+      }
+    }
+
+    final fromFileIdx = files.indexOf(from[0]);
+    final kingChar = rankChars[fromFileIdx];
+    final rookChar = rankChars[rookFileIdx];
+
+    // Clear original locations
+    rankChars[fromFileIdx] = '.';
+    rankChars[rookFileIdx] = '.';
+
+    // Place at target castling locations
+    final kFinalIdx = files.indexOf(kingFinalFile);
+    final rFinalIdx = files.indexOf(rookFinalFile);
+    rankChars[kFinalIdx] = kingChar;
+    rankChars[rFinalIdx] = rookChar;
+
+    // Re-compact rank layout
+    final buffer = StringBuffer();
+    int emptyCount = 0;
+    for (final c in rankChars) {
+      if (c == '.') {
+        emptyCount++;
+      } else {
+        if (emptyCount > 0) {
+          buffer.write(emptyCount);
+          emptyCount = 0;
+        }
+        buffer.write(c);
+      }
+    }
+    if (emptyCount > 0) {
+      buffer.write(emptyCount);
+    }
+    ranksStr[rankIdx] = buffer.toString();
+
+    final newPlacement = ranksStr.join('/');
+    final newTurn = isWhite ? 'b' : 'w';
+
+    String newRights = fenParts[2];
+    if (isWhite) {
+      newRights = newRights.replaceAll(RegExp(r'[KQ]'), '');
+    } else {
+      newRights = newRights.replaceAll(RegExp(r'[kq]'), '');
+    }
+    if (newRights.isEmpty) newRights = '-';
+
+    final newEnPassant = '-';
+    final halfmove = 0;
+    final fullmove = int.parse(fenParts[5]) + (isWhite ? 0 : 1);
+
+    return '$newPlacement $newTurn $newRights $newEnPassant $halfmove $fullmove';
+  }
+
+  void _executeMoveOrChess960Castle(chess_lib.Chess tempGame, chess_lib.Move move) {
+    final isCastling = (move.flags & 32) != 0 || (move.flags & 64) != 0;
+    final isKing = move.piece == chess_lib.PieceType.KING;
+    if (isChess960 && isKing && isCastling) {
+      final fromStr = chess_lib.Chess.algebraic(move.from);
+      final toStr = chess_lib.Chess.algebraic(move.to);
+      final isWhite = move.color == chess_lib.Color.WHITE;
+      final isKingside = (move.flags & 32) != 0;
+
+      final myRank = isWhite ? '1' : '8';
+      int rookFileIdx = -1;
+
+      final targetPiece = tempGame.get(toStr);
+      final isTargetFriendlyRook =
+          targetPiece != null &&
+          targetPiece.type == chess_lib.PieceType.ROOK &&
+          targetPiece.color == move.color;
+
+      final fromFileIdx = files.indexOf(fromStr[0]);
+      final toFileIdx = files.indexOf(toStr[0]);
+
+      if (isTargetFriendlyRook) {
+        rookFileIdx = toFileIdx;
+      } else {
+        if (toStr[0] == 'g' || toFileIdx > fromFileIdx) {
+          for (int f = fromFileIdx + 1; f < 8; f++) {
+            final rp = tempGame.get('${files[f]}$myRank');
+            if (rp != null &&
+                rp.type == chess_lib.PieceType.ROOK &&
+                rp.color == move.color) {
+              rookFileIdx = f;
+              break;
+            }
+          }
+        } else {
+          for (int f = 0; f < fromFileIdx; f++) {
+            final rp = tempGame.get('${files[f]}$myRank');
+            if (rp != null &&
+                rp.type == chess_lib.PieceType.ROOK &&
+                rp.color == move.color) {
+              rookFileIdx = f;
+              break;
+            }
+          }
+        }
+      }
+
+      if (rookFileIdx != -1) {
+        final castlingFen = _generateChess960CastlingFen(
+          currentFen: tempGame.fen,
+          from: fromStr,
+          to: toStr,
+          isWhite: isWhite,
+          rookFileIdx: rookFileIdx,
+          isKingside: isKingside,
+        );
+        tempGame.load(castlingFen);
+      }
+    } else {
+      tempGame.move(move);
     }
   }
 }

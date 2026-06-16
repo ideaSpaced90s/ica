@@ -6,7 +6,12 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `attacks_high_value_piece`, `is_closed_file`, `is_endgame`, `is_open_file`, `restricts_opponent_mobility`, `simple_hash`
+// These functions are ignored because they are not marked as `pub`: `attacks_high_value_piece`, `is_closed_file`, `is_endgame`, `is_open_file`, `restricts_opponent_mobility`, `shakmaty_move_to_uci`, `simple_hash`
+
+PersonaConfig getPersonaConfig({required String avatarName}) => RustLib
+    .instance
+    .api
+    .crateApiPersonaGetPersonaConfig(avatarName: avatarName);
 
 String selectPersonaMoveRust({
   required String fen,
@@ -38,4 +43,28 @@ class PersonaCandidate {
           runtimeType == other.runtimeType &&
           uciMove == other.uciMove &&
           evaluation == other.evaluation;
+}
+
+class PersonaConfig {
+  final int multiPv;
+  final int skillLevel;
+  final int depth;
+
+  const PersonaConfig({
+    required this.multiPv,
+    required this.skillLevel,
+    required this.depth,
+  });
+
+  @override
+  int get hashCode => multiPv.hashCode ^ skillLevel.hashCode ^ depth.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PersonaConfig &&
+          runtimeType == other.runtimeType &&
+          multiPv == other.multiPv &&
+          skillLevel == other.skillLevel &&
+          depth == other.depth;
 }

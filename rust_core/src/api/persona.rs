@@ -13,6 +13,14 @@ fn simple_hash(s: &str) -> u64 {
     hash
 }
 
+fn get_jitter_amount(hash: u64, range: u64, offset: f64) -> f64 {
+    if cfg!(test) {
+        0.0
+    } else {
+        ((hash % range) as f64 / 100.0) - offset
+    }
+}
+
 fn is_endgame(pos: &Chess) -> bool {
     let mut piece_count = 0;
     for sq in Square::ALL {
@@ -94,6 +102,80 @@ fn restricts_opponent_mobility(pos: &Chess, m: &Option<Move>) -> bool {
     opponent_moves_count < 20
 }
 
+fn shakmaty_move_to_uci(m: &Move, is_chess960: bool) -> String {
+    match m {
+        Move::Normal { from, to, promotion, .. } => {
+            let promo_str = match promotion {
+                Some(Role::Queen) => "q",
+                Some(Role::Rook) => "r",
+                Some(Role::Bishop) => "b",
+                Some(Role::Knight) => "n",
+                _ => "",
+            };
+            format!("{}{}{}", from.to_string(), to.to_string(), promo_str)
+        }
+        Move::EnPassant { from, to } => {
+            format!("{}{}", from.to_string(), to.to_string())
+        }
+        Move::Castle { king, rook } => {
+            if is_chess960 {
+                format!("{}{}", king.to_string(), rook.to_string())
+            } else {
+                let is_white = king.rank() == shakmaty::Rank::First;
+                let is_kingside = rook.file() > king.file();
+                let dest_file = if is_kingside { shakmaty::File::G } else { shakmaty::File::C };
+                let dest_rank = if is_white { shakmaty::Rank::First } else { shakmaty::Rank::Eighth };
+                let dest_sq = Square::from_coords(dest_file, dest_rank);
+                format!("{}{}", king.to_string(), dest_sq.to_string())
+            }
+        }
+        Move::Put { to, role } => {
+            let role_char = match role {
+                Role::Queen => 'q',
+                Role::Rook => 'r',
+                Role::Bishop => 'b',
+                Role::Knight => 'n',
+                Role::Pawn => 'p',
+                Role::King => 'k',
+            };
+            format!("{}@{}", role_char, to.to_string())
+        }
+    }
+}
+
+pub struct PersonaConfig {
+    pub multi_pv: i32,
+    pub skill_level: i32,
+    pub depth: i32,
+}
+
+#[flutter_rust_bridge::frb(sync)]
+pub fn get_persona_config(avatar_name: String) -> PersonaConfig {
+    match avatar_name.as_str() {
+        "Sparky" => PersonaConfig { multi_pv: 45, skill_level: 0, depth: 1 },
+        "Pawzy" | "Pawnzy" => PersonaConfig { multi_pv: 30, skill_level: 1, depth: 1 },
+        "Coward" => PersonaConfig { multi_pv: 20, skill_level: 2, depth: 2 },
+        "Rookie" | "Rook-ie" => PersonaConfig { multi_pv: 15, skill_level: 3, depth: 3 },
+        "Scholar" => PersonaConfig { multi_pv: 12, skill_level: 4, depth: 3 },
+        "Molly" => PersonaConfig { multi_pv: 10, skill_level: 5, depth: 4 },
+        "Berserker" | "Berkserker" => PersonaConfig { multi_pv: 10, skill_level: 6, depth: 4 },
+        "Blaire" => PersonaConfig { multi_pv: 8, skill_level: 7, depth: 5 },
+        "Python" => PersonaConfig { multi_pv: 8, skill_level: 8, depth: 6 },
+        "Gambit" => PersonaConfig { multi_pv: 6, skill_level: 9, depth: 7 },
+        "Trapper" => PersonaConfig { multi_pv: 6, skill_level: 10, depth: 8 },
+        "Assassin" => PersonaConfig { multi_pv: 6, skill_level: 11, depth: 9 },
+        "Vala" => PersonaConfig { multi_pv: 6, skill_level: 12, depth: 10 },
+        "Magician" => PersonaConfig { multi_pv: 6, skill_level: 13, depth: 12 },
+        "Sentinel" => PersonaConfig { multi_pv: 4, skill_level: 14, depth: 14 },
+        "Murphy" => PersonaConfig { multi_pv: 4, skill_level: 16, depth: 15 },
+        "Titan" => PersonaConfig { multi_pv: 1, skill_level: 18, depth: 18 },
+        "Alien" => PersonaConfig { multi_pv: 12, skill_level: 18, depth: 19 },
+        "Champ" => PersonaConfig { multi_pv: 1, skill_level: 18, depth: 20 },
+        "King" | "Kingslayer" => PersonaConfig { multi_pv: 1, skill_level: 20, depth: 22 },
+        _ => PersonaConfig { multi_pv: 4, skill_level: 10, depth: 8 }, // Default fallback
+    }
+}
+
 #[flutter_rust_bridge::frb(sync)]
 pub fn select_persona_move_rust(
     fen: String,
@@ -125,8 +207,71 @@ pub fn select_persona_move_rust(
         Err(_) => return candidates[0].uci_move.clone(),
     };
 
+    #[cfg(not(test))]
+    let random_prob = match avatar_name.as_str() {
+        "Sparky" => 75.0,
+        "Pawzy" | "Pawnzy" => 35.0,
+        "Coward" => 15.0,
+        "Rookie" | "Rook-ie" => 5.0,
+        "Scholar" => 2.0,
+        "Molly" => 1.0,
+        "Berserker" | "Berkserker" => 0.5,
+        "Blaire" => 0.25,
+        "Python" => 0.15,
+        "Gambit" => 0.1,
+        "Trapper" => 0.07,
+        "Assassin" => 0.05,
+        "Vala" => 0.03,
+        "Magician" => 0.02,
+        "Sentinel" => 0.01,
+        "Murphy" => 0.005,
+        _ => 0.0,
+    };
+    #[cfg(test)]
+    let random_prob = 0.0;
+
+    if random_prob > 0.0 {
+        let turn_hash = simple_hash(&(fen.clone() + &move_count.to_string()));
+        let roll = (turn_hash % 1000000) as f64 / 10000.0;
+        if roll < random_prob {
+            let legal_moves = initial_pos.legal_moves();
+            if !legal_moves.is_empty() {
+                let move_seed = simple_hash(&(fen.clone() + "move" + &move_count.to_string()));
+                let index = (move_seed as usize) % legal_moves.len();
+                let chosen_move = &legal_moves[index];
+                let uci = shakmaty_move_to_uci(chosen_move, is_chess960);
+                #[cfg(debug_assertions)]
+                println!("🎲 [Rust Randomizer] {} triggered random move: {} (roll: {}, prob: {})", avatar_name, uci, roll, random_prob);
+                return uci;
+            }
+        }
+    }
+
     let turn_color = initial_pos.turn();
     let opponent_color = !turn_color;
+
+    let gate_threshold = match avatar_name.as_str() {
+        "Sparky" => 9999.0, // practically no gate
+        "Pawzy" | "Pawnzy" => 5.0,
+        "Coward" => 3.0,
+        "Rookie" | "Rook-ie" => 2.0,
+        "Scholar" => 1.5,
+        "Molly" => 1.2,
+        "Berserker" | "Berkserker" => 1.5,
+        "Blaire" => 1.0,
+        "Python" => 0.8,
+        "Gambit" => 1.2,
+        "Trapper" => 0.8,
+        "Assassin" => 0.8,
+        "Vala" => 0.5,
+        "Magician" => 1.0,
+        "Sentinel" => 0.4,
+        "Murphy" => 0.2,
+        "Titan" => 0.1,
+        "Alien" => 0.5,
+        "Champ" => 0.05,
+        _ => 9999.0,
+    };
 
     let mut best_move = candidates[0].uci_move.clone();
     let mut max_adjusted_score = -99999.0;
@@ -180,16 +325,27 @@ pub fn select_persona_move_rust(
         let piece = initial_pos.board().piece_at(from_sq);
         let target_piece = initial_pos.board().piece_at(to_sq);
 
+        let best_eval = candidates[0].evaluation;
+        let eval_drop = best_eval - candidate.evaluation;
+        if eval_drop > gate_threshold {
+            weight -= 9999.0;
+        }
+
         if avatar_name == "Sparky" {
             let hash = simple_hash(&(candidate.uci_move.clone() + &fen));
-            let random_val = ((hash % 300) as f64 / 100.0) - 1.5; // -1.5 to +1.5
-            weight += random_val;
-        } else if avatar_name == "Pawnzy" {
+            let jitter = get_jitter_amount(hash, 16000, 80.0);
+            weight += jitter;
+        } else if avatar_name == "Pawzy" || avatar_name == "Pawnzy" {
             if let Some(p) = piece {
                 if p.role == Role::Pawn {
-                    weight += 1.5;
+                    weight += 2.0;
+                } else if p.role != Role::King {
+                    weight -= 1.5;
                 }
             }
+            let hash = simple_hash(&(candidate.uci_move.clone() + &fen));
+            let jitter = get_jitter_amount(hash, 6000, 30.0);
+            weight += jitter;
         } else if avatar_name == "Rook-ie" || avatar_name == "Rookie" {
             if target_piece.is_some() {
                 if initial_pos.board().attacks_to(to_sq, opponent_color, initial_pos.board().occupied()).is_empty() {
@@ -198,6 +354,9 @@ pub fn select_persona_move_rust(
                     weight += 0.5;
                 }
             }
+            let hash = simple_hash(&(candidate.uci_move.clone() + &fen));
+            let jitter = get_jitter_amount(hash, 1200, 6.0);
+            weight += jitter;
         } else if avatar_name == "Molly" {
             if let Some(p) = piece {
                 if p.role == Role::Pawn {
@@ -228,6 +387,9 @@ pub fn select_persona_move_rust(
                     weight -= 0.3;
                 }
             }
+            let hash = simple_hash(&(candidate.uci_move.clone() + &fen));
+            let jitter = get_jitter_amount(hash, 500, 2.5);
+            weight += jitter;
         } else if avatar_name == "Blaire" {
             if let Some(p) = piece {
                 if p.role == Role::Knight || p.role == Role::Bishop {
@@ -263,12 +425,18 @@ pub fn select_persona_move_rust(
                 let distance = (((from_file_idx - king_file_idx).pow(2) + (from_rank_idx - king_rank_idx).pow(2)) as f64).sqrt();
                 weight += (10.0 - distance).max(0.0) * 0.15;
             }
+            let hash = simple_hash(&(candidate.uci_move.clone() + &fen));
+            let jitter = get_jitter_amount(hash, 180, 0.9);
+            weight += jitter;
         } else if avatar_name == "Gambit" {
             let best_eval = candidates[0].evaluation;
             let eval_drop = best_eval - candidate.evaluation;
             if eval_drop > 0.5 && eval_drop < 4.0 && (target_piece.is_some() || piece.map_or(false, |p| p.role == Role::Pawn)) {
                 weight += 2.5;
             }
+            let hash = simple_hash(&(candidate.uci_move.clone() + &fen));
+            let jitter = get_jitter_amount(hash, 80, 0.4);
+            weight += jitter;
         } else if avatar_name == "Vala" {
             if let Some(m) = &found_move {
                 let mut sandbox = initial_pos.clone();
@@ -276,10 +444,29 @@ pub fn select_persona_move_rust(
                 if sandbox.is_check() {
                     weight += 0.7;
                 }
+
+                // Check for fork (attacking >=2 non-pawn opponent pieces)
+                let mut attack_count = 0;
+                for sq in Square::ALL {
+                    if let Some(target) = sandbox.board().piece_at(sq) {
+                        if target.color == opponent_color && target.role != Role::Pawn {
+                            let is_atk = !sandbox.board().attacks_to(sq, turn_color, sandbox.board().occupied()).is_empty();
+                            if is_atk {
+                                attack_count += 1;
+                            }
+                        }
+                    }
+                }
+                if attack_count >= 2 {
+                    weight += 1.0;
+                }
             }
             if target_piece.is_some() && candidate.evaluation > 0.0 {
                 weight += 0.5;
             }
+            let hash = simple_hash(&(candidate.uci_move.clone() + &fen));
+            let jitter = get_jitter_amount(hash, 20, 0.1);
+            weight += jitter;
         } else if avatar_name == "Sentinel" {
             let file = to_sq.file();
             let rank = to_sq.rank();
@@ -291,21 +478,59 @@ pub fn select_persona_move_rust(
             if initial_pos.board().attacks_to(to_sq, opponent_color, initial_pos.board().occupied()).is_empty() {
                 weight += 0.5;
             }
+            if let Some(p) = piece {
+                if p.role == Role::Knight {
+                    let is_central = (file == shakmaty::File::C || file == shakmaty::File::D || file == shakmaty::File::E || file == shakmaty::File::F) &&
+                                     (rank == shakmaty::Rank::Fourth || rank == shakmaty::Rank::Fifth || rank == shakmaty::Rank::Sixth);
+                    if is_central {
+                        if let Some(m) = &found_move {
+                            let mut sandbox = initial_pos.clone();
+                            sandbox.play_unchecked(m);
+                            let is_defended_by_pawn = !((sandbox.board().by_color(turn_color) & sandbox.board().by_role(Role::Pawn)) & sandbox.board().attacks_to(to_sq, turn_color, sandbox.board().occupied())).is_empty();
+                            if is_defended_by_pawn {
+                                weight += 1.5;
+                            }
+                        }
+                    }
+                }
+            }
             if restricts_opponent_mobility(&initial_pos, &found_move) {
                 weight += 0.8;
             }
+            let hash = simple_hash(&(candidate.uci_move.clone() + &fen));
+            let jitter = get_jitter_amount(hash, 10, 0.05);
+            weight += jitter;
         } else if avatar_name == "Murphy" {
             let file = to_sq.file();
             if let Some(p) = piece {
                 if (p.role == Role::Rook || p.role == Role::Queen) && is_open_file(file, &initial_pos) {
                     weight += 1.0;
                 }
-                if move_count < 24 && (p.role == Role::Knight || p.role == Role::Bishop) {
-                    weight += 0.6;
+                if move_count < 20 && (p.role == Role::Knight || p.role == Role::Bishop) {
+                    weight += 1.0;
+                }
+                if p.role == Role::Rook {
+                    let mut has_other = false;
+                    for rank in shakmaty::Rank::ALL {
+                        let sq = Square::from_coords(file, rank);
+                        if sq != from_sq {
+                            if let Some(other_p) = initial_pos.board().piece_at(sq) {
+                                if other_p.color == turn_color && (other_p.role == Role::Rook || other_p.role == Role::Queen) {
+                                    has_other = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if has_other {
+                        weight += 1.5;
+                    }
                 }
             }
+            let hash = simple_hash(&(candidate.uci_move.clone() + &fen));
+            let jitter = get_jitter_amount(hash, 6, 0.03);
+            weight += jitter;
         } else if avatar_name == "Coward" {
-            // Extreme defender: retreats pieces, castling, dislikes advancing and captures
             let is_retreat = if turn_color == Color::White {
                 to_sq.rank() < from_sq.rank()
             } else {
@@ -317,6 +542,18 @@ pub fn select_persona_move_rust(
             if let Some(Move::Castle { .. }) = found_move {
                 weight += 1.5;
             }
+            let mut is_defended = false;
+            if let Some(m) = &found_move {
+                let mut sandbox = initial_pos.clone();
+                sandbox.play_unchecked(m);
+                if sandbox.is_check() {
+                    weight -= 0.8;
+                }
+                is_defended = !sandbox.board().attacks_to(to_sq, turn_color, sandbox.board().occupied()).is_empty();
+            }
+            if is_defended {
+                weight += 1.0;
+            }
             if let Some(p) = piece {
                 if p.role == Role::Pawn {
                     let to_rank = to_sq.rank() as i32 + 1;
@@ -324,13 +561,6 @@ pub fn select_persona_move_rust(
                     if !is_advanced {
                         weight += 0.8;
                     }
-                }
-            }
-            if let Some(m) = &found_move {
-                let mut sandbox = initial_pos.clone();
-                sandbox.play_unchecked(m);
-                if sandbox.is_check() {
-                    weight -= 0.8;
                 }
             }
             if target_piece.is_some() {
@@ -341,8 +571,10 @@ pub fn select_persona_move_rust(
             if is_deep {
                 weight -= 1.0;
             }
+            let hash = simple_hash(&(candidate.uci_move.clone() + &fen));
+            let jitter = get_jitter_amount(hash, 2000, 10.0);
+            weight += jitter;
         } else if avatar_name == "Scholar" {
-            // Tactical trickster: quick attacks and early queen/bishop moves
             if move_count < 15 {
                 if let Some(p) = piece {
                     if p.role == Role::Queen || p.role == Role::Bishop {
@@ -356,6 +588,14 @@ pub fn select_persona_move_rust(
                     }
                 }
             }
+            let target_f_square = if turn_color == Color::White { Square::F7 } else { Square::F2 };
+            if to_sq == target_f_square {
+                if let Some(p) = piece {
+                    if p.role == Role::Queen || p.role == Role::Bishop {
+                        weight += 2.0;
+                    }
+                }
+            }
             if let Some(m) = &found_move {
                 let mut sandbox = initial_pos.clone();
                 sandbox.play_unchecked(m);
@@ -366,8 +606,10 @@ pub fn select_persona_move_rust(
             if attacks_high_value_piece(&initial_pos, &found_move, opponent_color) {
                 weight += 0.8;
             }
-        } else if avatar_name == "Berserker" {
-            // Reckless attacker: storms opponent king, early sacrifices
+            let hash = simple_hash(&(candidate.uci_move.clone() + &fen));
+            let jitter = get_jitter_amount(hash, 800, 4.0);
+            weight += jitter;
+        } else if avatar_name == "Berserker" || avatar_name == "Berkserker" {
             if let Some(king_sq) = initial_pos.board().king_of(opponent_color) {
                 let df = (to_sq.file() as i32 - king_sq.file() as i32).abs();
                 let dr = (to_sq.rank() as i32 - king_sq.rank() as i32).abs();
@@ -384,10 +626,12 @@ pub fn select_persona_move_rust(
             let best_eval = candidates[0].evaluation;
             let eval_drop = best_eval - candidate.evaluation;
             if eval_drop > 0.5 && eval_drop < 3.0 && target_piece.is_some() {
-                weight += 1.8; // willing to sacrifice for attacks
+                weight += 1.8;
             }
+            let hash = simple_hash(&(candidate.uci_move.clone() + &fen));
+            let jitter = get_jitter_amount(hash, 300, 1.5);
+            weight += jitter;
         } else if avatar_name == "Python" {
-            // Positional squeezer: controls center, restricts mobility
             if restricts_opponent_mobility(&initial_pos, &found_move) {
                 weight += 1.0;
             }
@@ -412,21 +656,44 @@ pub fn select_persona_move_rust(
                             weight += 0.5;
                         }
                     }
+
+                    let rank_val = to_sq.rank() as i32 + 1;
+                    let is_wedge = if turn_color == Color::White {
+                        rank_val == 5 || rank_val == 6
+                    } else {
+                        rank_val == 4 || rank_val == 3
+                    };
+                    if is_wedge {
+                        if let Some(m) = &found_move {
+                            let mut sandbox = initial_pos.clone();
+                            sandbox.play_unchecked(m);
+                            let is_defended_by_pawn = !((sandbox.board().by_color(turn_color) & sandbox.board().by_role(Role::Pawn)) & sandbox.board().attacks_to(to_sq, turn_color, sandbox.board().occupied())).is_empty();
+                            if is_defended_by_pawn {
+                                weight += 1.0;
+                            }
+                        }
+                    }
                 }
+            }
+            let file = to_sq.file();
+            if is_open_file(file, &initial_pos) {
+                weight -= 0.5;
             }
             let best_eval = candidates[0].evaluation;
             if best_eval - candidate.evaluation > 0.8 {
-                weight -= 2.0; // avoids speculative sacrifices
+                weight -= 2.0;
             }
+            let hash = simple_hash(&(candidate.uci_move.clone() + &fen));
+            let jitter = get_jitter_amount(hash, 120, 0.6);
+            weight += jitter;
         } else if avatar_name == "Trapper" {
-            // Tricky traps and pins
             let best_eval = candidates[0].evaluation;
             let eval_drop = best_eval - candidate.evaluation;
             if eval_drop > 0.3 && eval_drop < 1.5 && target_piece.is_some() {
-                weight += 1.5; // poisoned piece traps
+                weight += 1.5;
             }
             if let Some(p) = piece {
-                if p.role == Role::Knight || p.role == Role::Bishop || p.role == Role::Rook {
+                if p.role == Role::Knight || p.role == Role::Bishop || p.role == Role::Rook || p.role == Role::Queen {
                     if let Some(m) = &found_move {
                         let mut sandbox = initial_pos.clone();
                         sandbox.play_unchecked(m);
@@ -442,13 +709,15 @@ pub fn select_persona_move_rust(
                             }
                         }
                         if attack_count >= 2 {
-                            weight += 0.8; // double attacks/forks setup
+                            weight += if p.role == Role::Queen { 1.2 } else { 0.8 };
                         }
                     }
                 }
             }
+            let hash = simple_hash(&(candidate.uci_move.clone() + &fen));
+            let jitter = get_jitter_amount(hash, 50, 0.25);
+            weight += jitter;
         } else if avatar_name == "Assassin" {
-            // Relentless hunter: king safety pressure and open center breaks
             if let Some(king_sq) = initial_pos.board().king_of(opponent_color) {
                 let is_adjacent = (to_sq.file() as i32 - king_sq.file() as i32).abs() <= 1
                     && (to_sq.rank() as i32 - king_sq.rank() as i32).abs() <= 1;
@@ -460,7 +729,22 @@ pub fn select_persona_move_rust(
                 if p.role == Role::Pawn {
                     let file = to_sq.file();
                     if file == shakmaty::File::D || file == shakmaty::File::E {
-                        weight += 0.8; // opens center files
+                        weight += 0.8;
+                    }
+
+                    if let Some(king_sq) = initial_pos.board().king_of(opponent_color) {
+                        let file_dist = (to_sq.file() as i32 - king_sq.file() as i32).abs();
+                        let rank_dist = (to_sq.rank() as i32 - king_sq.rank() as i32).abs();
+                        if file_dist <= 2 && rank_dist <= 2 {
+                            if let Some(m) = &found_move {
+                                let mut sandbox = initial_pos.clone();
+                                sandbox.play_unchecked(m);
+                                let attacked_pawns = !((sandbox.board().by_color(opponent_color) & sandbox.board().by_role(Role::Pawn)) & sandbox.board().attacks_to(to_sq, turn_color, sandbox.board().occupied())).is_empty();
+                                if attacked_pawns {
+                                    weight += 1.2;
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -471,20 +755,34 @@ pub fn select_persona_move_rust(
                     let file_dist = (to_sq.file() as i32 - king_sq.file() as i32).abs();
                     let rank_dist = (to_sq.rank() as i32 - king_sq.rank() as i32).abs();
                     if file_dist <= 2 && rank_dist <= 2 {
-                        weight += 1.5; // sacrifice in the vicinity of king
+                        weight += 1.5;
                     }
                 }
             }
+            let hash = simple_hash(&(candidate.uci_move.clone() + &fen));
+            let jitter = get_jitter_amount(hash, 30, 0.15);
+            weight += jitter;
         } else if avatar_name == "Magician" {
-            // Tal-like attacker: creative sacrifices
             let best_eval = candidates[0].evaluation;
             let eval_drop = best_eval - candidate.evaluation;
             if eval_drop > 0.5 && eval_drop < 3.5 {
                 if let Some(m) = &found_move {
                     let mut sandbox = initial_pos.clone();
                     sandbox.play_unchecked(m);
-                    if sandbox.is_check() || attacks_high_value_piece(&initial_pos, &found_move, opponent_color) {
-                        weight += 2.0;
+
+                    let mut attack_count = 0;
+                    for sq in Square::ALL {
+                        if let Some(target) = sandbox.board().piece_at(sq) {
+                            if target.color == opponent_color {
+                                let is_atk = !sandbox.board().attacks_to(sq, turn_color, sandbox.board().occupied()).is_empty();
+                                if is_atk {
+                                    attack_count += 1;
+                                }
+                            }
+                        }
+                    }
+                    if attack_count >= 2 || sandbox.is_check() {
+                        weight += 2.5;
                     }
                 }
             }
@@ -495,6 +793,9 @@ pub fn select_persona_move_rust(
                     weight += 1.0;
                 }
             }
+            let hash = simple_hash(&(candidate.uci_move.clone() + &fen));
+            let jitter = get_jitter_amount(hash, 14, 0.07);
+            weight += jitter;
         } else if avatar_name == "Titan" {
             let file = to_sq.file();
             let rank = to_sq.rank();
@@ -504,16 +805,19 @@ pub fn select_persona_move_rust(
                 weight += 0.3;
             }
         } else if avatar_name == "Alien" {
-            // AlphaZero bizarre moves
             let best_eval = candidates[0].evaluation;
             let eval_drop = best_eval - candidate.evaluation;
-            if eval_drop < 0.4 {
+            if eval_drop < 0.5 {
+                let hash = simple_hash(&(candidate.uci_move.clone() + &fen));
+                let jitter = get_jitter_amount(hash, 300, 1.5);
+                weight += jitter;
+
                 if move_count >= 10 && move_count <= 30 {
                     if let Some(p) = piece {
                         if p.role == Role::Pawn {
                             let file = to_sq.file();
                             if file == shakmaty::File::A || file == shakmaty::File::H {
-                                weight += 1.2; // flank pawn pushes
+                                weight += 1.5;
                             }
                         }
                     }
@@ -521,16 +825,17 @@ pub fn select_persona_move_rust(
                 if move_count >= 10 && move_count <= 35 {
                     if let Some(p) = piece {
                         if p.role == Role::King {
-                            weight += 1.0; // weird middlegame king walk
+                            weight += 1.2;
                         }
                         if p.role == Role::Bishop && to_sq.rank() == if turn_color == Color::White { shakmaty::Rank::First } else { shakmaty::Rank::Eighth } {
-                            weight += 0.8; // unusual bishop retreats
+                            weight += 1.0;
                         }
                     }
                 }
+            } else {
+                weight -= 9999.0;
             }
         } else if avatar_name == "Champ" {
-            // Pure stockfish with tiny human variety
             let best_eval = candidates[0].evaluation;
             let eval_drop = best_eval - candidate.evaluation;
             if eval_drop <= 0.05 {
@@ -547,6 +852,7 @@ pub fn select_persona_move_rust(
 
     best_move
 }
+
 
 #[cfg(test)]
 mod tests {

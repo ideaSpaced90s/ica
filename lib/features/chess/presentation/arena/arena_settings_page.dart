@@ -128,8 +128,7 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
                           ),
                         ),
                         _SettingsSwitchTile(
-                          label: 'Master Animations',
-                          description: 'Enables theme-specific effects and signature move animations. Global animations (piece glide, tap ripple, landing) are always active.',
+                          label: 'Animations State',
                           icon: state.isAnimationsEnabled
                               ? Icons.auto_awesome_rounded
                               : Icons.auto_awesome_outlined,
@@ -146,7 +145,6 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
                     children: [
                       _SettingsSwitchTile(
                         label: 'Game Sounds',
-                        description: 'Enable or disable all chessboard sounds locally',
                         icon: state.isGameSoundEnabled
                             ? Icons.volume_up_rounded
                             : Icons.volume_off_rounded,
@@ -191,21 +189,64 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
                           },
                           trailing: Container(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
+                              horizontal: 10,
+                              vertical: 6,
                             ),
                             decoration: BoxDecoration(
                               color: ScholarlyTheme.accentBlueSoft,
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: ScholarlyTheme.accentBlue),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.5), width: 1.5),
                             ),
-                            child: Text(
-                              '${AiAvatar.getAvatar(state.engineLevel).name} / ${AiAvatar.getAvatar(state.bottomAvatarId).name}',
-                              style: GoogleFonts.inter(
-                                color: ScholarlyTheme.accentBlue,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 11,
-                              ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      AiAvatar.getAvatar(state.engineLevel).name,
+                                      style: GoogleFonts.inter(
+                                        color: ScholarlyTheme.accentBlue,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    const Text(
+                                      '↑',
+                                      style: TextStyle(
+                                        color: ScholarlyTheme.accentBlue,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 2),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      AiAvatar.getAvatar(state.bottomAvatarId).name,
+                                      style: GoogleFonts.inter(
+                                        color: ScholarlyTheme.accentBlue,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    const Text(
+                                      '↓',
+                                      style: TextStyle(
+                                        color: ScholarlyTheme.accentBlue,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
                           ),
                         ),
@@ -535,7 +576,7 @@ class _SettingsTile extends ConsumerWidget {
 
 class _SettingsSwitchTile extends ConsumerWidget {
   final String label;
-  final String description;
+  final String? description;
   final IconData icon;
   final bool value;
   final ValueChanged<bool> onChanged;
@@ -543,7 +584,7 @@ class _SettingsSwitchTile extends ConsumerWidget {
 
   const _SettingsSwitchTile({
     required this.label,
-    required this.description,
+    this.description,
     required this.icon,
     required this.value,
     required this.onChanged,
@@ -570,7 +611,7 @@ class _SettingsSwitchTile extends ConsumerWidget {
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: value
-                  ? ScholarlyTheme.accentBlue.withValues(alpha: 0.25)
+                   ? ScholarlyTheme.accentBlue.withValues(alpha: 0.25)
                   : Colors.white.withValues(alpha: 0.5),
               width: 1,
             ),
@@ -589,30 +630,32 @@ class _SettingsSwitchTile extends ConsumerWidget {
             fontWeight: FontWeight.w600,
           ),
         ),
-        subtitle: label == 'Quick play'
-            ? GestureDetector(
-                onTap: () {
-                  ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                  ScaffoldMessenger.of(context).clearSnackBars();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Text('⚠️ Opponents may not play at full strength!'),
-                      backgroundColor: Colors.orangeAccent,
-                      duration: const Duration(seconds: 2),
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        subtitle: description != null && description!.isNotEmpty
+            ? (label == 'Quick play'
+                ? GestureDetector(
+                    onTap: () {
+                      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                      ScaffoldMessenger.of(context).clearSnackBars();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: const Text('⚠️ Opponents may not play at full strength!'),
+                          backgroundColor: Colors.orangeAccent,
+                          duration: const Duration(seconds: 2),
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      );
+                    },
+                    child: Text(
+                      description!,
+                      style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 11),
                     ),
-                  );
-                },
-                child: Text(
-                  description,
-                  style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 11),
-                ),
-              )
-            : Text(
-                description,
-                style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 11),
-              ),
+                  )
+                : Text(
+                    description!,
+                    style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 11),
+                  ))
+            : null,
         activeThumbColor: ScholarlyTheme.accentBlue,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       ),

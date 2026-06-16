@@ -22,6 +22,7 @@ import '../domain/opening_classifier.dart';
 import '../domain/fen_parser.dart';
 import '../domain/models/dashboard_stats.dart';
 import 'package:kingslayer_chess/src/rust/api/cognitive.dart';
+import 'package:kingslayer_chess/src/rust/api/persona.dart' as rust_persona;
 import 'chess_provider.dart';
 import '../services/play_games_sync_service.dart';
 
@@ -381,6 +382,7 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
   DateTime _lastInfoUpdateTime = DateTime.fromMillisecondsSinceEpoch(0);
   String? _searchFen;
   final List<CandidateMove> _currentCandidates = [];
+  bool _waitingForReady = false;
 
   BattlegroundNotifier(
     this.ref,
@@ -530,14 +532,13 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
       final opponent =
           state.activeOpponent ??
           AiAvatar.getBestMatch(state.consolidatedRating);
+      final config = rust_persona.getPersonaConfig(avatarName: opponent.name);
       await _stockfishEngine.setSkillLevel(
-        opponent.skillLevel,
-        multiPV: (opponent.name == 'King' || opponent.name == 'Kingslayer')
-            ? 1
-            : 4,
+        config.skillLevel,
+        multiPV: config.multiPv,
       );
       _stockfishEngine.sendCommand(
-        'setoption name MultiPV value ${(opponent.name == 'King' || opponent.name == 'Kingslayer') ? 1 : 4}',
+        'setoption name MultiPV value ${config.multiPv}',
       );
 
       state = state.copyWith(
@@ -564,6 +565,7 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
   void _startAnalysis({int? depth}) async {
     if (!state.servicesStarted ||
         !state.engineReady ||
+        _waitingForReady ||
         state.game.gameOver ||
         state.isPaused) {
       return;
@@ -575,19 +577,18 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
 
     final opponent =
         state.activeOpponent ?? AiAvatar.getBestMatch(state.consolidatedRating);
+    final config = rust_persona.getPersonaConfig(avatarName: opponent.name);
     await _stockfishEngine.setSkillLevel(
-      opponent.skillLevel,
-      multiPV: (opponent.name == 'King' || opponent.name == 'Kingslayer')
-          ? 1
-          : 4,
+      config.skillLevel,
+      multiPV: config.multiPv,
     );
     _stockfishEngine.sendCommand(
-      'setoption name MultiPV value ${(opponent.name == 'King' || opponent.name == 'Kingslayer') ? 1 : 4}',
+      'setoption name MultiPV value ${config.multiPv}',
     );
 
     _searchFen = state.game.fen;
-    final targetDepth = depth ?? opponent.depth;
-    if (state.clockStarted && !state.game.gameOver) {
+    final targetDepth = depth ?? config.depth;
+    if (!state.game.gameOver) {
       _stockfishEngine.analyzePosition(
         state.game.fen,
         depth: targetDepth,
@@ -596,13 +597,46 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
         wInc: state.incrementDuration,
         bInc: state.incrementDuration,
       );
+
+      // Safety fallback timer: if the engine doesn't return a move, force stop
+      _engineMoveTimer?.cancel();
+      final aiTimeLeft = state.isPlayerWhite ? state.blackTimeLeft : state.whiteTimeLeft;
+      final safetyTimeoutMs = (aiTimeLeft.inMilliseconds * 0.2).clamp(1000.0, 5000.0).toInt();
+      _engineMoveTimer = Timer(Duration(milliseconds: safetyTimeoutMs), () {
+        if (!_isDisposed && _searchFen == state.game.fen && _isAiTurn()) {
+          debugPrint('BattlegroundNotifier: Safety timer fired after ${safetyTimeoutMs}ms. Forcing bestmove.');
+          _stockfishEngine.stopAnalysis();
+        }
+      });
     } else {
       _stockfishEngine.analyzePosition(state.game.fen, depth: targetDepth);
     }
   }
 
+  void _stopAnalysisAndReset() {
+    if (!state.servicesStarted || !state.engineReady) return;
+    _waitingForReady = true;
+    _stockfishEngine.sendCommand('stop');
+    _stockfishEngine.sendCommand('isready');
+  }
+
   void _handleEngineOutput(String line) {
     if (_isDisposed) return;
+
+    final trimmed = line.trim();
+    if (trimmed == 'readyok') {
+      _waitingForReady = false;
+      state = state.copyWith(engineReady: true);
+      if (_isAiTurn() && !state.game.gameOver && !state.isPaused) {
+        _startAnalysis();
+      }
+      return;
+    }
+
+    if (_waitingForReady) {
+      return;
+    }
+
     if (_searchFen != state.game.fen) return;
 
     final parsed = UCIParser.parseLine(line);
@@ -656,6 +690,20 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
 
       String? bestMoveToPlay = rawBestMove;
 
+      if (rawBestMove != null && _currentCandidates.isNotEmpty) {
+        final opponent =
+            state.activeOpponent ??
+            AiAvatar.getBestMatch(state.consolidatedRating);
+        if (opponent.name != 'King' && opponent.name != 'Kingslayer') {
+          bestMoveToPlay = ChessPersonaEvaluator.selectBestMove(
+            List.from(_currentCandidates),
+            opponent,
+            state.game,
+            rawBestMove,
+          );
+        }
+      }
+
       // Ensure the move is actually intended for the current turn's side
       bool isMoveValidForCurrentTurn = false;
       if (bestMoveToPlay != null && bestMoveToPlay.length >= 4) {
@@ -666,23 +714,6 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
         }
       }
 
-      if (bestMoveToPlay != null && aiTurn && isMoveValidForCurrentTurn) {
-        final opponent =
-            state.activeOpponent ??
-            AiAvatar.getBestMatch(state.consolidatedRating);
-        if (opponent.name != 'King' &&
-            opponent.name != 'Kingslayer' &&
-            _currentCandidates.isNotEmpty) {
-          bestMoveToPlay = ChessPersonaEvaluator.selectBestMove(
-            List.from(_currentCandidates),
-            opponent,
-            state.game,
-            bestMoveToPlay,
-          );
-        }
-        _currentCandidates.clear();
-      }
-
       if (bestMoveToPlay != null &&
           aiTurn &&
           isMoveValidForCurrentTurn &&
@@ -691,12 +722,14 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
         _engineMoveTimer?.cancel();
         final finalMove = bestMoveToPlay;
         // In rated mode we make moves instantly
-        _makeEngineMove(finalMove);
+        unawaited(_makeEngineMove(finalMove));
       }
+      
+      _currentCandidates.clear();
     }
   }
 
-  void _makeEngineMove(String move) {
+  Future<void> _makeEngineMove(String move) async {
     if (move.length < 4 || state.game.gameOver || state.isPaused) return;
     final from = move.substring(0, 2);
     final to = move.substring(2, 4);
@@ -745,7 +778,7 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
 
     if (moveMade) {
       final actualPromo = move.length > 4 ? move[4] : '';
-      unawaited(_onMoveCompleted('$from$to$actualPromo'));
+      await _onMoveCompleted('$from$to$actualPromo');
     } else {
       state = state.copyWith(moveAnimation: null);
     }
@@ -770,6 +803,16 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
   Future<void> makeMove(String from, String to) async {
     if (state.game.gameOver) return;
 
+    if (!_isPlayerTurn()) {
+      debugPrint('BattlegroundNotifier: Setting pre-move from $from to $to');
+      state = state.copyWith(premoveFrom: from, premoveTo: to);
+      return;
+    }
+
+    _stopAnalysisAndReset();
+    _engineMoveTimer?.cancel();
+    _engineMoveTimer = null;
+
     if (state.viewingMoveIndex != null) {
       _truncateToViewingIndex();
     }
@@ -779,12 +822,6 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
       if (state.clockStarted) {
         _startClockTicker();
       }
-    }
-
-    if (!_isPlayerTurn()) {
-      debugPrint('BattlegroundNotifier: Setting pre-move from $from to $to');
-      state = state.copyWith(premoveFrom: from, premoveTo: to);
-      return;
     }
 
     final piece = state.game.getPiece(from);
@@ -853,7 +890,20 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
     }
 
     final wasClockStarted = state.clockStarted;
-    unawaited(_onMoveCompleted('$from$to'));
+    await _onMoveCompleted('$from$to');
+
+    if (state.game.gameOver || state.isTimeOut) {
+      state = state.copyWith(
+        clockStarted: false,
+        activeClockSide: null,
+        isEngineThinking: false,
+      );
+      _stopClockTimer();
+      _engineMoveTimer?.cancel();
+      _engineMoveTimer = null;
+      _stopAnalysisAndReset();
+      return;
+    }
 
     if (!wasClockStarted) {
       state = state.copyWith(clockStarted: true);
@@ -1215,16 +1265,27 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
   }
 
   Future<void> resignRatedGame() async {
+    _clockTimer?.cancel();
+    _clockTimer = null;
+    _engineMoveTimer?.cancel();
+    _engineMoveTimer = null;
+    _searchFen = null;
+    _stopAnalysisAndReset();
+
     await _updateRating(0.0); // 0.0 = Loss
     await saveCurrentGame(
       customNameOverride: 'Rated Loss (Resigned)',
       resultOverride: 'L',
     );
-    state = state.copyWith(activeRatedMatchId: null);
+    state = state.copyWith(
+      activeRatedMatchId: null,
+      clockStarted: false,
+      activeClockSide: null,
+    );
     await _saveSettings();
   }
 
-  void completePromotion(String promotionPiece) {
+  Future<void> completePromotion(String promotionPiece) async {
     if (!state.isPromoting ||
         state.promotionSource == null ||
         state.promotionDestination == null) {
@@ -1263,13 +1324,27 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
 
     if (moveMade) {
       final wasClockStarted = state.clockStarted;
-      unawaited(_onMoveCompleted('$from$to${promotionPiece.toLowerCase()}'));
+      await _onMoveCompleted('$from$to${promotionPiece.toLowerCase()}');
+
+      if (state.game.gameOver || state.isTimeOut) {
+        state = state.copyWith(
+          clockStarted: false,
+          activeClockSide: null,
+          isEngineThinking: false,
+        );
+        _stopClockTimer();
+        _engineMoveTimer?.cancel();
+        _engineMoveTimer = null;
+        _stopAnalysisAndReset();
+        return;
+      }
+
       if (!wasClockStarted) {
         state = state.copyWith(clockStarted: true);
       }
       state = state.copyWith(activeClockSide: _clockSideForTurn());
       _startClockTicker();
-      unawaited(ensureGameServicesStarted(analyzeCurrentPosition: true));
+      await ensureGameServicesStarted(analyzeCurrentPosition: true);
       state = state.copyWith(isEngineThinking: state.engineReady);
     } else {
       state = state.copyWith(moveAnimation: null);
@@ -1283,14 +1358,18 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
       promotionSource: null,
       promotionDestination: null,
     );
-    if (state.clockStarted && !state.isPaused) {
+    if (state.clockStarted && !state.isPaused && !state.game.gameOver && !state.isTimeOut) {
       _startClockTicker();
     }
   }
 
   void clearBoard() {
     _clockTimer?.cancel();
+    _clockTimer = null;
     _engineMoveTimer?.cancel();
+    _engineMoveTimer = null;
+    _searchFen = null;
+    _stopAnalysisAndReset();
 
     final is960 = state.gameMode == 'chess960';
     final initialGame = is960
@@ -1311,6 +1390,8 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
       isEngineThinking: false,
       clockStarted: false,
       activeClockSide: null,
+      whiteTimeLeft: state.baseTimeDuration,
+      blackTimeLeft: state.baseTimeDuration,
       threatenedSquares: const [],
       moveAnimation: null,
       isPaused: false,
@@ -1325,7 +1406,11 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
 
   void reset({bool forcedPlayerWhite = true, bool startClockImmediate = false}) {
     _clockTimer?.cancel();
+    _clockTimer = null;
     _engineMoveTimer?.cancel();
+    _engineMoveTimer = null;
+    _searchFen = null;
+    _stopAnalysisAndReset();
 
     final is960 = state.gameMode == 'chess960';
     final initialGame = is960
