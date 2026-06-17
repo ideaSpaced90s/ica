@@ -38,7 +38,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.12.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -603051909;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -2042004886;
 
 // Section: executor
 
@@ -481,6 +481,40 @@ fn wire__crate__api__tactics__generate_tactics_analysis_impl(
                         api_engine_alternatives,
                         api_is_chess960,
                     ))?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__threats__get_dominating_squares_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "get_dominating_squares",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_fen = <String>::sse_decode(&mut deserializer);
+            let api_is_chess960 = <bool>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok = Result::<_, ()>::Ok(crate::api::threats::get_dominating_squares(
+                    api_fen,
+                    api_is_chess960,
+                ))?;
                 Ok(output_ok)
             })())
         },
@@ -1842,9 +1876,9 @@ fn pde_ffi_dispatcher_primary_impl(
             rust_vec_len,
             data_len,
         ),
-        16 => wire__crate__api__puzzles__get_random_puzzle_impl(port, ptr, rust_vec_len, data_len),
-        21 => wire__crate__api__simple__init_app_impl(port, ptr, rust_vec_len, data_len),
-        29 => wire__crate__api__puzzles__search_puzzles_impl(port, ptr, rust_vec_len, data_len),
+        17 => wire__crate__api__puzzles__get_random_puzzle_impl(port, ptr, rust_vec_len, data_len),
+        22 => wire__crate__api__simple__init_app_impl(port, ptr, rust_vec_len, data_len),
+        30 => wire__crate__api__puzzles__search_puzzles_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -1877,33 +1911,34 @@ fn pde_ffi_dispatcher_sync_impl(
         13 => {
             wire__crate__api__tactics__generate_tactics_analysis_impl(ptr, rust_vec_len, data_len)
         }
-        14 => wire__crate__api__moves__get_legal_destinations_impl(ptr, rust_vec_len, data_len),
-        15 => wire__crate__api__persona__get_persona_config_impl(ptr, rust_vec_len, data_len),
-        17 => wire__crate__api__history__get_san_history_impl(ptr, rust_vec_len, data_len),
-        18 => wire__crate__api__threats__get_threatened_squares_impl(ptr, rust_vec_len, data_len),
-        19 => wire__crate__api__simple__greet_impl(ptr, rust_vec_len, data_len),
-        20 => wire__crate__api__humanizer__humanize_move_rust_impl(ptr, rust_vec_len, data_len),
-        22 => wire__crate__api__pgn_db__load_all_games_from_db_impl(ptr, rust_vec_len, data_len),
-        23 => wire__crate__api__pgn_db__load_studies_from_db_impl(ptr, rust_vec_len, data_len),
-        24 => wire__crate__api__pgn_db__parse_pgn_database_impl(ptr, rust_vec_len, data_len),
-        25 => wire__crate__api__assignment__recommend_tasks_rust_impl(ptr, rust_vec_len, data_len),
-        26 => wire__crate__api__commentary__reset_commentary_history_rust_impl(
+        14 => wire__crate__api__threats__get_dominating_squares_impl(ptr, rust_vec_len, data_len),
+        15 => wire__crate__api__moves__get_legal_destinations_impl(ptr, rust_vec_len, data_len),
+        16 => wire__crate__api__persona__get_persona_config_impl(ptr, rust_vec_len, data_len),
+        18 => wire__crate__api__history__get_san_history_impl(ptr, rust_vec_len, data_len),
+        19 => wire__crate__api__threats__get_threatened_squares_impl(ptr, rust_vec_len, data_len),
+        20 => wire__crate__api__simple__greet_impl(ptr, rust_vec_len, data_len),
+        21 => wire__crate__api__humanizer__humanize_move_rust_impl(ptr, rust_vec_len, data_len),
+        23 => wire__crate__api__pgn_db__load_all_games_from_db_impl(ptr, rust_vec_len, data_len),
+        24 => wire__crate__api__pgn_db__load_studies_from_db_impl(ptr, rust_vec_len, data_len),
+        25 => wire__crate__api__pgn_db__parse_pgn_database_impl(ptr, rust_vec_len, data_len),
+        26 => wire__crate__api__assignment__recommend_tasks_rust_impl(ptr, rust_vec_len, data_len),
+        27 => wire__crate__api__commentary__reset_commentary_history_rust_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        27 => wire__crate__api__pgn_db__save_game_to_db_impl(ptr, rust_vec_len, data_len),
-        28 => wire__crate__api__pgn_db__save_study_to_db_impl(ptr, rust_vec_len, data_len),
-        30 => {
+        28 => wire__crate__api__pgn_db__save_game_to_db_impl(ptr, rust_vec_len, data_len),
+        29 => wire__crate__api__pgn_db__save_study_to_db_impl(ptr, rust_vec_len, data_len),
+        31 => {
             wire__crate__api__chanakya__select_chanakya_move_rust_impl(ptr, rust_vec_len, data_len)
         }
-        31 => wire__crate__api__commentary__select_commentary_template_rust_impl(
+        32 => wire__crate__api__commentary__select_commentary_template_rust_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        32 => wire__crate__api__persona__select_persona_move_rust_impl(ptr, rust_vec_len, data_len),
-        33 => wire__crate__api__state__validate_and_apply_move_impl(ptr, rust_vec_len, data_len),
+        33 => wire__crate__api__persona__select_persona_move_rust_impl(ptr, rust_vec_len, data_len),
+        34 => wire__crate__api__state__validate_and_apply_move_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }

@@ -617,8 +617,11 @@ class _PuzzlesPageState extends ConsumerState<PuzzlesPage> {
       }
     });
 
+    final currentNavIndex = ref.watch(mobileNavIndexProvider);
+    final isCurrentTab = currentNavIndex == 4;
+
     return PopScope(
-      canPop: false,
+      canPop: !isCurrentTab,
       onPopInvokedWithResult: (bool didPop, Object? result) async {
         if (didPop) return;
         await _requestExitPuzzle();

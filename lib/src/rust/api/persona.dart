@@ -6,7 +6,7 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `attacks_high_value_piece`, `is_closed_file`, `is_endgame`, `is_open_file`, `restricts_opponent_mobility`, `shakmaty_move_to_uci`, `simple_hash`
+// These functions are ignored because they are not marked as `pub`: `attacks_high_value_piece`, `get_jitter_amount`, `is_closed_file`, `is_endgame`, `is_open_file`, `restricts_opponent_mobility`, `shakmaty_move_to_uci`, `simple_hash`
 
 PersonaConfig getPersonaConfig({required String avatarName}) => RustLib
     .instance

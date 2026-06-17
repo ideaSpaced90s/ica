@@ -129,8 +129,11 @@ class _HistoryPageState extends ConsumerState<HistoryPage> with SingleTickerProv
       }
     }
 
+    final currentNavIndex = ref.watch(mobileNavIndexProvider);
+    final isCurrentTab = currentNavIndex == 6;
+
     return PopScope(
-      canPop: false,
+      canPop: !isCurrentTab,
       onPopInvokedWithResult: (bool didPop, Object? result) async {
         if (didPop) return;
         exitToDashboardWithSidebar(context, ref);

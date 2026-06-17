@@ -11,6 +11,7 @@ import 'package:kingslayer_chess/features/chess/data/settings_repository.dart';
 import 'package:kingslayer_chess/features/chess/domain/performance_ledger_entry.dart';
 import 'package:kingslayer_chess/features/chess/data/saved_game.dart';
 import 'package:kingslayer_chess/features/chess/application/chess_provider.dart';
+import 'package:kingslayer_chess/features/chess/application/store_provider.dart';
 import 'package:chess/chess.dart' as chess_lib;
 import 'package:kingslayer_chess/features/chess/services/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -127,6 +128,7 @@ void main() {
         chessHapticsServiceProvider.overrideWithValue(fakeHapticsService),
         settingsRepositoryProvider.overrideWithValue(fakeSettingsRepo),
         authServiceProvider.overrideWithValue(FakeAuthService()),
+        storeProvider.overrideWith((ref) => StoreNotifier(ref, loadData: false, initializeBilling: false)),
       ],
     );
     addTearDown(container.dispose);

@@ -13,6 +13,7 @@ import '../services/auth_service.dart';
 import '../services/cloud_sync_service.dart';
 import '../application/onboarding_provider.dart';
 import 'scholarly_theme.dart';
+import 'widgets/premium_membership_card.dart';
 import 'widgets/ambient_scaffold.dart';
 import 'sign_in_page.dart';
 import 'mobile_navigation_shell.dart';
@@ -33,20 +34,9 @@ class _AccountPageState extends ConsumerState<AccountPage> {
     final syncState = ref.watch(cloudSyncProvider);
     final syncNotifier = ref.read(cloudSyncProvider.notifier);
 
-    // Grouping themes for ownership checking
-    final freeThemeIds = {
-      'classic',
-      'scholar',
-      'vector_wood',
-      'theme3',
-      'sprite_fairytale',
-    };
-
     // Filter registry for owned themes
     final ownedThemes = ThemeRegistry.allThemes.where((theme) {
-      return freeThemeIds.contains(theme.id) ||
-          storeState.isPremium ||
-          storeState.purchasedBoardThemes.contains(theme.id);
+      return storeNotifier.isBoardThemePurchased(theme.id);
     }).toList();
 
     return AmbientScaffold(
@@ -89,6 +79,11 @@ class _AccountPageState extends ConsumerState<AccountPage> {
                 ),
               ),
             ),
+
+            const SliverToBoxAdapter(child: SizedBox(height: 12)),
+
+            // Theme Usage Tracker (only when premium)
+            _buildThemeUsageSection(context, storeState, storeNotifier),
 
             const SliverToBoxAdapter(child: SizedBox(height: 20)),
 
@@ -432,137 +427,177 @@ class _AccountPageState extends ConsumerState<AccountPage> {
     );
   }
 
+  Widget _buildThemeUsageSection(
+    BuildContext context,
+    StoreState storeState,
+    StoreNotifier storeNotifier,
+  ) {
+    if (!storeState.isPremium || storeState.cycleThemeAllocation == null) {
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
+    }
+
+    final activeThemeIds = storeState.cycleThemeAllocation!.take(9).toList();
+    final plan = storeState.subscriptionPlan ?? 'monthly';
+
+    return SliverPadding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      sliver: SliverToBoxAdapter(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              child: JuicySectionHeader(
+                title: 'THEME PLAY DAYS',
+                color: const Color(0xFFFFD700), // Gold for premium tracker
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0F172A).withValues(alpha: 0.8),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: const Color(0xFFFFD700).withValues(alpha: 0.25),
+                  width: 1.0,
+                ),
+              ),
+              child: Column(
+                children: activeThemeIds.map((themeId) {
+                  final theme = ThemeRegistry.getTheme(themeId);
+                  final isDirectlyPurchased = storeState.purchasedBoardThemes.contains(themeId);
+                  final allowed = storeNotifier.getThemeAllowedDays(themeId, plan);
+                  final used = storeNotifier.getThemeUsedDays(themeId);
+                  final remaining = (allowed - used).clamp(0, 365);
+                  final progress = allowed > 0 ? (used / allowed).clamp(0.0, 1.0) : 0.0;
+
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: Row(
+                      children: [
+                        // Color Swatch
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              width: 1,
+                            ),
+                          ),
+                          clipBehavior: Clip.antiAlias,
+                          child: Stack(
+                            children: [
+                              Column(
+                                children: [
+                                  Expanded(
+                                    child: Row(
+                                      children: [
+                                        Expanded(child: Container(color: theme.lightSquare)),
+                                        Expanded(child: Container(color: theme.darkSquare)),
+                                      ],
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Row(
+                                      children: [
+                                        Expanded(child: Container(color: theme.darkSquare)),
+                                        Expanded(child: Container(color: theme.lightSquare)),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Center(
+                                child: FractionallySizedBox(
+                                  widthFactor: 0.6,
+                                  heightFactor: 0.6,
+                                  child: theme.buildPiece(context, 'N', true, false, 0.0),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+
+                        // Name & Progress
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      theme.name,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    isDirectlyPurchased
+                                        ? 'Unlimited'
+                                        : '$remaining / $allowed left',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: isDirectlyPurchased
+                                          ? Colors.cyanAccent
+                                          : (remaining == 0
+                                              ? Colors.redAccent.shade100
+                                              : const Color(0xFFFFD700).withValues(alpha: 0.8)),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              // Progress bar
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(4),
+                                child: LinearProgressIndicator(
+                                  value: isDirectlyPurchased ? 1.0 : (1.0 - progress),
+                                  minHeight: 6,
+                                  backgroundColor: const Color(0xFF1E293B),
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    isDirectlyPurchased
+                                        ? Colors.cyanAccent
+                                        : (remaining == 0
+                                            ? Colors.redAccent
+                                            : const Color(0xFFFFD700)),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   // Membership & Subscription Header Card
   Widget _buildSubscriptionCard(
     BuildContext context,
     StoreState storeState,
     StoreNotifier storeNotifier,
   ) {
-    final dateFormat = DateFormat('MMM d, yyyy');
-
     if (storeState.isPremium && storeState.subscriptionTill != null) {
-      final rawPlan = storeState.subscriptionPlan ?? 'Premium';
-      final planName = (rawPlan == 'sixmonth' ? '6-Month' : rawPlan)
-          .toUpperCase();
-      final expiryStr = dateFormat.format(storeState.subscriptionTill!);
-      final daysLeft = storeState.subscriptionTill!
-          .difference(DateTime.now())
-          .inDays;
-
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF0F172A), Color(0xFF1E293B)], // Sleek Dark Steel
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-            color: Colors.cyan.withValues(alpha: 0.3),
-            width: 1.5,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.cyan.withValues(alpha: 0.1),
-              blurRadius: 16,
-              spreadRadius: 2,
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.cyan.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.verified_user_rounded,
-                color: Colors.cyan,
-                size: 28,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Wrap(
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: 6,
-                    runSpacing: 4,
-                    children: [
-                      Text(
-                        '$planName SUBSCRIBER',
-                        style: GoogleFonts.outfit(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.cyan,
-                          letterSpacing: 1.0,
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.green.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          'ACTIVE',
-                          style: GoogleFonts.inter(
-                            fontSize: 8,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.greenAccent,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Renews till: $expiryStr ($daysLeft days left)',
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      color: Colors.cyanAccent.withValues(alpha: 0.8),
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '✓ All app features and themes unlocked',
-                    style: GoogleFonts.inter(
-                      fontSize: 10,
-                      color: Colors.white70,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            TextButton(
-              onPressed: () {
-                ref
-                    .read(chessSoundServiceProvider)
-                    .playSfx(SoundEffect.uiClick);
-                _showCancelDialog(context, storeNotifier);
-              },
-              child: Text(
-                'CANCEL',
-                style: GoogleFonts.inter(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.redAccent,
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
+      return const PremiumMembershipCard();
     }
 
     // Free Tier Layout
@@ -678,7 +713,7 @@ class _AccountPageState extends ConsumerState<AccountPage> {
                       physics: const NeverScrollableScrollPhysics(),
                       mainAxisSpacing: 10,
                       crossAxisSpacing: 10,
-                      childAspectRatio: crossAxisCount == 4 ? 1.05 : 1.55,
+                      childAspectRatio: crossAxisCount == 4 ? 0.72 : 1.15,
                       children: [
                         _buildUsageTile(
                           'Rated Match',
@@ -716,75 +751,7 @@ class _AccountPageState extends ConsumerState<AccountPage> {
     );
   }
 
-  // Cancel Dialog
-  void _showCancelDialog(BuildContext context, StoreNotifier storeNotifier) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: Colors.white,
-          surfaceTintColor: Colors.transparent,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-          title: Text(
-            'Cancel Subscription',
-            style: GoogleFonts.outfit(
-              fontWeight: FontWeight.bold,
-              color: ScholarlyTheme.textPrimary,
-            ),
-          ),
-          content: Text(
-            'Are you sure you want to cancel your simulated subscription? You will lose access to premium AI coaching limits immediately.',
-            style: GoogleFonts.inter(
-              fontSize: 13,
-              color: ScholarlyTheme.textPrimary,
-              height: 1.4,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(
-                'Keep Subscription',
-                style: GoogleFonts.inter(color: ScholarlyTheme.textMuted),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                storeNotifier.cancelSubscription();
-                Navigator.pop(context);
-                ref
-                    .read(chessSoundServiceProvider)
-                    .playSfx(SoundEffect.uiClick);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text('Subscription cancelled successfully.'),
-                    behavior: SnackBarBehavior.floating,
-                    backgroundColor: Colors.redAccent,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.redAccent,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Text(
-                'Yes, Cancel',
-                style: GoogleFonts.inter(fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
+
 
   Widget _buildSyncStatusTile(
     BuildContext context,
@@ -1024,53 +991,60 @@ class _AccountPageState extends ConsumerState<AccountPage> {
           ),
         ],
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 28,
-            height: 28,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: progressColor.withValues(alpha: 0.12),
-            ),
-            child: Icon(icon, color: progressColor, size: 16),
-          ),
-          const SizedBox(height: 7),
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: GoogleFonts.inter(
-              fontSize: 10,
-              fontWeight: FontWeight.w800,
-              color: ScholarlyTheme.textMuted,
-            ),
-          ),
-          const SizedBox(height: 3),
-          Text(
-            '$remaining / $limit',
-            textAlign: TextAlign.center,
-            style: GoogleFonts.jetBrainsMono(
-              fontSize: 13,
-              fontWeight: FontWeight.w900,
-              color: ScholarlyTheme.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 6),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: LinearProgressIndicator(
-              minHeight: 4,
-              value: percent.clamp(0.0, 1.0).toDouble(),
-              color: progressColor,
-              backgroundColor: ScholarlyTheme.panelStroke.withValues(
-                alpha: 0.55,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: SizedBox(
+          width: 80,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: progressColor.withValues(alpha: 0.12),
+                ),
+                child: Icon(icon, color: progressColor, size: 16),
               ),
-            ),
+              const SizedBox(height: 7),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                  color: ScholarlyTheme.textMuted,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                '$remaining / $limit',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.jetBrainsMono(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                  color: ScholarlyTheme.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 6),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(999),
+                child: LinearProgressIndicator(
+                  minHeight: 4,
+                  value: percent.clamp(0.0, 1.0).toDouble(),
+                  color: progressColor,
+                  backgroundColor: ScholarlyTheme.panelStroke.withValues(
+                    alpha: 0.55,
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

@@ -1053,9 +1053,27 @@ class _ArenaPersonasSelectionPageState extends ConsumerState<ArenaPersonasSelect
                         ),
                         const SizedBox(height: 10),
                         _buildSpecRow(
+                          icon: Icons.error_outline_rounded,
+                          label: 'Blunderness Rate',
+                          value: avatar.blunderness,
+                        ),
+                        const SizedBox(height: 10),
+                        _buildSpecRow(
                           icon: Icons.query_stats_rounded,
                           label: 'Heuristic Jitteriness',
                           value: avatar.heuristicJitteriness,
+                        ),
+                        const SizedBox(height: 10),
+                        _buildSpecRow(
+                          icon: Icons.storage_rounded,
+                          label: 'Transposition Table',
+                          value: '${avatar.hashSize} MB',
+                        ),
+                        const SizedBox(height: 10),
+                        _buildSpecRow(
+                          icon: Icons.psychology_alt_rounded,
+                          label: 'Contempt Option',
+                          value: avatar.contemptDisplay,
                         ),
                         const SizedBox(height: 20),
 

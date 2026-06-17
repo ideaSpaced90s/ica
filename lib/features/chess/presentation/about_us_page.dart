@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'widgets/ambient_scaffold.dart';
 import 'dashboard_page.dart';
+import 'mobile_navigation_shell.dart';
 import 'about_us/widgets/about_us_widgets.dart';
 import 'about_us/tabs/overview_tab.dart';
 import 'about_us/tabs/manual_tab.dart';
@@ -40,8 +41,11 @@ class _AboutUsPageState extends ConsumerState<AboutUsPage> {
         activeAccent = Colors.blue;
     }
 
+    final currentNavIndex = ref.watch(mobileNavIndexProvider);
+    final isCurrentTab = currentNavIndex == 8;
+
     return PopScope(
-      canPop: false,
+      canPop: !isCurrentTab,
       onPopInvokedWithResult: (bool didPop, Object? result) async {
         if (didPop) return;
         exitToDashboardWithSidebar(context, ref);

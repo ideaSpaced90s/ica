@@ -274,6 +274,7 @@ void main() {
           chipPromptsUsed: 0,
           puzzlesSolved: 0,
         ),
+        cycleThemeUsageDates: {},
       );
     }
 

@@ -16,6 +16,7 @@ import 'widgets/illegal_move_feedback.dart';
 import 'widgets/mentor_panel.dart';
 import 'widgets/ambient_scaffold.dart';
 import 'dashboard_page.dart';
+import 'mobile_navigation_shell.dart';
 
 
 class TutorialPage extends ConsumerStatefulWidget {
@@ -216,8 +217,11 @@ class _TutorialPageState extends ConsumerState<TutorialPage> {
       );
     }
 
+    final currentNavIndex = ref.watch(mobileNavIndexProvider);
+    final isCurrentTab = currentNavIndex == 7;
+
     return PopScope(
-      canPop: false,
+      canPop: !isCurrentTab,
       onPopInvokedWithResult: (bool didPop, Object? result) async {
         if (didPop) return;
         if (state.isChapterComplete) {

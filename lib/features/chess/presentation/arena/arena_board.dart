@@ -159,6 +159,8 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
                             arenaState.hintTo == squareName;
                         final isThreatened =
                             arenaState.threatenedSquares.contains(squareName);
+                        final isDominating =
+                            arenaState.dominatingSquares.contains(squareName);
                         final isPremoveStartOrEnd =
                             arenaState.premoveFrom == squareName ||
                             arenaState.premoveTo == squareName;
@@ -252,14 +254,6 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
                                         piece != null,
                                       ),
 
-                                    // Threatened dot
-                                    if (isThreatened)
-                                      const ArenaOrbitingStarAnimation(
-                                        color: Colors.redAccent,
-                                        isActive: true,
-                                        isCircle: true,
-                                      ),
-
                                     // Last Move Highlight
                                     if (isLastMoveStartOrEnd || isLastMoveInBetween)
                                       TweenAnimationBuilder<double>(
@@ -315,73 +309,88 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
                                       ),
 
                                     // King Check Shake / Threatened Jitter
-                                    ShakeAnimation(
-                                      isActive: piece?.type ==
-                                              chess_lib.PieceType.KING &&
-                                          ((arenaState.game.inCheck &&
-                                                  piece?.color ==
-                                                      arenaState.game.turn) ||
-                                              isThreatened),
-                                      child: Center(
-                                        child: Builder(
-                                          builder: (context) {
-                                            final localPiece = piece;
-                                            final pieceExists = localPiece != null;
-                                            final isPlayerPiece = localPiece != null && !isGhostPiece &&
-                                                ((localPiece.color == chess_lib.Color.WHITE) == arenaState.isPlayerWhite);
+                                    // Wrapped in ArenaPieceEffectsWrapper for 3D orbit animations
+                                    ArenaPieceEffectsWrapper(
+                                      isThreatened: isThreatened && piece != null,
+                                      isDominating: isDominating && piece != null,
+                                      child: ShakeAnimation(
+                                        isActive: piece?.type ==
+                                                chess_lib.PieceType.KING &&
+                                            ((arenaState.game.inCheck &&
+                                                    piece?.color ==
+                                                        arenaState.game.turn) ||
+                                                isThreatened),
+                                        child: Center(
+                                          child: Builder(
+                                            builder: (context) {
+                                              final localPiece = piece;
+                                              final pieceExists = localPiece != null;
+                                              final isPlayerPiece = localPiece != null && !isGhostPiece &&
+                                                  ((localPiece.color == chess_lib.Color.WHITE) == arenaState.isPlayerWhite);
 
-                                            Widget pieceWidget = ChessPieceWidget(
-                                              squareName: isGhostPiece ? arenaState.premoveFrom! : squareName,
-                                              pieceCode: isGhostPiece && localPiece != null
-                                                  ? '${localPiece.color == chess_lib.Color.WHITE ? 'w' : 'b'}${localPiece.type.toUpperCase()}'
-                                                  : null,
-                                              game: displayGame,
-                                              highlighted: isSelected,
-                                              theme: chessTheme,
-                                              isMoving: arenaState.moveAnimation?.from == squareName ||
-                                                  arenaState.moveAnimation?.to == squareName,
-                                              onTap: () => _handleSquareTap(
-                                                squareName: squareName,
-                                                pieceExists: pieceExists,
-                                              ),
-                                            );
-
-                                            if (isGhostPiece) {
-                                              pieceWidget = Opacity(
-                                                opacity: 0.5,
-                                                child: pieceWidget,
+                                              Widget pieceWidget = ChessPieceWidget(
+                                                squareName: isGhostPiece ? arenaState.premoveFrom! : squareName,
+                                                pieceCode: isGhostPiece && localPiece != null
+                                                    ? '${localPiece.color == chess_lib.Color.WHITE ? 'w' : 'b'}${localPiece.type.toUpperCase()}'
+                                                    : null,
+                                                game: displayGame,
+                                                highlighted: isSelected,
+                                                theme: chessTheme,
+                                                isMoving: arenaState.moveAnimation?.from == squareName ||
+                                                    arenaState.moveAnimation?.to == squareName,
+                                                onTap: () => _handleSquareTap(
+                                                  squareName: squareName,
+                                                  pieceExists: pieceExists,
+                                                ),
                                               );
-                                            }
 
-                                            if (squareName == _dropSquare) {
-                                              pieceWidget = AnimatedBuilder(
-                                                animation: _dropController,
-                                                builder: (context, child) {
-                                                  double scale = 0.85 + 0.15 * Curves.elasticOut.transform(_dropController.value);
-                                                  return Transform.scale(scale: scale, child: child);
-                                                },
-                                                child: pieceWidget,
-                                              );
-                                            }
+                                              if (isGhostPiece) {
+                                                pieceWidget = Opacity(
+                                                  opacity: 0.5,
+                                                  child: pieceWidget,
+                                                );
+                                              }
 
-                                            if (isPlayerPiece) {
-                                              final squareSize = boardSize / 8;
-                                              return Draggable<String>(
-                                                data: squareName,
-                                                onDragStarted: () {
-                                                  _handlePieceSelection(squareName, displayGame);
-                                                },
-                                                onDraggableCanceled: (velocity, offset) {
-                                                  _clearSelection();
-                                                },
-                                                onDragEnd: (details) {
-                                                  _clearSelection();
-                                                },
-                                                feedback: Material(
-                                                  color: Colors.transparent,
-                                                  child: SizedBox(
-                                                    width: squareSize * 1.2,
-                                                    height: squareSize * 1.2,
+                                              if (squareName == _dropSquare) {
+                                                pieceWidget = AnimatedBuilder(
+                                                  animation: _dropController,
+                                                  builder: (context, child) {
+                                                    double scale = 0.85 + 0.15 * Curves.elasticOut.transform(_dropController.value);
+                                                    return Transform.scale(scale: scale, child: child);
+                                                  },
+                                                  child: pieceWidget,
+                                                );
+                                              }
+
+                                              if (isPlayerPiece) {
+                                                final squareSize = boardSize / 8;
+                                                return Draggable<String>(
+                                                  data: squareName,
+                                                  onDragStarted: () {
+                                                    _handlePieceSelection(squareName, displayGame);
+                                                  },
+                                                  onDraggableCanceled: (velocity, offset) {
+                                                    _clearSelection();
+                                                  },
+                                                  onDragEnd: (details) {
+                                                    _clearSelection();
+                                                  },
+                                                  feedback: Material(
+                                                    color: Colors.transparent,
+                                                    child: SizedBox(
+                                                      width: squareSize * 1.2,
+                                                      height: squareSize * 1.2,
+                                                      child: ChessPieceWidget(
+                                                        squareName: squareName,
+                                                        game: displayGame,
+                                                        highlighted: false,
+                                                        theme: chessTheme,
+                                                        isMoving: false,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  childWhenDragging: Opacity(
+                                                    opacity: 0.35,
                                                     child: ChessPieceWidget(
                                                       squareName: squareName,
                                                       game: displayGame,
@@ -390,23 +399,13 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
                                                       isMoving: false,
                                                     ),
                                                   ),
-                                                ),
-                                                childWhenDragging: Opacity(
-                                                  opacity: 0.35,
-                                                  child: ChessPieceWidget(
-                                                    squareName: squareName,
-                                                    game: displayGame,
-                                                    highlighted: false,
-                                                    theme: chessTheme,
-                                                    isMoving: false,
-                                                  ),
-                                                ),
-                                                child: pieceWidget,
-                                              );
-                                            }
+                                                  child: pieceWidget,
+                                                );
+                                              }
 
-                                            return pieceWidget;
-                                          },
+                                              return pieceWidget;
+                                            },
+                                          ),
                                         ),
                                       ),
                                     ),

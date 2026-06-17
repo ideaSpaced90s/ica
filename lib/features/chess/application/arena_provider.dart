@@ -15,7 +15,9 @@ import '../data/chess_engine_service.dart';
 import '../data/uci_parser.dart';
 import '../data/saved_game.dart';
 import 'chess_provider.dart';
+import 'store_provider.dart';
 import 'package:kingslayer_chess/src/rust/api/persona.dart' as rust_persona;
+import 'package:kingslayer_chess/src/rust/api/threats.dart' as rust_threats;
 
 const _initialClock = Duration(minutes: 10);
 const _clockWhite = 'white';
@@ -32,6 +34,7 @@ class _ArenaSnapshot {
   final bool clockStarted;
   final String? activeClockSide;
   final List<String> threatenedSquares;
+  final List<String> dominatingSquares;
   final MoveAnimationData? moveAnimation;
   final bool isPlayerWhite;
   final bool isBoardFlipped;
@@ -48,6 +51,7 @@ class _ArenaSnapshot {
     required this.clockStarted,
     this.activeClockSide,
     required this.threatenedSquares,
+    required this.dominatingSquares,
     this.moveAnimation,
     required this.isPlayerWhite,
     required this.isBoardFlipped,
@@ -82,6 +86,7 @@ class ArenaState {
   final bool clockStarted;
   final String? activeClockSide;
   final List<String> threatenedSquares;
+  final List<String> dominatingSquares;
   final MoveAnimationData? moveAnimation;
   final bool isPaused;
   final int? viewingMoveIndex;
@@ -103,6 +108,10 @@ class ArenaState {
   final String? premoveFrom;
   final String? premoveTo;
   final bool isTemporaryQuickPlay;
+  /// True when the clock has been permanently disabled after a timeout
+  /// (user chose "Continue" from the timeout popup). Clock will not
+  /// restart on subsequent moves until a new game is started.
+  final bool clockDisabledAfterTimeout;
 
   ArenaState({
     required this.game,
@@ -131,6 +140,7 @@ class ArenaState {
     this.clockStarted = false,
     this.activeClockSide,
     this.threatenedSquares = const [],
+    this.dominatingSquares = const [],
     this.moveAnimation,
     this.isPaused = false,
     this.viewingMoveIndex,
@@ -152,6 +162,7 @@ class ArenaState {
     this.premoveFrom,
     this.premoveTo,
     this.isTemporaryQuickPlay = false,
+    this.clockDisabledAfterTimeout = false,
   });
 
   bool get isChess960 => gameMode == 'chess960';
@@ -206,6 +217,7 @@ class ArenaState {
     bool? clockStarted,
     Object? activeClockSide = const Object(),
     List<String>? threatenedSquares,
+    List<String>? dominatingSquares,
     Object? moveAnimation = const Object(),
     bool? isPaused,
     Object? viewingMoveIndex = const Object(),
@@ -227,6 +239,7 @@ class ArenaState {
     Object? premoveFrom = const Object(),
     Object? premoveTo = const Object(),
     bool? isTemporaryQuickPlay,
+    bool? clockDisabledAfterTimeout,
   }) {
     return ArenaState(
       game: game ?? this.game,
@@ -255,6 +268,7 @@ class ArenaState {
       clockStarted: clockStarted ?? this.clockStarted,
       activeClockSide: activeClockSide == const Object() ? this.activeClockSide : activeClockSide as String?,
       threatenedSquares: threatenedSquares ?? this.threatenedSquares,
+      dominatingSquares: dominatingSquares ?? this.dominatingSquares,
       moveAnimation: moveAnimation == const Object() ? this.moveAnimation : moveAnimation as MoveAnimationData?,
       isPaused: isPaused ?? this.isPaused,
       viewingMoveIndex: viewingMoveIndex == const Object() ? this.viewingMoveIndex : viewingMoveIndex as int?,
@@ -276,6 +290,7 @@ class ArenaState {
       premoveFrom: premoveFrom == const Object() ? this.premoveFrom : premoveFrom as String?,
       premoveTo: premoveTo == const Object() ? this.premoveTo : premoveTo as String?,
       isTemporaryQuickPlay: isTemporaryQuickPlay ?? this.isTemporaryQuickPlay,
+      clockDisabledAfterTimeout: clockDisabledAfterTimeout ?? this.clockDisabledAfterTimeout,
     );
   }
 }
@@ -311,12 +326,20 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
     _loadInitialState();
     ref.listen<ChessState>(chessProvider, (previous, next) {
       if (state.recentMoves.isEmpty && !state.isGameOver) {
+        // Sync all settings when no game is in progress
         state = state.copyWith(
           engineLevel: next.engineLevel,
           bottomAvatarId: next.bottomAvatarId,
           whiteTimeLeft: next.baseTimeDuration,
           blackTimeLeft: next.baseTimeDuration,
           baseTimeDuration: next.baseTimeDuration,
+        );
+      } else {
+        // Always sync engine/avatar IDs so the new-game overlay reflects
+        // any persona changes made in settings mid-game.
+        state = state.copyWith(
+          engineLevel: next.engineLevel,
+          bottomAvatarId: next.bottomAvatarId,
         );
       }
     });
@@ -394,6 +417,7 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
       isTimeOut: false,
       loadedGameId: null,
       isGameOver: initialGame.gameOver,
+      clockDisabledAfterTimeout: false,
     );
 
     if (playSound) {
@@ -467,6 +491,8 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
       final config = rust_persona.getPersonaConfig(avatarName: avatar.name);
       await _stockfishEngine.setSkillLevel(config.skillLevel, multiPV: config.multiPv);
       _stockfishEngine.sendCommand('setoption name MultiPV value ${config.multiPv}');
+      _stockfishEngine.sendCommand('setoption name Hash value ${avatar.hashSize}');
+      _stockfishEngine.sendCommand('setoption name Contempt value ${avatar.contempt}');
 
       state = state.copyWith(
         servicesStarted: true,
@@ -507,6 +533,8 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
     final config = rust_persona.getPersonaConfig(avatarName: avatar.name);
     await _engine.setSkillLevel(config.skillLevel, multiPV: config.multiPv);
     _engine.sendCommand('setoption name MultiPV value ${config.multiPv}');
+    _engine.sendCommand('setoption name Hash value ${avatar.hashSize}');
+    _engine.sendCommand('setoption name Contempt value ${avatar.contempt}');
 
     _searchFen = state.game.fen;
     final targetDepth = depth ?? config.depth;
@@ -643,7 +671,8 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
           aiTurn &&
           isMoveValidForCurrentTurn &&
           !state.game.gameOver &&
-          !state.isPaused) {
+          !state.isPaused &&
+          !state.isTimeOut) {
         _engineMoveTimer?.cancel();
         _engineMoveTimer = null;
         _scheduledMove = null;
@@ -656,7 +685,10 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
     _engineMoveTimer?.cancel();
     _engineMoveTimer = null;
     _scheduledMove = null;
-    if (move.length < 4 || state.game.gameOver || state.isPaused) return;
+    // Don't play engine moves when the game is over, paused, or when the
+    // timeout popup is showing (isTimeOut = true). After the user clicks
+    // "Continue", isTimeOut is cleared and a fresh analysis request is made.
+    if (move.length < 4 || state.game.gameOver || state.isPaused || state.isTimeOut) return;
     final from = move.substring(0, 2);
     final to = move.substring(2, 4);
 
@@ -708,11 +740,12 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
 
     if (moveMade) {
       final wasClockStarted = state.clockStarted;
+      final isClockDisabled = state.clockDisabledAfterTimeout;
       _onMoveCompleted('$from$to$promotion');
       if (state.isTemporaryQuickPlay) {
         state = state.copyWith(isTemporaryQuickPlay: false);
       }
-      if (!wasClockStarted) {
+      if (!isClockDisabled && !wasClockStarted) {
         state = state.copyWith(
           clockStarted: true,
           activeClockSide: _clockSideForTurn(),
@@ -768,6 +801,7 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
       clockStarted: state.clockStarted,
       activeClockSide: state.activeClockSide,
       threatenedSquares: List<String>.from(state.threatenedSquares),
+      dominatingSquares: List<String>.from(state.dominatingSquares),
       moveAnimation: state.moveAnimation,
       isPlayerWhite: state.isPlayerWhite,
       isBoardFlipped: state.isBoardFlipped,
@@ -799,6 +833,7 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
       clockStarted: snapshot.clockStarted,
       activeClockSide: snapshot.activeClockSide,
       threatenedSquares: snapshot.threatenedSquares,
+      dominatingSquares: snapshot.dominatingSquares,
       moveAnimation: snapshot.moveAnimation,
       isPlayerWhite: snapshot.isPlayerWhite,
       isBoardFlipped: snapshot.isBoardFlipped,
@@ -826,6 +861,9 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
   Future<void> makeMove(String from, String to) async {
     if (state.game.gameOver && state.viewingMoveIndex == null) return;
     if (state.isTimeOut && state.viewingMoveIndex == null) return;
+
+    // Record theme usage day
+    ref.read(storeProvider.notifier).recordThemeDay(ref.read(chessProvider).boardThemeId);
 
     _stopAnalysisAndReset();
     _engineMoveTimer?.cancel();
@@ -933,14 +971,18 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
     }
 
     final wasClockStarted = state.clockStarted;
+    final isClockDisabled = state.clockDisabledAfterTimeout;
     _onMoveCompleted('$from$to');
 
-    if (!wasClockStarted) {
-      state = state.copyWith(clockStarted: true);
+    // Only (re)start the clock if it was already running and hasn't been
+    // permanently disabled by a prior timeout-continue action.
+    if (!isClockDisabled) {
+      if (!wasClockStarted) {
+        state = state.copyWith(clockStarted: true);
+      }
+      state = state.copyWith(activeClockSide: _clockSideForTurn());
+      _startClockTicker();
     }
-
-    state = state.copyWith(activeClockSide: _clockSideForTurn());
-    _startClockTicker();
 
     if (_isAiTurn()) {
       state = state.copyWith(isEngineThinking: true);
@@ -1011,6 +1053,17 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
       }
     }
 
+    // Compute dominating squares via Rust engine (sync FFI call).
+    List<String> dominating = const [];
+    try {
+      dominating = rust_threats.getDominatingSquares(
+        fen: state.game.fen,
+        isChess960: state.isChess960,
+      );
+    } catch (e) {
+      debugPrint('ArenaNotifier: getDominatingSquares error: $e');
+    }
+
     state = state.copyWith(
       game: state.game,
       lastMove: moveLabel,
@@ -1018,6 +1071,7 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
       isEngineThinking: _isAiTurn() && state.servicesStarted && state.engineReady,
       activeClockSide: state.clockStarted ? _clockSideForTurn() : state.activeClockSide,
       threatenedSquares: threatened,
+      dominatingSquares: dominating,
       isGameOver: state.game.gameOver,
     );
 
@@ -1114,12 +1168,15 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
 
     if (moveMade) {
       final wasClockStarted = state.clockStarted;
+      final isClockDisabled = state.clockDisabledAfterTimeout;
       _onMoveCompleted('$from$to${promotionPiece.toLowerCase()}');
-      if (!wasClockStarted) {
-        state = state.copyWith(clockStarted: true);
+      if (!isClockDisabled) {
+        if (!wasClockStarted) {
+          state = state.copyWith(clockStarted: true);
+        }
+        state = state.copyWith(activeClockSide: _clockSideForTurn());
+        _startClockTicker();
       }
-      state = state.copyWith(activeClockSide: _clockSideForTurn());
-      _startClockTicker();
       unawaited(ensureGameServicesStarted(analyzeCurrentPosition: true));
       state = state.copyWith(isEngineThinking: state.engineReady);
     } else {
@@ -1449,6 +1506,13 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
   }
 
   void _handleClockTimeout(String side) {
+    // Cancel any pending engine move timer so the AI can't sneak in a
+    // move after the clock has expired.
+    _engineMoveTimer?.cancel();
+    _engineMoveTimer = null;
+    _scheduledMove = null;
+    _stopAnalysisAndReset();
+
     state = state.copyWith(
       clockStarted: false,
       activeClockSide: null,
@@ -1497,11 +1561,14 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
   }
 
   void continueAfterTimeout() {
+    // Disable the clock permanently for the rest of this game so it
+    // doesn't restart when either side makes their next move.
     state = state.copyWith(
       isTimeOut: false,
       isGameOverDismissed: false,
       clockStarted: false,
       activeClockSide: null,
+      clockDisabledAfterTimeout: true,
     );
     if (_isAiTurn()) {
       unawaited(ensureGameServicesStarted(analyzeCurrentPosition: true));
@@ -1555,6 +1622,15 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
     return entry;
   }
 
+  List<String> _computeDominatingSquares(String fen, bool isChess960) {
+    try {
+      return rust_threats.getDominatingSquares(fen: fen, isChess960: isChess960);
+    } catch (e) {
+      debugPrint('ArenaNotifier: getDominatingSquares error: $e');
+      return const [];
+    }
+  }
+
   void clearMoveAnimation() {
     state = state.copyWith(moveAnimation: null);
   }
@@ -1580,6 +1656,7 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
       blackTimeLeft: Duration(milliseconds: entry.blackTimeLeftMs),
       clockStarted: entry.clockStarted,
       threatenedSquares: const [],
+      dominatingSquares: _computeDominatingSquares(restoredGame.fen, is960),
       isPromoting: false,
       isGameOverDismissed: false,
       isTimeOut: false,

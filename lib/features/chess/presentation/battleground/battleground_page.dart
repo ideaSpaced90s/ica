@@ -136,24 +136,12 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
       });
     }
 
+    final isCurrentTab = currentNavIndex == 2;
+
     return PopScope(
-      canPop: false,
+      canPop: !isCurrentTab,
       onPopInvokedWithResult: (bool didPop, Object? result) async {
-        if (didPop) return;
-        final isMatchActive = state.activeRatedMatchId != null;
-        if (isMatchActive) {
-          final resigned = await showRatedExitDialog(context);
-          if (resigned == true) {
-            await ref.read(battlegroundProvider.notifier).resignRatedGame();
-            if (context.mounted) {
-              exitToDashboardWithSidebar(context, ref);
-            }
-          }
-        } else {
-          if (context.mounted) {
-            exitToDashboardWithSidebar(context, ref);
-          }
-        }
+        // Do nothing on phone back button when Battleground tab is active
       },
       child: Scaffold(
         key: _scaffoldKey,

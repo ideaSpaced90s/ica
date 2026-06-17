@@ -14,6 +14,7 @@ import '../services/chess_haptics_service.dart';
 import '../data/saved_game.dart'; // For CommentaryEntry
 import 'chess_provider.dart' show MoveAnimationData, chessProvider, chessHapticsServiceProvider, chessSoundServiceProvider;
 import '../services/chess_sound_service.dart';
+import 'store_provider.dart';
 
 import '../presentation/widgets/scotoma_card.dart' show hasScotomaDiagnosis;
 
@@ -330,6 +331,9 @@ class PuzzlesNotifier extends StateNotifier<PuzzlesState> {
   Future<void> makeMove(String from, String to) async {
     if (state.game.gameOver) return;
     if (state.puzzleMovesRemaining.isEmpty) return;
+
+    // Record theme usage day
+    ref.read(storeProvider.notifier).recordThemeDay(ref.read(chessProvider).boardThemeId);
 
     final expectedMove = state.puzzleMovesRemaining.first;
     final uciAttempt = '$from$to';

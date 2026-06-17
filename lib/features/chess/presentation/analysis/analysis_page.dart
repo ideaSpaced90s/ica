@@ -13,6 +13,8 @@ import '../../services/chess_sound_service.dart';
 import 'analysis_board.dart';
 import 'position_setup_page.dart';
 import 'workspace_page.dart';
+import '../dashboard_page.dart';
+import '../mobile_navigation_shell.dart';
 
 class AnalysisPage extends ConsumerStatefulWidget {
   const AnalysisPage({super.key});
@@ -150,18 +152,23 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
       ref.read(analysisEngineControllerProvider.notifier).setFen(next);
     });
 
+    final currentNavIndex = ref.watch(mobileNavIndexProvider);
+    final isCurrentTab = currentNavIndex == 5;
+
     return PopScope(
-      canPop: false,
+      canPop: !isCurrentTab,
       onPopInvokedWithResult: (bool didPop, Object? result) async {
         if (didPop) return;
         final isDirty = ref.read(studyLabProvider).isDirty;
         if (isDirty) {
           final shouldLeave = await _showUnsavedChangesDialog(context);
           if (shouldLeave && context.mounted) {
-            Navigator.of(context).popUntil((route) => route.isFirst);
+            exitToDashboardWithSidebar(context, ref);
           }
         } else {
-          Navigator.of(context).popUntil((route) => route.isFirst);
+          if (context.mounted) {
+            exitToDashboardWithSidebar(context, ref);
+          }
         }
       },
       child: AmbientScaffold(

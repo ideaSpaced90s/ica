@@ -55,39 +55,102 @@ class AiAvatar {
   }
 
   String get randomMoveProbability {
-    if (name == 'Sparky') return '50%';
+    if (name == 'Sparky') return '75%';
     if (name == 'Pawzy') return '35%';
-    if (name == 'Timorous') return '25%';
-    if (name == 'Rookie') return '18%';
+    if (name == 'Timorous') return '15%';
+    if (name == 'Rookie') return '5%';
+    return '0%';
+  }
+
+  String get blunderness {
+    if (name == 'Sparky') return '95%';
+    if (name == 'Pawzy') return '50%';
+    if (name == 'Timorous') return '30%';
+    if (name == 'Rookie') return '20%';
     if (name == 'Scholar') return '12%';
-    if (name == 'Molly') return '8%';
-    if (name == 'Berkserker') return '6%';
-    if (name == 'Blaire') return '4%';
-    if (name == 'Python') return '2%';
+    if (name == 'Molly') return '10%';
+    if (name == 'Berkserker') return '9%';
+    if (name == 'Blaire') return '6%';
+    if (name == 'Python') return '4%';
+    if (name == 'Gambit') return '5%';
+    if (name == 'Trapper') return '4%';
+    if (name == 'Assassin') return '3.5%';
+    if (name == 'Vala') return '3%';
+    if (name == 'Magician') return '2.5%';
+    if (name == 'Sentinel') return '2%';
+    if (name == 'Murphy') return '1.5%';
+    if (name == 'Titan') return '1%';
+    if (name == 'Alien') return '3%';
+    if (name == 'Champ') return '0.5%';
     if (name == 'King') return '0%';
-    final level = skillLevel;
-    if (level <= 5) return '20%';
-    if (level <= 10) return '8%';
-    if (level <= 15) return '2%';
-    return '0.5%';
+    return '10%';
   }
 
   String get heuristicJitteriness {
-    if (name == 'Sparky') return '85%';
-    if (name == 'Pawzy') return '70%';
-    if (name == 'Timorous') return '55%';
-    if (name == 'Rookie') return '45%';
-    if (name == 'Scholar') return '35%';
-    if (name == 'Molly') return '25%';
-    if (name == 'Berkserker') return '20%';
-    if (name == 'Blaire') return '15%';
-    if (name == 'Python') return '10%';
+    if (name == 'Sparky') return '80%';
+    if (name == 'Pawzy') return '30%';
+    if (name == 'Timorous') return '10%';
+    if (name == 'Rookie') return '6%';
+    if (name == 'Scholar') return '2%';
+    if (name == 'Molly') return '1.25%';
+    if (name == 'Berkserker') return '0.8%';
+    if (name == 'Blaire') return '0.5%';
+    if (name == 'Python') return '0.2%';
+    if (name == 'Gambit') return '0.15%';
+    if (name == 'Trapper') return '0.1%';
+    if (name == 'Assassin') return '0.08%';
+    if (name == 'Vala') return '0.06%';
+    if (name == 'Magician') return '0.05%';
+    if (name == 'Sentinel') return '0.03%';
+    if (name == 'Murphy') return '0.02%';
+    if (name == 'Titan') return '0%';
+    if (name == 'Alien') return '0.5%';
+    if (name == 'Champ') return '0%';
     if (name == 'King') return '0%';
-    final level = skillLevel;
-    if (level <= 5) return '40%';
-    if (level <= 10) return '20%';
-    if (level <= 15) return '8%';
-    return '2%';
+    return '0%';
+  }
+
+  int get hashSize {
+    if (name == 'Sparky') return 16;
+    if (name == 'Pawzy') return 16;
+    if (name == 'Timorous') return 16;
+    if (name == 'Rookie') return 16;
+    if (name == 'Scholar') return 32;
+    if (name == 'Molly') return 32;
+    if (name == 'Berkserker') return 32;
+    if (name == 'Blaire') return 32;
+    if (name == 'Python') return 128;
+    if (name == 'Gambit') return 128;
+    if (name == 'Trapper') return 128;
+    if (name == 'Assassin') return 128;
+    if (name == 'Vala') return 128;
+    if (name == 'Magician') return 128;
+    if (name == 'Sentinel') return 128;
+    if (name == 'Murphy') return 128;
+    if (name == 'Titan') return 256;
+    if (name == 'Alien') return 256;
+    if (name == 'Champ') return 256;
+    if (name == 'King') return 256;
+    return 16;
+  }
+
+  int get contempt {
+    if (name == 'Timorous') return -100;
+    if (name == 'Molly') return -50;
+    if (name == 'Berkserker') return 100;
+    if (name == 'Blaire') return 50;
+    if (name == 'Gambit') return 80;
+    if (name == 'Assassin') return 100;
+    if (name == 'Magician') return 100;
+    if (name == 'Murphy') return 80;
+    return 0;
+  }
+
+  String get contemptDisplay {
+    final val = contempt;
+    if (val == 0) return 'N/A';
+    if (val > 0) return '+$val';
+    return '$val';
   }
 
   static const List<AiAvatar> avatars = [

@@ -153,21 +153,21 @@ pub struct PersonaConfig {
 pub fn get_persona_config(avatar_name: String) -> PersonaConfig {
     match avatar_name.as_str() {
         "Sparky" => PersonaConfig { multi_pv: 45, skill_level: 0, depth: 1 },
-        "Pawzy" | "Pawnzy" => PersonaConfig { multi_pv: 30, skill_level: 1, depth: 1 },
-        "Coward" => PersonaConfig { multi_pv: 20, skill_level: 2, depth: 2 },
-        "Rookie" | "Rook-ie" => PersonaConfig { multi_pv: 15, skill_level: 3, depth: 3 },
-        "Scholar" => PersonaConfig { multi_pv: 12, skill_level: 4, depth: 3 },
-        "Molly" => PersonaConfig { multi_pv: 10, skill_level: 5, depth: 4 },
-        "Berserker" | "Berkserker" => PersonaConfig { multi_pv: 10, skill_level: 6, depth: 4 },
-        "Blaire" => PersonaConfig { multi_pv: 8, skill_level: 7, depth: 5 },
-        "Python" => PersonaConfig { multi_pv: 8, skill_level: 8, depth: 6 },
-        "Gambit" => PersonaConfig { multi_pv: 6, skill_level: 9, depth: 7 },
-        "Trapper" => PersonaConfig { multi_pv: 6, skill_level: 10, depth: 8 },
-        "Assassin" => PersonaConfig { multi_pv: 6, skill_level: 11, depth: 9 },
-        "Vala" => PersonaConfig { multi_pv: 6, skill_level: 12, depth: 10 },
-        "Magician" => PersonaConfig { multi_pv: 6, skill_level: 13, depth: 12 },
-        "Sentinel" => PersonaConfig { multi_pv: 4, skill_level: 14, depth: 14 },
-        "Murphy" => PersonaConfig { multi_pv: 4, skill_level: 16, depth: 15 },
+        "Pawzy" | "Pawnzy" => PersonaConfig { multi_pv: 30, skill_level: 1, depth: 2 },
+        "Coward" => PersonaConfig { multi_pv: 20, skill_level: 2, depth: 3 },
+        "Rookie" | "Rook-ie" => PersonaConfig { multi_pv: 15, skill_level: 3, depth: 5 },
+        "Scholar" => PersonaConfig { multi_pv: 12, skill_level: 4, depth: 6 },
+        "Molly" => PersonaConfig { multi_pv: 10, skill_level: 5, depth: 7 },
+        "Berserker" | "Berkserker" => PersonaConfig { multi_pv: 10, skill_level: 6, depth: 8 },
+        "Blaire" => PersonaConfig { multi_pv: 8, skill_level: 7, depth: 9 },
+        "Python" => PersonaConfig { multi_pv: 4, skill_level: 8, depth: 10 },
+        "Gambit" => PersonaConfig { multi_pv: 4, skill_level: 9, depth: 11 },
+        "Trapper" => PersonaConfig { multi_pv: 4, skill_level: 10, depth: 12 },
+        "Assassin" => PersonaConfig { multi_pv: 4, skill_level: 11, depth: 13 },
+        "Vala" => PersonaConfig { multi_pv: 4, skill_level: 12, depth: 14 },
+        "Magician" => PersonaConfig { multi_pv: 3, skill_level: 13, depth: 15 },
+        "Sentinel" => PersonaConfig { multi_pv: 2, skill_level: 14, depth: 16 },
+        "Murphy" => PersonaConfig { multi_pv: 2, skill_level: 16, depth: 17 },
         "Titan" => PersonaConfig { multi_pv: 1, skill_level: 18, depth: 18 },
         "Alien" => PersonaConfig { multi_pv: 12, skill_level: 18, depth: 19 },
         "Champ" => PersonaConfig { multi_pv: 1, skill_level: 18, depth: 20 },
@@ -213,18 +213,6 @@ pub fn select_persona_move_rust(
         "Pawzy" | "Pawnzy" => 35.0,
         "Coward" => 15.0,
         "Rookie" | "Rook-ie" => 5.0,
-        "Scholar" => 2.0,
-        "Molly" => 1.0,
-        "Berserker" | "Berkserker" => 0.5,
-        "Blaire" => 0.25,
-        "Python" => 0.15,
-        "Gambit" => 0.1,
-        "Trapper" => 0.07,
-        "Assassin" => 0.05,
-        "Vala" => 0.03,
-        "Magician" => 0.02,
-        "Sentinel" => 0.01,
-        "Murphy" => 0.005,
         _ => 0.0,
     };
     #[cfg(test)]
@@ -255,20 +243,20 @@ pub fn select_persona_move_rust(
         "Pawzy" | "Pawnzy" => 5.0,
         "Coward" => 3.0,
         "Rookie" | "Rook-ie" => 2.0,
-        "Scholar" => 1.5,
-        "Molly" => 1.2,
-        "Berserker" | "Berkserker" => 1.5,
-        "Blaire" => 1.0,
-        "Python" => 0.8,
-        "Gambit" => 1.2,
-        "Trapper" => 0.8,
-        "Assassin" => 0.8,
-        "Vala" => 0.5,
-        "Magician" => 1.0,
-        "Sentinel" => 0.4,
-        "Murphy" => 0.2,
+        "Scholar" => 1.2,
+        "Molly" => 1.0,
+        "Berserker" | "Berkserker" => 0.9,
+        "Blaire" => 0.6,
+        "Python" => 0.4,
+        "Gambit" => 0.5,
+        "Trapper" => 0.4,
+        "Assassin" => 0.35,
+        "Vala" => 0.3,
+        "Magician" => 0.25,
+        "Sentinel" => 0.2,
+        "Murphy" => 0.15,
         "Titan" => 0.1,
-        "Alien" => 0.5,
+        "Alien" => 0.3,
         "Champ" => 0.05,
         _ => 9999.0,
     };
@@ -388,7 +376,7 @@ pub fn select_persona_move_rust(
                 }
             }
             let hash = simple_hash(&(candidate.uci_move.clone() + &fen));
-            let jitter = get_jitter_amount(hash, 500, 2.5);
+            let jitter = get_jitter_amount(hash, 250, 1.25);
             weight += jitter;
         } else if avatar_name == "Blaire" {
             if let Some(p) = piece {
@@ -426,7 +414,7 @@ pub fn select_persona_move_rust(
                 weight += (10.0 - distance).max(0.0) * 0.15;
             }
             let hash = simple_hash(&(candidate.uci_move.clone() + &fen));
-            let jitter = get_jitter_amount(hash, 180, 0.9);
+            let jitter = get_jitter_amount(hash, 100, 0.5);
             weight += jitter;
         } else if avatar_name == "Gambit" {
             let best_eval = candidates[0].evaluation;
@@ -435,7 +423,7 @@ pub fn select_persona_move_rust(
                 weight += 2.5;
             }
             let hash = simple_hash(&(candidate.uci_move.clone() + &fen));
-            let jitter = get_jitter_amount(hash, 80, 0.4);
+            let jitter = get_jitter_amount(hash, 30, 0.15);
             weight += jitter;
         } else if avatar_name == "Vala" {
             if let Some(m) = &found_move {
@@ -465,7 +453,7 @@ pub fn select_persona_move_rust(
                 weight += 0.5;
             }
             let hash = simple_hash(&(candidate.uci_move.clone() + &fen));
-            let jitter = get_jitter_amount(hash, 20, 0.1);
+            let jitter = get_jitter_amount(hash, 12, 0.06);
             weight += jitter;
         } else if avatar_name == "Sentinel" {
             let file = to_sq.file();
@@ -498,7 +486,7 @@ pub fn select_persona_move_rust(
                 weight += 0.8;
             }
             let hash = simple_hash(&(candidate.uci_move.clone() + &fen));
-            let jitter = get_jitter_amount(hash, 10, 0.05);
+            let jitter = get_jitter_amount(hash, 6, 0.03);
             weight += jitter;
         } else if avatar_name == "Murphy" {
             let file = to_sq.file();
@@ -528,7 +516,7 @@ pub fn select_persona_move_rust(
                 }
             }
             let hash = simple_hash(&(candidate.uci_move.clone() + &fen));
-            let jitter = get_jitter_amount(hash, 6, 0.03);
+            let jitter = get_jitter_amount(hash, 4, 0.02);
             weight += jitter;
         } else if avatar_name == "Coward" {
             let is_retreat = if turn_color == Color::White {
@@ -607,7 +595,7 @@ pub fn select_persona_move_rust(
                 weight += 0.8;
             }
             let hash = simple_hash(&(candidate.uci_move.clone() + &fen));
-            let jitter = get_jitter_amount(hash, 800, 4.0);
+            let jitter = get_jitter_amount(hash, 400, 2.0);
             weight += jitter;
         } else if avatar_name == "Berserker" || avatar_name == "Berkserker" {
             if let Some(king_sq) = initial_pos.board().king_of(opponent_color) {
@@ -629,7 +617,7 @@ pub fn select_persona_move_rust(
                 weight += 1.8;
             }
             let hash = simple_hash(&(candidate.uci_move.clone() + &fen));
-            let jitter = get_jitter_amount(hash, 300, 1.5);
+            let jitter = get_jitter_amount(hash, 160, 0.8);
             weight += jitter;
         } else if avatar_name == "Python" {
             if restricts_opponent_mobility(&initial_pos, &found_move) {
@@ -684,7 +672,7 @@ pub fn select_persona_move_rust(
                 weight -= 2.0;
             }
             let hash = simple_hash(&(candidate.uci_move.clone() + &fen));
-            let jitter = get_jitter_amount(hash, 120, 0.6);
+            let jitter = get_jitter_amount(hash, 40, 0.2);
             weight += jitter;
         } else if avatar_name == "Trapper" {
             let best_eval = candidates[0].evaluation;
@@ -715,7 +703,7 @@ pub fn select_persona_move_rust(
                 }
             }
             let hash = simple_hash(&(candidate.uci_move.clone() + &fen));
-            let jitter = get_jitter_amount(hash, 50, 0.25);
+            let jitter = get_jitter_amount(hash, 20, 0.1);
             weight += jitter;
         } else if avatar_name == "Assassin" {
             if let Some(king_sq) = initial_pos.board().king_of(opponent_color) {
@@ -760,7 +748,7 @@ pub fn select_persona_move_rust(
                 }
             }
             let hash = simple_hash(&(candidate.uci_move.clone() + &fen));
-            let jitter = get_jitter_amount(hash, 30, 0.15);
+            let jitter = get_jitter_amount(hash, 16, 0.08);
             weight += jitter;
         } else if avatar_name == "Magician" {
             let best_eval = candidates[0].evaluation;
@@ -794,7 +782,7 @@ pub fn select_persona_move_rust(
                 }
             }
             let hash = simple_hash(&(candidate.uci_move.clone() + &fen));
-            let jitter = get_jitter_amount(hash, 14, 0.07);
+            let jitter = get_jitter_amount(hash, 10, 0.05);
             weight += jitter;
         } else if avatar_name == "Titan" {
             let file = to_sq.file();
@@ -807,9 +795,9 @@ pub fn select_persona_move_rust(
         } else if avatar_name == "Alien" {
             let best_eval = candidates[0].evaluation;
             let eval_drop = best_eval - candidate.evaluation;
-            if eval_drop < 0.5 {
+            if eval_drop < 0.3 {
                 let hash = simple_hash(&(candidate.uci_move.clone() + &fen));
-                let jitter = get_jitter_amount(hash, 300, 1.5);
+                let jitter = get_jitter_amount(hash, 100, 0.5);
                 weight += jitter;
 
                 if move_count >= 10 && move_count <= 30 {

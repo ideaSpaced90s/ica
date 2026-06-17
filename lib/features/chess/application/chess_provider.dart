@@ -36,6 +36,7 @@ import '../domain/models/ai_avatar.dart';
 import '../domain/models/candidate_move.dart';
 import '../domain/chess_persona_evaluator.dart';
 import 'battleground_provider.dart';
+import 'store_provider.dart';
 import '../services/notification_service.dart';
 import '../services/cloud_sync_service.dart';
 
@@ -813,6 +814,8 @@ class ChessNotifier extends StateNotifier<ChessState> {
         config.skillLevel,
         multiPV: config.multiPv,
       );
+      await _engine.sendCommand('setoption name Hash value ${avatar.hashSize}');
+      await _engine.sendCommand('setoption name Contempt value ${avatar.contempt}');
 
       final musicInitiallyEnabled = s.isMusicEnabled;
       if (musicInitiallyEnabled) {
@@ -1401,6 +1404,8 @@ class ChessNotifier extends StateNotifier<ChessState> {
         config.skillLevel,
         multiPV: multiPV,
       );
+      await _stockfishEngine.sendCommand('setoption name Hash value ${avatar.hashSize}');
+      await _stockfishEngine.sendCommand('setoption name Contempt value ${avatar.contempt}');
 
       state = state.copyWith(
         servicesStarted: true,
@@ -2291,6 +2296,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
   Future<void> makeMove(String from, String to) async {
     if (state.game.gameOver) return;
 
+    // Record theme usage day
+    ref.read(storeProvider.notifier).recordThemeDay(state.boardThemeId);
+
     if (state.isAcademyBlunderActive) {
       state = state.copyWith(
         isAcademyBlunderActive: false,
@@ -2431,10 +2439,14 @@ class ChessNotifier extends StateNotifier<ChessState> {
       final chanakyaAvatar = AiAvatar.getBestMatch(targetElo);
       final config = rust_persona.getPersonaConfig(avatarName: chanakyaAvatar.name);
       await _engine.setSkillLevel(config.skillLevel, multiPV: 3);
+      await _engine.sendCommand('setoption name Hash value ${chanakyaAvatar.hashSize}');
+      await _engine.sendCommand('setoption name Contempt value ${chanakyaAvatar.contempt}');
     } else {
       final avatar = AiAvatar.getAvatar(state.engineLevel);
       final config = rust_persona.getPersonaConfig(avatarName: avatar.name);
       await _engine.setSkillLevel(config.skillLevel, multiPV: config.multiPv);
+      await _engine.sendCommand('setoption name Hash value ${avatar.hashSize}');
+      await _engine.sendCommand('setoption name Contempt value ${avatar.contempt}');
     }
   }
 
@@ -2528,6 +2540,8 @@ class ChessNotifier extends StateNotifier<ChessState> {
       configForMoving.skillLevel,
       multiPV: state.isAcademyActive ? 3 : configForMoving.multiPv,
     );
+    _engine.sendCommand('setoption name Hash value ${avatar.hashSize}');
+    _engine.sendCommand('setoption name Contempt value ${avatar.contempt}');
 
     // Cancel any existing max thinking timer
     _maxThinkingTimer?.cancel();
@@ -2635,6 +2649,8 @@ class ChessNotifier extends StateNotifier<ChessState> {
       config.skillLevel,
       multiPV: config.multiPv,
     );
+    await _engine.sendCommand('setoption name Hash value ${avatar.hashSize}');
+    await _engine.sendCommand('setoption name Contempt value ${avatar.contempt}');
     _saveSettings();
     if (state.servicesStarted && _isAiTurn()) {
       _currentCandidates.clear();
@@ -2662,6 +2678,8 @@ class ChessNotifier extends StateNotifier<ChessState> {
           config.skillLevel,
           multiPV: config.multiPv,
         );
+        await _engine.sendCommand('setoption name Hash value ${avatar.hashSize}');
+        await _engine.sendCommand('setoption name Contempt value ${avatar.contempt}');
         _currentCandidates.clear();
         _engine.analyzePosition(state.game.fen, depth: config.depth);
       }
@@ -3566,6 +3584,8 @@ class ChessNotifier extends StateNotifier<ChessState> {
       final config = rust_persona.getPersonaConfig(avatarName: avatar.name);
       await _engine.setSkillLevel(config.skillLevel,
           multiPV: config.multiPv); // Reset MultiPV to persona config
+      await _engine.sendCommand('setoption name Hash value ${avatar.hashSize}');
+      await _engine.sendCommand('setoption name Contempt value ${avatar.contempt}');
       state = state.copyWith(isEngineThinking: state.engineReady);
     }
 
@@ -3666,6 +3686,8 @@ class ChessNotifier extends StateNotifier<ChessState> {
       final config = rust_persona.getPersonaConfig(avatarName: avatar.name);
       await _engine.setSkillLevel(config.skillLevel,
           multiPV: 3); // Academy uses MultiPV=3
+      await _engine.sendCommand('setoption name Hash value ${avatar.hashSize}');
+      await _engine.sendCommand('setoption name Contempt value ${avatar.contempt}');
       state = state.copyWith(isEngineThinking: state.engineReady);
     }
 
@@ -3764,6 +3786,8 @@ class ChessNotifier extends StateNotifier<ChessState> {
     final config = rust_persona.getPersonaConfig(avatarName: avatar.name);
     await _engine.setSkillLevel(config.skillLevel,
         multiPV: 3); // Academy uses MultiPV=3
+    await _engine.sendCommand('setoption name Hash value ${avatar.hashSize}');
+    await _engine.sendCommand('setoption name Contempt value ${avatar.contempt}');
 
     // 6. If playing as Black, the engine (White) must think/make the first move!
     if (!playAsWhite) {

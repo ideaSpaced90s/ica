@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
 
 import '../../application/chess_provider.dart';
 import '../../application/store_provider.dart';
@@ -11,6 +10,7 @@ import '../widgets/ambient_scaffold.dart';
 import '../shared/themes/chess_theme.dart';
 import '../arena/themes/theme_registry.dart';
 import '../widgets/theme_preview_dialog.dart';
+import '../widgets/premium_membership_card.dart';
 import '../../services/auth_service.dart';
 import '../widgets/sign_in_prompt_dialog.dart';
 
@@ -161,6 +161,27 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
           final isActive = storeState.isPremium && storeState.subscriptionPlan == plan.id;
           return _buildPaidPlanCard(context, plan, isActive, storeState, storeNotifier);
         }),
+
+        if (storeState.isPremium) ...[
+          const SizedBox(height: 24),
+          Center(
+            child: TextButton(
+              onPressed: () {
+                ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                _showCancelDialog(context, storeNotifier);
+              },
+              child: Text(
+                'CANCEL SUBSCRIPTION',
+                style: GoogleFonts.outfit(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.0,
+                  color: Colors.redAccent.shade200,
+                ),
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -324,9 +345,32 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
     dynamic chessNotifier, {
     bool isFeatured = false,
   }) {
-    final isOwned = isFree || storeState.isPremium || storeState.purchasedBoardThemes.contains(theme.id);
+    final bool isDirectlyPurchased = storeState.purchasedBoardThemes.contains(theme.id);
+    final int allowedDays = storeNotifier.getThemeAllowedDays(theme.id, storeState.subscriptionPlan ?? 'monthly');
+    final int usedDays = storeNotifier.getThemeUsedDays(theme.id);
+    final int remainingDays = (allowedDays - usedDays).clamp(0, 365);
+    final bool hasSubscriptionAccess = storeState.isPremium && remainingDays > 0;
+
+    final isOwned = isFree || isDirectlyPurchased || hasSubscriptionAccess;
     final highlightThemeId = ref.watch(storeHighlightThemeIdProvider);
     final isHighlighted = theme.id == highlightThemeId;
+
+    final String badgeText;
+    final Color badgeColor;
+
+    if (isFree) {
+      badgeText = 'FREE';
+      badgeColor = Colors.green.withValues(alpha: 0.85);
+    } else if (isDirectlyPurchased) {
+      badgeText = 'OWNED';
+      badgeColor = ScholarlyTheme.accentBlue.withValues(alpha: 0.85);
+    } else if (hasSubscriptionAccess) {
+      badgeText = '$remainingDays ${remainingDays == 1 ? "DAY" : "DAYS"} LEFT';
+      badgeColor = const Color(0xFFFFD700).withValues(alpha: 0.9); // Gold for subscription access
+    } else {
+      badgeText = '\$0.99';
+      badgeColor = Colors.black.withValues(alpha: 0.65);
+    }
 
     return GestureDetector(
       onTap: () {
@@ -409,15 +453,11 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
-                          color: isFree
-                              ? Colors.green.withValues(alpha: 0.85)
-                              : (isOwned
-                                  ? ScholarlyTheme.accentBlue.withValues(alpha: 0.85)
-                                  : Colors.black.withValues(alpha: 0.65)),
+                          color: badgeColor,
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
-                          isFree ? 'FREE' : (isOwned ? 'OWNED' : '\$0.99'),
+                          badgeText,
                           style: GoogleFonts.outfit(
                             fontSize: 9,
                             fontWeight: FontWeight.bold,
@@ -779,6 +819,36 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
     final featureTextColor = isYearly ? Colors.white.withValues(alpha: 0.9) : ScholarlyTheme.textPrimary;
     final Color planAccentColor = isYearly ? const Color(0xFFF59E0B) : plan.color;
 
+    String buttonText = 'SUBSCRIBE';
+    bool isUpgrade = false;
+    bool isDowngrade = false;
+
+    if (isActive) {
+      buttonText = 'CURRENT PLAN';
+    } else if (storeState.isPremium) {
+      final currentPlanId = storeState.subscriptionPlan;
+      if (currentPlanId == 'monthly') {
+        if (plan.id == 'sixmonth' || plan.id == 'yearly') {
+          buttonText = 'UPGRADE';
+          isUpgrade = true;
+        } else {
+          buttonText = 'MANAGE';
+          isDowngrade = true;
+        }
+      } else if (currentPlanId == 'sixmonth') {
+        if (plan.id == 'yearly') {
+          buttonText = 'UPGRADE';
+          isUpgrade = true;
+        } else {
+          buttonText = 'MANAGE';
+          isDowngrade = true;
+        }
+      } else if (currentPlanId == 'yearly') {
+        buttonText = 'MANAGE';
+        isDowngrade = true;
+      }
+    }
+
     return Container(
       margin: const EdgeInsets.only(top: 16),
       decoration: BoxDecoration(
@@ -918,18 +988,29 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
                         ? null
                         : () {
                             ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                            if (isDowngrade) {
+                              storeNotifier.openSubscriptionManagement();
+                              return;
+                            }
+                            
+                            void action() {
+                              if (isUpgrade) {
+                                _showUpgradeConfirmation(context, plan, storeNotifier);
+                              } else {
+                                storeNotifier.buySubscription(plan.id);
+                              }
+                            }
+
                             final authService = ref.read(authServiceProvider);
                             if (!authService.isPlayGamesUser) {
                               SignInPromptDialog.show(
                                 context: context,
                                 title: 'Sign In Required',
                                 description: 'To buy premium subscriptions and sync benefits across devices, please sign in with Google.',
-                                onSignInSuccess: () {
-                                  storeNotifier.buySubscription(plan.id);
-                                },
+                                onSignInSuccess: action,
                               );
                             } else {
-                              storeNotifier.buySubscription(plan.id);
+                              action();
                             }
                           },
                     style: ElevatedButton.styleFrom(
@@ -948,7 +1029,7 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
                       elevation: isActive ? 0 : 2,
                     ),
                     child: Text(
-                      isActive ? 'CURRENT PLAN' : 'SUBSCRIBE',
+                      buttonText,
                       style: GoogleFonts.outfit(
                         fontWeight: FontWeight.bold,
                         fontSize: 13,
@@ -971,113 +1052,8 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
     StoreState storeState,
     StoreNotifier storeNotifier,
   ) {
-    final dateFormat = DateFormat('MMM d, yyyy');
-
     if (storeState.isPremium && storeState.subscriptionTill != null) {
-      final rawPlan = storeState.subscriptionPlan ?? 'Premium';
-      final planName = (rawPlan == 'sixmonth' ? '6-Month' : rawPlan).toUpperCase();
-      final expiryStr = dateFormat.format(storeState.subscriptionTill!);
-      final daysLeft = storeState.subscriptionTill!.difference(DateTime.now()).inDays;
-
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF0F172A), Color(0xFF1E293B)], // Sleek Dark Steel
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: Colors.cyan.withValues(alpha: 0.3), width: 1.5),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.cyan.withValues(alpha: 0.1),
-              blurRadius: 16,
-              spreadRadius: 2,
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.cyan.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.verified_user_rounded, color: Colors.cyan, size: 28),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Wrap(
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: 6,
-                    runSpacing: 4,
-                    children: [
-                      Text(
-                        '$planName SUBSCRIBER',
-                        style: GoogleFonts.outfit(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.cyan,
-                          letterSpacing: 1.0,
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.green.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          'ACTIVE',
-                          style: GoogleFonts.inter(
-                            fontSize: 8,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.greenAccent,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Renews till: $expiryStr ($daysLeft days left)',
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      color: Colors.cyanAccent.withValues(alpha: 0.8),
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '✓ All app features and themes unlocked',
-                    style: GoogleFonts.inter(fontSize: 10, color: Colors.white70),
-                  ),
-                ],
-              ),
-            ),
-            TextButton(
-              onPressed: () {
-                ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                _showCancelDialog(context, storeNotifier);
-              },
-              child: Text(
-                'CANCEL',
-                style: GoogleFonts.inter(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.redAccent,
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
+      return const PremiumMembershipCard();
     }
 
     // Free Tier Layout
@@ -1156,7 +1132,7 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
             style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary),
           ),
           content: Text(
-            'Are you sure you want to cancel your simulated subscription? You will lose access to premium AI coaching limits immediately.',
+            'To cancel your subscription, you will be redirected to Google Play Store. Your premium benefits will remain active until the end of the current billing cycle.',
             style: GoogleFonts.inter(fontSize: 13, color: ScholarlyTheme.textPrimary, height: 1.4),
           ),
           actions: [
@@ -1166,24 +1142,59 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
             ),
             ElevatedButton(
               onPressed: () {
-                storeNotifier.cancelSubscription();
+                storeNotifier.openSubscriptionManagement();
                 Navigator.pop(context);
                 ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text('Subscription cancelled successfully.'),
-                    behavior: SnackBarBehavior.floating,
-                    backgroundColor: Colors.redAccent,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.redAccent,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              child: Text('Yes, Cancel', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+              child: Text('Yes, Manage', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showUpgradeConfirmation(
+    BuildContext context,
+    SubscriptionPlan plan,
+    StoreNotifier storeNotifier,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: Text(
+            'Confirm Upgrade',
+            style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary),
+          ),
+          content: Text(
+            'Would you like to upgrade to the "${plan.title}" for \$${plan.price}? Your current plan will end immediately, and Google Play will apply a prorated credit toward your new plan.',
+            style: GoogleFonts.inter(fontSize: 13, color: ScholarlyTheme.textPrimary, height: 1.4),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                storeNotifier.buySubscription(plan.id);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: ScholarlyTheme.accentBlue,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: Text('Upgrade Now', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
             ),
           ],
         );

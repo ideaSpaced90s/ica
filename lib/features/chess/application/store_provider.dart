@@ -8,6 +8,7 @@ import 'package:in_app_purchase_android/billing_client_wrappers.dart';
 import 'package:kingslayer_chess/main.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'chess_provider.dart';
 
@@ -76,6 +77,10 @@ class StoreState {
   final String? subscriptionPlan; // 'monthly', 'sixmonth', 'yearly', or null
   final Set<String> purchasedBoardThemes;
   final FreeTierUsage freeTierUsage;
+  final DateTime? currentCycleStartDate;
+  final List<String>? cycleThemeAllocation;
+  final Map<String, List<String>> cycleThemeUsageDates;
+  final String? currentPurchaseToken;
 
   StoreState({
     required this.goldBalance,
@@ -87,6 +92,10 @@ class StoreState {
     this.subscriptionPlan,
     required this.purchasedBoardThemes,
     required this.freeTierUsage,
+    this.currentCycleStartDate,
+    this.cycleThemeAllocation,
+    required this.cycleThemeUsageDates,
+    this.currentPurchaseToken,
   });
 
   StoreState copyWith({
@@ -99,6 +108,10 @@ class StoreState {
     String? subscriptionPlan,
     Set<String>? purchasedBoardThemes,
     FreeTierUsage? freeTierUsage,
+    DateTime? currentCycleStartDate,
+    List<String>? cycleThemeAllocation,
+    Map<String, List<String>>? cycleThemeUsageDates,
+    String? currentPurchaseToken,
   }) {
     return StoreState(
       goldBalance: goldBalance ?? this.goldBalance,
@@ -110,6 +123,10 @@ class StoreState {
       subscriptionPlan: subscriptionPlan ?? this.subscriptionPlan,
       purchasedBoardThemes: purchasedBoardThemes ?? this.purchasedBoardThemes,
       freeTierUsage: freeTierUsage ?? this.freeTierUsage,
+      currentCycleStartDate: currentCycleStartDate ?? this.currentCycleStartDate,
+      cycleThemeAllocation: cycleThemeAllocation ?? this.cycleThemeAllocation,
+      cycleThemeUsageDates: cycleThemeUsageDates ?? this.cycleThemeUsageDates,
+      currentPurchaseToken: currentPurchaseToken ?? this.currentPurchaseToken,
     );
   }
 
@@ -123,6 +140,10 @@ class StoreState {
         'subscriptionPlan': subscriptionPlan,
         'purchasedBoardThemes': purchasedBoardThemes.toList(),
         'freeTierUsage': freeTierUsage.toJson(),
+        'currentCycleStartDate': currentCycleStartDate?.toIso8601String(),
+        'cycleThemeAllocation': cycleThemeAllocation,
+        'cycleThemeUsageDates': cycleThemeUsageDates,
+        'currentPurchaseToken': currentPurchaseToken,
       };
 
   factory StoreState.fromJson(Map<String, dynamic> json) {
@@ -153,6 +174,13 @@ class StoreState {
               chipPromptsUsed: 0,
               puzzlesSolved: 0,
             ),
+      currentCycleStartDate: json['currentCycleStartDate'] != null ? DateTime.parse(json['currentCycleStartDate']) : null,
+      cycleThemeAllocation: (json['cycleThemeAllocation'] as List<dynamic>?)?.map((e) => e.toString()).toList(),
+      cycleThemeUsageDates: (json['cycleThemeUsageDates'] as Map<String, dynamic>?)?.map(
+            (k, v) => MapEntry(k, (v as List<dynamic>).map((e) => e.toString()).toList()),
+          ) ??
+          {},
+      currentPurchaseToken: json['currentPurchaseToken'],
     );
   }
 }
@@ -176,6 +204,9 @@ class StoreRepository {
         chipPromptsUsed: 0,
         puzzlesSolved: 0,
       ),
+      currentCycleStartDate: null,
+      cycleThemeAllocation: null,
+      cycleThemeUsageDates: {},
     );
 
     if (!await file.exists()) {
@@ -232,6 +263,9 @@ class StoreNotifier extends StateNotifier<StoreState> {
             chipPromptsUsed: 0,
             puzzlesSolved: 0,
           ),
+          currentCycleStartDate: null,
+          cycleThemeAllocation: null,
+          cycleThemeUsageDates: {},
         )) {
     if (loadData) {
       _loadStoreData(initializeBilling: initializeBilling);
@@ -348,19 +382,31 @@ class StoreNotifier extends StateNotifier<StoreState> {
       days = 365;
     }
 
-    if (state.isPremium && state.subscriptionTill != null && state.subscriptionTill!.isAfter(now)) {
-      newExpiry = state.subscriptionTill!.add(Duration(days: days));
-    } else {
+    final String? oldPlan = state.subscriptionPlan;
+    final bool isPlanChange = state.isPremium && oldPlan != null && oldPlan != plan;
+
+    if (isPlanChange || !state.isPremium || state.subscriptionTill == null || state.subscriptionTill!.isBefore(now)) {
       newExpiry = now.add(Duration(days: days));
+    } else {
+      newExpiry = state.subscriptionTill!.add(Duration(days: days));
     }
+
+    final bool wasPremium = state.isPremium;
+    final String token = purchase.purchaseID ?? purchase.verificationData.serverVerificationData;
 
     state = state.copyWith(
       isPremium: true,
       joinedPremiumDate: state.joinedPremiumDate ?? now,
       subscriptionTill: newExpiry,
       subscriptionPlan: plan,
+      currentPurchaseToken: token,
     );
-    _saveStoreData();
+
+    if (!wasPremium || oldPlan != plan || state.currentCycleStartDate == null || state.cycleThemeAllocation == null) {
+      _startNewCycle(now);
+    } else {
+      _saveStoreData();
+    }
 
     if (productId == 'ica_saas_1') {
       sharedPrefs.remove('pending_plan_id');
@@ -421,9 +467,30 @@ class StoreNotifier extends StateNotifier<StoreState> {
 
         await sharedPrefs.setString('pending_plan_id', planId);
 
+        ChangeSubscriptionParam? changeSubscriptionParam;
+        if (state.isPremium && state.currentPurchaseToken != null) {
+          try {
+            final addition = InAppPurchase.instance
+                .getPlatformAddition<InAppPurchaseAndroidPlatformAddition>();
+            final pastPurchasesResponse = await addition.queryPastPurchases();
+            final activePurchases = pastPurchasesResponse.pastPurchases.where(
+              (p) => p.productID == 'ica_saas_1' && p.purchaseID == state.currentPurchaseToken,
+            );
+            if (activePurchases.isNotEmpty) {
+              changeSubscriptionParam = ChangeSubscriptionParam(
+                oldPurchaseDetails: activePurchases.first,
+                replacementMode: ReplacementMode.chargeProratedPrice,
+              );
+            }
+          } catch (e) {
+            // Log/ignore and fallback to normal purchase
+          }
+        }
+
         final GooglePlayPurchaseParam purchaseParam = GooglePlayPurchaseParam(
           productDetails: productDetails,
           offerToken: selectedOffer.offerIdToken,
+          changeSubscriptionParam: changeSubscriptionParam,
         );
 
         await InAppPurchase.instance.buyNonConsumable(purchaseParam: purchaseParam);
@@ -510,13 +577,21 @@ class StoreNotifier extends StateNotifier<StoreState> {
       newExpiry = now.add(Duration(days: days));
     }
 
+    final bool wasPremium = state.isPremium;
+    final String? oldPlan = state.subscriptionPlan;
+
     state = state.copyWith(
       isPremium: true,
       joinedPremiumDate: state.joinedPremiumDate ?? now,
       subscriptionTill: newExpiry,
       subscriptionPlan: plan,
     );
-    _saveStoreData();
+
+    if (!wasPremium || oldPlan != plan || state.currentCycleStartDate == null || state.cycleThemeAllocation == null) {
+      _startNewCycle(now);
+    } else {
+      _saveStoreData();
+    }
   }
 
   // Cancel subscription simulation
@@ -525,8 +600,21 @@ class StoreNotifier extends StateNotifier<StoreState> {
       isPremium: false,
       subscriptionTill: null,
       subscriptionPlan: null,
+      currentCycleStartDate: null,
+      cycleThemeAllocation: null,
+      cycleThemeUsageDates: {},
     );
     _saveStoreData();
+  }
+
+  // Opens external Google Play subscription management page
+  Future<void> openSubscriptionManagement() async {
+    final Uri url = Uri.parse(Platform.isAndroid
+        ? 'https://play.google.com/store/account/subscriptions?package=com.dsamok.ideaspacechess&sku=ica_saas_1'
+        : 'https://apps.apple.com/account/subscriptions');
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    }
   }
 
   // Buy or renew an AI Opponent Avatar
@@ -560,14 +648,120 @@ class StoreNotifier extends StateNotifier<StoreState> {
 
   // Board theme ownership checking
   bool isBoardThemePurchased(String themeId) {
-    if (state.isPremium) return true;
-    
     // Free themes
     const freeThemes = {'classic', 'scholar', 'vector_wood', 'theme3', 'sprite_fairytale'};
     if (freeThemes.contains(themeId)) return true;
 
     // Purchased premium themes
-    return state.purchasedBoardThemes.contains(themeId);
+    if (state.purchasedBoardThemes.contains(themeId)) return true;
+
+    if (state.isPremium) {
+      final allowed = getThemeAllowedDays(themeId, state.subscriptionPlan ?? 'monthly');
+      final used = getThemeUsedDays(themeId);
+      return (allowed - used) > 0;
+    }
+
+    return false;
+  }
+
+  int getThemeAllowedDays(String themeId, String plan) {
+    if (state.cycleThemeAllocation == null) return 0;
+    final index = state.cycleThemeAllocation!.indexOf(themeId);
+    if (index == -1) return 0;
+
+    if (index < 3) {
+      if (plan == 'sixmonth') return 4;
+      if (plan == 'yearly') return 10;
+      return 1;
+    } else if (index < 5) {
+      if (plan == 'sixmonth') return 8;
+      if (plan == 'yearly') return 20;
+      return 2;
+    } else if (index < 9) {
+      if (plan == 'sixmonth') return 30;
+      if (plan == 'yearly') return 60;
+      return 10;
+    }
+    return 0;
+  }
+
+  int getThemeUsedDays(String themeId) {
+    final dates = state.cycleThemeUsageDates[themeId];
+    return dates?.length ?? 0;
+  }
+
+  void recordThemeDay(String themeId) {
+    if (!state.isPremium) return;
+    const freeThemes = {'classic', 'scholar', 'vector_wood', 'theme3', 'sprite_fairytale'};
+    if (freeThemes.contains(themeId)) return;
+    if (state.purchasedBoardThemes.contains(themeId)) return;
+
+    final plan = state.subscriptionPlan ?? 'monthly';
+    final allowed = getThemeAllowedDays(themeId, plan);
+    if (allowed == 0) return;
+
+    final todayStr = _getCurrentDateKey();
+    final currentUsage = Map<String, List<String>>.from(state.cycleThemeUsageDates);
+    final dates = List<String>.from(currentUsage[themeId] ?? []);
+
+    if (!dates.contains(todayStr)) {
+      dates.add(todayStr);
+      currentUsage[themeId] = dates;
+      state = state.copyWith(cycleThemeUsageDates: currentUsage);
+      _saveStoreData();
+
+      // Verify if this consumption has locked the theme and requires resetting active board theme
+      _checkExpirationsAndSync();
+    }
+  }
+
+  void _checkAndStartNewCycleIfNeeded() {
+    if (!state.isPremium) return;
+
+    final plan = state.subscriptionPlan ?? 'monthly';
+    int cycleDays = 30;
+    if (plan == 'sixmonth') {
+      cycleDays = 180;
+    } else if (plan == 'yearly') {
+      cycleDays = 365;
+    }
+
+    final now = DateTime.now();
+
+    if (state.currentCycleStartDate == null || state.cycleThemeAllocation == null) {
+      _startNewCycle(state.joinedPremiumDate ?? now);
+      return;
+    }
+
+    final cycleEnd = state.currentCycleStartDate!.add(Duration(days: cycleDays));
+    if (now.isAfter(cycleEnd)) {
+      DateTime newCycleStart = state.currentCycleStartDate!;
+      while (now.isAfter(newCycleStart.add(Duration(days: cycleDays)))) {
+        newCycleStart = newCycleStart.add(Duration(days: cycleDays));
+      }
+      _startNewCycle(newCycleStart);
+    }
+  }
+
+  void _startNewCycle(DateTime startDate) {
+    const List<String> premiumThemeIds = [
+      'theme2', 'theme4', 'theme5', 'theme10',
+      'vector_glass', 'vector_championship', 'vector_egyptian',
+      'sprite_bubblegum', 'sprite_copper', 'sprite_plasma', 'sprite_overgrown',
+      'sprite_goldsilver', 'sprite_marble', 'sprite_desert', 'sprite_ivory',
+      'sprite_seasons', 'sprite_timber', 'sprite_lightning', 'sprite_diamonds',
+      'sprite_royal', 'sprite_arc'
+    ];
+
+    final shuffled = List<String>.from(premiumThemeIds);
+    shuffled.shuffle();
+
+    state = state.copyWith(
+      currentCycleStartDate: startDate,
+      cycleThemeAllocation: shuffled,
+      cycleThemeUsageDates: {},
+    );
+    _saveStoreData();
   }
 
   // Purchase a board theme (simulated)
@@ -656,6 +850,10 @@ class StoreNotifier extends StateNotifier<StoreState> {
   // Dynamic clean-up logic: if active theme or avatar is expired, fall back to default
   void _checkExpirationsAndSync() {
     if (!mounted) return;
+
+    // Check and start new subscription cycle if needed
+    _checkAndStartNewCycleIfNeeded();
+
     final chessState = ref.read(chessProvider);
     final chessNotifier = ref.read(chessProvider.notifier);
 
@@ -673,6 +871,11 @@ class StoreNotifier extends StateNotifier<StoreState> {
     if (state.isPremium && state.subscriptionTill != null && state.subscriptionTill!.isBefore(DateTime.now())) {
       state = state.copyWith(isPremium: false);
       _saveStoreData();
+    }
+
+    // Verify Board Theme
+    if (!isBoardThemePurchased(chessState.boardThemeId)) {
+      chessNotifier.setBoardTheme('classic'); // default theme
     }
   }
 

@@ -22,6 +22,7 @@ import '../widgets/ambient_flow_backdrop.dart';
 import '../widgets/tabbed_game_panel.dart';
 import '../widgets/premium_nudge_overlay.dart';
 import '../dashboard_page.dart';
+import '../mobile_navigation_shell.dart';
 import 'arena_settings_page.dart';
 import '../../application/onboarding_provider.dart';
 import '../../application/tutorial_provider.dart';
@@ -126,8 +127,11 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
       }
     });
 
+    final currentNavIndex = ref.watch(mobileNavIndexProvider);
+    final isCurrentTab = currentNavIndex == 1;
+
     return PopScope(
-      canPop: false,
+      canPop: !isCurrentTab,
       onPopInvokedWithResult: (bool didPop, Object? result) async {
         if (didPop) return;
         if (_showNewGameConfirmOverlay) {
@@ -1002,26 +1006,14 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                           child: FilledButton(
                             onPressed: () async {
                               if (!_checkArenaLimitAndUpsell(context, ref)) return;
-                              Future<void> startNewGameAction() async {
-                                setState(() {
-                                  _hasTriggeredConfetti = false;
-                                });
-                                await ref.read(arenaProvider.notifier).saveCurrentGame();
-                                ref.read(storeProvider.notifier).recordArenaGame();
-                                ref.read(arenaProvider.notifier).reset();
-                              }
-                              final storeState = ref.read(storeProvider);
-                              if (!storeState.isPremium) {
-                                PremiumNudgeOverlay.show(
-                                  context,
-                                  ref,
-                                  title: 'IDEASPACE PREMIUM',
-                                  description: 'Keep the momentum going! Upgrade to unlock unlimited Arena games, puzzles, and elite themes.',
-                                  onDismiss: startNewGameAction,
-                                );
-                              } else {
-                                await startNewGameAction();
-                              }
+                              // Close the game-over overlay then show the
+                              // full new-game confirmation popup (with match
+                              // details) – same experience as tapping +.
+                              ref.read(arenaProvider.notifier).dismissGameOver();
+                              setState(() {
+                                _hasTriggeredConfetti = false;
+                                _showNewGameConfirmOverlay = true;
+                              });
                             },
                             style: FilledButton.styleFrom(
                               backgroundColor: Colors.transparent,
@@ -1315,9 +1307,12 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                         child: OutlinedButton(
                           onPressed: () async {
                             if (!_checkArenaLimitAndUpsell(context, ref)) return;
-                            await ref.read(arenaProvider.notifier).saveCurrentGame();
-                            ref.read(storeProvider.notifier).recordArenaGame();
-                            ref.read(arenaProvider.notifier).reset();
+                            // Dismiss the timeout overlay and show the
+                            // full new-game confirmation popup.
+                            ref.read(arenaProvider.notifier).dismissGameOver();
+                            setState(() {
+                              _showNewGameConfirmOverlay = true;
+                            });
                           },
                           style: OutlinedButton.styleFrom(
                             foregroundColor: ScholarlyTheme.accentGold,

@@ -15,7 +15,7 @@ import 'widgets/tactics_playback_controls.dart';
 import 'widgets/academy_pendulum_indicator.dart';
 import 'themes/academy_scholar_theme.dart';
 import '../widgets/ambient_scaffold.dart';
-import '../dashboard_page.dart';
+import '../mobile_navigation_shell.dart';
 import 'dart:ui';
 
 
@@ -97,18 +97,7 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
   }
 
 
-  Future<void> _requestExitAcademy() async {
-    final state = ref.read(chessProvider);
-    final hasActiveMatch = state.recentMoves.isNotEmpty && !state.game.gameOver;
-    final bool? confirm = await showAcademyExitDialog(context, hasActiveMatch: hasActiveMatch);
 
-    if (confirm == true) {
-      if (!mounted) return;
-      await ref.read(chessProvider.notifier).initializeAcademySession();
-      if (!mounted) return;
-      exitToDashboardWithSidebar(context, ref);
-    }
-  }
 
   Future<void> _handleNewGame(BuildContext context, WidgetRef ref) async {
     final state = ref.read(chessProvider);
@@ -1170,14 +1159,15 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
     final state = ref.watch(chessProvider);
     final notifier = ref.read(chessProvider.notifier);
 
+    final currentNavIndex = ref.watch(mobileNavIndexProvider);
+    final isCurrentTab = currentNavIndex == 3;
+
     return PopScope(
-      canPop: false,
+      canPop: !isCurrentTab,
       onPopInvokedWithResult: (bool didPop, Object? result) async {
         if (didPop) return;
         if (_slideController.value > 0.0) {
           _slideController.reverse();
-        } else {
-          await _requestExitAcademy();
         }
       },
       child: AmbientScaffold(

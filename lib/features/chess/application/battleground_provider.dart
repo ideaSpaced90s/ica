@@ -24,6 +24,7 @@ import '../domain/models/dashboard_stats.dart';
 import 'package:kingslayer_chess/src/rust/api/cognitive.dart';
 import 'package:kingslayer_chess/src/rust/api/persona.dart' as rust_persona;
 import 'chess_provider.dart';
+import 'store_provider.dart';
 import '../services/cloud_sync_service.dart';
 
 const _initialClock = Duration(minutes: 10);
@@ -519,6 +520,19 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
     _startupFuture = null;
   }
 
+  rust_persona.PersonaConfig _getPersonaConfigSafely(String avatarName) {
+    try {
+      return rust_persona.getPersonaConfig(avatarName: avatarName);
+    } catch (e) {
+      debugPrint('BattlegroundNotifier: getPersonaConfig error: $e. Using fallback config.');
+      return const rust_persona.PersonaConfig(
+        multiPv: 1,
+        skillLevel: 20,
+        depth: 15,
+      );
+    }
+  }
+
   Future<void> _startServices({
     required int? depth,
     required bool analyzeCurrentPosition,
@@ -532,13 +546,19 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
       final opponent =
           state.activeOpponent ??
           AiAvatar.getBestMatch(state.consolidatedRating);
-      final config = rust_persona.getPersonaConfig(avatarName: opponent.name);
+      final config = _getPersonaConfigSafely(opponent.name);
       await _stockfishEngine.setSkillLevel(
         config.skillLevel,
         multiPV: config.multiPv,
       );
       _stockfishEngine.sendCommand(
         'setoption name MultiPV value ${config.multiPv}',
+      );
+      _stockfishEngine.sendCommand(
+        'setoption name Hash value ${opponent.hashSize}',
+      );
+      _stockfishEngine.sendCommand(
+        'setoption name Contempt value ${opponent.contempt}',
       );
 
       state = state.copyWith(
@@ -577,13 +597,19 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
 
     final opponent =
         state.activeOpponent ?? AiAvatar.getBestMatch(state.consolidatedRating);
-    final config = rust_persona.getPersonaConfig(avatarName: opponent.name);
+    final config = _getPersonaConfigSafely(opponent.name);
     await _stockfishEngine.setSkillLevel(
       config.skillLevel,
       multiPV: config.multiPv,
     );
     _stockfishEngine.sendCommand(
       'setoption name MultiPV value ${config.multiPv}',
+    );
+    _stockfishEngine.sendCommand(
+      'setoption name Hash value ${opponent.hashSize}',
+    );
+    _stockfishEngine.sendCommand(
+      'setoption name Contempt value ${opponent.contempt}',
     );
 
     _searchFen = state.game.fen;
@@ -802,6 +828,9 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
 
   Future<void> makeMove(String from, String to) async {
     if (state.game.gameOver) return;
+
+    // Record theme usage day
+    ref.read(storeProvider.notifier).recordThemeDay(ref.read(chessProvider).boardThemeId);
 
     if (!_isPlayerTurn()) {
       debugPrint('BattlegroundNotifier: Setting pre-move from $from to $to');

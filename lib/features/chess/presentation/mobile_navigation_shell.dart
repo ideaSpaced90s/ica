@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -217,6 +218,22 @@ class MobileNavigationShell extends ConsumerWidget {
         ],
       );
     }
+
+    result = PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (bool didPop, Object? result) async {
+        if (didPop) return;
+        if (currentIndex != 0) {
+          ref.read(mobileNavIndexProvider.notifier).state = 0;
+        } else {
+          final exitApp = await showExitAppConfirmationDialog(context);
+          if (exitApp == true) {
+            SystemNavigator.pop();
+          }
+        }
+      },
+      child: result,
+    );
 
     return result;
   }
@@ -1059,4 +1076,78 @@ class _LazyIndexedStackChildState extends State<LazyIndexedStackChild> {
     }
     return const SizedBox.shrink();
   }
+}
+
+Future<bool?> showExitAppConfirmationDialog(BuildContext context) async {
+  return showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      backgroundColor: ScholarlyTheme.panelBase,
+      surfaceTintColor: ScholarlyTheme.accentBlue,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(28),
+        side: BorderSide(
+          color: ScholarlyTheme.accentBlue.withValues(alpha: 0.2),
+          width: 1,
+        ),
+      ),
+      title: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: ScholarlyTheme.accentBlue.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.power_settings_new_rounded,
+              color: ScholarlyTheme.accentBlue,
+              size: 24,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Exit App',
+            style: GoogleFonts.inter(
+              fontWeight: FontWeight.bold,
+              color: ScholarlyTheme.textPrimary,
+              fontSize: 20,
+            ),
+          ),
+        ],
+      ),
+      content: Text(
+        'Are you sure you want to exit IdeaSpace Chess Academy?',
+        textAlign: TextAlign.center,
+        style: GoogleFonts.inter(
+          color: ScholarlyTheme.textPrimary,
+          fontSize: 14,
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: Text(
+            'CANCEL',
+            style: GoogleFonts.inter(
+              color: ScholarlyTheme.textMuted,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, true),
+          style: FilledButton.styleFrom(
+            backgroundColor: ScholarlyTheme.accentBlue,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          child: const Text('EXIT'),
+        ),
+      ],
+    ),
+  );
 }

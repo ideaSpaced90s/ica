@@ -9,6 +9,7 @@ import 'package:kingslayer_chess/features/chess/data/saved_game_repository.dart'
 import 'package:kingslayer_chess/features/chess/data/saved_game.dart';
 import 'package:kingslayer_chess/features/chess/application/chess_provider.dart';
 import 'package:kingslayer_chess/features/chess/data/settings_repository.dart';
+import 'package:kingslayer_chess/features/chess/application/store_provider.dart';
 
 class FakeStockfishService extends Fake implements StockfishService {
   final _controller = StreamController<String>.broadcast();
@@ -78,6 +79,7 @@ void main() {
         chessSoundServiceProvider.overrideWithValue(fakeSoundService),
         chessHapticsServiceProvider.overrideWithValue(fakeHapticsService),
         settingsRepositoryProvider.overrideWithValue(fakeSettingsRepo),
+        storeProvider.overrideWith((ref) => StoreNotifier(ref, loadData: false, initializeBilling: false)),
       ],
     );
     addTearDown(container.dispose);
