@@ -9,6 +9,7 @@ import '../application/store_provider.dart';
 import '../application/battleground_provider.dart';
 import '../application/tutorial_provider.dart';
 import '../application/assignment_provider.dart';
+import '../application/lifetime_xp_provider.dart';
 import '../services/chess_sound_service.dart';
 import '../services/auth_service.dart';
 import '../services/cloud_sync_service.dart';
@@ -341,6 +342,53 @@ class _AccountPageState extends ConsumerState<AccountPage> {
               ),
             ),
 
+            // Restore Purchases Section
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+                child: JuicySectionHeader(
+                  title: 'PURCHASES',
+                  color: ScholarlyTheme.accentBlue,
+                ),
+              ),
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              sliver: SliverToBoxAdapter(
+                child: JuicyGlassCard(
+                  padding: EdgeInsets.zero,
+                  borderRadius: 24,
+                  child: Column(
+                    children: [
+                      _buildSettingsTile(
+                        label: 'Restore Previous Purchases',
+                        description: 'Re-link your Google Play purchases to this account',
+                        icon: Icons.restore_rounded,
+                        accentColor: ScholarlyTheme.accentBlue,
+                        onTap: () {
+                          ref
+                              .read(chessSoundServiceProvider)
+                              .playSfx(SoundEffect.uiClick);
+                          storeNotifier.restorePurchases();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: const Text(
+                                'Checking Google Play for previous purchases...',
+                              ),
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
             // Danger Zone Section
             SliverToBoxAdapter(
               child: Padding(
@@ -366,55 +414,13 @@ class _AccountPageState extends ConsumerState<AccountPage> {
                       _buildSettingsTile(
                         label: 'Reset Progress',
                         description:
-                            'Wipe ratings, match history, and tutorial progress',
+                            'Wipe ratings, XP, LP, match history & tutorial progress',
                         icon: Icons.delete_forever_rounded,
                         accentColor: Colors.redAccent,
                         onTap: () => _showResetConfirmationDialog(context, ref),
                         isDarkBg: true,
                       ),
                     ],
-                  ),
-                ),
-              ),
-            ),
-
-            // Restore Purchases Action at the absolute bottom
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
-              sliver: SliverToBoxAdapter(
-                child: Center(
-                  child: TextButton.icon(
-                    onPressed: () {
-                      ref
-                          .read(chessSoundServiceProvider)
-                          .playSfx(SoundEffect.uiClick);
-                      storeNotifier.restorePurchases();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Text(
-                            'Checking Google Play for previous purchases...',
-                          ),
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      );
-                    },
-                    icon: const Icon(
-                      Icons.restore_rounded,
-                      size: 18,
-                      color: ScholarlyTheme.accentBlue,
-                    ),
-                    label: Text(
-                      'RESTORE PREVIOUS PURCHASES',
-                      style: GoogleFonts.outfit(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.0,
-                        color: ScholarlyTheme.accentBlue,
-                      ),
-                    ),
                   ),
                 ),
               ),
@@ -925,11 +931,12 @@ class _AccountPageState extends ConsumerState<AccountPage> {
       await ref.read(tutorialProvider.notifier).resetAllProgress();
       await ref.read(assignmentProvider.notifier).resetAssignmentProgress();
       await ref.read(chessProvider.notifier).clearAllHistory();
+      await ref.read(lifetimeXpProvider.notifier).resetAll();
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-              'All progress, rated stats, match history, assignment data, and tutorial records have been reset.',
+              'Everything reset: ratings, XP, LP, match history, saved games, tutorials, and daily assignments.',
             ),
             backgroundColor: Colors.redAccent,
           ),
@@ -1163,7 +1170,7 @@ class _ResetConfirmationDialogState extends State<ResetConfirmationDialog> {
           mainAxisSize: MainAxisSize.min,
           children: [
             const Text(
-              'This action is irreversible. All your ratings, match history, and tutorial academy progress will be permanently deleted.',
+              'This action is irreversible. Your ratings, XP, LP, match history, saved games, tutorial progress, and daily assignment data will be permanently deleted.',
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 20),

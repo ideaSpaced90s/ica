@@ -5,8 +5,13 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'auth_service.dart';
-import '../application/chess_provider.dart';
+import 'package:kingslayer_chess/features/chess/services/auth_service.dart';
+import 'package:kingslayer_chess/features/chess/application/chess_provider.dart';
+import 'package:kingslayer_chess/features/chess/application/store_provider.dart';
+import 'package:kingslayer_chess/features/chess/application/battleground_provider.dart';
+import 'package:kingslayer_chess/features/chess/application/assignment_provider.dart';
+import 'package:kingslayer_chess/features/chess/application/lifetime_xp_provider.dart';
+import 'package:kingslayer_chess/features/chess/data/saved_game.dart';
 
 /// Sync statuses for UI integration.
 enum CloudSyncStatus { idle, syncing, success, error }
@@ -37,11 +42,14 @@ class CloudSyncState {
 }
 
 /// StateNotifier to manage sync triggers, automatic debounce, and progress states.
-class CloudSyncNotifier extends StateNotifier<CloudSyncState> {
-  final Ref _ref;
+class CloudSyncNotifier extends Notifier<CloudSyncState> {
+  Ref get _ref => ref;
   DateTime? _lastBackupRequestTime;
 
-  CloudSyncNotifier(this._ref) : super(CloudSyncState());
+  @override
+  CloudSyncState build() {
+    return CloudSyncState();
+  }
 
   /// Triggers backup of local settings and progress files to Firebase Storage.
   Future<bool> backup({bool silent = false}) async {
@@ -70,11 +78,26 @@ class CloudSyncNotifier extends StateNotifier<CloudSyncState> {
       final supportDir = await getApplicationSupportDirectory();
       final docDir = await getApplicationDocumentsDirectory();
 
+      // Export local SQLite/Rust database to JSON file before compiling payload
+      try {
+        final savedGameRepo = _ref.read(savedGameRepositoryProvider);
+        final list = await savedGameRepo.listSaves();
+        final savedGamesJson = jsonEncode(list.map((e) => e.toJson()).toList());
+        final savedGamesFile = File(p.join(docDir.path, 'saved_games.json'));
+        await savedGamesFile.parent.create(recursive: true);
+        await savedGamesFile.writeAsString(savedGamesJson, flush: true);
+      } catch (e) {
+        debugPrint("Cloud Sync Backup: Failed to export saved games to JSON: $e");
+      }
+
       final filesToSync = {
         'app_settings': p.join(supportDir.path, 'app_settings.json'),
         'assignment_settings': p.join(supportDir.path, 'assignment_settings.json'),
         'saved_games': p.join(docDir.path, 'saved_games.json'),
         'performance_ledger': p.join(docDir.path, 'performance_ledger.json'),
+        'store_data': p.join(supportDir.path, 'store_data.json'),
+        // Bug C-06 fix: lifetime_xp was missing from backup payload.
+        'lifetime_xp': p.join(supportDir.path, 'lifetime_xp_settings.json'),
       };
 
       final Map<String, String> payload = {};
@@ -87,7 +110,7 @@ class CloudSyncNotifier extends StateNotifier<CloudSyncState> {
 
       final String jsonString = jsonEncode(payload);
 
-      final storageRef = FirebaseStorage.instance.ref();
+      final storageRef = _ref.read(firebaseStorageProvider).ref();
       final userSaveRef = storageRef.child("users/${currentUser.uid}/kingslayer_chess_save.json");
 
       // Upload payload as string
@@ -127,7 +150,7 @@ class CloudSyncNotifier extends StateNotifier<CloudSyncState> {
     state = state.copyWith(status: CloudSyncStatus.syncing);
 
     try {
-      final storageRef = FirebaseStorage.instance.ref();
+      final storageRef = _ref.read(firebaseStorageProvider).ref();
       final userSaveRef = storageRef.child("users/${currentUser.uid}/kingslayer_chess_save.json");
 
       String? data;
@@ -160,6 +183,9 @@ class CloudSyncNotifier extends StateNotifier<CloudSyncState> {
           'assignment_settings': p.join(supportDir.path, 'assignment_settings.json'),
           'saved_games': p.join(docDir.path, 'saved_games.json'),
           'performance_ledger': p.join(docDir.path, 'performance_ledger.json'),
+          'store_data': p.join(supportDir.path, 'store_data.json'),
+          // Bug C-06 fix: lifetime_xp was missing from restore payload.
+          'lifetime_xp': p.join(supportDir.path, 'lifetime_xp_settings.json'),
         };
 
         for (final entry in filesToSync.entries) {
@@ -170,8 +196,33 @@ class CloudSyncNotifier extends StateNotifier<CloudSyncState> {
           }
         }
 
-        // Reload settings provider so the UI shows the restored settings immediately
+        // If saved_games.json was restored, import it back into the SQLite/Rust PGN database
+        final savedGamesFile = File(p.join(docDir.path, 'saved_games.json'));
+        if (await savedGamesFile.exists()) {
+          final savedGamesJson = await savedGamesFile.readAsString();
+          if (savedGamesJson.trim().isNotEmpty) {
+            try {
+              final List<dynamic> decoded = jsonDecode(savedGamesJson);
+              final List<SavedGameEntry> entries = decoded
+                  .map((e) => SavedGameEntry.fromJson(Map<String, dynamic>.from(e)))
+                  .toList();
+              final savedGameRepo = _ref.read(savedGameRepositoryProvider);
+              await savedGameRepo.writeAll(entries);
+              debugPrint("Cloud Sync: Imported saved games from JSON back into SQLite database");
+            } catch (e) {
+              debugPrint("Cloud Sync Restore: Error importing saved games: $e");
+            }
+          }
+        }
+
+        // Reload all providers so the UI shows the restored data immediately
+        // without requiring an app restart (Bug C-02 fix).
         await _ref.read(chessProvider.notifier).reloadSettings();
+        await _ref.read(storeProvider.notifier).reloadStoreData();
+        await _ref.read(battlegroundProvider.notifier).reloadFromDisk();
+        await _ref.read(assignmentProvider.notifier).reloadFromDisk();
+        await _ref.read(lifetimeXpProvider.notifier).reloadFromDisk();
+        debugPrint("Cloud Sync: All providers reloaded after restore.");
       }
 
       state = state.copyWith(
@@ -190,10 +241,13 @@ class CloudSyncNotifier extends StateNotifier<CloudSyncState> {
   }
 }
 
-/// Global StateNotifierProvider for CloudSync State.
+/// Global NotifierProvider for CloudSync State.
 final cloudSyncProvider =
-    StateNotifierProvider<CloudSyncNotifier, CloudSyncState>((ref) {
-  return CloudSyncNotifier(ref);
+    NotifierProvider<CloudSyncNotifier, CloudSyncState>(CloudSyncNotifier.new);
+
+/// Provider for FirebaseStorage to enable mocking in tests.
+final firebaseStorageProvider = Provider<FirebaseStorage>((ref) {
+  return FirebaseStorage.instance;
 });
 
 // Alias to avoid breaking googleDriveSyncProvider references initially (can be removed later)

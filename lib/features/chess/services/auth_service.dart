@@ -5,11 +5,6 @@ import 'package:flutter/foundation.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
-    scopes: [
-      'email',
-    ],
-  );
 
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
@@ -21,7 +16,7 @@ class AuthService {
     return !user.isAnonymous;
   }
 
-  GoogleSignIn get googleSignIn => _googleSignIn;
+  GoogleSignIn get googleSignIn => GoogleSignIn.instance;
 
   Future<UserCredential?> signInAnonymously() async {
     try {
@@ -34,12 +29,9 @@ class AuthService {
 
   Future<UserCredential?> signInWithGoogle() async {
     try {
-      final googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) return null;
-
-      final googleAuth = await googleUser.authentication;
+      final googleUser = await GoogleSignIn.instance.authenticate();
+      final googleAuth = googleUser.authentication;
       final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
@@ -52,12 +44,11 @@ class AuthService {
 
   Future<UserCredential?> signInWithGoogleSilently() async {
     try {
-      final googleUser = await _googleSignIn.signInSilently();
+      final googleUser = await GoogleSignIn.instance.attemptLightweightAuthentication();
       if (googleUser == null) return null;
 
-      final googleAuth = await googleUser.authentication;
+      final googleAuth = googleUser.authentication;
       final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
@@ -70,7 +61,7 @@ class AuthService {
 
   Future<void> signOut() async {
     try {
-      await _googleSignIn.signOut();
+      await GoogleSignIn.instance.signOut();
       await _auth.signOut();
     } catch (e) {
       debugPrint('ERROR signing out: $e');
