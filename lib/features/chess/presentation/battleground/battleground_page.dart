@@ -132,6 +132,15 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
     final currentNavIndex = ref.watch(mobileNavIndexProvider);
     final isVisible = currentNavIndex == 2; // Tab 2 in MobileNavigationShell is BattlegroundPage
 
+    ref.listen<int>(mobileNavIndexProvider, (previous, current) {
+      if (previous == 2 && current != 2) {
+        final repo = ref.read(tutorialProgressRepositoryProvider);
+        if (!repo.shouldPersistIntroSeen()) {
+          ref.read(showBattlegroundIntroProvider.notifier).state = true;
+        }
+      }
+    });
+
     if (isVisible && !_wasVisible) {
       _wasVisible = true;
       if (state.activeRatedMatchId == null) {
@@ -172,7 +181,7 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
             isLandscape
                 ? _buildLandscapeLayout(context, ref, state)
                 : _buildPortraitLayout(context, ref, state),
-            if ((state.game.gameOver || state.isTimeOut) && !state.isGameOverDismissed)
+            if ((state.game.gameOver || state.isTimeOut || state.isResigned || state.isDrawAgreed) && !state.isGameOverDismissed)
               _buildGameOverOverlay(context, ref, state),
             if (_isDiceRolling)
               DiceRollingOverlay(
@@ -217,14 +226,15 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
             if (showIntro)
               GMChanakyaIntroOverlay(
                 pageTitle: 'BATTLEGROUND',
-                text: "Step forward into the Battleground, Apprentice! This is where your academy studies under my guidance, your lessons, and your arena practices will be calculated and battle-tested, and where every decision directly affects your standing. Here, you will face rated opponents in real-time combat against bots close to your strength, managing both your pieces and your clock. There is no room for hesitation, escape, or casual blunders in this crucible. The machines are watching, and every rating point is a mark of human resilience. Tap the thumbs up to enter the field of honor, and show them the power of human intuition.",
+                text: 'Enter the Battleground. These rated games test your decisions under clock pressure and shape your training profile.',
                 onDismiss: () {
                   // Sound effects disabled in Battleground
                   // ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
                   ref.read(showBattlegroundIntroProvider.notifier).state = false;
                   final repo = ref.read(tutorialProgressRepositoryProvider);
-                  // Non-blocking save
-                  repo.setBattlegroundIntroSeen(true);
+                  if (repo.shouldPersistIntroSeen()) {
+                    repo.setBattlegroundIntroSeen(true);
+                  }
                 },
               ),
           ],
@@ -568,9 +578,47 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // 1. Draw Button (Handshake)
           ActionIconButton(
-            icon: Icons.casino_rounded, // RATED uses Dice
-            size: 30, // 20% reduction logic
+            icon: Icons.handshake_rounded,
+            size: 30,
+            isEnabled: isMatchActive && state.drawOffersCount < 3,
+            onTap: () async {
+              final remaining = 3 - state.drawOffersCount;
+              final confirm = await _showDrawConfirmationDialog(context, remaining);
+              if (confirm == true) {
+                if (!context.mounted) return;
+                _showDrawConsideringDialog(context);
+                
+                await Future.delayed(const Duration(milliseconds: 1500));
+                
+                if (!context.mounted) return;
+                Navigator.pop(context); // Close considering dialog
+                
+                final accepted = await ref.read(battlegroundProvider.notifier).offerDraw();
+                
+                if (!context.mounted) return;
+                if (!accepted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Opponent declined the draw offer.',
+                        style: GoogleFonts.inter(fontWeight: FontWeight.w500),
+                      ),
+                      backgroundColor: Colors.redAccent.withValues(alpha: 0.9),
+                      behavior: SnackBarBehavior.floating,
+                      duration: const Duration(seconds: 3),
+                    ),
+                  );
+                }
+              }
+            },
+          ),
+          const SizedBox(width: 16),
+          // 2. New Match Button (Dice)
+          ActionIconButton(
+            icon: Icons.casino_rounded,
+            size: 30,
             onTap: () async {
               if (isMatchActive) {
                 final resigned = await _showRatedNewGameDialog(context);
@@ -595,6 +643,19 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
               }
             },
           ),
+          const SizedBox(width: 16),
+          // 3. Resign Button (Flag)
+          ActionIconButton(
+            icon: Icons.flag_rounded,
+            size: 30,
+            isEnabled: isMatchActive,
+            onTap: () async {
+              final confirm = await _showResignConfirmationDialog(context);
+              if (confirm == true) {
+                await ref.read(battlegroundProvider.notifier).resignRatedGame();
+              }
+            },
+          ),
         ],
       ),
     );
@@ -602,7 +663,7 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
 
 
   Widget _buildGameOverOverlay(BuildContext context, WidgetRef ref, BattlegroundState state) {
-    final isDraw = state.game.inDraw;
+    final isDraw = state.game.inDraw || state.isDrawAgreed;
     final didWin = _didPlayerWin(state);
 
     String title = '';
@@ -610,14 +671,19 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
 
     if (isDraw) {
       title = 'MATCH TIED';
-      msg = 'A well-fought game.';
+      msg = state.isDrawAgreed ? 'Draw by mutual agreement.' : 'A well-fought game.';
     } else {
       if (didWin) {
         title = state.isTimeOut ? 'VICTORY (TIME)' : 'VICTORY!';
         msg = state.isTimeOut ? 'Opponent ran out of time!' : 'Congratulations, you have won!';
       } else {
-        title = state.isTimeOut ? 'LOSS (TIME)' : 'MATCH LOST';
-        msg = state.isTimeOut ? 'You ran out of time!' : 'Defeat is but a stepping stone to mastery.';
+        if (state.isResigned) {
+          title = 'DEFEAT (RESIGNED)';
+          msg = 'You surrendered the battle.';
+        } else {
+          title = state.isTimeOut ? 'LOSS (TIME)' : 'MATCH LOST';
+          msg = state.isTimeOut ? 'You ran out of time!' : 'Defeat is but a stepping stone to mastery.';
+        }
       }
     }
 
@@ -801,6 +867,7 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
   }
 
   bool _didPlayerWin(BattlegroundState state) {
+    if (state.isResigned) return false;
     if (state.game.inDraw) return false;
     
     if (state.isTimeOut) {
@@ -873,6 +940,118 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
   double _getEvalFraction(BattlegroundState state, bool forPlayer) {
     final eval = forPlayer ? (state.isPlayerWhite ? state.currentEvaluation : -state.currentEvaluation) : (state.isPlayerWhite ? -state.currentEvaluation : state.currentEvaluation);
     return (eval.clamp(-5.0, 5.0) + 5.0) / 10.0;
+  }
+
+  Future<bool?> _showResignConfirmationDialog(BuildContext context) async {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: ScholarlyTheme.panelBase,
+        surfaceTintColor: ScholarlyTheme.accentBlue,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28), side: BorderSide(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.2), width: 1)),
+        title: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.1), shape: BoxShape.circle),
+              child: const Icon(Icons.flag_rounded, color: ScholarlyTheme.accentBlue, size: 24),
+            ),
+            const SizedBox(height: 16),
+            Text('Resign Game?', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary, fontSize: 20)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Are you sure you want to resign?', textAlign: TextAlign.center),
+            const SizedBox(height: 12),
+            Text('This will count as an immediate defeat and your rating will decrease.', textAlign: TextAlign.center, style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 12, height: 1.5)),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('CANCEL')),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(backgroundColor: ScholarlyTheme.accentBlue, foregroundColor: Colors.white),
+            child: const Text('RESIGN'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<bool?> _showDrawConfirmationDialog(BuildContext context, int remainingOffers) async {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: ScholarlyTheme.panelBase,
+        surfaceTintColor: ScholarlyTheme.accentBlue,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28), side: BorderSide(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.2), width: 1)),
+        title: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.1), shape: BoxShape.circle),
+              child: const Icon(Icons.handshake_rounded, color: ScholarlyTheme.accentBlue, size: 24),
+            ),
+            const SizedBox(height: 16),
+            Text('Offer a Draw?', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary, fontSize: 20)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Are you sure you want to offer a draw?', textAlign: TextAlign.center),
+            const SizedBox(height: 12),
+            Text('You can make at most 3 draw offers per game. Offers remaining: $remainingOffers.', textAlign: TextAlign.center, style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 12, height: 1.5)),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('CANCEL')),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(backgroundColor: ScholarlyTheme.accentBlue, foregroundColor: Colors.white),
+            child: const Text('OFFER DRAW'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDrawConsideringDialog(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => PopScope(
+        canPop: false,
+        child: AlertDialog(
+          backgroundColor: ScholarlyTheme.panelBase,
+          surfaceTintColor: ScholarlyTheme.accentBlue,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28), side: BorderSide(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.2), width: 1)),
+          content: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(
+                  width: 40,
+                  height: 40,
+                  child: CircularProgressIndicator(strokeWidth: 3, valueColor: AlwaysStoppedAnimation<Color>(ScholarlyTheme.accentBlue)),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Opponent is considering the draw offer...',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w500, color: ScholarlyTheme.textPrimary, fontSize: 15),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   Future<bool?> _showRatedNewGameDialog(BuildContext context) async {
@@ -1323,3 +1502,4 @@ class ThinkingDotsAnimation extends StatelessWidget {
     return const NeuralConnectivityMesh();
   }
 }
+

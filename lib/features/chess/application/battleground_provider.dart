@@ -71,12 +71,15 @@ class BattlegroundState {
   final String? promotionDestination;
   final String gameMode;
   final bool isTimeOut;
+  final bool isResigned;
   final bool servicesStarted;
   final bool servicesStarting;
   final bool engineReady;
   final String? startupError;
   final String? premoveFrom;
   final String? premoveTo;
+  final int drawOffersCount;
+  final bool isDrawAgreed;
 
   // Rated ELO fields
   final int consolidatedRating;
@@ -102,6 +105,7 @@ class BattlegroundState {
   final int recalibrationGamesRemaining;
   final int? lastRatedGameTimestampMs;
   final int decayIntervalsApplied;
+  final bool hasLoadedSettings;
 
   // Cached dashboard metrics
   final ScotomaResult? cachedScotoma;
@@ -140,12 +144,15 @@ class BattlegroundState {
     this.promotionDestination,
     this.gameMode = 'classic',
     this.isTimeOut = false,
+    this.isResigned = false,
     this.servicesStarted = false,
     this.servicesStarting = false,
     this.engineReady = false,
     this.startupError,
     this.premoveFrom,
     this.premoveTo,
+    this.drawOffersCount = 0,
+    this.isDrawAgreed = false,
 
     // Rated
     this.consolidatedRating = 400,
@@ -172,6 +179,7 @@ class BattlegroundState {
     this.recalibrationGamesRemaining = 0,
     this.lastRatedGameTimestampMs,
     this.decayIntervalsApplied = 0,
+    this.hasLoadedSettings = false,
 
     // Cached metrics
     this.cachedScotoma,
@@ -227,12 +235,15 @@ class BattlegroundState {
     Object? promotionDestination = const Object(),
     String? gameMode,
     bool? isTimeOut,
+    bool? isResigned,
     bool? servicesStarted,
     bool? servicesStarting,
     bool? engineReady,
     Object? startupError = const Object(),
     Object? premoveFrom = const Object(),
     Object? premoveTo = const Object(),
+    int? drawOffersCount,
+    bool? isDrawAgreed,
 
     // Rated
     int? consolidatedRating,
@@ -258,6 +269,7 @@ class BattlegroundState {
     int? recalibrationGamesRemaining,
     int? lastRatedGameTimestampMs,
     int? decayIntervalsApplied,
+    bool? hasLoadedSettings,
 
     // Cached metrics
     ScotomaResult? cachedScotoma,
@@ -310,6 +322,7 @@ class BattlegroundState {
           : promotionDestination as String?,
       gameMode: gameMode ?? this.gameMode,
       isTimeOut: isTimeOut ?? this.isTimeOut,
+      isResigned: isResigned ?? this.isResigned,
       servicesStarted: servicesStarted ?? this.servicesStarted,
       servicesStarting: servicesStarting ?? this.servicesStarting,
       engineReady: engineReady ?? this.engineReady,
@@ -322,6 +335,8 @@ class BattlegroundState {
       premoveTo: premoveTo == const Object()
           ? this.premoveTo
           : premoveTo as String?,
+      drawOffersCount: drawOffersCount ?? this.drawOffersCount,
+      isDrawAgreed: isDrawAgreed ?? this.isDrawAgreed,
 
       // Rated
       consolidatedRating: consolidatedRating ?? this.consolidatedRating,
@@ -349,6 +364,7 @@ class BattlegroundState {
       recalibrationGamesRemaining: recalibrationGamesRemaining ?? this.recalibrationGamesRemaining,
       lastRatedGameTimestampMs: lastRatedGameTimestampMs ?? this.lastRatedGameTimestampMs,
       decayIntervalsApplied: decayIntervalsApplied ?? this.decayIntervalsApplied,
+      hasLoadedSettings: hasLoadedSettings ?? this.hasLoadedSettings,
 
       // Cached metrics
       cachedScotoma: cachedScotoma ?? this.cachedScotoma,
@@ -363,16 +379,15 @@ class BattlegroundState {
   }
 }
 
-class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
-  final Ref ref;
-  final StockfishService _stockfishEngine;
-  final SavedGameRepository _savedGameRepository;
-  final PerformanceLedgerRepository _performanceLedgerRepository;
+class BattlegroundNotifier extends Notifier<BattlegroundState> {
+  late final StockfishService _stockfishEngine;
+  late final SavedGameRepository _savedGameRepository;
+  late final PerformanceLedgerRepository _performanceLedgerRepository;
   // ignore: unused_field
-  final ChessSoundService _soundService;
+  late final ChessSoundService _soundService;
   // ignore: unused_field
-  final ChessHapticsService _hapticsService;
-  final SettingsRepository _settingsRepository;
+  late final ChessHapticsService _hapticsService;
+  late final SettingsRepository _settingsRepository;
 
   Timer? _clockTimer;
   Timer? _engineMoveTimer;
@@ -385,16 +400,25 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
   final List<CandidateMove> _currentCandidates = [];
   bool _waitingForReady = false;
 
-  BattlegroundNotifier(
-    this.ref,
-    this._stockfishEngine,
-    this._savedGameRepository,
-    this._performanceLedgerRepository,
-    this._soundService,
-    this._hapticsService,
-    this._settingsRepository,
-  ) : super(BattlegroundState(game: ChessGame())) {
+  @override
+  BattlegroundState build() {
+    _stockfishEngine = ref.watch(stockfishServiceProvider);
+    _savedGameRepository = ref.watch(savedGameRepositoryProvider);
+    _performanceLedgerRepository = ref.watch(performanceLedgerRepositoryProvider);
+    _soundService = ref.watch(chessSoundServiceProvider);
+    _hapticsService = ref.watch(chessHapticsServiceProvider);
+    _settingsRepository = ref.watch(settingsRepositoryProvider);
+
+    ref.onDispose(() {
+      _isDisposed = true;
+      _clockTimer?.cancel();
+      _engineMoveTimer?.cancel();
+      _stockfishSubscription?.cancel();
+    });
+
     _loadInitialStateAndLedger();
+
+    return BattlegroundState(game: ChessGame());
   }
 
   Future<void> _loadInitialStateAndLedger() async {
@@ -475,11 +499,36 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
       );
       await _savedGameRepository.save(entry);
 
+      // Sync boot-up forfeit to performance ledger
+      final opponent = AiAvatar.getBestMatch(state.consolidatedRating);
+      final ledgerEntry = PerformanceLedgerEntry(
+        id: entry.id,
+        timestamp: entry.savedAt,
+        source: PerformanceLedgerEntry.ratedBattlegroundSource,
+        ratingCategory: 'rapid', // default category
+        gameMode: 'classic',
+        result: 'L',
+        dominance: 0.0,
+        opponentName: opponent.name,
+        ratingSnapshot: state.consolidatedRating,
+        fen: entry.fen,
+        recentMoves: const [],
+        uciMoves: const [],
+        initialFen: chess_lib.Chess.DEFAULT_POSITION,
+        isPlayerWhite: true,
+        whiteTimeLeftMs: 0,
+        blackTimeLeftMs: 0,
+        reachedEndgame: false,
+      );
+      await _performanceLedgerRepository.addEntry(ledgerEntry);
+
       // reload ledger
       final freshLedger = await _performanceLedgerRepository.listEntries();
       state = state.copyWith(cachedLedgerEntries: freshLedger);
       _refreshDashboardStats();
     }
+
+    state = state.copyWith(hasLoadedSettings: true);
   }
 
   void _autoSelectRatedOpponent() {
@@ -1033,7 +1082,7 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
     }
 
     // Apply ELO / Save Rated match outcome
-    _applyRatedRatingAdjustments(playerJustMoved);
+    await _applyRatedRatingAdjustments(playerJustMoved);
 
     if (state.game.gameOver) {
       state = state.copyWith(activeRatedMatchId: null);
@@ -1047,7 +1096,7 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
       } else if (state.game.inDraw || state.game.inStalemate) {
         result = 'D';
       }
-      saveCurrentGame(resultOverride: result);
+      await saveCurrentGame(resultOverride: result);
     } else {
       if (state.activeRatedMatchId == null) {
         state = state.copyWith(
@@ -1095,7 +1144,7 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
     }
   }
 
-  void _applyRatedRatingAdjustments(String player) {
+  Future<void> _applyRatedRatingAdjustments(String player) async {
     if (state.game.gameOver) {
       double actualScore = 0.5; // Draw
       if (state.game.inCheckmate) {
@@ -1103,7 +1152,7 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
         final humanWon = winnerIsWhite == state.isPlayerWhite;
         actualScore = humanWon ? 1.0 : 0.0;
       }
-      _updateRating(actualScore);
+      await _updateRating(actualScore);
     }
   }
 
@@ -1196,7 +1245,7 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
 
     int newSpecificStreak = actualScore == 1.0
         ? currentSpecificStreak + 1
-        : (actualScore == 0.0 ? 0 : currentSpecificStreak);
+        : 0;
     int specificStreakBonus = (actualScore == 1.0 && newSpecificStreak >= 3)
         ? 5
         : 0;
@@ -1218,7 +1267,7 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
 
     int newConsolidatedStreak = actualScore == 1.0
         ? state.totalWinningStreak + 1
-        : (actualScore == 0.0 ? 0 : state.totalWinningStreak);
+        : 0;
     int consolidatedStreakBonus =
         (actualScore == 1.0 && newConsolidatedStreak >= 3) ? 5 : 0;
 
@@ -1313,8 +1362,81 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
       activeRatedMatchId: null,
       clockStarted: false,
       activeClockSide: null,
+      isGameOverDismissed: false,
+      isResigned: true,
     );
     await _saveSettings();
+  }
+
+  Future<bool> offerDraw() async {
+    // 1. Increment drawOffersCount
+    final newCount = state.drawOffersCount + 1;
+    state = state.copyWith(drawOffersCount: newCount);
+
+    // 2. Minimum move requirement: 20 plies (10 moves for each side)
+    if (state.recentMoves.length < 20) {
+      return false;
+    }
+
+    final opponent = state.activeOpponent ?? AiAvatar.getBestMatch(state.consolidatedRating);
+    final contempt = opponent.contempt;
+
+    // Calculate player's evaluation (White perspective vs Black perspective)
+    final double playerEval = state.isPlayerWhite ? state.currentEvaluation : -state.currentEvaluation;
+
+    // AI's evaluation is the negative of the player's evaluation
+    final double aiEval = -playerEval;
+
+    bool accepted = false;
+
+    // If AI is winning significantly, it declines.
+    double aiWinningThreshold = 1.0; 
+    if (contempt > 0) {
+      aiWinningThreshold = 0.4;
+    } else if (contempt < 0) {
+      aiWinningThreshold = 1.5;
+    }
+
+    if (aiEval >= aiWinningThreshold) {
+      accepted = false;
+    } else if (playerEval >= 1.5) {
+      accepted = true;
+    } else {
+      if (contempt > 0) {
+        final acceptProbability = 0.8 - (contempt / 150.0);
+        final randomValue = math.Random().nextDouble();
+        accepted = randomValue < acceptProbability;
+      } else {
+        accepted = true;
+      }
+    }
+
+    if (accepted) {
+      _clockTimer?.cancel();
+      _clockTimer = null;
+      _engineMoveTimer?.cancel();
+      _engineMoveTimer = null;
+      _searchFen = null;
+      _stopAnalysisAndReset();
+
+      await _updateRating(0.5); // 0.5 = Draw
+      await saveCurrentGame(
+        customNameOverride: 'Draw by Agreement',
+        resultOverride: 'D',
+      );
+
+      state = state.copyWith(
+        activeRatedMatchId: null,
+        clockStarted: false,
+        activeClockSide: null,
+        isGameOverDismissed: false,
+        isDrawAgreed: true,
+      );
+      await _saveSettings();
+      return true;
+    }
+
+    return false;
   }
 
   Future<void> completePromotion(String promotionPiece) async {
@@ -1433,10 +1555,17 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
       promotionSource: null,
       promotionDestination: null,
       isTimeOut: false,
+      isResigned: false,
+      drawOffersCount: 0,
+      isDrawAgreed: false,
     );
   }
 
-  void reset({bool forcedPlayerWhite = true, bool startClockImmediate = false}) {
+  void reset({
+    bool forcedPlayerWhite = true,
+    bool startClockImmediate = false,
+    bool keepOpponent = false,
+  }) {
     _clockTimer?.cancel();
     _clockTimer = null;
     _engineMoveTimer?.cancel();
@@ -1481,13 +1610,18 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
       promotionSource: null,
       promotionDestination: null,
       isTimeOut: false,
+      isResigned: false,
       premoveFrom: null,
       premoveTo: null,
+      drawOffersCount: 0,
+      isDrawAgreed: false,
       // Clear any stale match ID so a fresh game never inherits a ghost ID
       activeRatedMatchId: null,
     );
 
-    _autoSelectRatedOpponent();
+    if (!keepOpponent || state.activeOpponent == null) {
+      _autoSelectRatedOpponent();
+    }
 
     if (startClockImmediate) {
       _startClockTicker();
@@ -1515,8 +1649,8 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
 
     final opponent = AiAvatar.getAvatar(avatarId);
     
-    // Play as White for the daily assignment
-    final forcedPlayerWhite = DateTime.now().isAfter(DateTime(2000));
+    // Play as random side for the daily assignment
+    final forcedPlayerWhite = math.Random().nextBool();
     final initialGame = ChessGame(isChess960: false);
     final aiMovesFirst = !forcedPlayerWhite;
 
@@ -1546,6 +1680,7 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
       promotionSource: null,
       promotionDestination: null,
       isTimeOut: false,
+      isResigned: false,
       premoveFrom: null,
       premoveTo: null,
       activeOpponent: opponent,
@@ -1600,7 +1735,7 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
   void setGameMode(String mode) {
     if (state.gameMode == mode) return;
     state = state.copyWith(gameMode: mode);
-    reset();
+    reset(keepOpponent: true);
   }
 
   void setTimeControl(Duration total, Duration increment) {
@@ -1610,7 +1745,7 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
       whiteTimeLeft: total,
       blackTimeLeft: total,
     );
-    reset();
+    reset(keepOpponent: true);
   }
 
   void dismissGameOver() {
@@ -1672,6 +1807,9 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
   }
 
   Future<void> _handleClockTimeout(String side) async {
+    if (state.game.inCheckmate) {
+      return;
+    }
     state = state.copyWith(
       clockStarted: false,
       activeClockSide: null,
@@ -1704,8 +1842,9 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
   }
 
   Future<void> _saveSettings() async {
-    final s = await _settingsRepository.loadSettings();
-    final updated = s.copyWith(
+    // Uses atomic updateSettings() to serialize concurrent calls and eliminate
+    // the read-modify-write race condition (Bug C-01 fix).
+    await _settingsRepository.updateSettings((s) => s.copyWith(
       consolidatedRating: state.consolidatedRating,
       bulletElo: state.bulletElo,
       blitzElo: state.blitzElo,
@@ -1728,9 +1867,16 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
       lastRatedGameTimestampMs: state.lastRatedGameTimestampMs,
       recalibrationGamesRemaining: state.recalibrationGamesRemaining,
       decayIntervalsApplied: state.decayIntervalsApplied,
-    );
-    await _settingsRepository.saveSettings(updated);
+    ));
     ref.read(cloudSyncProvider.notifier).backup(silent: true);
+  }
+
+  /// Reloads all BattlegroundNotifier state from disk.
+  /// Called after a cloud restore so the UI reflects restored data
+  /// without requiring an app restart (Bug C-02 fix).
+  Future<void> reloadFromDisk() async {
+    _settingsRepository.clearCache();
+    await _loadInitialStateAndLedger();
   }
 
   Future<SavedGameEntry?> saveCurrentGame({
@@ -1784,6 +1930,28 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
         final opponent =
             state.activeOpponent ??
             AiAvatar.getBestMatch(state.consolidatedRating);
+        
+        bool reachedEndgame = false;
+        try {
+          final tempGame = ChessGame(
+            fen: entry.initialFen,
+            isChess960: entry.gameMode == 'chess960',
+          );
+          if (FenParser.isEndgame(tempGame.fen)) {
+            reachedEndgame = true;
+          } else {
+            for (final move in entry.uciMoves) {
+              tempGame.makeMove(move);
+              if (FenParser.isEndgame(tempGame.fen)) {
+                reachedEndgame = true;
+                break;
+              }
+            }
+          }
+        } catch (e) {
+          debugPrint('Error replaying game to detect endgame: $e');
+        }
+
         final ledgerEntry = PerformanceLedgerEntry(
           id: entry.id,
           timestamp: entry.savedAt,
@@ -1801,6 +1969,7 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
           isPlayerWhite: entry.isPlayerWhite,
           whiteTimeLeftMs: entry.whiteTimeLeftMs,
           blackTimeLeftMs: entry.blackTimeLeftMs,
+          reachedEndgame: reachedEndgame,
         );
         updatedLedger = await _performanceLedgerRepository.addEntry(
           ledgerEntry,
@@ -1866,7 +2035,7 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
     final aggression = math.min(1.0, math.max(0.0, (avgDom + 5) / 10));
 
     final maxElo = ratedSaves.map((s) => s.ratingSnapshot).reduce(math.max);
-    final power = math.min(1.0, (maxElo - 400) / 2000);
+    final power = math.min(1.0, math.max(0.0, (maxElo - 400) / (2000 - 400)));
 
     final count960 = ratedSaves.where((s) => s.gameMode == 'chess960').length;
     final versatility = count960 / ratedSaves.length;
@@ -1936,7 +2105,7 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
     // 4. Endgame calculations
     EndgamePerformanceStats? endgames;
     final endgameSaves = ratedSaves
-        .where((s) => FenParser.isEndgame(s.fen))
+        .where((s) => s.reachedEndgame || FenParser.isEndgame(s.fen))
         .toList();
     if (endgameSaves.isNotEmpty) {
       double totalWeightedScore = 0.0;
@@ -2022,14 +2191,14 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
     final Map<String, List<double>> dailyDom = {};
     for (int i = 29; i >= 0; i--) {
       final date = now.subtract(Duration(days: i));
-      final dateKey = '${date.year}-${date.month}-${date.day}';
+      final dateKey = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
       dailyDom[dateKey] = [];
     }
 
     for (final s in ratedSaves) {
       if (s.timestamp.isAfter(thirtyDaysAgo)) {
         final dateKey =
-            '${s.timestamp.year}-${s.timestamp.month}-${s.timestamp.day}';
+            '${s.timestamp.year}-${s.timestamp.month.toString().padLeft(2, '0')}-${s.timestamp.day.toString().padLeft(2, '0')}';
         if (dailyDom.containsKey(dateKey)) {
           dailyDom[dateKey]!.add(s.dominance);
         }
@@ -2129,14 +2298,6 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
     state = state.copyWith(moveAnimation: null);
   }
 
-  @override
-  void dispose() {
-    _isDisposed = true;
-    _clockTimer?.cancel();
-    _engineMoveTimer?.cancel();
-    _stockfishSubscription?.cancel();
-    super.dispose();
-  }
 }
 
 class _OpeningRepertoireStatsBuilder {
@@ -2161,22 +2322,4 @@ class _OpeningRepertoireStatsBuilder {
 }
 
 final battlegroundProvider =
-    StateNotifierProvider<BattlegroundNotifier, BattlegroundState>((ref) {
-      final stockfishEngine = ref.watch(stockfishServiceProvider);
-      final savedGameRepository = ref.watch(savedGameRepositoryProvider);
-      final performanceLedgerRepository = ref.watch(
-        performanceLedgerRepositoryProvider,
-      );
-      final soundService = ref.watch(chessSoundServiceProvider);
-      final hapticsService = ref.watch(chessHapticsServiceProvider);
-      final settingsRepository = ref.watch(settingsRepositoryProvider);
-      return BattlegroundNotifier(
-        ref,
-        stockfishEngine,
-        savedGameRepository,
-        performanceLedgerRepository,
-        soundService,
-        hapticsService,
-        settingsRepository,
-      );
-    });
+    NotifierProvider<BattlegroundNotifier, BattlegroundState>(BattlegroundNotifier.new);
