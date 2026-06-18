@@ -13,6 +13,8 @@ import '../widgets/ambient_scaffold.dart';
 import '../scholarly_theme.dart';
 import '../../services/chess_sound_service.dart';
 import '../widgets/gm_chanakya_intro_overlay.dart';
+import 'blueprint_tab_content.dart';
+import '../widgets/landfall_overlay.dart';
 import '../../application/chess_provider.dart';
 
 import 'dart:ui';
@@ -130,6 +132,8 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
             )
           else if (state.newlyCompletedTaskIndex >= 0)
             _buildCelebrationOverlay(context, state.dailyTasks[state.newlyCompletedTaskIndex]),
+          if (state.landfallPendingIndex != null)
+            LandfallOverlay(islandIndex: state.landfallPendingIndex!),
         ],
       ),
     );
@@ -567,6 +571,10 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
         icon = Icons.history_edu_rounded;
         color = ScholarlyTheme.accentGold;
         break;
+      case DailyTaskType.analysis:
+        icon = Icons.analytics_rounded;
+        color = Colors.deepOrangeAccent;
+        break;
     }
 
     final bool justCompleted = state.newlyCompletedTaskIndex == index;
@@ -688,6 +696,11 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
         icon = Icons.history_edu_rounded;
         buttonColor = ScholarlyTheme.accentGold;
         break;
+      case DailyTaskType.analysis:
+        label = "ANALYZE GAME";
+        icon = Icons.analytics_rounded;
+        buttonColor = Colors.deepOrangeAccent;
+        break;
       case DailyTaskType.attendance:
         return const SizedBox.shrink();
     }
@@ -759,6 +772,9 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
           ref.read(mobileNavIndexProvider.notifier).state = 3; 
         }
         break;
+      case DailyTaskType.analysis:
+        ref.read(mobileNavIndexProvider.notifier).state = 5; // Analysis tab
+        break;
       case DailyTaskType.attendance:
         break;
     }
@@ -781,6 +797,9 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
         break;
       case DailyTaskType.historicalArchive:
         text = "Go to Academy → Historical Cinema — watch until the final move";
+        break;
+      case DailyTaskType.analysis:
+        text = "Go to Study Lab — perform move analysis on a saved game";
         break;
     }
 
@@ -1192,254 +1211,8 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
       );
     }
 
-    final currentElo = bgState.consolidatedRating;
-    final targetElo = state.goalElo;
-    final startElo = state.startElo;
-
-    final double minElo = (currentElo + 50).toDouble();
-    final double maxElo = (currentElo + 500).toDouble();
-    final double sliderValue = targetElo.toDouble().clamp(minElo, maxElo);
-
-    // Calculate progress fraction
-    double progress = 0.0;
-    if (targetElo > startElo) {
-      progress = (currentElo - startElo) / (targetElo - startElo);
-    }
-
-    // Days remaining
-    final daysRemaining = state.goalDeadline != null
-        ? state.goalDeadline!.difference(DateTime.now()).inDays
-        : 30;
-
-    return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Goal Progress Display Card
-          JuicyGlassCard(
-            padding: const EdgeInsets.all(20),
-            borderRadius: 20,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      "MONTHLY ASSIGNMENT TARGET",
-                      style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w900, color: ScholarlyTheme.accentBlue, letterSpacing: 0.5),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: ScholarlyTheme.realGold.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        "$daysRemaining Days Left",
-                        style: GoogleFonts.jetBrainsMono(fontSize: 10, fontWeight: FontWeight.bold, color: ScholarlyTheme.realGold),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildEloStatColumn("STARTING ELO", startElo.toString(), Colors.grey),
-                    const Icon(Icons.arrow_forward_rounded, color: ScholarlyTheme.textSubtle, size: 24),
-                    _buildEloStatColumn("CURRENT ELO", currentElo.toString(), ScholarlyTheme.accentBlue),
-                    const Icon(Icons.arrow_forward_rounded, color: ScholarlyTheme.textSubtle, size: 24),
-                    _buildEloStatColumn("TARGET ELO", targetElo.toString(), Colors.green),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      "Target Progress",
-                      style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary),
-                    ),
-                    Text(
-                      "${(progress * 100).toStringAsFixed(0)}%",
-                      style: GoogleFonts.jetBrainsMono(fontSize: 12, fontWeight: FontWeight.bold, color: ScholarlyTheme.accentBlue),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: progress.clamp(0.0, 1.0),
-                    minHeight: 8,
-                    backgroundColor: ScholarlyTheme.panelStroke,
-                    color: Colors.green,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // Custom Goal Builder
-          Text(
-            "GOAL BUILDER",
-            style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w900, color: ScholarlyTheme.textMuted, letterSpacing: 0.5),
-          ),
-          const SizedBox(height: 8),
-          JuicyGlassCard(
-            padding: const EdgeInsets.all(20),
-            borderRadius: 16,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "Adjust Monthly Blueprint Goal",
-                  style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  "Choose a monthly ELO target rating and date to complete your training routine blueprint.",
-                  style: GoogleFonts.inter(fontSize: 11, color: ScholarlyTheme.textMuted),
-                ),
-                const SizedBox(height: 20),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          "Target Rating:",
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: ScholarlyTheme.textPrimary,
-                          ),
-                        ),
-                        Text(
-                          "${sliderValue.round()} ELO (${(sliderValue - currentElo).round() >= 0 ? '+' : ''}${(sliderValue - currentElo).round()} ELO)",
-                          style: GoogleFonts.jetBrainsMono(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: ScholarlyTheme.accentBlue,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Theme(
-                      data: Theme.of(context).copyWith(
-                        sliderTheme: SliderThemeData(
-                          activeTrackColor: ScholarlyTheme.accentBlue,
-                          inactiveTrackColor: ScholarlyTheme.panelStroke,
-                          thumbColor: ScholarlyTheme.accentBlue,
-                          overlayColor: ScholarlyTheme.accentBlue.withValues(alpha: 0.15),
-                          valueIndicatorColor: ScholarlyTheme.accentBlue,
-                          valueIndicatorTextStyle: GoogleFonts.jetBrainsMono(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          showValueIndicator: ShowValueIndicator.alwaysVisible,
-                        ),
-                      ),
-                      child: Slider(
-                        value: sliderValue,
-                        min: minElo,
-                        max: maxElo,
-                        divisions: 9,
-                        label: "${sliderValue.round()} ELO",
-                        onChanged: (value) {
-                          ref.read(assignmentProvider.notifier).setupGoal(value.round());
-                        },
-                      ),
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          "+50 ELO",
-                          style: GoogleFonts.inter(fontSize: 10, color: ScholarlyTheme.textMuted),
-                        ),
-                        Text(
-                          "+500 ELO",
-                          style: GoogleFonts.inter(fontSize: 10, color: ScholarlyTheme.textMuted),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                const Divider(color: ScholarlyTheme.panelStroke),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      "Target Date:",
-                      style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary),
-                    ),
-                    TextButton.icon(
-                      icon: const Icon(Icons.calendar_month_rounded, size: 18, color: ScholarlyTheme.accentBlue),
-                      label: Text(
-                        state.goalDeadline != null
-                            ? DateFormat.yMMMd().format(state.goalDeadline!)
-                            : "Select Date",
-                        style: GoogleFonts.jetBrainsMono(fontSize: 13, fontWeight: FontWeight.bold, color: ScholarlyTheme.accentBlue),
-                      ),
-                      onPressed: () async {
-                        final picked = await showDatePicker(
-                          context: context,
-                          initialDate: state.goalDeadline ?? DateTime.now().add(const Duration(days: 30)),
-                          firstDate: DateTime.now().subtract(const Duration(days: 30)), // allow selecting slightly past date to test revision mode
-                          lastDate: DateTime.now().add(const Duration(days: 365)),
-                          builder: (context, child) {
-                            return Theme(
-                              data: Theme.of(context).copyWith(
-                                colorScheme: const ColorScheme.light(
-                                  primary: ScholarlyTheme.accentBlue,
-                                  onPrimary: Colors.white,
-                                  onSurface: ScholarlyTheme.textPrimary,
-                                ),
-                              ),
-                              child: child!,
-                            );
-                          },
-                        );
-                        if (picked != null) {
-                          ref.read(assignmentProvider.notifier).setupGoalDeadline(picked);
-                        }
-                      },
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
+    return BlueprintTabContent(state: state, bgState: bgState);
   }
-
-  Widget _buildEloStatColumn(String label, String value, Color color) {
-    return Column(
-      children: [
-        Text(
-          label,
-          style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.bold, color: ScholarlyTheme.textMuted),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          value,
-          style: GoogleFonts.jetBrainsMono(fontSize: 22, fontWeight: FontWeight.bold, color: color),
-        ),
-      ],
-    );
-  }
-
 
   Widget _buildWeeklyGoalCard(BuildContext context, AssignmentState state) {
     return JuicyGlassCard(
@@ -1660,6 +1433,8 @@ class _JuicyCompletionBannerState extends State<JuicyCompletionBanner>
         return "Knowledge built layer by layer — this is how champions are made.";
       case DailyTaskType.historicalArchive:
         return "You have studied the masters. Now let their wisdom flow through your play.";
+      case DailyTaskType.analysis:
+        return "True mastery is born in reflection. Analyze your decisions deeply.";
     }
   }
 
