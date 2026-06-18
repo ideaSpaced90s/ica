@@ -285,6 +285,7 @@ class AnalysisStockfishService implements ChessEngineService {
 
   @override
   Future<void> setSkillLevel(int level, {int multiPV = 1}) async {
+    if (_process == null) return;
     if (!_isReady) await _readyCompleter.future;
     // Keep it at full strength, but support setting MultiPV if requested.
     await sendCommand('setoption name MultiPV value $multiPV');
@@ -292,6 +293,7 @@ class AnalysisStockfishService implements ChessEngineService {
 
   @override
   Future<void> setChess960Mode(bool isEnabled) async {
+    if (_process == null) return;
     if (!_isReady) await _readyCompleter.future;
     await sendCommand(
       'setoption name UCI_Chess960 value ${isEnabled ? "true" : "false"}',

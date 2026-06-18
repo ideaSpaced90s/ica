@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/material.dart';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -22,6 +24,13 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   late AnimationController _progressController;
   late Animation<double> _progressAnimation;
   late AnimationController _shimmerController;
+  late AnimationController _floatController;
+  late Animation<double> _logoScaleAnimation;
+  late Animation<double> _logoOpacityAnimation;
+  late Animation<double> _logoShimmerAnimation;
+  late Animation<double> _shadowOpacityAnimation;
+  late Animation<double> _shimmerOpacityAnimation;
+  late Animation<double> _floatAnimation;
   double _loadingValue = 0;
 
   bool _hasTransitioned = false;
@@ -61,6 +70,69 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1800),
     )..repeat();
+
+    _logoScaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _progressController,
+        curve: const Interval(0.0, 0.45, curve: Curves.easeOutBack),
+      ),
+    );
+
+    _logoOpacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _progressController,
+        curve: const Interval(0.0, 0.3, curve: Curves.easeIn),
+      ),
+    );
+
+    _logoShimmerAnimation = Tween<double>(begin: -2.0, end: 2.0).animate(
+      CurvedAnimation(
+        parent: _progressController,
+        curve: const Interval(0.35, 0.75, curve: Curves.easeInOut),
+      ),
+    );
+
+    _shadowOpacityAnimation = Tween<double>(begin: 0.0, end: 0.6).animate(
+      CurvedAnimation(
+        parent: _progressController,
+        curve: const Interval(0.3, 0.5, curve: Curves.easeIn),
+      ),
+    );
+
+    _shimmerOpacityAnimation = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: ConstantTween<double>(0.0),
+        weight: 35,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 0.0, end: 1.0).chain(CurveTween(curve: Curves.easeIn)),
+        weight: 5,
+      ),
+      TweenSequenceItem(
+        tween: ConstantTween<double>(1.0),
+        weight: 30,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.0, end: 0.0).chain(CurveTween(curve: Curves.easeOut)),
+        weight: 5,
+      ),
+      TweenSequenceItem(
+        tween: ConstantTween<double>(0.0),
+        weight: 25,
+      ),
+    ]).animate(_progressController);
+
+    _floatController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..repeat(reverse: true);
+
+    _floatAnimation = Tween<double>(begin: -8.0, end: 8.0).animate(
+      CurvedAnimation(
+        parent: _floatController,
+        curve: Curves.easeInOutSine,
+      ),
+    );
 
     // 1. Start services initialization in parallel
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -162,6 +234,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     _fallbackTimer?.cancel();
     _progressController.dispose();
     _shimmerController.dispose();
+    _floatController.dispose();
     super.dispose();
   }
 
@@ -180,9 +253,105 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                 SizedBox(
                   width: 320,
                   height: 300,
-                  child: Image.asset(
-                    'assets/splash/appicon.png',
-                    fit: BoxFit.contain,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      // 1. Drop Shadow Settle & Float Sync (using ImageFiltered with light_knight.png)
+                      AnimatedBuilder(
+                        animation: Listenable.merge([_progressController, _floatController]),
+                        builder: (context, child) {
+                          final floatVal = _floatAnimation.value;
+                          final baseOpacity = _shadowOpacityAnimation.value;
+                          final baseScale = _logoScaleAnimation.value;
+
+                          // Shadow becomes wider and softer when icon is higher (floatVal is negative)
+                          final shadowScaleX = baseScale * (1.0 - (floatVal / 80.0));
+                          final shadowScaleY = baseScale * (1.0 - (floatVal / 80.0)) * 0.18; // Flatten Y-scale
+                          final shadowOpacity = baseOpacity * (1.0 + (floatVal / 40.0));
+
+                          return Transform(
+                            transform: Matrix4.translationValues(0.0, 120.0, 0.0) // Position directly below the knight
+                              ..scaleByDouble(shadowScaleX, shadowScaleY, 1.0, 1.0),
+                            alignment: Alignment.center,
+                            child: Opacity(
+                              opacity: shadowOpacity.clamp(0.0, 1.0),
+                              child: ImageFiltered(
+                                imageFilter: ImageFilter.blur(sigmaX: 8.0, sigmaY: 3.0),
+                                child: Image.asset(
+                                  'assets/splash/light_knight.png',
+                                  color: Colors.black.withValues(alpha: 0.18),
+                                  fit: BoxFit.contain,
+                                  width: 220,
+                                  height: 220,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      // 2. 2D Scale/Fade Entrance & Floating Logo Layer
+                      AnimatedBuilder(
+                        animation: Listenable.merge([_progressController, _floatController]),
+                        builder: (context, child) {
+                          final scaleVal = _logoScaleAnimation.value;
+                          final opacityVal = _logoOpacityAnimation.value;
+                          final shimmerVal = _logoShimmerAnimation.value;
+                          final floatVal = _floatAnimation.value;
+                          final shimmerOpacity = _shimmerOpacityAnimation.value;
+
+                          return Opacity(
+                            opacity: opacityVal,
+                            child: Transform.translate(
+                              offset: Offset(0, floatVal * scaleVal), // Float only relative to entrance scale
+                              child: Transform.scale(
+                                scale: scaleVal,
+                                child: Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    // Base App Icon
+                                    Image.asset(
+                                      'assets/splash/light_knight.png',
+                                      fit: BoxFit.contain,
+                                      width: 220,
+                                      height: 220,
+                                    ),
+                                    // Metallic Shine Sweep Overlay (Only visible when active to avoid central fade/glow)
+                                    Opacity(
+                                      opacity: shimmerOpacity,
+                                      child: ShaderMask(
+                                        blendMode: BlendMode.srcIn,
+                                        shaderCallback: (bounds) {
+                                          return LinearGradient(
+                                            begin: Alignment(-1.5 + shimmerVal, -1.5 + shimmerVal),
+                                            end: Alignment(1.5 + shimmerVal, 1.5 + shimmerVal),
+                                            colors: [
+                                              Colors.white.withValues(alpha: 0.0),
+                                              Colors.white.withValues(alpha: 0.65), // Narrow bright highlight
+                                              Colors.white.withValues(alpha: 0.0),
+                                            ],
+                                            stops: const [
+                                              0.45,
+                                              0.5,
+                                              0.55,
+                                            ],
+                                          ).createShader(bounds);
+                                        },
+                                        child: Image.asset(
+                                          'assets/splash/light_knight.png',
+                                          fit: BoxFit.contain,
+                                          width: 220,
+                                          height: 220,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
                   ),
                 ),
                 Text(

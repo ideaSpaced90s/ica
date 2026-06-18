@@ -280,6 +280,7 @@ class StockfishService implements ChessEngineService {
 
   @override
   Future<void> setSkillLevel(int level, {int multiPV = 1}) async {
+    if (_process == null) return;
     if (!_isReady) await _readyCompleter.future;
     await sendCommand('setoption name MultiPV value $multiPV');
     await sendCommand('setoption name Skill Level value $level');
@@ -287,6 +288,7 @@ class StockfishService implements ChessEngineService {
 
   @override
   Future<void> setChess960Mode(bool isEnabled) async {
+    if (_process == null) return;
     if (!_isReady) await _readyCompleter.future;
     await sendCommand(
       'setoption name UCI_Chess960 value ${isEnabled ? "true" : "false"}',

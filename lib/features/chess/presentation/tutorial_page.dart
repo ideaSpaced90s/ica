@@ -15,7 +15,6 @@ import 'widgets/chapter_select_screen.dart';
 import 'widgets/illegal_move_feedback.dart';
 import 'widgets/mentor_panel.dart';
 import 'widgets/ambient_scaffold.dart';
-import 'dashboard_page.dart';
 import 'mobile_navigation_shell.dart';
 
 
@@ -91,6 +90,37 @@ class _TutorialPageState extends ConsumerState<TutorialPage> {
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,
     ]);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.read(backButtonOverridesProvider.notifier).update((map) => {
+          ...map,
+          7: _handleBackPress,
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    ref.read(backButtonOverridesProvider.notifier).update((map) {
+      final newMap = Map<int, Future<bool> Function()>.from(map);
+      newMap.remove(7);
+      return newMap;
+    });
+    super.dispose();
+  }
+
+  Future<bool> _handleBackPress() async {
+    final state = ref.read(tutorialProvider);
+    if (state.isChapterComplete) {
+      ref.read(tutorialProvider.notifier).loadChapter(state.currentChapterIndex);
+      ref.read(showChapterSelectionProvider.notifier).state = true;
+      return true;
+    } else if (!ref.read(showChapterSelectionProvider)) {
+      ref.read(showChapterSelectionProvider.notifier).state = true;
+      return true;
+    }
+    return false;
   }
 
   void _handleChapterSelected(int chapterId) {
@@ -217,24 +247,7 @@ class _TutorialPageState extends ConsumerState<TutorialPage> {
       );
     }
 
-    final currentNavIndex = ref.watch(mobileNavIndexProvider);
-    final isCurrentTab = currentNavIndex == 7;
-
-    return PopScope(
-      canPop: !isCurrentTab,
-      onPopInvokedWithResult: (bool didPop, Object? result) async {
-        if (didPop) return;
-        if (state.isChapterComplete) {
-          ref.read(tutorialProvider.notifier).loadChapter(state.currentChapterIndex);
-          ref.read(showChapterSelectionProvider.notifier).state = true;
-        } else if (!ref.read(showChapterSelectionProvider)) {
-          ref.read(showChapterSelectionProvider.notifier).state = true;
-        } else {
-          exitToDashboardWithSidebar(context, ref);
-        }
-      },
-      child: content,
-    );
+    return content;
   }
 
   Widget _buildProgressFooter(TutorialState state) {

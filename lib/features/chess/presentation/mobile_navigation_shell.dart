@@ -32,10 +32,18 @@ import 'widgets/notification_prompt_page.dart';
 import 'widgets/sidebar_dynamic_bg.dart';
 import 'widgets/hover_scale_effect.dart';
 import '../application/onboarding_provider.dart';
+import 'shared/page_transition_overlay.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 
 // Provides the current active mobile tab index.
 final mobileNavIndexProvider = StateProvider<int>((ref) => 0);
+
+// Registry of page-specific back button overrides, keyed by tab/page index.
+// Handlers return true if they handled the back event (preventing index 0 navigation),
+// or false if they want the shell to execute default navigation to Dashboard.
+final backButtonOverridesProvider = StateProvider<Map<int, Future<bool> Function()>>((ref) => {});
+
 
 class MobileNavigationShell extends ConsumerWidget {
   const MobileNavigationShell({super.key});
@@ -121,13 +129,27 @@ class MobileNavigationShell extends ConsumerWidget {
         backgroundColor: ScholarlyTheme.backgroundStart,
         elevation: 0,
         centerTitle: true,
-        title: Text(
-          getTitle(),
-          style: GoogleFonts.outfit(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1.5,
-            color: ScholarlyTheme.textPrimary,
+        title: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 220),
+          transitionBuilder: (child, animation) => FadeTransition(
+            opacity: animation,
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0, 0.3),
+                end: Offset.zero,
+              ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOut)),
+              child: child,
+            ),
+          ),
+          child: Text(
+            getTitle(),
+            key: ValueKey<int>(currentIndex),
+            style: GoogleFonts.outfit(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.5,
+              color: ScholarlyTheme.textPrimary,
+            ),
           ),
         ),
         leading: Builder(
@@ -193,17 +215,24 @@ class MobileNavigationShell extends ConsumerWidget {
         ],
       ),
       drawer: const _MobileSidebarDrawer(),
-      body: IndexedStack(
-        index: currentIndex,
-        children: List.generate(pages.length, (index) {
-          return LazyIndexedStackChild(
-            isActive: currentIndex == index,
-            child: TickerMode(
-              enabled: currentIndex == index,
-              child: pages[index],
-            ),
-          );
-        }),
+      body: Stack(
+        children: [
+          IndexedStack(
+            index: currentIndex,
+            children: List.generate(pages.length, (index) {
+              return LazyIndexedStackChild(
+                isActive: currentIndex == index,
+                child: TickerMode(
+                  enabled: currentIndex == index,
+                  child: pages[index],
+                ),
+              );
+            }),
+          ),
+          const IgnorePointer(
+            child: PageTransitionOverlay(),
+          ),
+        ],
       ),
     );
 
@@ -219,12 +248,20 @@ class MobileNavigationShell extends ConsumerWidget {
       );
     }
 
+    final overrides = ref.watch(backButtonOverridesProvider);
+    final activeOverride = overrides[currentIndex];
+
     result = PopScope(
       canPop: false,
       onPopInvokedWithResult: (bool didPop, Object? result) async {
         if (didPop) return;
+        if (activeOverride != null) {
+          final handled = await activeOverride();
+          if (handled) return;
+        }
+        if (!context.mounted) return;
         if (currentIndex != 0) {
-          ref.read(mobileNavIndexProvider.notifier).state = 0;
+          exitToDashboardWithSidebar(context, ref);
         } else {
           final exitApp = await showExitAppConfirmationDialog(context);
           if (exitApp == true) {
@@ -488,6 +525,7 @@ class _MobileSidebarDrawer extends ConsumerWidget {
                   label: 'Dashboard',
                   icon: Icons.space_dashboard_rounded,
                   isSelected: currentIndex == 0,
+                  index: 0,
                   onTap: () {
                     _navigate(ref, context, 0);
                   },
@@ -496,6 +534,7 @@ class _MobileSidebarDrawer extends ConsumerWidget {
                   label: 'Assignment',
                   icon: Icons.assignment_turned_in_rounded,
                   isSelected: currentIndex == 11,
+                  index: 1,
                   trailing: pendingCount > 0
                       ? Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -526,6 +565,7 @@ class _MobileSidebarDrawer extends ConsumerWidget {
                   label: 'Arena',
                   icon: Icons.sports_esports_rounded,
                   isSelected: currentIndex == 1,
+                  index: 2,
                   onTap: () {
                     _navigate(ref, context, 1);
                   },
@@ -534,6 +574,7 @@ class _MobileSidebarDrawer extends ConsumerWidget {
                   label: 'Battleground',
                   icon: Icons.emoji_events_rounded,
                   isSelected: currentIndex == 2,
+                  index: 3,
                   onTap: () {
                     _navigate(ref, context, 2);
                   },
@@ -542,6 +583,7 @@ class _MobileSidebarDrawer extends ConsumerWidget {
                   label: 'Academy',
                   icon: Icons.school_rounded,
                   isSelected: currentIndex == 3,
+                  index: 4,
                   onTap: () {
                     _navigate(ref, context, 3);
                   },
@@ -550,6 +592,7 @@ class _MobileSidebarDrawer extends ConsumerWidget {
                   label: 'Puzzles',
                   icon: Icons.extension_rounded,
                   isSelected: currentIndex == 4,
+                  index: 5,
                   onTap: () {
                     _navigate(ref, context, 4);
                   },
@@ -558,6 +601,7 @@ class _MobileSidebarDrawer extends ConsumerWidget {
                   label: 'Analysis',
                   icon: Icons.science_rounded,
                   isSelected: currentIndex == 5,
+                  index: 6,
                   onTap: () {
                     _navigate(ref, context, 5);
                   },
@@ -566,6 +610,7 @@ class _MobileSidebarDrawer extends ConsumerWidget {
                   label: 'Archive',
                   icon: Icons.history_rounded,
                   isSelected: currentIndex == 6,
+                  index: 7,
                   onTap: () {
                     _navigate(ref, context, 6);
                   },
@@ -574,6 +619,7 @@ class _MobileSidebarDrawer extends ConsumerWidget {
                   label: 'Tutorial',
                   icon: Icons.menu_book_rounded,
                   isSelected: currentIndex == 7,
+                  index: 8,
                   onTap: () {
                     _navigate(ref, context, 7);
                   },
@@ -583,10 +629,11 @@ class _MobileSidebarDrawer extends ConsumerWidget {
                   child: Divider(color: Color(0xFFE2E8F0), height: 1),
                 ),
                 // Settings, Store, About Us Group
-                _DrawerTile(
+                 _DrawerTile(
                   label: 'Settings',
                   icon: Icons.settings_rounded,
                   isSelected: currentIndex == 9,
+                  index: 9,
                   onTap: () {
                     _navigate(ref, context, 9);
                   },
@@ -595,6 +642,7 @@ class _MobileSidebarDrawer extends ConsumerWidget {
                   label: 'Account',
                   icon: Icons.manage_accounts_rounded,
                   isSelected: currentIndex == 12,
+                  index: 10,
                   onTap: () {
                     _navigate(ref, context, 12);
                   },
@@ -603,6 +651,7 @@ class _MobileSidebarDrawer extends ConsumerWidget {
                   label: 'Store',
                   icon: Icons.storefront_rounded,
                   isSelected: currentIndex == 10,
+                  index: 11,
                   onTap: () {
                     _navigate(ref, context, 10);
                   },
@@ -611,6 +660,7 @@ class _MobileSidebarDrawer extends ConsumerWidget {
                   label: 'About Us',
                   icon: Icons.info_outline_rounded,
                   isSelected: currentIndex == 8,
+                  index: 12,
                   onTap: () {
                     _navigate(ref, context, 8);
                   },
@@ -995,6 +1045,7 @@ class _DrawerTile extends StatelessWidget {
   final IconData icon;
   final bool isSelected;
   final VoidCallback onTap;
+  final int index;
   final Widget? trailing;
 
   const _DrawerTile({
@@ -1002,6 +1053,7 @@ class _DrawerTile extends StatelessWidget {
     required this.icon,
     required this.isSelected,
     required this.onTap,
+    required this.index,
     this.trailing,
   });
 
@@ -1037,6 +1089,16 @@ class _DrawerTile extends StatelessWidget {
           trailing: trailing,
         ),
       ),
+    )
+    .animate(delay: (index * 28).ms)
+    .fadeIn(duration: 160.ms)
+    .slideX(begin: -0.04, end: 0.0, duration: 160.ms, curve: Curves.easeOut)
+    .animate(key: ValueKey(isSelected))
+    .scale(
+      begin: const Offset(0.96, 0.96),
+      end: const Offset(1.0, 1.0),
+      duration: 180.ms,
+      curve: Curves.easeOutBack,
     );
   }
 }

@@ -53,6 +53,14 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
     WidgetsBinding.instance.addObserver(this);
     _confettiController = ConfettiController(duration: const Duration(seconds: 3));
     _confettiBottomController = ConfettiController(duration: const Duration(seconds: 3));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.read(backButtonOverridesProvider.notifier).update((map) => {
+          ...map,
+          2: _handleBackPress,
+        });
+      }
+    });
   }
 
   @override
@@ -60,7 +68,26 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
     WidgetsBinding.instance.removeObserver(this);
     _confettiController.dispose();
     _confettiBottomController.dispose();
+    ref.read(backButtonOverridesProvider.notifier).update((map) {
+      final newMap = Map<int, Future<bool> Function()>.from(map);
+      newMap.remove(2);
+      return newMap;
+    });
     super.dispose();
+  }
+
+  Future<bool> _handleBackPress() async {
+    final bgState = ref.read(battlegroundProvider);
+    final isMatchActive = bgState.activeRatedMatchId != null;
+    if (isMatchActive) {
+      final resigned = await showRatedExitDialog(context);
+      if (resigned == true) {
+        await ref.read(battlegroundProvider.notifier).resignRatedGame();
+        return false; // let the default exit to dashboard happen
+      }
+      return true; // stay on page
+    }
+    return false; // let the default exit to dashboard happen
   }
 
   @override
@@ -136,14 +163,7 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
       });
     }
 
-    final isCurrentTab = currentNavIndex == 2;
-
-    return PopScope(
-      canPop: !isCurrentTab,
-      onPopInvokedWithResult: (bool didPop, Object? result) async {
-        // Do nothing on phone back button when Battleground tab is active
-      },
-      child: Scaffold(
+    return Scaffold(
         key: _scaffoldKey,
         backgroundColor: ScholarlyTheme.backgroundStart,
         body: Stack(
@@ -209,8 +229,7 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
               ),
           ],
         ),
-      ),
-    );
+      );
   }
 
   Widget _buildLandscapeLayout(BuildContext context, WidgetRef ref, BattlegroundState state) {

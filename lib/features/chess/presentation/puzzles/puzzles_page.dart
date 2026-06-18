@@ -46,13 +46,29 @@ class _PuzzlesPageState extends ConsumerState<PuzzlesPage> {
         ref.read(storeProvider.notifier).recordPuzzle();
         await ref.read(puzzlesProvider.notifier).startPrescriptionMode(silent: true);
       }
+      if (mounted) {
+        ref.read(backButtonOverridesProvider.notifier).update((map) => {
+          ...map,
+          4: _handleBackPress,
+        });
+      }
     });
   }
 
   @override
   void dispose() {
     _confettiController.dispose();
+    ref.read(backButtonOverridesProvider.notifier).update((map) {
+      final newMap = Map<int, Future<bool> Function()>.from(map);
+      newMap.remove(4);
+      return newMap;
+    });
     super.dispose();
+  }
+
+  Future<bool> _handleBackPress() async {
+    await _requestExitPuzzle();
+    return true;
   }
 
   Future<void> _requestExitPuzzle() async {
@@ -617,16 +633,7 @@ class _PuzzlesPageState extends ConsumerState<PuzzlesPage> {
       }
     });
 
-    final currentNavIndex = ref.watch(mobileNavIndexProvider);
-    final isCurrentTab = currentNavIndex == 4;
-
-    return PopScope(
-      canPop: !isCurrentTab,
-      onPopInvokedWithResult: (bool didPop, Object? result) async {
-        if (didPop) return;
-        await _requestExitPuzzle();
-      },
-      child: AmbientScaffold(
+    return AmbientScaffold(
         scaffoldKey: _scaffoldKey,
         blob1Color: const Color(0xFFF0F9FF), // Very light blue
         blob2Color: const Color(0xFFFDF2F8), // Very light pink
@@ -671,8 +678,7 @@ class _PuzzlesPageState extends ConsumerState<PuzzlesPage> {
               ),
           ],
         ),
-      ),
-    );
+      );
   }
 
   bool _checkPuzzleLimitAndUpsell(BuildContext context, WidgetRef ref) {

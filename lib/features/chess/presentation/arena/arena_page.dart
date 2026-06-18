@@ -55,6 +55,15 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
     
     final initialState = ref.read(arenaProvider);
     _showGameOverOverlayDelayed = (initialState.isGameOver || initialState.isTimeOut) && !initialState.isGameOverDismissed;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.read(backButtonOverridesProvider.notifier).update((map) => {
+          ...map,
+          1: _handleBackPress,
+        });
+      }
+    });
   }
 
   @override
@@ -63,7 +72,22 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
     _confettiController.dispose();
     _confettiBottomController.dispose();
     _gameOverDelayTimer?.cancel();
+    ref.read(backButtonOverridesProvider.notifier).update((map) {
+      final newMap = Map<int, Future<bool> Function()>.from(map);
+      newMap.remove(1);
+      return newMap;
+    });
     super.dispose();
+  }
+
+  Future<bool> _handleBackPress() async {
+    if (_showNewGameConfirmOverlay) {
+      setState(() {
+        _showNewGameConfirmOverlay = false;
+      });
+      return true;
+    }
+    return false;
   }
 
   void _exitWithNudgeCheck(BuildContext context, WidgetRef ref) {
@@ -127,27 +151,7 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
       }
     });
 
-    final currentNavIndex = ref.watch(mobileNavIndexProvider);
-    final isCurrentTab = currentNavIndex == 1;
-
-    return PopScope(
-      canPop: !isCurrentTab,
-      onPopInvokedWithResult: (bool didPop, Object? result) async {
-        if (didPop) return;
-        if (_showNewGameConfirmOverlay) {
-          setState(() {
-            _showNewGameConfirmOverlay = false;
-          });
-          return;
-        }
-        final bool? confirm = await _showExitConfirmation(context);
-        if (confirm == true) {
-          if (context.mounted) {
-            _exitWithNudgeCheck(context, ref);
-          }
-        }
-      },
-      child: Scaffold(
+    return Scaffold(
         key: _scaffoldKey,
         backgroundColor: ScholarlyTheme.backgroundStart,
         body: Stack(
@@ -263,8 +267,7 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
               ),
           ],
         ),
-      ),
-    );
+      );
   }
 
   Widget _buildLandscapeLayout(BuildContext context, WidgetRef ref, ArenaState state) {
@@ -1540,20 +1543,7 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
     }
   }
 
-  Future<bool?> _showExitConfirmation(BuildContext context) async {
-    return showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: ScholarlyTheme.panelBase,
-        title: const Text('Exit IdeaSpace Chess Academy?'),
-        content: const Text('Do you want to quit?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Continue')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), style: FilledButton.styleFrom(backgroundColor: Colors.redAccent), child: const Text('Quit')),
-        ],
-      ),
-    );
-  }
+
 }
 
 class ActiveAvatarWrapper extends StatefulWidget {

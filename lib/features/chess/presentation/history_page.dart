@@ -14,7 +14,6 @@ import '../services/chess_sound_service.dart';
 import 'scholarly_theme.dart';
 import 'widgets/history_card.dart';
 import 'widgets/ambient_scaffold.dart';
-import 'dashboard_page.dart';
 import 'mobile_navigation_shell.dart';
 
 enum HistoryFilterType { all, favorites }
@@ -129,16 +128,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage> with SingleTickerProv
       }
     }
 
-    final currentNavIndex = ref.watch(mobileNavIndexProvider);
-    final isCurrentTab = currentNavIndex == 6;
-
-    return PopScope(
-      canPop: !isCurrentTab,
-      onPopInvokedWithResult: (bool didPop, Object? result) async {
-        if (didPop) return;
-        exitToDashboardWithSidebar(context, ref);
-      },
-      child: AmbientScaffold(
+    return AmbientScaffold(
         scaffoldKey: _scaffoldKey,
         blob1Color: const Color(0xFFCCFBF1), // Soft Teal
         blob2Color: const Color(0xFFDBEAFE), // Soft Blue
@@ -402,8 +392,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage> with SingleTickerProv
           ),
         ],
       ),
-    ), // End of AmbientScaffold
-   ); // End of PopScope
+    ); // End of AmbientScaffold
   }
 
   Widget _buildTabButton({

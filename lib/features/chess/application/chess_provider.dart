@@ -1396,6 +1396,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
 
       await _stockfishEngine.init();
 
+      final is960 = state.gameMode == 'chess960';
+      await _stockfishEngine.setChess960Mode(is960);
+
       final avatar = AiAvatar.getAvatar(state.engineLevel);
       final config = rust_persona.getPersonaConfig(avatarName: avatar.name);
       final multiPV = state.isAcademyActive ? 3 : config.multiPv;

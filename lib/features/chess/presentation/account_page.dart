@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:lottie/lottie.dart';
 
 import '../application/chess_provider.dart';
 import '../application/store_provider.dart';
@@ -761,30 +762,6 @@ class _AccountPageState extends ConsumerState<AccountPage> {
     final authService = ref.watch(authServiceProvider);
     final isPlayGamesUser = authService.isPlayGamesUser;
 
-    if (!isPlayGamesUser) {
-      return _buildSettingsTile(
-        label: 'Cloud Backup Sync',
-        description: 'Sign in to sync your progress.',
-        icon: Icons.cloud_off_rounded,
-        accentColor: ScholarlyTheme.textSubtle,
-        onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Please sign in from the main menu to enable Cloud Sync.',
-              ),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        },
-        trailing: const Icon(
-          Icons.cloud_off_rounded,
-          color: ScholarlyTheme.textSubtle,
-          size: 20,
-        ),
-      );
-    }
-
     IconData statusIcon;
     Color statusColor;
 
@@ -805,6 +782,97 @@ class _AccountPageState extends ConsumerState<AccountPage> {
         statusIcon = Icons.cloud_queue_rounded;
         statusColor = ScholarlyTheme.textSubtle;
         break;
+    }
+
+    final activeLottieCloud = Container(
+      padding: const EdgeInsets.all(2),
+      decoration: BoxDecoration(
+        color: statusColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: statusColor.withValues(alpha: 0.35),
+          width: 1,
+        ),
+      ),
+      width: 54,
+      height: 54,
+      child: Lottie.asset(
+        'assets/lottie/paperplane.lottie',
+        repeat: true,
+        animate: true,
+        fit: BoxFit.contain,
+        decoder: (bytes) {
+          return LottieComposition.decodeZip(
+            bytes,
+            filePicker: (files) {
+              for (final file in files) {
+                if (file.name.startsWith('animations/') && file.name.endsWith('.json')) {
+                  return file;
+                }
+              }
+              return null;
+            },
+          );
+        },
+      ),
+    );
+
+    final staticLottieCloud = Container(
+      padding: const EdgeInsets.all(2),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.35),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.5),
+          width: 1,
+        ),
+      ),
+      width: 54,
+      height: 54,
+      child: ColorFiltered(
+        colorFilter: const ColorFilter.mode(
+          Colors.grey,
+          BlendMode.srcIn,
+        ),
+        child: Lottie.asset(
+          'assets/lottie/paperplane.lottie',
+          animate: false,
+          fit: BoxFit.contain,
+          decoder: (bytes) {
+            return LottieComposition.decodeZip(
+              bytes,
+              filePicker: (files) {
+                for (final file in files) {
+                  if (file.name.startsWith('animations/') && file.name.endsWith('.json')) {
+                    return file;
+                  }
+                }
+                return null;
+              },
+            );
+          },
+        ),
+      ),
+    );
+
+    if (!isPlayGamesUser) {
+      return _buildSettingsTile(
+        label: 'Cloud Backup Sync',
+        description: 'Sign in to sync your progress.',
+        icon: Icons.cloud_off_rounded,
+        accentColor: ScholarlyTheme.textSubtle,
+        onTap: () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Please sign in from the main menu to enable Cloud Sync.',
+              ),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        },
+        trailing: staticLottieCloud,
+      );
     }
 
     Future<void> handleSync() async {
@@ -831,41 +899,17 @@ class _AccountPageState extends ConsumerState<AccountPage> {
     }
 
     return _buildSettingsTile(
-      label: 'Cloud Backup Sync',
-      description: syncState.status == CloudSyncStatus.syncing
-          ? 'Syncing your data...'
-          : syncState.lastSyncedAt != null
+      label: isPlayGamesUser ? 'Cloud sync established' : 'Cloud Backup Sync',
+      description: syncState.lastSyncedAt != null
           ? 'Last synced: ${DateFormat.jm().format(syncState.lastSyncedAt!)}'
           : 'Auto-syncs settings and game history',
       icon: statusIcon,
       accentColor: statusColor,
       onTap: syncState.status == CloudSyncStatus.syncing ? () {} : handleSync,
-      trailing: syncState.status == CloudSyncStatus.syncing
-          ? const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  ScholarlyTheme.accentBlue,
-                ),
-              ),
-            )
-          : TextButton.icon(
-              onPressed: syncState.status == CloudSyncStatus.syncing
-                  ? null
-                  : handleSync,
-              icon: const Icon(Icons.sync_rounded, size: 16),
-              label: Text(
-                'Sync Now',
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
+      trailing: activeLottieCloud,
     );
   }
+
 
   Future<void> _showResetConfirmationDialog(
     BuildContext context,
@@ -897,7 +941,8 @@ class _AccountPageState extends ConsumerState<AccountPage> {
   Widget _buildSettingsTile({
     required String label,
     required String description,
-    required IconData icon,
+    IconData? icon,
+    Widget? leading,
     required VoidCallback onTap,
     Color? accentColor,
     Widget? trailing,
@@ -911,7 +956,7 @@ class _AccountPageState extends ConsumerState<AccountPage> {
           ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
           onTap();
         },
-        leading: Container(
+        leading: leading ?? Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
             color: effectiveAccent != null
@@ -926,13 +971,14 @@ class _AccountPageState extends ConsumerState<AccountPage> {
             ),
           ),
           child: Icon(
-            icon,
+            icon ?? Icons.settings,
             color:
                 effectiveAccent ??
                 (isDarkBg ? Colors.white : ScholarlyTheme.textPrimary),
             size: 20,
           ),
         ),
+
         title: Text(
           label,
           style: GoogleFonts.inter(

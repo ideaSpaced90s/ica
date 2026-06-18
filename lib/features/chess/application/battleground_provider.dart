@@ -543,6 +543,9 @@ class BattlegroundNotifier extends StateNotifier<BattlegroundState> {
       );
       await _stockfishEngine.init();
 
+      final is960 = state.gameMode == 'chess960';
+      await _stockfishEngine.setChess960Mode(is960);
+
       final opponent =
           state.activeOpponent ??
           AiAvatar.getBestMatch(state.consolidatedRating);

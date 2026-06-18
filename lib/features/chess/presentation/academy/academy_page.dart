@@ -86,6 +86,12 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await ref.read(chessProvider.notifier).initializeAcademySession();
+      if (mounted) {
+        ref.read(backButtonOverridesProvider.notifier).update((map) => {
+          ...map,
+          3: _handleBackPress,
+        });
+      }
     });
   }
 
@@ -93,7 +99,20 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
   void dispose() {
     _chatScrollController.dispose();
     _slideController.dispose();
+    ref.read(backButtonOverridesProvider.notifier).update((map) {
+      final newMap = Map<int, Future<bool> Function()>.from(map);
+      newMap.remove(3);
+      return newMap;
+    });
     super.dispose();
+  }
+
+  Future<bool> _handleBackPress() async {
+    if (_slideController.value > 0.0) {
+      _slideController.reverse();
+      return true;
+    }
+    return false;
   }
 
 
@@ -1159,18 +1178,7 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
     final state = ref.watch(chessProvider);
     final notifier = ref.read(chessProvider.notifier);
 
-    final currentNavIndex = ref.watch(mobileNavIndexProvider);
-    final isCurrentTab = currentNavIndex == 3;
-
-    return PopScope(
-      canPop: !isCurrentTab,
-      onPopInvokedWithResult: (bool didPop, Object? result) async {
-        if (didPop) return;
-        if (_slideController.value > 0.0) {
-          _slideController.reverse();
-        }
-      },
-      child: AmbientScaffold(
+    return AmbientScaffold(
         scaffoldKey: _scaffoldKey,
         blob1Color: const Color(0xFFDBEAFE),
         blob2Color: const Color(0xFFD1FAE5),
@@ -1299,8 +1307,7 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
             ),
           ),
         ),
-      ),
-    );
+      );
   }
 }
 

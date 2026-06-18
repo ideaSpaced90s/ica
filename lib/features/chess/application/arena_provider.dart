@@ -487,6 +487,9 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
 
       await _stockfishEngine.init();
 
+      final is960 = state.gameMode == 'chess960';
+      await _stockfishEngine.setChess960Mode(is960);
+
       final avatar = AiAvatar.getAvatar(state.engineLevel);
       final config = rust_persona.getPersonaConfig(avatarName: avatar.name);
       await _stockfishEngine.setSkillLevel(config.skillLevel, multiPV: config.multiPv);

@@ -13,7 +13,6 @@ import '../../services/chess_sound_service.dart';
 import 'analysis_board.dart';
 import 'position_setup_page.dart';
 import 'workspace_page.dart';
-import '../dashboard_page.dart';
 import '../mobile_navigation_shell.dart';
 
 class AnalysisPage extends ConsumerStatefulWidget {
@@ -32,7 +31,21 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
   @override
   void dispose() {
     _autoPlayTimer?.cancel();
+    ref.read(backButtonOverridesProvider.notifier).update((map) {
+      final newMap = Map<int, Future<bool> Function()>.from(map);
+      newMap.remove(5);
+      return newMap;
+    });
     super.dispose();
+  }
+
+  Future<bool> _handleBackPress() async {
+    final isDirty = ref.read(studyLabProvider).isDirty;
+    if (isDirty) {
+      final shouldLeave = await _showUnsavedChangesDialog(context);
+      return !shouldLeave;
+    }
+    return false;
   }
 
   void _startAutoPlay(StudyLabNotifier notifier) {
@@ -58,6 +71,14 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
   void initState() {
     super.initState();
     Future.microtask(() => ref.read(chessProvider.notifier).loadSavedGames());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.read(backButtonOverridesProvider.notifier).update((map) => {
+          ...map,
+          5: _handleBackPress,
+        });
+      }
+    });
   }
 
   Widget _buildLandscapeLayout(
@@ -152,26 +173,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
       ref.read(analysisEngineControllerProvider.notifier).setFen(next);
     });
 
-    final currentNavIndex = ref.watch(mobileNavIndexProvider);
-    final isCurrentTab = currentNavIndex == 5;
-
-    return PopScope(
-      canPop: !isCurrentTab,
-      onPopInvokedWithResult: (bool didPop, Object? result) async {
-        if (didPop) return;
-        final isDirty = ref.read(studyLabProvider).isDirty;
-        if (isDirty) {
-          final shouldLeave = await _showUnsavedChangesDialog(context);
-          if (shouldLeave && context.mounted) {
-            exitToDashboardWithSidebar(context, ref);
-          }
-        } else {
-          if (context.mounted) {
-            exitToDashboardWithSidebar(context, ref);
-          }
-        }
-      },
-      child: AmbientScaffold(
+    return AmbientScaffold(
         scaffoldKey: _scaffoldKey,
         blob1Color: const Color(0xFFF3E8FF),
         blob2Color: const Color(0xFFDBEAFE),
@@ -267,8 +269,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
             },
           ),
         ),
-      ),
-    );
+      );
   }
 
   Widget _buildBoardWithEval(
