@@ -1095,7 +1095,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4.0),
             child: Image.asset(
-              'assets/splash/appicon.png',
+              'assets/splash/light_knight.png',
               height: 16,
               fit: BoxFit.contain,
               errorBuilder: (context, error, stackTrace) => const Icon(

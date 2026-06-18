@@ -132,24 +132,23 @@ class PuzzlesState {
   }
 }
 
-class PuzzlesNotifier extends StateNotifier<PuzzlesState> {
-  PuzzlesNotifier(
-    this.ref,
-    this._puzzleRepository,
-    this._prescriptionRepository,
-    this._hapticsService,
-  ) : super(PuzzlesState(game: ChessGame(fen: '8/8/8/8/8/8/8/8 w - - 0 1')));
-
-  final Ref ref;
-  final PuzzleRepository _puzzleRepository;
-  final PrescriptionPuzzleRepository _prescriptionRepository;
-  final ChessHapticsService _hapticsService;
+class PuzzlesNotifier extends Notifier<PuzzlesState> {
+  late final PuzzleRepository _puzzleRepository;
+  late final PrescriptionPuzzleRepository _prescriptionRepository;
+  late final ChessHapticsService _hapticsService;
   bool _isDisposed = false;
 
   @override
-  void dispose() {
-    _isDisposed = true;
-    super.dispose();
+  PuzzlesState build() {
+    _puzzleRepository = ref.watch(puzzleRepositoryProvider);
+    _prescriptionRepository = ref.watch(prescriptionPuzzleRepositoryProvider);
+    _hapticsService = ref.watch(chessHapticsServiceProvider);
+
+    ref.onDispose(() {
+      _isDisposed = true;
+    });
+
+    return PuzzlesState(game: ChessGame(fen: '8/8/8/8/8/8/8/8 w - - 0 1'));
   }
 
   Future<void> startPuzzleMode({bool silent = false}) async {
@@ -605,9 +604,4 @@ class PuzzlesNotifier extends StateNotifier<PuzzlesState> {
   }
 }
 
-final puzzlesProvider = StateNotifierProvider<PuzzlesNotifier, PuzzlesState>((ref) {
-  final puzzleRepository = ref.watch(puzzleRepositoryProvider);
-  final prescriptionRepository = ref.watch(prescriptionPuzzleRepositoryProvider);
-  final hapticsService = ref.watch(chessHapticsServiceProvider);
-  return PuzzlesNotifier(ref, puzzleRepository, prescriptionRepository, hapticsService);
-});
+final puzzlesProvider = NotifierProvider<PuzzlesNotifier, PuzzlesState>(PuzzlesNotifier.new);

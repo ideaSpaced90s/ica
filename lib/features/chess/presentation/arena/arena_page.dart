@@ -151,6 +151,15 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
       }
     });
 
+    ref.listen<int>(mobileNavIndexProvider, (previous, current) {
+      if (previous == 1 && current != 1) {
+        final repo = ref.read(tutorialProgressRepositoryProvider);
+        if (!repo.shouldPersistIntroSeen()) {
+          ref.read(showArenaIntroProvider.notifier).state = true;
+        }
+      }
+    });
+
     return Scaffold(
         key: _scaffoldKey,
         backgroundColor: ScholarlyTheme.backgroundStart,
@@ -256,13 +265,14 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
             if (showIntro)
               GMChanakyaIntroOverlay(
                 pageTitle: 'ARENA',
-                text: "Welcome to the Arena, Apprentice. This is your practice chamber—the place where you can test theories, experiment, and hone your strategies. The more you grind here, the sharper you become. This is a sanctuary where you can practice without the burden of ratings. Here, defeat is simply data, and victory is a silent step toward mastery. Adjust the engine's level, select your opponent's persona, and play at your own pace. There are no stakes here; it exists solely to raise your understanding. Tap the thumbs up when you are ready to begin.",
+                text: 'Welcome to the Arena. Practice freely here: test ideas, face AI avatars, adjust difficulty, and learn without rating pressure.',
                 onDismiss: () {
                   ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
                   ref.read(showArenaIntroProvider.notifier).state = false;
                   final repo = ref.read(tutorialProgressRepositoryProvider);
-                  // Non-blocking save
-                  repo.setArenaIntroSeen(true);
+                  if (repo.shouldPersistIntroSeen()) {
+                    repo.setArenaIntroSeen(true);
+                  }
                 },
               ),
           ],
@@ -1694,4 +1704,5 @@ class ThinkingDotsAnimation extends StatelessWidget {
     return const NeuralConnectivityMesh();
   }
 }
+
 

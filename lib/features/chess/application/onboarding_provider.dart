@@ -7,45 +7,77 @@ import '../presentation/mobile_navigation_shell.dart';
 import 'chess_provider.dart';
 import 'tutorial_provider.dart';
 
+import 'var_notifier.dart';
+
 /// Provider tracking whether the user is currently in the active onboarding tutorial flow.
-final isOnboardingProvider = StateProvider<bool>((ref) => false);
+final isOnboardingProvider = NotifierProvider<VarNotifier<bool>, bool>(() => VarNotifier(() => false));
 
 /// Provider tracking the active target chapter during onboarding.
-final onboardingTargetChapterProvider = StateProvider<int>((ref) => 1);
+final onboardingTargetChapterProvider = NotifierProvider<VarNotifier<int>, int>(() => VarNotifier(() => 1));
 
 /// Provider tracking whether the chapter selection screen should be visible.
-final showChapterSelectionProvider = StateProvider<bool>((ref) => true);
+final showChapterSelectionProvider = NotifierProvider<VarNotifier<bool>, bool>(() => VarNotifier(() => true));
 
 /// Provider tracking whether the notification prompt should be shown.
-final showNotificationPromptProvider = StateProvider<bool>((ref) {
-  final repo = ref.watch(tutorialProgressRepositoryProvider);
-  final chessState = ref.watch(chessProvider);
-  return !repo.hasSeenWelcomeGuide() &&
-      !repo.hasPromptedNotification() &&
-      !chessState.isNotificationsEnabled;
-});
+class ShowNotificationPrompt extends Notifier<bool> {
+  @override
+  bool build() {
+    final repo = ref.watch(tutorialProgressRepositoryProvider);
+    final chessState = ref.watch(chessProvider);
+    return !repo.hasSeenWelcomeGuide() &&
+        !repo.hasPromptedNotification() &&
+        !chessState.isNotificationsEnabled;
+  }
+  @override
+  set state(bool value) => super.state = value;
+}
+final showNotificationPromptProvider = NotifierProvider<ShowNotificationPrompt, bool>(ShowNotificationPrompt.new);
 
 /// Provider tracking whether the welcome guide dialog should be displayed.
-final showWelcomeDialogProvider = StateProvider<bool>((ref) {
-  final repo = ref.watch(tutorialProgressRepositoryProvider);
-  return !repo.hasSeenWelcomeGuide();
-});
+class ShowWelcomeDialog extends Notifier<bool> {
+  @override
+  bool build() {
+    final repo = ref.watch(tutorialProgressRepositoryProvider);
+    return !repo.hasSeenWelcomeGuide();
+  }
+  @override
+  set state(bool value) => super.state = value;
+}
+final showWelcomeDialogProvider = NotifierProvider<ShowWelcomeDialog, bool>(ShowWelcomeDialog.new);
 
 /// Providers tracking whether the page welcome intros should be displayed.
-final showArenaIntroProvider = StateProvider<bool>((ref) {
-  final repo = ref.watch(tutorialProgressRepositoryProvider);
-  return !repo.hasSeenArenaIntro();
-});
+class ShowArenaIntro extends Notifier<bool> {
+  @override
+  bool build() {
+    final repo = ref.watch(tutorialProgressRepositoryProvider);
+    return !repo.hasSeenArenaIntro();
+  }
+  @override
+  set state(bool value) => super.state = value;
+}
+final showArenaIntroProvider = NotifierProvider<ShowArenaIntro, bool>(ShowArenaIntro.new);
 
-final showBattlegroundIntroProvider = StateProvider<bool>((ref) {
-  final repo = ref.watch(tutorialProgressRepositoryProvider);
-  return !repo.hasSeenBattlegroundIntro();
-});
+class ShowBattlegroundIntro extends Notifier<bool> {
+  @override
+  bool build() {
+    final repo = ref.watch(tutorialProgressRepositoryProvider);
+    return !repo.hasSeenBattlegroundIntro();
+  }
+  @override
+  set state(bool value) => super.state = value;
+}
+final showBattlegroundIntroProvider = NotifierProvider<ShowBattlegroundIntro, bool>(ShowBattlegroundIntro.new);
 
-final showPuzzlesIntroProvider = StateProvider<bool>((ref) {
-  final repo = ref.watch(tutorialProgressRepositoryProvider);
-  return !repo.hasSeenPuzzlesIntro();
-});
+class ShowPuzzlesIntro extends Notifier<bool> {
+  @override
+  bool build() {
+    final repo = ref.watch(tutorialProgressRepositoryProvider);
+    return !repo.hasSeenPuzzlesIntro();
+  }
+  @override
+  set state(bool value) => super.state = value;
+}
+final showPuzzlesIntroProvider = NotifierProvider<ShowPuzzlesIntro, bool>(ShowPuzzlesIntro.new);
 
 /// The guided tour now only covers Group 1: Foundations (Chapters 1–9).
 /// After the user completes Chapter 9, the guided tour ends with a farewell message.
@@ -90,7 +122,7 @@ class GuidedTutorialFlow {
 
 /// Service class to handle the guided onboarding tutorial path.
 class OnboardingService {
-  final WidgetRef ref;
+  final dynamic ref;
 
   OnboardingService(this.ref);
 

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:kingslayer_chess/src/rust/api/pgn_db.dart' as rust_pgn;
@@ -46,8 +47,10 @@ class SavedGameRepository {
         savedAt: entry.savedAt.toIso8601String(),
         jsonData: jsonData,
       );
-    } catch (_) {
-      // Handle error gracefully
+    } catch (e, stack) {
+      debugPrint('SavedGameRepository: Failed to save game ${entry.id}: $e');
+      debugPrintStack(stackTrace: stack);
+      rethrow;
     }
     return listSaves();
   }

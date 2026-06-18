@@ -46,13 +46,20 @@ class StockfishState {
 }
 
 /// A controller to manage the Stockfish engine using StateNotifier.
-class StockfishController extends StateNotifier<StockfishState> {
-  final StockfishService _service;
+class StockfishController extends Notifier<StockfishState> {
+  late final StockfishService _service;
   StreamSubscription? _subscription;
   DateTime _lastUpdateTime = DateTime.fromMillisecondsSinceEpoch(0);
 
-  StockfishController(this._service) : super(StockfishState()) {
+  @override
+  StockfishState build() {
+    _service = ref.watch(stockfishServiceProvider);
     _init();
+    ref.onDispose(() {
+      _subscription?.cancel();
+    });
+
+    return StockfishState();
   }
 
   void _init() {
@@ -153,17 +160,8 @@ class StockfishController extends StateNotifier<StockfishState> {
   Future<void> setChess960Mode(bool isEnabled) async {
     await _service.setChess960Mode(isEnabled);
   }
-
-  @override
-  void dispose() {
-    _subscription?.cancel();
-    super.dispose();
-  }
 }
 
 /// Provider for the StockfishController.
 final stockfishControllerProvider =
-    StateNotifierProvider<StockfishController, StockfishState>((ref) {
-      final service = ref.watch(stockfishServiceProvider);
-      return StockfishController(service);
-    });
+    NotifierProvider<StockfishController, StockfishState>(StockfishController.new);

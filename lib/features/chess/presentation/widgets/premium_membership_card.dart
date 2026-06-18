@@ -25,6 +25,7 @@ class PremiumMembershipCard extends ConsumerWidget {
     final planName = (rawPlan == 'sixmonth' ? '6-Month' : rawPlan).toUpperCase();
     final expiryStr = dateFormat.format(storeState.subscriptionTill!);
     final daysLeft = storeState.subscriptionTill!.difference(DateTime.now()).inDays.clamp(0, 365);
+    final accountId = storeState.subscriptionAccountId;
 
     return Container(
       width: double.infinity,
@@ -124,6 +125,42 @@ class PremiumMembershipCard extends ConsumerWidget {
               fontWeight: FontWeight.w500,
             ),
           ),
+          if (accountId != null && accountId.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: const Color(0xFFFFD700).withValues(alpha: 0.25),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.verified_user_rounded,
+                    color: Color(0xFFFFD700),
+                    size: 15,
+                  ),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      'Account ID: $accountId',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.jetBrainsMono(
+                        fontSize: 11,
+                        color: Colors.white.withValues(alpha: 0.88),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
 
           const Divider(

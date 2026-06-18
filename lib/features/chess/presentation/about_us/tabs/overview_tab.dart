@@ -37,8 +37,8 @@ class OverviewTab extends StatelessWidget {
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(18),
                     child: Image.asset(
-                      'assets/splash/appicon.png',
-                      fit: BoxFit.cover,
+                      'assets/splash/light_knight.png',
+                      fit: BoxFit.contain,
                       errorBuilder: (context, error, stackTrace) => Container(
                         decoration: const BoxDecoration(
                           gradient: LinearGradient(
@@ -60,12 +60,11 @@ class OverviewTab extends StatelessWidget {
                 FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Text(
-                    'IDEASPACE CHESS ACADEMY',
+                    'Chess Academy',
                     maxLines: 1,
-                    style: GoogleFonts.outfit(
-                      fontSize: 21,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.2,
+                    style: GoogleFonts.pirataOne(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
                       color: ScholarlyTheme.textPrimary,
                     ),
                   ),
@@ -74,10 +73,10 @@ class OverviewTab extends StatelessWidget {
                 FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Text(
-                    'Accelerating Tactical Vision & Chess Playing Strength',
+                    'Learn Chess Intently',
                     maxLines: 1,
                     style: GoogleFonts.inter(
-                      fontSize: 13,
+                      fontSize: 14,
                       fontWeight: FontWeight.w700,
                       color: Colors.indigo,
                     ),

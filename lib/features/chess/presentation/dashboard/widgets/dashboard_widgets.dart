@@ -865,10 +865,56 @@ class TierCard extends StatelessWidget {
 }
 
 class GameModesCard extends StatelessWidget {
-  const GameModesCard({super.key});
+  final bool isMobile;
+  const GameModesCard({super.key, this.isMobile = false});
 
   @override
   Widget build(BuildContext context) {
+    if (isMobile) {
+      return HoverScaleEffect(
+        child: JuicyGlassCard(
+          borderRadius: 20,
+          borderColor: const Color(0xFF06B6D4),
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                width: 3,
+                height: 40,
+                margin: const EdgeInsets.only(right: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF06B6D4),
+                  borderRadius: BorderRadius.circular(2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF06B6D4).withValues(alpha: 0.4),
+                      blurRadius: 6,
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF06B6D4).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(
+                  Icons.pie_chart_rounded,
+                  color: Color(0xFF06B6D4),
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 16),
+              const Expanded(
+                child: ModeDistributionChart(isMobile: true),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return SizedBox(
       width: 200,
       height: 208,
@@ -907,7 +953,7 @@ class GameModesCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 12),
-              const Expanded(child: ModeDistributionChart()),
+              const Expanded(child: ModeDistributionChart(isMobile: false)),
             ],
           ),
         ),

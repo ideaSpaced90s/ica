@@ -295,11 +295,10 @@ class ArenaState {
   }
 }
 
-class ArenaNotifier extends StateNotifier<ArenaState> {
-  final Ref ref;
-  final StockfishService _stockfishEngine;
-  final ChessSoundService _soundService;
-  final ChessHapticsService _hapticsService;
+class ArenaNotifier extends Notifier<ArenaState> {
+  late final StockfishService _stockfishEngine;
+  late final ChessSoundService _soundService;
+  late final ChessHapticsService _hapticsService;
 
   final List<_ArenaSnapshot> _undoStack = [];
   final List<_ArenaSnapshot> _redoStack = [];
@@ -317,13 +316,12 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
   bool _waitingForReady = false;
   final List<CandidateMove> _currentCandidates = [];
 
-  ArenaNotifier(
-    this.ref,
-    this._stockfishEngine,
-    this._soundService,
-    this._hapticsService,
-  ) : super(ArenaState(game: ChessGame())) {
-    _loadInitialState();
+  @override
+  ArenaState build() {
+    _stockfishEngine = ref.watch(stockfishServiceProvider);
+    _soundService = ref.watch(chessSoundServiceProvider);
+    _hapticsService = ref.watch(chessHapticsServiceProvider);
+
     ref.listen<ChessState>(chessProvider, (previous, next) {
       if (state.recentMoves.isEmpty && !state.isGameOver) {
         // Sync all settings when no game is in progress
@@ -343,16 +341,35 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
         );
       }
     });
-  }
 
-  void _loadInitialState() {
-    _prepareNewGameFromSettings(
-      playSound: false,
-      forcedPlayerWhite: true,
+    ref.onDispose(() {
+      _isDisposed = true;
+      _clockTimer?.cancel();
+      _engineMoveTimer?.cancel();
+      _scheduledMove = null;
+      _stockfishSubscription?.cancel();
+    });
+
+    final settings = ref.read(chessProvider);
+    final mode = settings.gameMode;
+    final is960 = mode == 'chess960';
+    final initialGame = is960
+        ? ChessGame(fen: Chess960Generator.generateRandomPosition().fen, isChess960: true)
+        : ChessGame(isChess960: false);
+
+    return ArenaState(
+      game: initialGame,
+      isPlayerWhite: true,
+      isBoardFlipped: false,
+      engineLevel: settings.engineLevel,
+      bottomAvatarId: settings.bottomAvatarId,
+      whiteTimeLeft: settings.baseTimeDuration,
+      blackTimeLeft: settings.baseTimeDuration,
+      baseTimeDuration: settings.baseTimeDuration,
+      incrementDuration: settings.incrementDuration,
+      gameMode: mode,
+      isGameOver: initialGame.gameOver,
     );
-    if (_isAiTurn()) {
-      unawaited(ensureGameServicesStarted(analyzeCurrentPosition: true));
-    }
   }
 
   void _prepareNewGameFromSettings({
@@ -1620,7 +1637,11 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
       result: resultOverride,
     );
 
-    await ref.read(savedGameRepositoryProvider).save(entry);
+    try {
+      await ref.read(savedGameRepositoryProvider).save(entry);
+    } catch (e) {
+      debugPrint('ArenaNotifier: Failed to save game: $e');
+    }
     await ref.read(chessProvider.notifier).loadSavedGames();
     return entry;
   }
@@ -1681,25 +1702,6 @@ class ArenaNotifier extends StateNotifier<ArenaState> {
     }
   }
 
-  @override
-  void dispose() {
-    _isDisposed = true;
-    _clockTimer?.cancel();
-    _engineMoveTimer?.cancel();
-    _scheduledMove = null;
-    _stockfishSubscription?.cancel();
-    super.dispose();
-  }
 }
 
-final arenaProvider = StateNotifierProvider<ArenaNotifier, ArenaState>((ref) {
-  final stockfishEngine = ref.watch(stockfishServiceProvider);
-  final soundService = ref.watch(chessSoundServiceProvider);
-  final hapticsService = ref.watch(chessHapticsServiceProvider);
-  return ArenaNotifier(
-    ref,
-    stockfishEngine,
-    soundService,
-    hapticsService,
-  );
-});
+final arenaProvider = NotifierProvider<ArenaNotifier, ArenaState>(ArenaNotifier.new);

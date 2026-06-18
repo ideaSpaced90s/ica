@@ -404,7 +404,7 @@ class _GMChanakyaNewGameOverlayState extends ConsumerState<GMChanakyaNewGameOver
       final bottomAvatar = AiAvatar.getAvatar(state.bottomAvatarId);
 
       return [
-        const TextSpan(text: 'Apprentice, you have requested a machine-vs-machine simulation. This strategic clash will be played between '),
+        const TextSpan(text: 'Simulation ready: '),
         TextSpan(
           text: topAvatar.name,
           style: GoogleFonts.inter(
@@ -434,7 +434,7 @@ class _GMChanakyaNewGameOverlayState extends ConsumerState<GMChanakyaNewGameOver
             fontWeight: FontWeight.w900,
           ),
         ),
-        const TextSpan(text: ') under the laws of '),
+        const TextSpan(text: '). Mode: '),
         TextSpan(
           text: modeText,
           style: GoogleFonts.inter(
@@ -442,7 +442,7 @@ class _GMChanakyaNewGameOverlayState extends ConsumerState<GMChanakyaNewGameOver
             color: const Color(0xFF2563EB),
           ),
         ),
-        const TextSpan(text: '. Time control is set at '),
+        const TextSpan(text: '. Time: '),
         TextSpan(
           text: timeStr,
           style: GoogleFonts.inter(
@@ -450,14 +450,14 @@ class _GMChanakyaNewGameOverlayState extends ConsumerState<GMChanakyaNewGameOver
             color: const Color(0xFF7C3AED),
           ),
         ),
-        const TextSpan(text: '. Do not merely watch—study the structure of their conflict and locate their critical errors.'),
+        const TextSpan(text: '. Watch for structure, pressure, and critical errors.'),
       ];
     } else {
       final opponent = AiAvatar.getAvatar(state.engineLevel);
       final colorText = state.isPlayerWhite ? 'White' : 'Black';
 
       return [
-        const TextSpan(text: 'Apprentice, your next trial is prepared. You shall face '),
+        const TextSpan(text: 'New match ready against '),
         TextSpan(
           text: opponent.name,
           style: GoogleFonts.inter(
@@ -472,14 +472,14 @@ class _GMChanakyaNewGameOverlayState extends ConsumerState<GMChanakyaNewGameOver
             fontWeight: FontWeight.w900,
           ),
         ),
-        const TextSpan(text: '), whose computational strength is estimated at '),
+        const TextSpan(text: '), estimated at '),
         TextSpan(
           text: '${opponent.fideRatingRange} ELO',
           style: GoogleFonts.inter(
             fontWeight: FontWeight.w900,
           ),
         ),
-        const TextSpan(text: '. You will command the '),
+        const TextSpan(text: '. You play '),
         TextSpan(
           text: colorText,
           style: GoogleFonts.inter(
@@ -487,7 +487,7 @@ class _GMChanakyaNewGameOverlayState extends ConsumerState<GMChanakyaNewGameOver
             color: state.isPlayerWhite ? const Color(0xFF0D9488) : const Color(0xFF4B5563),
           ),
         ),
-        const TextSpan(text: ' pieces under a time control of '),
+        const TextSpan(text: '. Time: '),
         TextSpan(
           text: timeStr,
           style: GoogleFonts.inter(
@@ -495,7 +495,7 @@ class _GMChanakyaNewGameOverlayState extends ConsumerState<GMChanakyaNewGameOver
             color: const Color(0xFF7C3AED),
           ),
         ),
-        const TextSpan(text: '. The battleground is '),
+        const TextSpan(text: '. Mode: '),
         TextSpan(
           text: modeText,
           style: GoogleFonts.inter(
@@ -503,8 +503,9 @@ class _GMChanakyaNewGameOverlayState extends ConsumerState<GMChanakyaNewGameOver
             color: const Color(0xFF2563EB),
           ),
         ),
-        const TextSpan(text: '. Remember: calculation merely navigates the current move, but strategy defines the future. Steel your resolve.'),
+        const TextSpan(text: '. Play with discipline and review the turning points.'),
       ];
     }
   }
 }
+

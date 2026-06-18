@@ -36,13 +36,15 @@ import 'shared/page_transition_overlay.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 
+import '../application/var_notifier.dart';
+
 // Provides the current active mobile tab index.
-final mobileNavIndexProvider = StateProvider<int>((ref) => 0);
+final mobileNavIndexProvider = NotifierProvider<VarNotifier<int>, int>(() => VarNotifier(() => 0));
 
 // Registry of page-specific back button overrides, keyed by tab/page index.
 // Handlers return true if they handled the back event (preventing index 0 navigation),
 // or false if they want the shell to execute default navigation to Dashboard.
-final backButtonOverridesProvider = StateProvider<Map<int, Future<bool> Function()>>((ref) => {});
+final backButtonOverridesProvider = NotifierProvider<VarNotifier<Map<int, Future<bool> Function()>>, Map<int, Future<bool> Function()>>(() => VarNotifier(() => {}));
 
 
 class MobileNavigationShell extends ConsumerWidget {

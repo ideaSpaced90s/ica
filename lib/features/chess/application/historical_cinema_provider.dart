@@ -40,24 +40,33 @@ class HistoricalCinemaState {
   }
 }
 
-class HistoricalCinemaNotifier extends StateNotifier<HistoricalCinemaState> {
-  HistoricalCinemaNotifier() : super(const HistoricalCinemaState()) {
-    _loadGames();
-  }
-
+class HistoricalCinemaNotifier extends Notifier<HistoricalCinemaState> {
   Timer? _playbackTimer;
+  bool _isDisposed = false;
+
+  @override
+  HistoricalCinemaState build() {
+    ref.onDispose(() {
+      _playbackTimer?.cancel();
+      _isDisposed = true;
+    });
+
+    _loadGames();
+
+    return const HistoricalCinemaState();
+  }
 
   Future<void> _loadGames() async {
     try {
       final jsonString = await rootBundle.loadString('assets/data/historical_cinema.json');
       final List<dynamic> list = json.decode(jsonString) as List<dynamic>;
       final games = list.map((item) => HistoricalGame.fromJson(item as Map<String, dynamic>)).toList();
-      if (mounted) {
+      if (!_isDisposed) {
         state = state.copyWith(games: games, isLoading: false);
       }
     } catch (e) {
       // Fallback in case of failure or incomplete build
-      if (mounted) {
+      if (!_isDisposed) {
         state = state.copyWith(games: [], isLoading: false);
       }
     }
@@ -139,15 +148,7 @@ class HistoricalCinemaNotifier extends StateNotifier<HistoricalCinemaState> {
       _startTimer();
     }
   }
-
-  @override
-  void dispose() {
-    _playbackTimer?.cancel();
-    super.dispose();
-  }
 }
 
 final historicalCinemaProvider =
-    StateNotifierProvider<HistoricalCinemaNotifier, HistoricalCinemaState>((ref) {
-  return HistoricalCinemaNotifier();
-});
+    NotifierProvider<HistoricalCinemaNotifier, HistoricalCinemaState>(HistoricalCinemaNotifier.new);

@@ -345,43 +345,108 @@ class _HistoryPageState extends ConsumerState<HistoryPage> with SingleTickerProv
                               itemCount: filteredSaves.length,
                               itemBuilder: (context, index) {
                                 final game = filteredSaves[index];
+                                final isAcademy = game.isAcademyActive;
+                                final isFavBattleground = game.isRatedMode && game.isFavorite;
+                                final isDeletable = !isAcademy && !isFavBattleground;
+
                                 return Padding(
                                   padding: const EdgeInsets.only(bottom: 12),
-                                  child: HistoryCard(
-                                    key: ValueKey(game.id),
-                                    game: game,
-                                    onTap: () {
-                                      if (game.isRatedMode) {
-                                        // Rated games do nothing when clicked
-                                        return;
-                                      }
-                                      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                                      if (game.isAcademyActive) {
-                                        ref.read(studyLabProvider.notifier).loadGameEntry(game);
-                                        ref.read(mobileNavIndexProvider.notifier).state = 5;
-                                        return;
-                                      }
-                                      _showArenaOptions(context, game, notifier);
-                                    },
-                                    onDelete: game.isAcademyActive ? () {} : () {
-                                      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                                      notifier.deleteSavedGame(game.id);
-                                    },
-                                    onToggleFavorite: game.isAcademyActive ? () {} : () {
-                                      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                                      notifier.toggleFavorite(game.id);
-                                    },
-                                    onRename: game.isAcademyActive ? (_) {} : (newName) {
-                                      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                                      notifier.renameSavedGame(
-                                        game.id,
-                                        newName,
+                                  child: Dismissible(
+                                    key: ValueKey('history-game-${game.id}'),
+                                    direction: isDeletable ? DismissDirection.endToStart : DismissDirection.none,
+                                    background: Container(
+                                      alignment: Alignment.centerRight,
+                                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                                      decoration: BoxDecoration(
+                                        color: Colors.redAccent.withValues(alpha: 0.8),
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.end,
+                                        children: [
+                                          Text(
+                                            'Delete from archive...',
+                                            style: GoogleFonts.inter(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          const Icon(Icons.delete_sweep_rounded, color: Colors.white, size: 22),
+                                        ],
+                                      ),
+                                    ),
+                                    confirmDismiss: (direction) async {
+                                      return await showDialog<bool>(
+                                        context: context,
+                                        builder: (ctx) => AlertDialog(
+                                          backgroundColor: ScholarlyTheme.panelBase,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(16),
+                                            side: const BorderSide(color: ScholarlyTheme.panelStroke, width: 1.5),
+                                          ),
+                                          title: Text(
+                                            'Delete Game?',
+                                            style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary),
+                                          ),
+                                          content: Text(
+                                            'Are you sure you want to delete this game from your archive? This cannot be undone.',
+                                            style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 13),
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () => Navigator.pop(ctx, false),
+                                              child: Text('Cancel', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted)),
+                                            ),
+                                            FilledButton(
+                                              onPressed: () => Navigator.pop(ctx, true),
+                                              style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+                                              child: Text('Delete', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
+                                            ),
+                                          ],
+                                        ),
                                       );
                                     },
-                                    onExport: () {
+                                    onDismissed: (direction) {
                                       ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                                      _showExportOptions(context, game);
+                                      notifier.deleteSavedGame(game.id);
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Game deleted from archive!', style: TextStyle(fontWeight: FontWeight.bold)),
+                                          backgroundColor: Colors.green,
+                                        ),
+                                      );
                                     },
+                                    child: HistoryCard(
+                                      key: ValueKey(game.id),
+                                      game: game,
+                                      onTap: () {
+                                        ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                                        if (game.isAcademyActive || game.isRatedMode) {
+                                          ref.read(studyLabProvider.notifier).loadGameEntry(game);
+                                          ref.read(mobileNavIndexProvider.notifier).state = 5;
+                                          return;
+                                        }
+                                        _showArenaOptions(context, game, notifier);
+                                      },
+                                      onDelete: () {},
+                                      onToggleFavorite: game.isAcademyActive ? () {} : () {
+                                        ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                                        notifier.toggleFavorite(game.id);
+                                      },
+                                      onRename: game.isAcademyActive ? (_) {} : (newName) {
+                                        ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                                        notifier.renameSavedGame(
+                                          game.id,
+                                          newName,
+                                        );
+                                      },
+                                      onExport: () {
+                                        ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                                        _showExportOptions(context, game);
+                                      },
+                                    ),
                                   ),
                                 );
                               },

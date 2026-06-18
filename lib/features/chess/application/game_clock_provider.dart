@@ -38,18 +38,23 @@ class GameClockState {
   }
 }
 
-class GameClockNotifier extends StateNotifier<GameClockState> {
-  final Ref ref;
+class GameClockNotifier extends Notifier<GameClockState> {
   Timer? _clockTimer;
 
-  GameClockNotifier(this.ref)
-      : super(const GameClockState(
-          whiteTimeLeft: Duration(minutes: 10),
-          blackTimeLeft: Duration(minutes: 10),
-          clockStarted: false,
-          activeClockSide: null,
-          isTimeOut: false,
-        ));
+  @override
+  GameClockState build() {
+    ref.onDispose(() {
+      _clockTimer?.cancel();
+    });
+
+    return const GameClockState(
+      whiteTimeLeft: Duration(minutes: 10),
+      blackTimeLeft: Duration(minutes: 10),
+      clockStarted: false,
+      activeClockSide: null,
+      isTimeOut: false,
+    );
+  }
 
   void setClock({
     required Duration whiteTime,
@@ -159,14 +164,6 @@ class GameClockNotifier extends StateNotifier<GameClockState> {
       haptics.heartbeat();
     }
   }
-
-  @override
-  void dispose() {
-    _clockTimer?.cancel();
-    super.dispose();
-  }
 }
 
-final gameClockProvider = StateNotifierProvider<GameClockNotifier, GameClockState>((ref) {
-  return GameClockNotifier(ref);
-});
+final gameClockProvider = NotifierProvider<GameClockNotifier, GameClockState>(GameClockNotifier.new);

@@ -107,21 +107,23 @@ class PracticeLabState {
   }
 }
 
-class PracticeLabNotifier extends StateNotifier<PracticeLabState> {
-  final AnalysisStockfishService _service;
-  final Ref _ref;
+class PracticeLabNotifier extends Notifier<PracticeLabState> {
+  late final AnalysisStockfishService _service;
+  Ref get _ref => ref;
   StreamSubscription? _subscription;
 
-  PracticeLabNotifier(this._service, this._ref) : super(PracticeLabState()) {
+  @override
+  PracticeLabState build() {
+    _service = ref.watch(analysisStockfishServiceProvider);
     _subscription = _service.outputStream.listen(_handleEngineOutput);
     _logDebug('PracticeLabNotifier initialized, listening to service output stream');
-  }
 
-  @override
-  void dispose() {
-    _subscription?.cancel();
-    _logDebug('PracticeLabNotifier disposed');
-    super.dispose();
+    ref.onDispose(() {
+      _subscription?.cancel();
+      _logDebug('PracticeLabNotifier disposed');
+    });
+
+    return PracticeLabState();
   }
 
   void _handleEngineOutput(String line) {
@@ -534,7 +536,4 @@ class PracticeLabNotifier extends StateNotifier<PracticeLabState> {
   }
 }
 
-final practiceLabProvider = StateNotifierProvider<PracticeLabNotifier, PracticeLabState>((ref) {
-  final service = ref.watch(analysisStockfishServiceProvider);
-  return PracticeLabNotifier(service, ref);
-});
+final practiceLabProvider = NotifierProvider<PracticeLabNotifier, PracticeLabState>(PracticeLabNotifier.new);

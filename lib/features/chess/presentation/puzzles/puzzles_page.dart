@@ -612,6 +612,13 @@ class _PuzzlesPageState extends ConsumerState<PuzzlesPage> {
     final isLandscape = MediaQuery.of(context).size.width > MediaQuery.of(context).size.height;
 
     ref.listen<int>(mobileNavIndexProvider, (previous, current) {
+      if (previous == 4 && current != 4) {
+        final repo = ref.read(tutorialProgressRepositoryProvider);
+        if (!repo.shouldPersistIntroSeen()) {
+          ref.read(showPuzzlesIntroProvider.notifier).state = true;
+        }
+      }
+
       if (current == 4 && !ref.read(puzzlesProvider).isPuzzleMode) {
         if (!_checkPuzzleLimitAndUpsell(context, ref)) {
           ref.read(mobileNavIndexProvider.notifier).state = 0; // Redirect to Dashboard
@@ -667,13 +674,14 @@ class _PuzzlesPageState extends ConsumerState<PuzzlesPage> {
             if (showIntro)
               GMChanakyaIntroOverlay(
                 pageTitle: 'PUZZLES',
-                text: "The Puzzles chamber, Apprentice, is where we address chess blindspots and train your tactical sight. Chess is won in the details—the double attacks, the pins, the sudden checkmates that the untrained mind overlooks. In this room, you must solve a daily tailored challenge of hand-picked puzzle scenarios. Each puzzle is a tactical riddle designed to sharpen your pattern recognition and build muscle memory. The puzzles will help you even more if you play more rated games. Tap the thumbs up to begin your mental training. Let us see how quickly you spot the winning line.",
+                text: 'This chamber trains tactical sight. Solve tailored puzzles to sharpen patterns, reduce blind spots, and strengthen calculation.',
                 onDismiss: () {
                   ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
                   ref.read(showPuzzlesIntroProvider.notifier).state = false;
                   final repo = ref.read(tutorialProgressRepositoryProvider);
-                  // Non-blocking save
-                  repo.setPuzzlesIntroSeen(true);
+                  if (repo.shouldPersistIntroSeen()) {
+                    repo.setPuzzlesIntroSeen(true);
+                  }
                 },
               ),
           ],
@@ -1024,4 +1032,5 @@ List<InlineSpan> _buildHighlightedText(String text) {
   }
   return spans;
 }
+
 

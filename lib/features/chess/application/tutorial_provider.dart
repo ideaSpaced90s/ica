@@ -17,11 +17,7 @@ final tutorialProgressRepositoryProvider = Provider<TutorialProgressRepository>(
   throw UnimplementedError('Initialized in main() ProviderScope overrides');
 });
 
-final tutorialProvider = StateNotifierProvider<TutorialNotifier, TutorialState>((ref) {
-  final repo = ref.watch(tutorialProgressRepositoryProvider);
-  final sounds = ref.watch(chessSoundServiceProvider);
-  return TutorialNotifier(repo, sounds, ref);
-});
+final tutorialProvider = NotifierProvider<TutorialNotifier, TutorialState>(TutorialNotifier.new);
 
 class TutorialState {
   final chess_lib.Chess board;
@@ -108,14 +104,25 @@ class TutorialState {
   }
 }
 
-class TutorialNotifier extends StateNotifier<TutorialState> {
-  final TutorialProgressRepository _repository;
-  final ChessSoundService _sounds;
-  final Ref ref;
+class TutorialNotifier extends Notifier<TutorialState> {
+  late final TutorialProgressRepository _repository;
+  late final ChessSoundService _sounds;
   Timer? _hesitationTimer;
+  bool _isDisposed = false;
 
-  TutorialNotifier(this._repository, this._sounds, this.ref) : super(_getInitialState()) {
+  @override
+  TutorialState build() {
+    _repository = ref.watch(tutorialProgressRepositoryProvider);
+    _sounds = ref.watch(chessSoundServiceProvider);
+
     _initialize();
+
+    ref.onDispose(() {
+      _cancelHesitationTimer();
+      _isDisposed = true;
+    });
+
+    return _getInitialState();
   }
 
   static TutorialState _getInitialState() {
@@ -470,7 +477,7 @@ class TutorialNotifier extends StateNotifier<TutorialState> {
 
     _hesitationTimer = Timer(Duration(seconds: delaySec), () {
       final reaction = state.currentStep.reactionHesitation;
-      if (reaction != null && mounted) {
+      if (reaction != null && !_isDisposed) {
         state = state.copyWith(
           lastMentorDialogue: reaction.dialogue,
           mentorMood: reaction.mood,
@@ -553,9 +560,4 @@ class TutorialNotifier extends StateNotifier<TutorialState> {
     unawaited(_repository.saveProgress(updatedProgress));
   }
 
-  @override
-  void dispose() {
-    _cancelHesitationTimer();
-    super.dispose();
-  }
 }

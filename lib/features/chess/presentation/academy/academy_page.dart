@@ -34,27 +34,8 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
 
   void _checkShowAcademyIntro() {
     final repo = ref.read(tutorialProgressRepositoryProvider);
-    final isGoogleSignedIn = repo.getIsGoogleSignedIn();
-
-    final currentCount = repo.getAcademyAccessCount();
-    final nextCount = currentCount + 1;
-    repo.setAcademyAccessCount(nextCount); // asynchronous save
-
-    final hasSeen = repo.hasSeenAcademyIntro();
-
-    if (!isGoogleSignedIn) {
-      // Guest user: show every time
-      _showAcademyIntro = true;
-    } else {
-      // Signed up user
-      if (!hasSeen) {
-        // Once after first install
-        _showAcademyIntro = true;
-      } else if (nextCount > 0 && nextCount % 10 == 0) {
-        // Once in 10 times
-        _showAcademyIntro = true;
-      }
-    }
+    _showAcademyIntro =
+        !repo.shouldPersistIntroSeen() || !repo.hasSeenAcademyIntro();
   }
 
   @override
@@ -1178,6 +1159,17 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
     final state = ref.watch(chessProvider);
     final notifier = ref.read(chessProvider.notifier);
 
+    ref.listen<int>(mobileNavIndexProvider, (previous, current) {
+      if (previous == 3 && current != 3) {
+        final repo = ref.read(tutorialProgressRepositoryProvider);
+        if (!repo.shouldPersistIntroSeen()) {
+          setState(() {
+            _showAcademyIntro = true;
+          });
+        }
+      }
+    });
+
     return AmbientScaffold(
         scaffoldKey: _scaffoldKey,
         blob1Color: const Color(0xFFDBEAFE),
@@ -1292,15 +1284,16 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
                 if (_showAcademyIntro)
                   GMChanakyaIntroOverlay(
                     pageTitle: 'ACADEMY',
-                    text:
-                        "GoodDay, ${state.userName}: I am GM Chankya, I am here to mentor and coach you, my playing strength and style are auto-tuned to reflect your current capabilities. I adapt to your playstyle and Scotoma Report. The more rated games you play, the more precise I will become in exposing your vulnerabilities. Do not be disheartened if my strikes cut deep at times; they will gradually forge you into a stronger player wherever you were once fragile. Do not hesitate to attend these classes and face the challenges in the Arena modes.",
+                    text: 'Welcome to the Academy, ${state.userName}. I tune lessons to your play, rating, and scotoma report so each session targets what you need most.',
                     onDismiss: () async {
                       ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
                       setState(() {
                         _showAcademyIntro = false;
                       });
                       final repo = ref.read(tutorialProgressRepositoryProvider);
-                      await repo.setAcademyIntroSeen(true);
+                      if (repo.shouldPersistIntroSeen()) {
+                        await repo.setAcademyIntroSeen(true);
+                      }
                     },
                   ),
               ],
@@ -1782,3 +1775,4 @@ Future<bool?> showAcademyExitDialog(BuildContext context, {required bool hasActi
     ),
   );
 }
+

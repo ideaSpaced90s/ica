@@ -44,9 +44,16 @@ class PerformanceLedgerRepository {
 
   Future<List<PerformanceLedgerEntry>> addEntry(PerformanceLedgerEntry entry) async {
     final entries = await listEntries();
+    if (entries.any((e) => e.id == entry.id)) {
+      return entries;
+    }
     entries.insert(0, entry);
-    await _writeAll(entries);
-    return entries;
+    List<PerformanceLedgerEntry> cappedEntries = entries;
+    if (cappedEntries.length > 200) {
+      cappedEntries = cappedEntries.sublist(0, 200);
+    }
+    await _writeAll(cappedEntries);
+    return cappedEntries;
   }
 
   Future<void> clearAll() async {

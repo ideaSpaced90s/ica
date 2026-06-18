@@ -201,7 +201,7 @@ class PremiumNudgeOverlay extends StatelessWidget {
                                   onPressed: () {
                                     ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
                                     Navigator.pop(context); // Close overlay
-                                    ref.read(mobileNavIndexProvider.notifier).state = 10; // Navigate to Store
+                                    ref.read(mobileNavIndexProvider.notifier).state = 11; // Navigate to Store
                                   },
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.transparent,

@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'features/chess/presentation/scholarly_theme.dart';
 import 'features/chess/presentation/splash_screen.dart';
 import 'src/rust/frb_generated.dart';
@@ -17,6 +19,11 @@ void main() {
   runZonedGuarded(() async {
     WidgetsFlutterBinding.ensureInitialized();
     await Firebase.initializeApp();
+    await FirebaseAppCheck.instance.activate(
+      providerAndroid: AndroidPlayIntegrityProvider(),
+      providerApple: AppleAppAttestProvider(),
+    );
+    await GoogleSignIn.instance.initialize();
     sharedPrefs = await SharedPreferences.getInstance();
     try {
       await RustLib.init();

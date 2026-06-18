@@ -33,6 +33,11 @@ class ScotomaCard extends ConsumerWidget {
     final scotoma = bgState.cachedScotoma;
 
     if (scotoma == null) {
+      final textMessage = bgState.totalRatedGamesCount < 10
+          ? 'Scotoma analysis calibration in progress. Play ${10 - bgState.totalRatedGamesCount} more rated matches in Battleground to calibrate visual scotoma scanning.'
+          : (bgState.recalibrationGamesRemaining > 0
+              ? 'Recalibration in progress. Play ${bgState.recalibrationGamesRemaining} more rated matches to update visual scotoma scanning.'
+              : 'Play your first rated arena match to initialize visual scotoma scanning.');
       return JuicyGlassCard(
         borderColor: const Color(0xFFEF4444), // Crimson border for diagnostics
         padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
@@ -48,7 +53,7 @@ class ScotomaCard extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                'Play your first rated arena match to initialize visual scotoma scanning.',
+                textMessage,
                 style: GoogleFonts.inter(
                   color: ScholarlyTheme.textMuted,
                   fontSize: 12,
@@ -88,7 +93,7 @@ class ScotomaCard extends ConsumerWidget {
     if (!hasEnoughEvidence) {
       diagnosticTitle = 'INSUFFICIENT DIAGNOSTIC DATA';
       diagnosticDesc =
-          'At least 5 successfully analyzed rated Battleground games are required before a reliable scotoma diagnosis can be made.';
+          'Play 5 rated Battleground games to see your raw scotoma radar chart, and complete 10 rated games to fully calibrate your strength and unlock daily training.';
       diagnosticColor = const Color(0xFFF59E0B);
     } else if (hasDiagnosis) {
       diagnosticColor = const Color(0xFFEF4444); // Crimson

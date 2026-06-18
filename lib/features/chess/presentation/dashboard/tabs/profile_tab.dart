@@ -106,7 +106,7 @@ class ProfileTab extends ConsumerWidget {
                   nineSixty: bgState.rapidGames960,
                   dominance: bgState.rapidDominance,
                 ),
-                const GameModesCard(),
+                const GameModesCard(isMobile: true),
               ],
             ),
             if (bgState.totalWinningStreak > 0) ...[

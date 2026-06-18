@@ -56,7 +56,7 @@ class ContactTab extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'We would love to hear your feedback, suggestions, or cooperation ideas. Reach out to the IdeaSpace team directly.',
+                  'We would love to hear from premium members. Share feedback, feature requests, or improvements you want considered for future app updates.',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.inter(
                     fontSize: 13,

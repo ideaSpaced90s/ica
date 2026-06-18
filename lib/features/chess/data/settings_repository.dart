@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -454,29 +455,65 @@ class AppSettings {
 class SettingsRepository {
   static const _fileName = 'app_settings.json';
 
-  Future<AppSettings> loadSettings() async {
+  // In-memory cache eliminates redundant disk reads.
+  AppSettings? _cache;
+
+  // Serial update queue: each update waits for the previous to finish,
+  // preventing concurrent read-modify-write races (Bug C-01).
+  Future<void> _queue = Future.value();
+
+  /// Clears the in-memory cache (call before forcing a fresh disk read,
+  /// e.g. after a cloud restore).
+  void clearCache() => _cache = null;
+
+  Future<AppSettings> loadSettings({bool forceReload = false}) async {
+    if (!forceReload && _cache != null) return _cache!;
+
     final file = await _getFile();
     if (!await file.exists()) {
-      return AppSettings();
+      _cache = AppSettings();
+      return _cache!;
     }
 
     try {
       final raw = await file.readAsString();
       if (raw.trim().isEmpty) {
-        return AppSettings();
+        _cache = AppSettings();
+        return _cache!;
       }
 
       final decoded = jsonDecode(raw);
-      return AppSettings.fromJson(Map<String, dynamic>.from(decoded));
+      _cache = AppSettings.fromJson(Map<String, dynamic>.from(decoded));
+      return _cache!;
     } catch (e) {
-      return AppSettings();
+      _cache = AppSettings();
+      return _cache!;
     }
   }
 
   Future<void> saveSettings(AppSettings settings) async {
+    _cache = settings;
     final file = await _getFile();
     await file.parent.create(recursive: true);
     await file.writeAsString(jsonEncode(settings.toJson()), flush: true);
+  }
+
+  /// Atomically reads the current settings, applies [updater], and saves.
+  /// Calls are serialised so concurrent updates never clobber each other
+  /// (fixes the read-then-write race condition in Bug C-01).
+  Future<AppSettings> updateSettings(
+    AppSettings Function(AppSettings current) updater,
+  ) {
+    // Chain onto the existing queue — ensures sequential execution.
+    final next = _queue.then((_) async {
+      final current = await loadSettings();
+      final updated = updater(current);
+      await saveSettings(updated);
+      return updated;
+    });
+    // Store the new tail of the queue (discard result type for chaining).
+    _queue = next.then((_) {});
+    return next;
   }
 
   Future<File> _getFile() async {

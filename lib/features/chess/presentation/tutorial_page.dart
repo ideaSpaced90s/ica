@@ -16,6 +16,7 @@ import 'widgets/illegal_move_feedback.dart';
 import 'widgets/mentor_panel.dart';
 import 'widgets/ambient_scaffold.dart';
 import 'mobile_navigation_shell.dart';
+import 'dashboard_page.dart';
 
 
 class TutorialPage extends ConsumerStatefulWidget {
@@ -117,7 +118,7 @@ class _TutorialPageState extends ConsumerState<TutorialPage> {
       ref.read(showChapterSelectionProvider.notifier).state = true;
       return true;
     } else if (!ref.read(showChapterSelectionProvider)) {
-      ref.read(showChapterSelectionProvider.notifier).state = true;
+      await showTutorialExitPrompt(context, ref);
       return true;
     }
     return false;
@@ -366,4 +367,124 @@ class _TutorialPageState extends ConsumerState<TutorialPage> {
       ),
     );
   }
+}
+
+Future<bool> showTutorialExitPrompt(BuildContext context, WidgetRef ref) async {
+  final tutorialState = ref.read(tutorialProvider);
+  final isChapterSelectionVisible = ref.read(showChapterSelectionProvider);
+  if (tutorialState.isChapterComplete || isChapterSelectionVisible) {
+    return false;
+  }
+
+  final result = await showDialog<String>(
+    context: context,
+    barrierDismissible: true,
+    builder: (dialogContext) {
+      return AlertDialog(
+        backgroundColor: ScholarlyTheme.panelBase,
+        surfaceTintColor: ScholarlyTheme.accentBlue,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: BorderSide(
+            color: ScholarlyTheme.accentBlue.withValues(alpha: 0.22),
+            width: 1.2,
+          ),
+        ),
+        title: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: ScholarlyTheme.accentBlue.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.school_rounded,
+                color: ScholarlyTheme.accentBlue,
+                size: 26,
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              'GM Chanakya',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.outfit(
+                color: ScholarlyTheme.textPrimary,
+                fontSize: 21,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'Apprentice, this chapter will wait for you. Complete it in your own due time, but do not leave your training unfinished for long.',
+          textAlign: TextAlign.center,
+          style: GoogleFonts.inter(
+            color: ScholarlyTheme.textPrimary,
+            fontSize: 13,
+            height: 1.5,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        actionsPadding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
+        actions: [
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              FilledButton.icon(
+                onPressed: () => Navigator.of(dialogContext).pop('continue'),
+                icon: const Icon(Icons.play_arrow_rounded, size: 18),
+                label: Text(
+                  'CONTINUE',
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w900),
+                ),
+                style: FilledButton.styleFrom(
+                  backgroundColor: ScholarlyTheme.accentBlue,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton(
+                onPressed: () => Navigator.of(dialogContext).pop('stay'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: ScholarlyTheme.textPrimary,
+                  side: BorderSide(
+                    color: ScholarlyTheme.panelStroke.withValues(alpha: 0.7),
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text(
+                  'STAY',
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w800),
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop('exit'),
+                child: Text(
+                  'EXIT TO DASHBOARD',
+                  style: GoogleFonts.inter(
+                    color: Colors.redAccent,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      );
+    },
+  );
+
+  if (result == 'exit' && context.mounted) {
+    exitToDashboardWithSidebar(context, ref);
+  }
+  return true;
 }

@@ -275,8 +275,11 @@ class StudyLabState {
   }
 }
 
-class StudyLabNotifier extends StateNotifier<StudyLabState> {
-  StudyLabNotifier() : super(StudyLabState());
+class StudyLabNotifier extends Notifier<StudyLabState> {
+  @override
+  StudyLabState build() {
+    return StudyLabState();
+  }
 
   Future<String> _getDbPath() async {
     final directory = await getApplicationDocumentsDirectory();
@@ -424,6 +427,13 @@ class StudyLabNotifier extends StateNotifier<StudyLabState> {
     state = state.copyWith(nodes: newNodes, isDirty: true);
   }
 
+  void updateCommentAt(int nodeIndex, String comment) {
+    if (nodeIndex < 0 || nodeIndex >= state.nodes.length) return;
+    final newNodes = List<StudyLabMoveNode>.from(state.nodes);
+    newNodes[nodeIndex] = newNodes[nodeIndex].copyWith(comment: comment);
+    state = state.copyWith(nodes: newNodes, isDirty: true);
+  }
+
   void deleteCurrentNode() {
     if (state.currentNodeIndex == null) return;
     final targetIdx = state.currentNodeIndex!;
@@ -503,6 +513,10 @@ class StudyLabNotifier extends StateNotifier<StudyLabState> {
 
   void clearDirty() {
     state = state.copyWith(isDirty: false);
+  }
+
+  void markDirty() {
+    state = state.copyWith(isDirty: true);
   }
 
   void setAnnotation(int nodeIndex, MoveAnnotation a) {
@@ -1280,6 +1294,4 @@ class StudyLabNotifier extends StateNotifier<StudyLabState> {
   }
 }
 
-final studyLabProvider = StateNotifierProvider<StudyLabNotifier, StudyLabState>((ref) {
-  return StudyLabNotifier();
-});
+final studyLabProvider = NotifierProvider<StudyLabNotifier, StudyLabState>(StudyLabNotifier.new);

@@ -98,13 +98,43 @@ class SpriteChessTheme extends ChessTheme {
           ? '$individualPiecesFolder/${colorStr}_${typeStr}_$variantIndex.$pieceExtension'
           : '$individualPiecesFolder/${colorStr}_$typeStr.$pieceExtension';
 
+      final image = Image.asset(
+        assetPath,
+        fit: BoxFit.contain,
+        filterQuality: FilterQuality.high,
+      );
+      final shouldOutlineDarkTimber = id == 'sprite_timber' && !isWhite;
+
       return AspectRatio(
         aspectRatio: 1.0,
-        child: Image.asset(
-          assetPath,
-          fit: BoxFit.contain,
-          filterQuality: FilterQuality.high,
-        ),
+        child: shouldOutlineDarkTimber
+            ? Stack(
+                fit: StackFit.expand,
+                children: [
+                  for (final offset in const [
+                    Offset(-1.2, 0),
+                    Offset(1.2, 0),
+                    Offset(0, -1.2),
+                    Offset(0, 1.2),
+                  ])
+                    Transform.translate(
+                      offset: offset,
+                      child: ColorFiltered(
+                        colorFilter: ColorFilter.mode(
+                          const Color(0xFFFFF1D2).withValues(alpha: 0.72),
+                          BlendMode.srcATop,
+                        ),
+                        child: Image.asset(
+                          assetPath,
+                          fit: BoxFit.contain,
+                          filterQuality: FilterQuality.high,
+                        ),
+                      ),
+                    ),
+                  image,
+                ],
+              )
+            : image,
       );
     }
 

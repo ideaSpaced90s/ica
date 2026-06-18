@@ -11,6 +11,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'chess_provider.dart';
+import 'var_notifier.dart';
 
 String _getCurrentDateKey() {
   final now = DateTime.now();
@@ -97,6 +98,11 @@ class StoreState {
     required this.cycleThemeUsageDates,
     this.currentPurchaseToken,
   });
+
+  String? get subscriptionAccountId {
+    if (!isPremium || currentCycleStartDate == null) return null;
+    return 'ICA-${currentCycleStartDate!.millisecondsSinceEpoch}';
+  }
 
   StoreState copyWith({
     int? goldBalance,
@@ -238,56 +244,64 @@ class StoreRepository {
   }
 }
 
-final storeProvider = StateNotifierProvider<StoreNotifier, StoreState>((ref) {
-  return StoreNotifier(ref);
-});
+final storeProvider = NotifierProvider<StoreNotifier, StoreState>(StoreNotifier.new);
 
-class StoreNotifier extends StateNotifier<StoreState> {
-  final Ref ref;
+class StoreNotifier extends Notifier<StoreState> {
   final StoreRepository _repository = StoreRepository();
-
-  StoreNotifier(
-    this.ref, {
-    bool initializeBilling = true,
-    bool loadData = true,
-  }) : super(StoreState(
-          goldBalance: 1000,
-          isPremium: false,
-          joinedFreeDate: DateTime.now().subtract(const Duration(days: 15)),
-          purchasedAvatars: {},
-          purchasedBoardThemes: {},
-          freeTierUsage: FreeTierUsage(
-            dateKey: _getCurrentDateKey(),
-            ratedGamesPlayed: 0,
-            arenaGamesPlayed: 0,
-            chipPromptsUsed: 0,
-            puzzlesSolved: 0,
-          ),
-          currentCycleStartDate: null,
-          cycleThemeAllocation: null,
-          cycleThemeUsageDates: {},
-        )) {
-    if (loadData) {
-      _loadStoreData(initializeBilling: initializeBilling);
-    }
-  }
-
   StreamSubscription<List<PurchaseDetails>>? _purchaseSubscription;
+  bool _isDisposed = false;
+  final bool loadData;
+  final bool initializeBilling;
+
+  StoreNotifier({
+    this.loadData = true,
+    this.initializeBilling = true,
+  });
 
   @override
-  void dispose() {
-    _purchaseSubscription?.cancel();
-    super.dispose();
+  StoreState build() {
+    ref.onDispose(() {
+      _purchaseSubscription?.cancel();
+      _isDisposed = true;
+    });
+
+    if (loadData) {
+      Future.microtask(() {
+        _loadStoreData(initializeBilling: initializeBilling);
+      });
+    }
+
+    return StoreState(
+      goldBalance: 1000,
+      isPremium: false,
+      joinedFreeDate: DateTime.now().subtract(const Duration(days: 15)),
+      purchasedAvatars: {},
+      purchasedBoardThemes: {},
+      freeTierUsage: FreeTierUsage(
+        dateKey: _getCurrentDateKey(),
+        ratedGamesPlayed: 0,
+        arenaGamesPlayed: 0,
+        chipPromptsUsed: 0,
+        puzzlesSolved: 0,
+      ),
+      currentCycleStartDate: null,
+      cycleThemeAllocation: null,
+      cycleThemeUsageDates: {},
+    );
   }
 
   Future<void> _loadStoreData({bool initializeBilling = true}) async {
     final loaded = await _repository.loadStore();
-    if (!mounted) return;
+    if (_isDisposed) return;
     state = loaded;
     _checkExpirationsAndSync();
     if (initializeBilling) {
       _initializeBilling();
     }
+  }
+
+  Future<void> reloadStoreData() async {
+    await _loadStoreData(initializeBilling: false);
   }
 
   void _initializeBilling() {
@@ -849,7 +863,7 @@ class StoreNotifier extends StateNotifier<StoreState> {
 
   // Dynamic clean-up logic: if active theme or avatar is expired, fall back to default
   void _checkExpirationsAndSync() {
-    if (!mounted) return;
+    if (_isDisposed) return;
 
     // Check and start new subscription cycle if needed
     _checkAndStartNewCycleIfNeeded();
@@ -885,5 +899,5 @@ class StoreNotifier extends StateNotifier<StoreState> {
   }
 }
 
-final storeTabProvider = StateProvider<int>((ref) => 0);
-final storeHighlightThemeIdProvider = StateProvider<String?>((ref) => null);
+final storeTabProvider = NotifierProvider<VarNotifier<int>, int>(() => VarNotifier(() => 0));
+final storeHighlightThemeIdProvider = NotifierProvider<VarNotifier<String?>, String?>(() => VarNotifier(() => null));

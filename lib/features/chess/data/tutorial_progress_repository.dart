@@ -175,6 +175,10 @@ class TutorialProgressRepository {
     return _prefs.getBool(_kIsGoogleSignedIn) ?? false;
   }
 
+  bool shouldPersistIntroSeen() {
+    return getIsGoogleSignedIn();
+  }
+
   Future<void> setIsGoogleSignedIn(bool value) async {
     await _prefs.setBool(_kIsGoogleSignedIn, value);
   }

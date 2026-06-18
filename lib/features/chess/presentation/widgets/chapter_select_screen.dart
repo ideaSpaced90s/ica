@@ -22,8 +22,10 @@ import '../../domain/models/historical_game.dart';
 import '../../application/historical_cinema_provider.dart';
 import '../academy/historical_cinema_page.dart';
 
-final tutorialTabProvider = StateProvider<int>((ref) => 0); // 0 = Lessons, 1 = History
-final historicalSubTabProvider = StateProvider<int>((ref) => 0); // 0 = Tactics, 1 = Positional, 2 = Dynamic, 3 = Endgame
+import '../../application/var_notifier.dart';
+
+final tutorialTabProvider = NotifierProvider<VarNotifier<int>, int>(() => VarNotifier(() => 0)); // 0 = Lessons, 1 = History
+final historicalSubTabProvider = NotifierProvider<VarNotifier<int>, int>(() => VarNotifier(() => 0)); // 0 = Tactics, 1 = Positional, 2 = Dynamic, 3 = Endgame
 
 class ChapterSelectScreen extends ConsumerWidget {
   const ChapterSelectScreen({super.key, required this.onSelectChapter});

@@ -231,7 +231,7 @@ class _SignInPageState extends ConsumerState<SignInPage>
             );
           },
           child: Image.asset(
-            'assets/splash/appicon.png',
+            'assets/splash/light_knight.png',
             height: 120,
             fit: BoxFit.contain,
           ),
@@ -240,19 +240,18 @@ class _SignInPageState extends ConsumerState<SignInPage>
         FittedBox(
           fit: BoxFit.scaleDown,
           child: Text(
-            'IDEASPACE CHESS ACADEMY',
+            'Chess Academy',
             maxLines: 1,
-            style: GoogleFonts.outfit(
-              fontSize: 22,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 1.5,
+            style: GoogleFonts.pirataOne(
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
               color: ScholarlyTheme.textPrimary,
             ),
           ),
         ),
         const SizedBox(height: 8),
         Text(
-          'Learn chess intently',
+          'Learn Chess Intently',
           textAlign: TextAlign.center,
           style: GoogleFonts.inter(
             fontSize: 13,

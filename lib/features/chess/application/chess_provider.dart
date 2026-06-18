@@ -727,36 +727,57 @@ String _pickSideChoiceResponseBlack(String modeStr) {
   return pool[math.Random().nextInt(pool.length)];
 }
 
-class ChessNotifier extends StateNotifier<ChessState> {
-  final Ref ref;
+class ChessNotifier extends Notifier<ChessState> {
+  late final StockfishService _stockfishEngine;
+  late final CommentaryEngine _commentaryEngine;
+  late final SavedGameRepository _savedGameRepository;
+  late final PerformanceLedgerRepository _performanceLedgerRepository;
+  late final ChessSoundService _soundService;
+  late final ChessHapticsService _hapticsService;
+  late final AiContextService _aiContextService;
+  late final SettingsRepository _settingsRepository;
+
   bool _bgmDelayActive = false;
 
-  ChessNotifier(
-    this.ref,
-    this._stockfishEngine,
-    this._commentaryEngine,
-    this._savedGameRepository,
-    this._performanceLedgerRepository,
-    this._soundService,
-    this._hapticsService,
-    this._aiContextService,
-    this._settingsRepository,
-  ) : super(
-        ChessState(
-          game: ChessGame(),
-          commentaryHistory: [
-            CommentaryEntry(
-              text: _pickWelcomeMessage(),
-              timestamp: DateTime.now(),
-              isComplete: true,
-              isUser: false,
-            ),
-          ],
-        ),
-      ) {
+  @override
+  ChessState build() {
+    _stockfishEngine = ref.watch(stockfishServiceProvider);
+    _commentaryEngine = ref.watch(commentaryEngineProvider);
+    _savedGameRepository = ref.watch(savedGameRepositoryProvider);
+    _performanceLedgerRepository = ref.watch(performanceLedgerRepositoryProvider);
+    _soundService = ref.watch(chessSoundServiceProvider);
+    _hapticsService = ref.watch(chessHapticsServiceProvider);
+    _aiContextService = ref.watch(aiContextServiceProvider);
+    _settingsRepository = ref.watch(settingsRepositoryProvider);
+
+    ref.onDispose(() {
+      _isDisposed = true;
+      _engineMoveTimer?.cancel();
+      _playbackTimer?.cancel();
+      _maxThinkingTimer?.cancel();
+      _stopClock();
+      _cancelCommentaryReveal();
+      _stockfishSubscription?.cancel();
+      _stockfishSubscription = null;
+      _stockfishEngine.dispose();
+      unawaited(_commentaryEngine.dispose());
+    });
+
     _soundService.updateSettings(sfxEnabled: true, bgmEnabled: false, isRatedMode: false);
     _hapticsService.updateSettings(hapticsEnabled: true);
     _loadSettings();
+
+    return ChessState(
+      game: ChessGame(),
+      commentaryHistory: [
+        CommentaryEntry(
+          text: _pickWelcomeMessage(),
+          timestamp: DateTime.now(),
+          isComplete: true,
+          isUser: false,
+        ),
+      ],
+    );
   }
 
   Future<void> _loadSettings() async {
@@ -863,13 +884,15 @@ class ChessNotifier extends StateNotifier<ChessState> {
   }
 
   Future<void> reloadSettings() async {
+    _settingsRepository.clearCache();
     await _loadSettings();
   }
 
   Future<void> _saveSettings() async {
     try {
-      final s = await _settingsRepository.loadSettings();
-      final updated = s.copyWith(
+      // Uses atomic updateSettings() to serialize concurrent calls and eliminate
+      // the read-modify-write race condition (Bug C-01 fix).
+      await _settingsRepository.updateSettings((s) => s.copyWith(
         boardThemeId: state.boardThemeId,
         isSoundEnabled: state.isSoundEnabled,
         isGameSoundEnabled: state.isGameSoundEnabled,
@@ -900,8 +923,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
         quietHoursEnabled: state.quietHoursEnabled,
         quietHoursStart: state.quietHoursStart,
         quietHoursEnd: state.quietHoursEnd,
-      );
-      await _settingsRepository.saveSettings(updated);
+      ));
       _syncScheduledNotifications();
       ref.read(cloudSyncProvider.notifier).backup(silent: true);
     } catch (e) {
@@ -1310,19 +1332,9 @@ class ChessNotifier extends StateNotifier<ChessState> {
     state = state.copyWith(threatenedSquares: finalThreats);
   }
 
-  final ChessEngineService _stockfishEngine;
-
   ChessEngineService get _engine {
     return _stockfishEngine;
   }
-
-  final CommentaryEngine _commentaryEngine;
-  final SavedGameRepository _savedGameRepository;
-  final PerformanceLedgerRepository _performanceLedgerRepository;
-  final ChessSoundService _soundService;
-  final ChessHapticsService _hapticsService;
-  final AiContextService _aiContextService;
-  final SettingsRepository _settingsRepository;
   final _uuid = const Uuid();
 
   Timer? _engineMoveTimer;
@@ -3906,20 +3918,7 @@ class ChessNotifier extends StateNotifier<ChessState> {
     await _commentaryEngine.dispose();
   }
 
-  @override
-  void dispose() {
-    _isDisposed = true;
-    _engineMoveTimer?.cancel();
-    _playbackTimer?.cancel();
-    _maxThinkingTimer?.cancel();
-    _stopClock();
-    _cancelCommentaryReveal();
-    _stockfishSubscription?.cancel();
-    _stockfishSubscription = null;
-    _stockfishEngine.dispose();
-    unawaited(_commentaryEngine.dispose());
-    super.dispose();
-  }
+
 
   void enterTacticsMode() {
     _playbackTimer?.cancel();
@@ -4508,26 +4507,6 @@ final savedGameRepositoryProvider = Provider((ref) => SavedGameRepository());
 final performanceLedgerRepositoryProvider = Provider((ref) => PerformanceLedgerRepository());
 final settingsRepositoryProvider = Provider((ref) => SettingsRepository());
 
-final chessProvider = StateNotifierProvider<ChessNotifier, ChessState>((ref) {
-  final stockfishEngine = ref.watch(stockfishServiceProvider);
-  final commentaryEngine = ref.watch(commentaryEngineProvider);
-  final savedGameRepository = ref.watch(savedGameRepositoryProvider);
-  final performanceLedgerRepository = ref.watch(performanceLedgerRepositoryProvider);
-  final soundService = ref.watch(chessSoundServiceProvider);
-  final hapticsService = ref.watch(chessHapticsServiceProvider);
-  final aiContextService = ref.watch(aiContextServiceProvider);
-  final settingsRepository = ref.watch(settingsRepositoryProvider);
-  return ChessNotifier(
-    ref,
-    stockfishEngine,
-    commentaryEngine,
-    savedGameRepository,
-    performanceLedgerRepository,
-    soundService,
-    hapticsService,
-    aiContextService,
-    settingsRepository,
-  );
-});
+final chessProvider = NotifierProvider<ChessNotifier, ChessState>(ChessNotifier.new);
 
 

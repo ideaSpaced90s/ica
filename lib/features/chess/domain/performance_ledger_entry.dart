@@ -17,6 +17,7 @@ class PerformanceLedgerEntry {
   final bool isPlayerWhite;
   final int whiteTimeLeftMs;
   final int blackTimeLeftMs;
+  final bool reachedEndgame;
 
   const PerformanceLedgerEntry({
     required this.id,
@@ -35,6 +36,7 @@ class PerformanceLedgerEntry {
     required this.isPlayerWhite,
     required this.whiteTimeLeftMs,
     required this.blackTimeLeftMs,
+    this.reachedEndgame = false,
   });
 
   Map<String, dynamic> toJson() => {
@@ -54,6 +56,7 @@ class PerformanceLedgerEntry {
     'isPlayerWhite': isPlayerWhite,
     'whiteTimeLeftMs': whiteTimeLeftMs,
     'blackTimeLeftMs': blackTimeLeftMs,
+    'reachedEndgame': reachedEndgame,
   };
 
   factory PerformanceLedgerEntry.fromJson(Map<String, dynamic> json) {
@@ -80,6 +83,7 @@ class PerformanceLedgerEntry {
       isPlayerWhite: json['isPlayerWhite'] as bool? ?? true,
       whiteTimeLeftMs: json['whiteTimeLeftMs'] as int? ?? 600000,
       blackTimeLeftMs: json['blackTimeLeftMs'] as int? ?? 600000,
+      reachedEndgame: json['reachedEndgame'] as bool? ?? false,
     );
   }
 }

@@ -364,11 +364,9 @@ class _EloAscentChartState extends ConsumerState<EloAscentChart> {
     if (filtered.isEmpty) return [];
 
     final List<FlSpot> spots = [];
-    spots.add(const FlSpot(0, 400));
-
     for (int i = 0; i < filtered.length; i++) {
       final snapshot = filtered[i].ratingSnapshot;
-      spots.add(FlSpot((i + 1).toDouble(), snapshot.toDouble()));
+      spots.add(FlSpot(i.toDouble(), snapshot.toDouble()));
     }
     return spots;
   }
@@ -844,7 +842,8 @@ class TacticalRadarChart extends ConsumerWidget {
 }
 
 class ModeDistributionChart extends ConsumerWidget {
-  const ModeDistributionChart({super.key});
+  final bool isMobile;
+  const ModeDistributionChart({super.key, this.isMobile = false});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -870,28 +869,82 @@ class ModeDistributionChart extends ConsumerWidget {
     final classicPct = total > 0 ? (classic / total * 100).toInt() : 0;
     final nineSixtyPct = total > 0 ? (nineSixty / total * 100).toInt() : 0;
 
-    return Row(
-      children: [
-        Expanded(
-          flex: 4,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
+    if (isMobile) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildLegendItem(const Color(0xFF8B5CF6), 'Classic', '$classicPct%'),
-              const SizedBox(height: 12),
-              _buildLegendItem(const Color(0xFFF59E0B), '960', '$nineSixtyPct%'),
+              Text(
+                'GAME MODES',
+                style: GoogleFonts.inter(
+                  color: ScholarlyTheme.textPrimary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                '$total MATCHES',
+                style: GoogleFonts.jetBrainsMono(
+                  color: ScholarlyTheme.textMuted,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ],
           ),
-        ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: SizedBox(
+              height: 6,
+              child: Row(
+                children: [
+                  if (classic > 0)
+                    Expanded(
+                      flex: classic,
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF8B5CF6), // Classic Violet
+                        ),
+                      ),
+                    ),
+                  if (nineSixty > 0)
+                    Expanded(
+                      flex: nineSixty,
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFF59E0B), // 960 Gold
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              _buildMiniLegend(const Color(0xFF8B5CF6), 'Classic', '$classicPct% ($classic)'),
+              const SizedBox(width: 16),
+              _buildMiniLegend(const Color(0xFFF59E0B), '960', '$nineSixtyPct% ($nineSixty)'),
+            ],
+          ),
+        ],
+      );
+    }
+
+    return Column(
+      children: [
         Expanded(
-          flex: 5,
           child: Padding(
             padding: const EdgeInsets.all(4.0),
             child: PieChart(
               PieChartData(
                 sectionsSpace: 3,
-                centerSpaceRadius: 22,
+                centerSpaceRadius: 24,
                 sections: [
                   PieChartSectionData(
                     color: const Color(0xFF8B5CF6), // Electric Violet
@@ -910,47 +963,47 @@ class ModeDistributionChart extends ConsumerWidget {
             ),
           ),
         ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 12,
+          runSpacing: 4,
+          alignment: WrapAlignment.center,
+          children: [
+            _buildMiniLegend(const Color(0xFF8B5CF6), 'Classic', '$classicPct%'),
+            _buildMiniLegend(const Color(0xFFF59E0B), '960', '$nineSixtyPct%'),
+          ],
+        ),
       ],
     );
   }
 
-  Widget _buildLegendItem(Color color, String label, String percentage) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildMiniLegend(Color color, String label, String percentage) {
+    return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(
-                color: color,
-                shape: BoxShape.circle,
-              ),
-            ),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: GoogleFonts.inter(
-                color: ScholarlyTheme.textPrimary,
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+          ),
         ),
-        const SizedBox(height: 2),
-        Padding(
-          padding: const EdgeInsets.only(left: 14),
-          child: Text(
-            percentage,
-            style: GoogleFonts.jetBrainsMono(
-              color: ScholarlyTheme.textMuted,
-              fontSize: 14,
-              fontWeight: FontWeight.w900,
-            ),
+        const SizedBox(width: 6),
+        Text(
+          '$label: ',
+          style: GoogleFonts.inter(
+            color: ScholarlyTheme.textMuted,
+            fontSize: 10,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        Text(
+          percentage,
+          style: GoogleFonts.jetBrainsMono(
+            color: ScholarlyTheme.textPrimary,
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
           ),
         ),
       ],
