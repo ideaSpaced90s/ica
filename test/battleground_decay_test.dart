@@ -78,7 +78,7 @@ class TestSettingsRepository implements SettingsRepository {
   TestSettingsRepository(this.loadedSettings);
 
   @override
-  Future<AppSettings> loadSettings() async {
+  Future<AppSettings> loadSettings({bool forceReload = false}) async {
     return loadedSettings;
   }
 
@@ -86,6 +86,18 @@ class TestSettingsRepository implements SettingsRepository {
   Future<void> saveSettings(AppSettings settings) async {
     savedSettings = settings;
     loadedSettings = settings;
+  }
+
+  @override
+  void clearCache() => loadedSettings = savedSettings ?? loadedSettings;
+
+  @override
+  Future<AppSettings> updateSettings(
+    AppSettings Function(AppSettings current) updater,
+  ) async {
+    final updated = updater(loadedSettings);
+    await saveSettings(updated);
+    return updated;
   }
 }
 

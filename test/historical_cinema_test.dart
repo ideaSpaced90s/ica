@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kingslayer_chess/features/chess/domain/models/historical_game.dart';
 import 'package:kingslayer_chess/features/chess/domain/models/tutorial_lesson.dart' show MentorMood;
 import 'package:kingslayer_chess/features/chess/application/historical_cinema_provider.dart';
@@ -19,7 +20,7 @@ void main() {
         "fens": [
           "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
           "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
-          "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 2"
+          "rnbqkbnr/pppp1ppp/8/4e5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 2"
         ],
         "annotations": {
           "0": {
@@ -74,39 +75,39 @@ void main() {
     });
 
     test('selectGame resets active indices and playback status', () {
-      final notifier = HistoricalCinemaNotifier();
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      final notifier = container.read(historicalCinemaProvider.notifier);
       
       // Select the game
       notifier.selectGame(mockGame);
-      expect(notifier.state.activeGame, mockGame);
-      expect(notifier.state.currentMoveIndex, 0);
-      expect(notifier.state.isPlaying, false);
-
-      notifier.dispose();
+      expect(container.read(historicalCinemaProvider).activeGame, mockGame);
+      expect(container.read(historicalCinemaProvider).currentMoveIndex, 0);
+      expect(container.read(historicalCinemaProvider).isPlaying, false);
     });
 
     test('stepping forward and backward updates currentMoveIndex correctly', () {
-      final notifier = HistoricalCinemaNotifier();
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      final notifier = container.read(historicalCinemaProvider.notifier);
       notifier.selectGame(mockGame);
 
       notifier.nextMove();
-      expect(notifier.state.currentMoveIndex, 1);
+      expect(container.read(historicalCinemaProvider).currentMoveIndex, 1);
 
       notifier.nextMove();
-      expect(notifier.state.currentMoveIndex, 2);
+      expect(container.read(historicalCinemaProvider).currentMoveIndex, 2);
 
       // Should clamp/end on last move
       notifier.nextMove();
-      expect(notifier.state.currentMoveIndex, 2);
-      expect(notifier.state.isPlaying, false);
+      expect(container.read(historicalCinemaProvider).currentMoveIndex, 2);
+      expect(container.read(historicalCinemaProvider).isPlaying, false);
 
       notifier.previousMove();
-      expect(notifier.state.currentMoveIndex, 1);
+      expect(container.read(historicalCinemaProvider).currentMoveIndex, 1);
 
       notifier.jumpToMove(0);
-      expect(notifier.state.currentMoveIndex, 0);
-
-      notifier.dispose();
+      expect(container.read(historicalCinemaProvider).currentMoveIndex, 0);
     });
   });
 }

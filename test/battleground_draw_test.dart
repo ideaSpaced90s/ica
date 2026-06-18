@@ -12,7 +12,6 @@ import 'package:kingslayer_chess/features/chess/domain/performance_ledger_entry.
 import 'package:kingslayer_chess/features/chess/data/saved_game.dart';
 import 'package:kingslayer_chess/features/chess/application/chess_provider.dart';
 import 'package:kingslayer_chess/features/chess/application/store_provider.dart';
-import 'package:chess/chess.dart' as chess_lib;
 import 'package:kingslayer_chess/features/chess/services/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -97,7 +96,7 @@ class FakePerformanceLedgerRepository extends Fake implements PerformanceLedgerR
 class FakeSavedGameRepository extends Fake implements SavedGameRepository {
   @override
   Future<List<SavedGameEntry>> save(SavedGameEntry entry) async {
-    return [];
+    return [entry];
   }
 }
 
@@ -111,56 +110,112 @@ class FakeSettingsRepository extends Fake implements SettingsRepository {
 }
 
 void main() {
-  test('Verify pre-move setup and auto-execution after bot move', () async {
-    final fakeStockfish = FakeStockfishService();
-    final fakeSavedGameRepo = FakeSavedGameRepository();
-    final fakeLedgerRepo = FakePerformanceLedgerRepository();
-    final fakeSoundService = FakeChessSoundService();
-    final fakeHapticsService = FakeChessHapticsService();
-    final fakeSettingsRepo = FakeSettingsRepository();
+  late ProviderContainer container;
+  late BattlegroundNotifier notifier;
+  late FakeStockfishService fakeStockfish;
 
-    final container = ProviderContainer(
+  setUp(() {
+    fakeStockfish = FakeStockfishService();
+    container = ProviderContainer(
       overrides: [
         stockfishServiceProvider.overrideWithValue(fakeStockfish),
-        savedGameRepositoryProvider.overrideWithValue(fakeSavedGameRepo),
-        performanceLedgerRepositoryProvider.overrideWithValue(fakeLedgerRepo),
-        chessSoundServiceProvider.overrideWithValue(fakeSoundService),
-        chessHapticsServiceProvider.overrideWithValue(fakeHapticsService),
-        settingsRepositoryProvider.overrideWithValue(fakeSettingsRepo),
+        savedGameRepositoryProvider.overrideWithValue(FakeSavedGameRepository()),
+        performanceLedgerRepositoryProvider.overrideWithValue(FakePerformanceLedgerRepository()),
+        chessSoundServiceProvider.overrideWithValue(FakeChessSoundService()),
+        chessHapticsServiceProvider.overrideWithValue(FakeChessHapticsService()),
+        settingsRepositoryProvider.overrideWithValue(FakeSettingsRepository()),
         authServiceProvider.overrideWithValue(FakeAuthService()),
         storeProvider.overrideWith(() => StoreNotifier(loadData: false, initializeBilling: false)),
       ],
     );
-    addTearDown(container.dispose);
+    notifier = container.read(battlegroundProvider.notifier);
+  });
 
-    // Get the Battleground notifier from the container
-    final notifier = container.read(battlegroundProvider.notifier);
+  tearDown(() {
+    container.dispose();
+  });
 
-    // Initialize with White player turn
-    notifier.reset(forcedPlayerWhite: true);
+  Future<void> makeGameMoves(List<List<String>> pairs) async {
     await notifier.ensureGameServicesStarted(analyzeCurrentPosition: false);
+    for (final pair in pairs) {
+      final from = pair[0];
+      final to = pair[1];
+      final turnWhite = notifier.state.game.fen.split(' ')[1] == 'w';
+      final isPlayerTurn = notifier.state.isPlayerWhite == turnWhite;
+
+      if (isPlayerTurn) {
+        await notifier.makeMove(from, to);
+      } else {
+        fakeStockfish.emitBestMove('$from$to');
+      }
+      await Future.delayed(const Duration(milliseconds: 30));
+    }
+  }
+
+  test('Verify initial draw state and draw count increment', () async {
+    notifier.reset(forcedPlayerWhite: true);
+    expect(notifier.state.drawOffersCount, 0);
+    expect(notifier.state.isDrawAgreed, false);
+
+    // Call offerDraw - should fail because < 20 plies (10 moves) have been played
+    final result = await notifier.offerDraw();
+    expect(result, false);
+    expect(notifier.state.drawOffersCount, 1);
+  });
+
+  test('Verify draw offer limit resets on new game', () async {
+    notifier.reset(forcedPlayerWhite: true);
+    await notifier.offerDraw();
+    expect(notifier.state.drawOffersCount, 1);
+
+    notifier.reset(forcedPlayerWhite: true);
+    expect(notifier.state.drawOffersCount, 0);
+  });
+
+  test('Verify AI declines draw when move count is less than 20 plies', () async {
+    notifier.reset(forcedPlayerWhite: true);
     
-    // 1. Play first player move: e2e4
-    await notifier.makeMove('e2', 'e4');
-    expect(notifier.state.game.turn, chess_lib.Color.BLACK); // Now Black's turn (bot's turn)
-    expect(notifier.state.premoveFrom, isNull);
+    // Play a few moves (6 plies)
+    final moves = [
+      ['e2', 'e4'], ['e7', 'e5'],
+      ['g1', 'f3'], ['b8', 'c6'],
+      ['f1', 'c4'], ['g8', 'f6']
+    ];
+    await makeGameMoves(moves);
 
-    // 2. Queue player's pre-move: g1f3 (during bot's turn)
-    await notifier.makeMove('g1', 'f3');
-    expect(notifier.state.premoveFrom, 'g1');
-    expect(notifier.state.premoveTo, 'f3');
-    expect(notifier.state.game.turn, chess_lib.Color.BLACK); // Still Black's turn
+    expect(notifier.state.recentMoves.length, 6);
+    
+    final result = await notifier.offerDraw();
+    expect(result, false);
+    expect(notifier.state.drawOffersCount, 1);
+    expect(notifier.state.isDrawAgreed, false);
+  });
 
-    // 3. Emit bot move: d7d5
-    fakeStockfish.emitBestMove('d7d5');
+  test('Verify AI accepts/declines based on evaluation when moves >= 20 plies', () async {
+    notifier.reset(forcedPlayerWhite: true);
+    
+    // Setup a 20-ply game state by playing legal moves back and forth
+    final moves = [
+      ['e2', 'e4'], ['e7', 'e5'],
+      ['g1', 'f3'], ['b8', 'c6'],
+      ['a2', 'a3'], ['a7', 'a6'],
+      ['h2', 'h3'], ['h7', 'h6'],
+      ['d2', 'd3'], ['d7', 'd6'],
+      ['b1', 'c3'], ['g8', 'f6'],
+      ['b2', 'b3'], ['b7', 'b6'],
+      ['g2', 'g3'], ['g7', 'g6'],
+      ['f1', 'g2'], ['f8', 'g7'],
+      ['c1', 'd2'], ['c8', 'd7']
+    ];
 
-    // Wait for the asynchronous events and delayed pre-move execution (300ms)
-    await Future.delayed(const Duration(milliseconds: 500));
+    await makeGameMoves(moves);
 
-    // Verify that the pre-move has executed!
-    // Since White played g1f3 after Black played d7d5, it should be Black's turn now.
-    expect(notifier.state.game.turn, chess_lib.Color.BLACK);
-    // And the move history should contain both d7d5 and g1f3!
-    expect(notifier.state.uciMoves, containsAll(['e2e4', 'd7d5', 'g1f3']));
+    expect(notifier.state.recentMoves.length, 20);
+
+    // Scenario A: Neutral/Balanced Evaluation (eval = 0.0)
+    // AI has 0 contempt by default, so it accepts balanced position
+    final result = await notifier.offerDraw();
+    expect(result, true);
+    expect(notifier.state.isDrawAgreed, true);
   });
 }

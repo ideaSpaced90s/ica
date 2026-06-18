@@ -55,7 +55,7 @@ class FakeSavedGameRepository extends Fake implements SavedGameRepository {
 
 class FakeSettingsRepository extends Fake implements SettingsRepository {
   @override
-  Future<AppSettings> loadSettings() async {
+  Future<AppSettings> loadSettings({bool forceReload = false}) async {
     return AppSettings();
   }
   @override
@@ -79,7 +79,7 @@ void main() {
         chessSoundServiceProvider.overrideWithValue(fakeSoundService),
         chessHapticsServiceProvider.overrideWithValue(fakeHapticsService),
         settingsRepositoryProvider.overrideWithValue(fakeSettingsRepo),
-        storeProvider.overrideWith((ref) => StoreNotifier(ref, loadData: false, initializeBilling: false)),
+        storeProvider.overrideWith(() => StoreNotifier(loadData: false, initializeBilling: false)),
       ],
     );
     addTearDown(container.dispose);

@@ -1,16 +1,23 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kingslayer_chess/features/chess/application/study_lab_provider.dart';
 import 'package:chess/chess.dart' as chess_lib;
 
 void main() {
+  late ProviderContainer container;
   late StudyLabNotifier notifier;
 
   setUp(() {
-    notifier = StudyLabNotifier();
+    container = ProviderContainer();
+    notifier = container.read(studyLabProvider.notifier);
+  });
+
+  tearDown(() {
+    container.dispose();
   });
 
   test('Initial state is correct', () {
-    final state = notifier.state;
+    final state = container.read(studyLabProvider);
     expect(state.nodes, isEmpty);
     expect(state.currentNodeIndex, isNull);
     expect(state.activeFen, chess_lib.Chess.DEFAULT_POSITION);
@@ -21,7 +28,7 @@ void main() {
     // 1. Move e2 to e4
     notifier.makeMove('e2', 'e4');
     
-    var state = notifier.state;
+    var state = container.read(studyLabProvider);
     expect(state.nodes.length, 1);
     expect(state.currentNodeIndex, 0);
     expect(state.nodes[0].san, 'e4');
@@ -32,7 +39,7 @@ void main() {
     // 2. Move e7 to e5
     notifier.makeMove('e7', 'e5');
     
-    state = notifier.state;
+    state = container.read(studyLabProvider);
     expect(state.nodes.length, 2);
     expect(state.currentNodeIndex, 1);
     expect(state.nodes[1].san, 'e5');
@@ -53,7 +60,7 @@ void main() {
     // 3. Move c7c5 (Variation node 2)
     notifier.makeMove('c7', 'c5');
     
-    final state = notifier.state;
+    final state = container.read(studyLabProvider);
     expect(state.nodes.length, 3);
     expect(state.currentNodeIndex, 2);
     expect(state.nodes[2].san, 'c5');

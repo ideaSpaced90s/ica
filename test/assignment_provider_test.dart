@@ -13,6 +13,7 @@ import 'package:kingslayer_chess/features/chess/application/store_provider.dart'
 import 'package:kingslayer_chess/features/chess/application/chess_provider.dart';
 import 'package:kingslayer_chess/src/rust/api/cognitive.dart' as rust_cognitive;
 import 'package:kingslayer_chess/features/chess/services/cloud_sync_service.dart';
+import 'package:kingslayer_chess/features/chess/domain/performance_ledger_entry.dart';
 
 class FakeAssignmentRepository implements AssignmentRepository {
   AssignmentState? savedState;
@@ -35,16 +36,34 @@ class FakeBattlegroundState extends Fake implements BattlegroundState {
   final int totalRatedGamesCount;
   @override
   final rust_cognitive.ScotomaResult? cachedScotoma;
+  @override
+  final bool hasLoadedSettings;
+  @override
+  final List<PerformanceLedgerEntry> cachedLedgerEntries;
+  @override
+  final int recalibrationGamesRemaining;
+
+  @override
+  bool get isCalibrated => totalRatedGamesCount >= 10 && recalibrationGamesRemaining == 0;
 
   FakeBattlegroundState({
     required this.consolidatedRating,
     required this.totalRatedGamesCount,
     this.cachedScotoma,
+    this.hasLoadedSettings = true,
+    this.cachedLedgerEntries = const [],
+    this.recalibrationGamesRemaining = 0,
   });
 }
 
-class FakeBattlegroundNotifier extends StateNotifier<BattlegroundState> implements BattlegroundNotifier {
-  FakeBattlegroundNotifier(super.state);
+class FakeBattlegroundNotifier extends Notifier<BattlegroundState> implements BattlegroundNotifier {
+  final BattlegroundState initialState;
+  FakeBattlegroundNotifier(this.initialState);
+
+  @override
+  BattlegroundState build() {
+    return initialState;
+  }
 
   void updateState(BattlegroundState newState) {
     state = newState;
@@ -66,8 +85,14 @@ class FakePuzzlesState extends Fake implements PuzzlesState {
   });
 }
 
-class FakePuzzlesNotifier extends StateNotifier<PuzzlesState> implements PuzzlesNotifier {
-  FakePuzzlesNotifier(super.state);
+class FakePuzzlesNotifier extends Notifier<PuzzlesState> implements PuzzlesNotifier {
+  final PuzzlesState initialState;
+  FakePuzzlesNotifier(this.initialState);
+
+  @override
+  PuzzlesState build() {
+    return initialState;
+  }
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -85,31 +110,17 @@ class FakeTutorialState extends Fake implements TutorialState {
   FakeTutorialState({required this.progress});
 }
 
-class FakeTutorialNotifier extends StateNotifier<TutorialState> implements TutorialNotifier {
-  FakeTutorialNotifier(super.state);
+class FakeTutorialNotifier extends Notifier<TutorialState> implements TutorialNotifier {
+  final TutorialState initialState;
+  FakeTutorialNotifier(this.initialState);
+
+  @override
+  TutorialState build() {
+    return initialState;
+  }
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
-}
-
-class FakeRef extends Fake implements Ref {
-  final Ref _realRef;
-  FakeRef(this._realRef);
-
-  @override
-  T read<T>(ProviderListenable<T> provider) {
-    try {
-      return _realRef.read(provider);
-    } catch (e) {
-      if (T == ChessState || (provider as dynamic) == chessProvider) {
-        return FakeChessState() as T;
-      }
-      if (T == ChessNotifier || (provider as dynamic) == chessProvider.notifier) {
-        return FakeChessNotifier(FakeChessState()) as T;
-      }
-      rethrow;
-    }
-  }
 }
 
 class FakeChessState extends Fake implements ChessState {
@@ -124,8 +135,14 @@ class FakeChessState extends Fake implements ChessState {
   });
 }
 
-class FakeChessNotifier extends StateNotifier<ChessState> implements ChessNotifier {
-  FakeChessNotifier(super.state);
+class FakeChessNotifier extends Notifier<ChessState> implements ChessNotifier {
+  final ChessState initialState;
+  FakeChessNotifier(this.initialState);
+
+  @override
+  ChessState build() {
+    return initialState;
+  }
 
   @override
   Future<void> setEngineLevel(String level) async {}
@@ -138,31 +155,24 @@ class FakeChessNotifier extends StateNotifier<ChessState> implements ChessNotifi
 }
 
 class FakeStoreNotifier extends StoreNotifier {
-  bool _allowStateSet = false;
-
-  FakeStoreNotifier(Ref ref, StoreState initialState) : super(FakeRef(ref), loadData: false) {
-    _allowStateSet = true;
-    state = initialState;
-    _allowStateSet = false;
-  }
+  final StoreState initialState;
+  FakeStoreNotifier(this.initialState) : super(loadData: false);
 
   @override
-  set state(StoreState value) {
-    if (!mounted) return;
-    if (_allowStateSet) {
-      super.state = value;
-    }
+  StoreState build() {
+    return initialState;
   }
 
   void updateState(StoreState newState) {
-    _allowStateSet = true;
     state = newState;
-    _allowStateSet = false;
   }
 }
 
-class FakeCloudSyncNotifier extends StateNotifier<CloudSyncState> implements CloudSyncNotifier {
-  FakeCloudSyncNotifier() : super(CloudSyncState());
+class FakeCloudSyncNotifier extends Notifier<CloudSyncState> implements CloudSyncNotifier {
+  @override
+  CloudSyncState build() {
+    return CloudSyncState();
+  }
 
   @override
   Future<bool> backup({bool silent = false}) async {
@@ -296,14 +306,14 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           assignmentRepositoryProvider.overrideWithValue(fakeRepository),
-          battlegroundProvider.overrideWith((ref) => fakeBattleground),
-          puzzlesProvider.overrideWith((ref) => fakePuzzles),
-          tutorialProvider.overrideWith((ref) => fakeTutorial),
-          chessProvider.overrideWith((ref) => FakeChessNotifier(FakeChessState())),
-          storeProvider.overrideWith((ref) {
-            return FakeStoreNotifier(ref, createMockStoreState(isPremium: isPremium));
+          battlegroundProvider.overrideWith(() => fakeBattleground),
+          puzzlesProvider.overrideWith(() => fakePuzzles),
+          tutorialProvider.overrideWith(() => fakeTutorial),
+          chessProvider.overrideWith(() => FakeChessNotifier(FakeChessState())),
+          storeProvider.overrideWith(() {
+            return FakeStoreNotifier(createMockStoreState(isPremium: isPremium));
           }),
-          cloudSyncProvider.overrideWith((ref) => FakeCloudSyncNotifier()),
+          cloudSyncProvider.overrideWith(() => FakeCloudSyncNotifier()),
         ],
       );
       addTearDown(container.dispose);

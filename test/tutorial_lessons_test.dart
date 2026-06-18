@@ -171,10 +171,9 @@ class FakeChessSoundService extends Fake implements ChessSoundService {
   void playSfx(SoundEffect effect) {}
 }
 
-class FakeWidgetRef extends Fake implements WidgetRef {
+class FakeWidgetRef {
   final ProviderContainer container;
   FakeWidgetRef(this.container);
 
-  @override
-  T read<T>(ProviderListenable<T> provider) => container.read(provider);
+  T read<T>(dynamic provider) => container.read(provider);
 }

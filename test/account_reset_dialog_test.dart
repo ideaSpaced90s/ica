@@ -43,7 +43,7 @@ class FakeChessHapticsService extends Fake implements ChessHapticsService {
 }
 
 class FakeCloudSyncNotifier extends CloudSyncNotifier {
-  FakeCloudSyncNotifier(super.ref);
+  FakeCloudSyncNotifier();
 
   @override
   Future<bool> backup({bool silent = false}) async {
@@ -69,8 +69,8 @@ void main() {
           authServiceProvider.overrideWithValue(FakeAuthService()),
           chessSoundServiceProvider.overrideWithValue(FakeChessSoundService()),
           chessHapticsServiceProvider.overrideWithValue(FakeChessHapticsService()),
-          cloudSyncProvider.overrideWith((ref) => FakeCloudSyncNotifier(ref)),
-          storeProvider.overrideWith((ref) => StoreNotifier(ref, loadData: false)),
+          cloudSyncProvider.overrideWith(() => FakeCloudSyncNotifier()),
+          storeProvider.overrideWith(() => StoreNotifier(loadData: false)),
         ],
         child: const MaterialApp(
           home: Scaffold(
