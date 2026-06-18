@@ -9,6 +9,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:kingslayer_chess/src/rust/api/pgn_db.dart' as rust_pgn;
 import 'package:archive/archive.dart';
+import 'package:kingslayer_chess/features/chess/data/saved_game.dart';
+import 'package:kingslayer_chess/main.dart' show sharedPrefs;
 
 import '../widgets/ambient_scaffold.dart';
 import '../scholarly_theme.dart';
@@ -34,12 +36,123 @@ class WorkspacePage extends ConsumerStatefulWidget {
 
 class _WorkspacePageState extends ConsumerState<WorkspacePage> {
   late int _workspaceTabIndex;
-  final Set<String> _pulledGameIds = {};
+  Future<List<rust_pgn.PgnGameRecord>>? _libraryFuture;
+
+  int _librarySubTabIndex = 0;
+  String? _selectedFolderName;
+  String _searchQuery = '';
+  final TextEditingController _librarySearchController = TextEditingController();
+  List<GameLibraryFolder> _folders = [];
 
   @override
   void initState() {
     super.initState();
     _workspaceTabIndex = widget.initialTabIndex;
+    _loadFolders();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(chessProvider.notifier).loadSavedGames();
+      _refreshLibrary();
+    });
+  }
+
+  @override
+  void dispose() {
+    _librarySearchController.dispose();
+    super.dispose();
+  }
+
+  void _loadFolders() {
+    try {
+      final jsonStr = sharedPrefs.getString('game_library_folders');
+      if (jsonStr != null) {
+        final decoded = jsonDecode(jsonStr);
+        if (decoded is List) {
+          setState(() {
+            _folders = decoded
+                .map((f) => GameLibraryFolder.fromJson(f as Map<String, dynamic>))
+                .toList();
+          });
+          return;
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading folders: $e');
+    }
+    setState(() {
+      _folders = [];
+    });
+  }
+
+  void _saveFolders() {
+    try {
+      final jsonStr = jsonEncode(_folders.map((f) => f.toJson()).toList());
+      sharedPrefs.setString('game_library_folders', jsonStr);
+    } catch (e) {
+      debugPrint('Error saving folders: $e');
+    }
+  }
+
+  void _createFolder(String name) {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return;
+    if (_folders.any((f) => f.name.toLowerCase() == trimmed.toLowerCase())) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('A folder with this name already exists!'), backgroundColor: Colors.redAccent),
+      );
+      return;
+    }
+    setState(() {
+      _folders.add(GameLibraryFolder(name: trimmed, itemIds: []));
+      _saveFolders();
+    });
+  }
+
+  void _renameFolder(int index, String newName) {
+    final trimmed = newName.trim();
+    if (trimmed.isEmpty) return;
+    if (_folders.any((f) => f.name.toLowerCase() == trimmed.toLowerCase())) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('A folder with this name already exists!'), backgroundColor: Colors.redAccent),
+      );
+      return;
+    }
+    setState(() {
+      final folder = _folders[index];
+      _folders[index] = GameLibraryFolder(name: trimmed, itemIds: folder.itemIds);
+      _saveFolders();
+    });
+  }
+
+  void _deleteFolder(int index) {
+    setState(() {
+      _folders.removeAt(index);
+      _saveFolders();
+    });
+  }
+
+  void _toggleGameInFolder(String folderName, String itemId) {
+    setState(() {
+      final folderIndex = _folders.indexWhere((f) => f.name == folderName);
+      if (folderIndex != -1) {
+        final folder = _folders[folderIndex];
+        final list = List<String>.from(folder.itemIds);
+        if (list.contains(itemId)) {
+          list.remove(itemId);
+        } else {
+          list.add(itemId);
+        }
+        _folders[folderIndex] = GameLibraryFolder(name: folder.name, itemIds: list);
+        _saveFolders();
+      }
+    });
+  }
+
+  void _refreshLibrary() {
+    if (mounted) {
+      setState(() {
+        _libraryFuture = ref.read(studyLabProvider.notifier).loadGamesFromLibrary();
+      });
+    }
   }
 
 
@@ -161,10 +274,6 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
     StudyLabState state,
     StudyLabNotifier notifier,
   ) {
-    final chessState = ref.watch(chessProvider);
-    final eligibleGames = chessState.savedGames.where((s) => s.recentMoves.isNotEmpty && s.isFavorite).toList();
-    final availableGames = eligibleGames.where((g) => !_pulledGameIds.contains(g.id)).toList();
-
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       child: Column(
@@ -192,99 +301,6 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 16),
-          JuicyGlassCard(
-            padding: const EdgeInsets.all(12),
-            borderRadius: 16,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.favorite_rounded, size: 14, color: ScholarlyTheme.accentBlue),
-                    const SizedBox(width: 4),
-                    Text(
-                      'GAMES TO PULL (${availableGames.length})',
-                      style: GoogleFonts.inter(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: ScholarlyTheme.accentBlue,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                availableGames.isEmpty
-                    ? Container(
-                        padding: const EdgeInsets.all(24),
-                        alignment: Alignment.center,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.favorite_border_rounded,
-                              size: 32,
-                              color: ScholarlyTheme.textMuted.withValues(alpha: 0.6),
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              'Transfer few games to favorites to pull the game for analysis.',
-                              textAlign: TextAlign.center,
-                              style: GoogleFonts.inter(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                                color: ScholarlyTheme.textMuted,
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    : ListView.separated(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: availableGames.length,
-                        separatorBuilder: (context, index) => Divider(
-                          color: ScholarlyTheme.panelStroke.withValues(alpha: 0.4),
-                          height: 16,
-                        ),
-                        itemBuilder: (context, index) {
-                          final g = availableGames[index];
-                          return ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            title: Text(
-                              g.customName != null && g.customName!.isNotEmpty ? g.customName! : 'Saved Game #${g.id.substring(0, 4)}',
-                              style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary),
-                            ),
-                            subtitle: Text(
-                              'Moves: ${g.recentMoves.length} | FEN: ${g.fen.substring(0, 15)}...',
-                              style: GoogleFonts.inter(fontSize: 10, color: ScholarlyTheme.textMuted),
-                            ),
-                            trailing: TextButton.icon(
-                              icon: const Icon(Icons.download_rounded, size: 14),
-                              label: const Text('Pull'),
-                              onPressed: () async {
-                                notifier.loadGameEntry(g);
-                                setState(() {
-                                  _pulledGameIds.add(g.id);
-                                });
-                                final gameName = g.customName != null && g.customName!.isNotEmpty
-                                    ? g.customName!
-                                    : 'Saved Game #${g.id.substring(0, 4)}';
-                                await notifier.saveCurrentGameToLibrary(gameName);
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Game loaded into study workspace and library!'), backgroundColor: Colors.green),
-                                  );
-                                }
-                              },
-                            ),
-                          );
-                        },
-                      ),
-              ],
-            ),
           ),
         ],
       ),
@@ -345,15 +361,11 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
 
       notifier.importPgn(pgnText);
 
-      final state = ref.read(studyLabProvider);
-      final eventName = state.metadata.event.isNotEmpty 
-          ? state.metadata.event 
-          : 'Imported PGN Game';
-      await notifier.saveCurrentGameToLibrary(eventName);
+      notifier.markDirty();
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('PGN Imported and Saved to Library!'), backgroundColor: Colors.green),
+          const SnackBar(content: Text('PGN Imported successfully! Save explicitly to add to library.'), backgroundColor: Colors.green),
         );
       }
     } catch (e) {
@@ -467,9 +479,13 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
   Future<void> _performExport(BuildContext context, List<rust_pgn.PgnGameRecord> games) async {
     try {
       Directory? directory;
-      directory = Directory('/storage/emulated/0/Download');
-      if (!await directory.exists()) {
-        directory = await getExternalStorageDirectory();
+      if (Platform.isAndroid) {
+        directory = Directory('/storage/emulated/0/Download');
+        if (!await directory.exists()) {
+          directory = await getExternalStorageDirectory();
+        }
+      } else {
+        directory = await getApplicationDocumentsDirectory();
       }
       directory ??= await getApplicationDocumentsDirectory();
 
@@ -544,83 +560,583 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
     StudyLabState state,
     StudyLabNotifier notifier,
   ) {
+    _libraryFuture ??= notifier.loadGamesFromLibrary();
+    final chessState = ref.watch(chessProvider);
+
     return FutureBuilder<List<rust_pgn.PgnGameRecord>>(
-      future: notifier.loadGamesFromLibrary(),
+      future: _libraryFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
-        final records = snapshot.data ?? const [];
+        
+        final customRecords = snapshot.data ?? const [];
 
-        return SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+        // 1. Build unified list of GameLibraryItem
+        final List<GameLibraryItem> allItems = [];
+
+        // Add custom SQLite studies
+        for (var i = 0; i < customRecords.length; i++) {
+          final record = customRecords[i];
+          final title = record.header.event.isNotEmpty ? record.header.event : 'Custom Study #${i + 1}';
+          final moveCount = record.movesPgn.split(' ').where((m) => m.isNotEmpty && !m.contains('.')).length;
+          
+          final details = '${record.header.white} vs ${record.header.black} | Moves: $moveCount';
+          
+          DateTime date = DateTime.now();
+          try {
+            if (record.header.date.isNotEmpty && record.header.date != '?') {
+              final dateStr = record.header.date.replaceAll('.', '-');
+              date = DateTime.parse(dateStr);
+            }
+          } catch (_) {}
+
+          allItems.add(GameLibraryItem(
+            id: 'study_${record.index}',
+            type: GameLibraryItemType.customStudy,
+            title: title,
+            details: details,
+            date: date,
+            customStudy: record,
+          ));
+        }
+
+        // Add favorited Battleground games and completed Academy games
+        for (final game in chessState.savedGames) {
+          final isAcademy = game.isAcademyActive;
+          final isFavBattleground = game.isRatedMode && game.isFavorite;
+
+          if (isAcademy || isFavBattleground) {
+            final shortId = game.id.length >= 4 ? game.id.substring(0, 4) : game.id;
+            final title = game.customName != null && game.customName!.isNotEmpty
+                ? game.customName!
+                : (isAcademy ? 'Academy Game $shortId' : 'Battleground Game $shortId');
+            
+            final details = '${game.isPlayerWhite ? "White" : "Black"} | Moves: ${game.recentMoves.length}';
+
+            allItems.add(GameLibraryItem(
+              id: 'saved_${game.id}',
+              type: isAcademy ? GameLibraryItemType.academy : GameLibraryItemType.battleground,
+              title: title,
+              details: details,
+              date: game.savedAt,
+              savedGame: game,
+            ));
+          }
+        }
+
+        // Sort items by date descending
+        allItems.sort((a, b) => b.date.compareTo(a.date));
+
+        // Filter items by search query
+        List<GameLibraryItem> filteredItems = allItems;
+        if (_searchQuery.isNotEmpty) {
+          final query = _searchQuery.toLowerCase();
+          filteredItems = allItems.where((item) {
+            final titleMatch = item.title.toLowerCase().contains(query);
+            final detailsMatch = item.details.toLowerCase().contains(query);
+            
+            bool movesMatch = false;
+            if (item.type == GameLibraryItemType.customStudy) {
+              movesMatch = item.customStudy!.movesPgn.toLowerCase().contains(query);
+            } else if (item.savedGame != null) {
+              movesMatch = item.savedGame!.recentMoves.any((m) => m.toLowerCase().contains(query));
+            }
+
+            return titleMatch || detailsMatch || movesMatch;
+          }).toList();
+        }
+
+        // If folder sub-tab is active
+        Widget activeBody;
+        if (_librarySubTabIndex == 0) {
+          activeBody = _buildAllGamesList(filteredItems, notifier);
+        } else {
+          if (_selectedFolderName == null) {
+            activeBody = _buildFoldersListView();
+          } else {
+            activeBody = _buildFolderDetailsView(_selectedFolderName!, filteredItems, notifier);
+          }
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'GAME LIBRARY',
+                  style: GoogleFonts.outfit(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: ScholarlyTheme.textPrimary,
+                  ),
+                ),
+                TextButton.icon(
+                  icon: const Icon(Icons.save_outlined, size: 14),
+                  label: const Text('Save Current'),
+                  onPressed: () => _promptSaveStudyName(context, notifier),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            _buildSearchBar(),
+            const SizedBox(height: 8),
+            _buildLibrarySubTabBar(),
+            const SizedBox(height: 12),
+            Expanded(
+              child: activeBody,
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+      decoration: BoxDecoration(
+        color: ScholarlyTheme.panelBase,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: ScholarlyTheme.panelStroke),
+      ),
+      child: TextField(
+        controller: _librarySearchController,
+        style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 13),
+        onChanged: (val) {
+          setState(() {
+            _searchQuery = val;
+          });
+        },
+        decoration: InputDecoration(
+          hintText: 'Search games by name, players, moves...',
+          hintStyle: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 13),
+          prefixIcon: const Icon(Icons.search_rounded, color: ScholarlyTheme.textMuted, size: 18),
+          prefixIconConstraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+          suffixIcon: _searchQuery.isNotEmpty
+              ? GestureDetector(
+                  onTap: () {
+                    _librarySearchController.clear();
+                    setState(() {
+                      _searchQuery = '';
+                    });
+                  },
+                  child: const Icon(Icons.clear_rounded, color: ScholarlyTheme.textMuted, size: 16),
+                )
+              : null,
+          border: InputBorder.none,
+          isDense: true,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLibrarySubTabBar() {
+    return Row(
+      children: [
+        _buildSubTabButton(0, 'All Games', Icons.grid_view_rounded),
+        const SizedBox(width: 8),
+        _buildSubTabButton(1, 'Folders', Icons.folder_copy_rounded),
+      ],
+    );
+  }
+
+  Widget _buildSubTabButton(int index, String label, IconData icon) {
+    final isActive = _librarySubTabIndex == index;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+          setState(() {
+            _librarySubTabIndex = index;
+            _selectedFolderName = null;
+          });
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: isActive ? ScholarlyTheme.accentBlue.withValues(alpha: 0.15) : ScholarlyTheme.panelBase,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isActive ? ScholarlyTheme.accentBlue : ScholarlyTheme.panelStroke,
+              width: 1.2,
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              JuicyGlassCard(
-                padding: const EdgeInsets.all(12),
-                borderRadius: 16,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'SAVED STUDIES (${records.length})',
-                          style: GoogleFonts.inter(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: ScholarlyTheme.accentBlue,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                        TextButton.icon(
-                          icon: const Icon(Icons.save_outlined, size: 14),
-                          label: const Text('Save Current'),
-                          onPressed: () => _promptSaveStudyName(context, notifier),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    records.isEmpty
-                        ? Container(
-                            padding: const EdgeInsets.all(24),
-                            alignment: Alignment.center,
-                            child: Text(
-                              'No studies saved yet. Tap "Save Current" to persist to SQLite database.',
-                              textAlign: TextAlign.center,
-                              style: GoogleFonts.inter(
-                                fontSize: 11,
-                                fontStyle: FontStyle.italic,
-                                color: ScholarlyTheme.textMuted,
-                              ),
-                            ),
-                          )
-                        : ListView.separated(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: records.length,
-                            separatorBuilder: (context, index) => Divider(
-                              color: ScholarlyTheme.panelStroke.withValues(alpha: 0.4),
-                              height: 16,
-                            ),
-                            itemBuilder: (context, index) {
-                              final record = records[index];
-                              return GameLibraryCardWidget(
-                                record: record,
-                                index: index,
-                                notifier: notifier,
-                                onRefresh: () => setState(() {}),
-                                onEdit: _promptEditStudyHeaders,
-                              );
-                            },
-                          ),
-                  ],
+              Icon(icon, size: 16, color: isActive ? ScholarlyTheme.accentBlue : ScholarlyTheme.textMuted),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: isActive ? ScholarlyTheme.accentBlue : ScholarlyTheme.textPrimary,
                 ),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAllGamesList(List<GameLibraryItem> items, StudyLabNotifier notifier) {
+    if (items.isEmpty) {
+      return Center(
+        child: Text(
+          _searchQuery.isNotEmpty ? 'No matching games found.' : 'No games in library yet.',
+          style: GoogleFonts.inter(fontSize: 12, color: ScholarlyTheme.textMuted, fontStyle: FontStyle.italic),
+        ),
+      );
+    }
+
+    return ListView.separated(
+      physics: const BouncingScrollPhysics(),
+      itemCount: items.length,
+      separatorBuilder: (context, index) => const SizedBox(height: 10),
+      itemBuilder: (context, index) {
+        final item = items[index];
+        return GameLibraryItemCardWidget(
+          item: item,
+          notifier: notifier,
+          onRefresh: _refreshLibrary,
+          onOrganizeFolders: () => _showFolderSelectionDialog(context, item),
+          onEditStudy: _promptEditStudyHeaders,
+          ref: ref,
+        );
+      },
+    );
+  }
+
+  Widget _buildFoldersListView() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'FOLDERS (${_folders.length})',
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: ScholarlyTheme.accentBlue,
+                letterSpacing: 0.5,
+              ),
+            ),
+            TextButton.icon(
+              icon: const Icon(Icons.create_new_folder_outlined, size: 14),
+              label: const Text('New Folder'),
+              onPressed: () => _promptCreateFolder(context),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        _folders.isEmpty
+            ? Expanded(
+                child: Center(
+                  child: Text(
+                    'No folders created yet.',
+                    style: GoogleFonts.inter(fontSize: 12, color: ScholarlyTheme.textMuted, fontStyle: FontStyle.italic),
+                  ),
+                ),
+              )
+            : Expanded(
+                child: ListView.separated(
+                  physics: const BouncingScrollPhysics(),
+                  itemCount: _folders.length,
+                  separatorBuilder: (context, index) => const SizedBox(height: 8),
+                  itemBuilder: (context, index) {
+                    final folder = _folders[index];
+                    return JuicyGlassCard(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      borderRadius: 12,
+                      child: ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.folder_rounded, color: ScholarlyTheme.accentBlue, size: 28),
+                        title: Text(folder.name, style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13, color: ScholarlyTheme.textPrimary)),
+                        subtitle: Text('${folder.itemIds.length} games', style: GoogleFonts.inter(fontSize: 11, color: ScholarlyTheme.textMuted)),
+                        onTap: () {
+                          setState(() {
+                            _selectedFolderName = folder.name;
+                          });
+                        },
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.edit_outlined, color: Colors.teal, size: 18),
+                              onPressed: () => _promptRenameFolder(context, index),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 18),
+                              onPressed: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (ctx) => AlertDialog(
+                                    backgroundColor: ScholarlyTheme.panelBase,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                    title: Text('Delete Folder?', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary)),
+                                    content: Text('Are you sure you want to delete the folder "${folder.name}"? The games will not be deleted.', style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 13)),
+                                    actions: [
+                                      TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted))),
+                                      FilledButton(
+                                        style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+                                        onPressed: () {
+                                          _deleteFolder(index);
+                                          Navigator.pop(ctx);
+                                        },
+                                        child: Text('Delete', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+      ],
+    );
+  }
+
+  Widget _buildFolderDetailsView(String folderName, List<GameLibraryItem> allFilteredItems, StudyLabNotifier notifier) {
+    final folder = _folders.firstWhere((f) => f.name == folderName, orElse: () => GameLibraryFolder(name: folderName, itemIds: []));
+    final folderItems = allFilteredItems.where((item) => folder.itemIds.contains(item.id)).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            GestureDetector(
+              onTap: () {
+                setState(() {
+                  _selectedFolderName = null;
+                });
+              },
+              child: Row(
+                children: [
+                  const Icon(Icons.arrow_back_ios_new_rounded, size: 12, color: ScholarlyTheme.accentBlue),
+                  const SizedBox(width: 4),
+                  Text(
+                    'BACK TO FOLDERS',
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: ScholarlyTheme.accentBlue,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Spacer(),
+            Text(
+              'FOLDER: ${folderName.toUpperCase()}',
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: ScholarlyTheme.textPrimary,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        folderItems.isEmpty
+            ? Expanded(
+                child: Center(
+                  child: Text(
+                    _searchQuery.isNotEmpty ? 'No matching games in this folder.' : 'No games added to this folder yet.',
+                    style: GoogleFonts.inter(fontSize: 12, color: ScholarlyTheme.textMuted, fontStyle: FontStyle.italic),
+                  ),
+                ),
+              )
+            : Expanded(
+                child: ListView.separated(
+                  physics: const BouncingScrollPhysics(),
+                  itemCount: folderItems.length,
+                  separatorBuilder: (context, index) => const SizedBox(height: 10),
+                  itemBuilder: (context, index) {
+                    final item = folderItems[index];
+                    return GameLibraryItemCardWidget(
+                      item: item,
+                      notifier: notifier,
+                      onRefresh: _refreshLibrary,
+                      onOrganizeFolders: () => _showFolderSelectionDialog(context, item),
+                      onEditStudy: _promptEditStudyHeaders,
+                      ref: ref,
+                    );
+                  },
+                ),
+              ),
+      ],
+    );
+  }
+
+  void _showFolderSelectionDialog(BuildContext context, GameLibraryItem item) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: ScholarlyTheme.panelBase,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: const BorderSide(color: ScholarlyTheme.panelStroke, width: 1.5),
+              ),
+              title: Text(
+                'Organize Game',
+                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary),
+              ),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Select folders to save "${item.title}":',
+                      style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 12),
+                    ),
+                    const SizedBox(height: 12),
+                    _folders.isEmpty
+                        ? Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 20.0),
+                            child: Text(
+                              'No folders created yet.',
+                              style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontStyle: FontStyle.italic, fontSize: 12),
+                            ),
+                          )
+                        : Flexible(
+                            child: ListView.builder(
+                              shrinkWrap: true,
+                              itemCount: _folders.length,
+                              itemBuilder: (context, index) {
+                                final folder = _folders[index];
+                                final inFolder = folder.itemIds.contains(item.id);
+                                return CheckboxListTile(
+                                  title: Text(folder.name, style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 13)),
+                                  value: inFolder,
+                                  activeColor: ScholarlyTheme.accentBlue,
+                                  onChanged: (val) {
+                                    _toggleGameInFolder(folder.name, item.id);
+                                    setDialogState(() {});
+                                  },
+                                );
+                              },
+                            ),
+                          ),
+                    const Divider(color: ScholarlyTheme.panelStroke),
+                    TextButton.icon(
+                      icon: const Icon(Icons.add_rounded, size: 16),
+                      label: const Text('Create New Folder'),
+                      onPressed: () {
+                        _promptCreateFolder(context, () {
+                          setDialogState(() {});
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text('Done', style: GoogleFonts.inter(color: ScholarlyTheme.accentBlue, fontWeight: FontWeight.bold)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _promptCreateFolder(BuildContext context, [VoidCallback? onCreated]) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: ScholarlyTheme.panelBase,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: ScholarlyTheme.panelStroke, width: 1.5),
+          ),
+          title: Text('New Folder', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary)),
+          content: TextField(
+            controller: controller,
+            style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary),
+            decoration: InputDecoration(
+              hintText: 'Folder name (e.g. Openings)',
+              hintStyle: GoogleFonts.inter(color: ScholarlyTheme.textMuted),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: ScholarlyTheme.accentBlue),
+              onPressed: () {
+                if (controller.text.trim().isEmpty) return;
+                _createFolder(controller.text.trim());
+                Navigator.pop(context);
+                if (onCreated != null) onCreated();
+              },
+              child: Text('Create', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _promptRenameFolder(BuildContext context, int index) {
+    final folder = _folders[index];
+    final controller = TextEditingController(text: folder.name);
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: ScholarlyTheme.panelBase,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: ScholarlyTheme.panelStroke, width: 1.5),
+          ),
+          title: Text('Rename Folder', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary)),
+          content: TextField(
+            controller: controller,
+            style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary),
+            decoration: InputDecoration(
+              hintText: 'New folder name',
+              hintStyle: GoogleFonts.inter(color: ScholarlyTheme.textMuted),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: ScholarlyTheme.accentBlue),
+              onPressed: () {
+                if (controller.text.trim().isEmpty) return;
+                _renameFolder(index, controller.text.trim());
+                Navigator.pop(context);
+              },
+              child: Text('Rename', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
         );
       },
     );
@@ -653,7 +1169,7 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
                 await notifier.saveCurrentGameToLibrary(controller.text.trim());
                 if (context.mounted) {
                   Navigator.pop(context);
-                  setState(() {});
+                  _refreshLibrary();
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Study saved successfully!'), backgroundColor: Colors.green),
                   );
@@ -740,7 +1256,7 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
                 await notifier.updateStudyHeadersInLibrary(index, newHeader);
                 if (context.mounted) {
                   Navigator.pop(context);
-                  setState(() {});
+                  _refreshLibrary();
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('PGN headers updated successfully!'), backgroundColor: Colors.green),
                   );
@@ -782,27 +1298,29 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
   }
 }
 
-class GameLibraryCardWidget extends StatefulWidget {
-  final rust_pgn.PgnGameRecord record;
-  final int index;
+class GameLibraryItemCardWidget extends StatefulWidget {
+  final GameLibraryItem item;
   final StudyLabNotifier notifier;
   final VoidCallback onRefresh;
-  final void Function(BuildContext, StudyLabNotifier, int, rust_pgn.PgnGameRecord) onEdit;
+  final VoidCallback onOrganizeFolders;
+  final void Function(BuildContext, StudyLabNotifier, int, rust_pgn.PgnGameRecord) onEditStudy;
+  final WidgetRef ref;
 
-  const GameLibraryCardWidget({
+  const GameLibraryItemCardWidget({
     super.key,
-    required this.record,
-    required this.index,
+    required this.item,
     required this.notifier,
     required this.onRefresh,
-    required this.onEdit,
+    required this.onOrganizeFolders,
+    required this.onEditStudy,
+    required this.ref,
   });
 
   @override
-  State<GameLibraryCardWidget> createState() => _GameLibraryCardWidgetState();
+  State<GameLibraryItemCardWidget> createState() => _GameLibraryItemCardWidgetState();
 }
 
-class _GameLibraryCardWidgetState extends State<GameLibraryCardWidget>
+class _GameLibraryItemCardWidgetState extends State<GameLibraryItemCardWidget>
     with SingleTickerProviderStateMixin {
   bool _showDeleteBin = false;
   late AnimationController _animController;
@@ -841,73 +1359,46 @@ class _GameLibraryCardWidgetState extends State<GameLibraryCardWidget>
     });
   }
 
-  String _buildDetailsText() {
-    final hasWhite = widget.record.header.white.isNotEmpty && widget.record.header.white != '?';
-    final hasBlack = widget.record.header.black.isNotEmpty && widget.record.header.black != '?';
-    final moveCount = widget.record.movesPgn.split(' ').where((m) => m.isNotEmpty && !m.contains('.')).length;
-    
-    String details = '';
-    if (hasWhite || hasBlack) {
-      final wName = hasWhite ? widget.record.header.white : 'Unknown';
-      final bName = hasBlack ? widget.record.header.black : 'Unknown';
-      details += '$wName vs $bName';
-      if (widget.record.header.result.isNotEmpty && widget.record.header.result != '?') {
-        details += ' (${widget.record.header.result})';
-      }
-      details += ' | ';
-    }
-    
-    details += 'Moves: $moveCount';
-    
-    if (widget.record.header.eco.isNotEmpty && widget.record.header.eco != '?') {
-      details += ' | ECO: ${widget.record.header.eco}';
-    }
-    if (widget.record.header.date.isNotEmpty && widget.record.header.date != '?') {
-      details += ' | ${widget.record.header.date}';
-    }
-    return details;
-  }
-
   @override
   Widget build(BuildContext context) {
+    final isCustomStudy = widget.item.type == GameLibraryItemType.customStudy;
+    final canDelete = isCustomStudy;
+
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        // Background track (revealed during swipe)
-        Positioned.fill(
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.redAccent.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.redAccent.withValues(alpha: 0.3), width: 1),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            alignment: Alignment.centerLeft,
-            child: Row(
-              children: [
-                const Icon(Icons.delete_sweep_rounded, color: Colors.redAccent, size: 22),
-                const SizedBox(width: 8),
-                Text(
-                  'Release to delete...',
-                  style: GoogleFonts.inter(
-                    color: Colors.redAccent, 
-                    fontWeight: FontWeight.bold, 
-                    fontSize: 11,
+        if (canDelete)
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.redAccent.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.redAccent.withValues(alpha: 0.3), width: 1),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              alignment: Alignment.centerLeft,
+              child: Row(
+                children: [
+                  const Icon(Icons.delete_sweep_rounded, color: Colors.redAccent, size: 22),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Release to delete study...',
+                    style: GoogleFonts.inter(
+                      color: Colors.redAccent, 
+                      fontWeight: FontWeight.bold, 
+                      fontSize: 11,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
-        
-        // The swipable card
+
         Dismissible(
-          key: ValueKey('library-game-${widget.record.index}-${widget.index}'),
-          direction: _showDeleteBin ? DismissDirection.startToEnd : DismissDirection.none,
-          onDismissed: (_) async {
-            // Handled in confirmDismiss
-          },
+          key: ValueKey('library-item-${widget.item.id}'),
+          direction: (canDelete && _showDeleteBin) ? DismissDirection.startToEnd : DismissDirection.none,
           confirmDismiss: (direction) async {
+            final record = widget.item.customStudy!;
             final confirmed = await showDialog<bool>(
               context: context,
               builder: (ctx) => AlertDialog(
@@ -921,7 +1412,7 @@ class _GameLibraryCardWidgetState extends State<GameLibraryCardWidget>
                   style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary),
                 ),
                 content: Text(
-                  'Are you sure you want to delete "${widget.record.header.event}" from your library? This cannot be undone.',
+                  'Are you sure you want to delete "${record.header.event}" from your library? This cannot be undone.',
                   style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 13),
                 ),
                 actions: [
@@ -939,7 +1430,7 @@ class _GameLibraryCardWidgetState extends State<GameLibraryCardWidget>
             );
 
             if (confirmed == true) {
-              final ok = await widget.notifier.deleteStudyFromLibrary(widget.index);
+              final ok = await widget.notifier.deleteStudyFromLibrary(record.index.toInt());
               if (ok) {
                 widget.onRefresh();
                 if (context.mounted) {
@@ -953,8 +1444,7 @@ class _GameLibraryCardWidgetState extends State<GameLibraryCardWidget>
                 return true;
               }
             }
-            
-            // Cancel swipe and hide bin
+
             setState(() {
               _showDeleteBin = false;
               _animController.reverse();
@@ -962,21 +1452,12 @@ class _GameLibraryCardWidgetState extends State<GameLibraryCardWidget>
             return false;
           },
           child: GestureDetector(
-            onLongPress: _toggleDeleteBin,
+            onLongPress: canDelete ? _toggleDeleteBin : null,
             onTap: () {
-              if (!_showDeleteBin) {
-                widget.notifier.loadPgnRecord(widget.record, widget.index);
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Study "${widget.record.header.event}" loaded!', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                  Navigator.pop(context);
-                }
-              } else {
+              if (_showDeleteBin) {
                 _toggleDeleteBin();
+              } else {
+                _loadGame();
               }
             },
             child: JuicyGlassCard(
@@ -991,7 +1472,7 @@ class _GameLibraryCardWidgetState extends State<GameLibraryCardWidget>
                     const Icon(Icons.arrow_forward_rounded, color: Colors.redAccent, size: 20),
                     const SizedBox(width: 8),
                     Text(
-                      'Flip right to delete',
+                      'Swipe right to delete',
                       style: GoogleFonts.inter(
                         color: Colors.redAccent,
                         fontWeight: FontWeight.bold,
@@ -999,24 +1480,31 @@ class _GameLibraryCardWidgetState extends State<GameLibraryCardWidget>
                       ),
                     ),
                   ] else ...[
-                    // Metadata Details
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            widget.record.header.event,
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: ScholarlyTheme.textPrimary,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                          Row(
+                            children: [
+                              _buildTypeBadge(),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  widget.item.title,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: ScholarlyTheme.textPrimary,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 2),
+                          const SizedBox(height: 4),
                           Text(
-                            _buildDetailsText(),
+                            widget.item.details,
                             style: GoogleFonts.inter(
                               fontSize: 10,
                               color: ScholarlyTheme.textMuted,
@@ -1029,28 +1517,49 @@ class _GameLibraryCardWidgetState extends State<GameLibraryCardWidget>
                     ),
                     const SizedBox(width: 8),
                     
-                    // Action buttons: Open & Edit (Always clean and premium)
                     IconButton(
-                      icon: const Icon(Icons.folder_open_rounded, color: ScholarlyTheme.accentBlue, size: 20),
-                      tooltip: 'Open Study',
-                      onPressed: () {
-                        widget.notifier.loadPgnRecord(widget.record, widget.index);
-                        if (context.mounted) {
+                      icon: const Icon(Icons.folder_open_outlined, color: ScholarlyTheme.textMuted, size: 18),
+                      tooltip: 'Organize Folders',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                      onPressed: widget.onOrganizeFolders,
+                    ),
+
+                    IconButton(
+                      icon: const Icon(Icons.play_arrow_rounded, color: ScholarlyTheme.accentBlue, size: 20),
+                      tooltip: 'Load Game',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                      onPressed: _loadGame,
+                    ),
+
+                    if (isCustomStudy)
+                      IconButton(
+                        icon: const Icon(Icons.edit_outlined, color: Colors.teal, size: 18),
+                        tooltip: 'Edit Headers',
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                        onPressed: () => widget.onEditStudy(
+                          context,
+                          widget.notifier,
+                          widget.item.customStudy!.index.toInt(),
+                          widget.item.customStudy!,
+                        ),
+                      )
+                    else if (widget.item.type == GameLibraryItemType.battleground)
+                      IconButton(
+                        icon: const Icon(Icons.star_rounded, color: ScholarlyTheme.accentYellow, size: 20),
+                        tooltip: 'Unfavorite',
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                        onPressed: () {
+                          widget.ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                          widget.ref.read(chessProvider.notifier).toggleFavorite(widget.item.savedGame!.id);
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Study "${widget.record.header.event}" loaded!', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-                              backgroundColor: Colors.green,
-                            ),
+                            const SnackBar(content: Text('Removed from Game Library (unfavorited).'), backgroundColor: Colors.orange),
                           );
-                          Navigator.pop(context);
-                        }
-                      },
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.edit_outlined, color: Colors.teal, size: 20),
-                      tooltip: 'Edit Headers',
-                      onPressed: () => widget.onEdit(context, widget.notifier, widget.index, widget.record),
-                    ),
+                        },
+                      ),
                   ],
                 ],
               ),
@@ -1058,7 +1567,6 @@ class _GameLibraryCardWidgetState extends State<GameLibraryCardWidget>
           ),
         ),
 
-        // Flip-right trash bin overlay (anchored to the right)
         if (_showDeleteBin)
           Positioned(
             right: 12,
@@ -1067,18 +1575,15 @@ class _GameLibraryCardWidgetState extends State<GameLibraryCardWidget>
             child: AnimatedBuilder(
               animation: _animController,
               builder: (context, child) {
-                // Y-rotation flip animation: -pi/2 (90deg, flat/orthogonal) to 0 (0deg, facing forward)
                 final angle = _flipAnimation.value;
-                // Fade in based on slide animation
                 final opacity = _slideAnimation.value;
-                // Scale effect
                 final scale = 0.5 + (0.5 * _slideAnimation.value);
 
                 return Opacity(
                   opacity: opacity,
                   child: Transform(
                     transform: Matrix4.identity()
-                      ..setEntry(3, 2, 0.002) // Perspective depth
+                      ..setEntry(3, 2, 0.002)
                       ..rotateY(angle)
                       ..scaleByDouble(scale, scale, 1.0, 1.0),
                     alignment: Alignment.centerRight,
@@ -1089,13 +1594,6 @@ class _GameLibraryCardWidgetState extends State<GameLibraryCardWidget>
                           color: Colors.redAccent.withValues(alpha: 0.15),
                           shape: BoxShape.circle,
                           border: Border.all(color: Colors.redAccent, width: 1.5),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.redAccent.withValues(alpha: 0.2),
-                              blurRadius: 8,
-                              spreadRadius: 1,
-                            ),
-                          ],
                         ),
                         child: const Icon(
                           Icons.delete_forever_rounded,
@@ -1112,5 +1610,104 @@ class _GameLibraryCardWidgetState extends State<GameLibraryCardWidget>
       ],
     );
   }
+
+  Widget _buildTypeBadge() {
+    Color badgeColor;
+    String text;
+    switch (widget.item.type) {
+      case GameLibraryItemType.customStudy:
+        badgeColor = Colors.teal;
+        text = 'STUDY';
+        break;
+      case GameLibraryItemType.academy:
+        badgeColor = ScholarlyTheme.accentBlue;
+        text = 'ACADEMY';
+        break;
+      case GameLibraryItemType.battleground:
+        badgeColor = ScholarlyTheme.realGold;
+        text = 'BATTLE';
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+      decoration: BoxDecoration(
+        color: badgeColor.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: badgeColor.withValues(alpha: 0.4), width: 0.8),
+      ),
+      child: Text(
+        text,
+        style: GoogleFonts.jetBrainsMono(
+          color: badgeColor,
+          fontSize: 8,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  void _loadGame() {
+    widget.ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+    if (widget.item.type == GameLibraryItemType.customStudy) {
+      widget.notifier.loadPgnRecord(widget.item.customStudy!, widget.item.customStudy!.index.toInt());
+    } else {
+      widget.notifier.loadGameEntry(widget.item.savedGame!);
+    }
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('"${widget.item.title}" loaded successfully!', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+          backgroundColor: Colors.green,
+        ),
+      );
+      Navigator.pop(context);
+    }
+  }
 }
 
+enum GameLibraryItemType { customStudy, battleground, academy }
+
+class GameLibraryItem {
+  final String id;
+  final GameLibraryItemType type;
+  final String title;
+  final String details;
+  final DateTime date;
+  final rust_pgn.PgnGameRecord? customStudy;
+  final SavedGameEntry? savedGame;
+
+  GameLibraryItem({
+    required this.id,
+    required this.type,
+    required this.title,
+    required this.details,
+    required this.date,
+    this.customStudy,
+    this.savedGame,
+  });
+}
+
+class GameLibraryFolder {
+  final String name;
+  final List<String> itemIds;
+
+  GameLibraryFolder({
+    required this.name,
+    required this.itemIds,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'name': name,
+    'itemIds': itemIds,
+  };
+
+  factory GameLibraryFolder.fromJson(Map<String, dynamic> json) {
+    return GameLibraryFolder(
+      name: json['name'] as String,
+      itemIds: (json['itemIds'] as List<dynamic>? ?? const [])
+          .map((id) => id.toString())
+          .toList(),
+    );
+  }
+}

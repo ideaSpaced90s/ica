@@ -85,8 +85,8 @@ class AnalysisEngineState {
 }
 
 
-class AnalysisEngineController extends StateNotifier<AnalysisEngineState> {
-  final AnalysisStockfishService _service;
+class AnalysisEngineController extends Notifier<AnalysisEngineState> {
+  late final AnalysisStockfishService _service;
   StreamSubscription? _subscription;
 
   // Throttling fields
@@ -97,8 +97,15 @@ class AnalysisEngineController extends StateNotifier<AnalysisEngineState> {
   bool _pendingIsMate = false;
   int? _pendingMateIn;
 
-  AnalysisEngineController(this._service) : super(AnalysisEngineState()) {
+  @override
+  AnalysisEngineState build() {
+    _service = ref.watch(analysisStockfishServiceProvider);
     _init();
+    ref.onDispose(() {
+      _throttleTimer?.cancel();
+      _subscription?.cancel();
+    });
+    return AnalysisEngineState();
   }
 
   void _init() {
@@ -164,7 +171,6 @@ class AnalysisEngineController extends StateNotifier<AnalysisEngineState> {
 
   void _flushState() {
     _throttleTimer = null;
-    if (!mounted) return;
 
     final sortedLines = _pendingLines.values.toList()
       ..sort((a, b) => a.pvIndex.compareTo(b.pvIndex));
@@ -387,16 +393,7 @@ class AnalysisEngineController extends StateNotifier<AnalysisEngineState> {
     return score / 100.0;
   }
 
-  @override
-  void dispose() {
-    _throttleTimer?.cancel();
-    _subscription?.cancel();
-    super.dispose();
-  }
 }
 
 final analysisEngineControllerProvider =
-    StateNotifierProvider<AnalysisEngineController, AnalysisEngineState>((ref) {
-  final service = ref.watch(analysisStockfishServiceProvider);
-  return AnalysisEngineController(service);
-});
+    NotifierProvider<AnalysisEngineController, AnalysisEngineState>(AnalysisEngineController.new);

@@ -673,7 +673,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
                 ),
               ),
               onPressed: () {
-                notifier.updateComment(controller.text);
+                notifier.updateCommentAt(node.index, controller.text);
                 Navigator.pop(context);
               },
               child: Text(
@@ -1283,7 +1283,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
     if (isWhite) {
       chips.add(Text(' $moveNumber.', style: GoogleFonts.jetBrainsMono(color: ScholarlyTheme.textMuted, fontSize: 13, fontWeight: FontWeight.bold)));
     } else if (parentIdx == null) {
-      chips.add(Text(' ${moveNumber - 1}...', style: GoogleFonts.jetBrainsMono(color: ScholarlyTheme.textMuted, fontSize: 13, fontWeight: FontWeight.bold)));
+      chips.add(Text(' ${math.max(1, moveNumber - 1)}...', style: GoogleFonts.jetBrainsMono(color: ScholarlyTheme.textMuted, fontSize: 13, fontWeight: FontWeight.bold)));
     }
 
     final isCurrent = state.currentNodeIndex == mainNode.index;
@@ -1399,6 +1399,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
         ),
       ),
       builder: (context) {
+        final hasSelectedNode = ref.read(studyLabProvider).currentNodeIndex != null;
         return SafeArea(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -1432,12 +1433,12 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.comment_outlined, color: Colors.teal),
-                title: Text('Edit Comment', style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary)),
-                onTap: () {
+                leading: Icon(Icons.comment_outlined, color: hasSelectedNode ? Colors.teal : Colors.teal.withValues(alpha: 0.4)),
+                title: Text('Edit Comment', style: GoogleFonts.inter(color: hasSelectedNode ? ScholarlyTheme.textPrimary : ScholarlyTheme.textMuted)),
+                onTap: hasSelectedNode ? () {
                   Navigator.pop(context);
                   _showCommentEditDialog(context, node, notifier);
-                },
+                } : null,
               ),
               const SizedBox(height: 8),
             ],
@@ -1467,7 +1468,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
             TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
             ElevatedButton(
               onPressed: () {
-                notifier.updateComment(controller.text);
+                notifier.updateCommentAt(node.index, controller.text);
                 Navigator.pop(context);
               },
               child: const Text('Save'),
