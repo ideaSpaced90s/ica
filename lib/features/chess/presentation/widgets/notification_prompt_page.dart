@@ -11,7 +11,15 @@ import '../../application/onboarding_provider.dart';
 import '../../services/chess_sound_service.dart';
 
 class NotificationPromptPage extends ConsumerStatefulWidget {
-  const NotificationPromptPage({super.key});
+  /// When provided the page operates as a standalone full-screen route
+  /// (e.g. launched from the splash screen). After the user taps either
+  /// "Enable Alerts" or "Later" this callback is invoked so the caller
+  /// can push the next route. When null the page operates as an overlay
+  /// inside MobileNavigationShell and simply dismisses itself via the
+  /// showNotificationPromptProvider state.
+  final void Function(BuildContext)? onDismissed;
+
+  const NotificationPromptPage({super.key, this.onDismissed});
 
   @override
   ConsumerState<NotificationPromptPage> createState() => _NotificationPromptPageState();
@@ -38,21 +46,25 @@ class _NotificationPromptPageState extends ConsumerState<NotificationPromptPage>
   }
 
   Future<void> _handleEnableNotifications() async {
-    if (_isProcessing) return;
+    debugPrint('--- _handleEnableNotifications: started ---');
+    if (_isProcessing) {
+      debugPrint('--- _handleEnableNotifications: already processing, return ---');
+      return;
+    }
     setState(() => _isProcessing = true);
 
     ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
 
     bool granted = false;
-    if (Platform.isAndroid) {
-      final status = await Permission.notification.status;
-      if (status.isGranted) {
-        granted = true;
-      } else {
-        final result = await Permission.notification.request();
-        if (result.isGranted) {
+    try {
+      if (Platform.isAndroid) {
+        debugPrint('--- _handleEnableNotifications: checking notification status ---');
+        final status = await Permission.notification.status;
+        debugPrint('--- _handleEnableNotifications: notification status is $status ---');
+        if (status.isGranted) {
           granted = true;
         } else if (status.isPermanentlyDenied) {
+          debugPrint('--- _handleEnableNotifications: status is permanently denied ---');
           if (mounted) {
             final openSettings = await showDialog<bool>(
               context: context,
@@ -86,30 +98,53 @@ class _NotificationPromptPageState extends ConsumerState<NotificationPromptPage>
                 ],
               ),
             );
+            debugPrint('--- _handleEnableNotifications: user choice for settings is $openSettings ---');
             if (openSettings == true) {
               await openAppSettings();
             }
           }
+        } else {
+          debugPrint('--- _handleEnableNotifications: requesting permission ---');
+          final result = await Permission.notification.request();
+          debugPrint('--- _handleEnableNotifications: permission request result is $result ---');
+          if (result.isGranted) {
+            granted = true;
+          }
         }
+      } else {
+        // Non-Android platforms (e.g. Windows/macOS)
+        granted = true;
       }
-    } else {
-      // Non-Android platforms (e.g. Windows/macOS)
-      granted = true;
+    } catch (e) {
+      debugPrint('Error requesting notification permission: $e');
     }
 
+    debugPrint('--- _handleEnableNotifications: granted = $granted ---');
     if (granted) {
       await ref.read(chessProvider.notifier).toggleNotifications(true);
     }
 
     if (mounted) {
+      debugPrint('--- _handleEnableNotifications: dismissing notification prompt ---');
       await OnboardingService(ref).dismissNotificationPrompt();
+      if (mounted) {
+        debugPrint('--- _handleEnableNotifications: invoking onDismissed callback ---');
+        widget.onDismissed?.call(context);
+      }
+    } else {
+      debugPrint('--- _handleEnableNotifications: not mounted, setting processing false ---');
+      _isProcessing = false;
     }
+    debugPrint('--- _handleEnableNotifications: finished ---');
   }
 
   Future<void> _handleSkip() async {
     if (_isProcessing) return;
     ref.read(chessSoundServiceProvider).playSfx(SoundEffect.click);
     await OnboardingService(ref).dismissNotificationPrompt();
+    if (mounted) {
+      widget.onDismissed?.call(context);
+    }
   }
 
   @override
@@ -170,7 +205,8 @@ class _NotificationPromptPageState extends ConsumerState<NotificationPromptPage>
               _buildAnimatedBell(),
               const SizedBox(height: 24),
               PremiumGradientText(
-                'NEVER MISS A TACTIC',
+                'NEVER MISS AN ASSIGNMENT',
+                textAlign: TextAlign.center,
                 style: GoogleFonts.outfit(
                   fontSize: 20,
                   fontWeight: FontWeight.w900,
@@ -179,7 +215,7 @@ class _NotificationPromptPageState extends ConsumerState<NotificationPromptPage>
               ),
               const SizedBox(height: 16),
               Text(
-                'To build a strong chess foundation, consistency is key. We send gentle reminders for your daily custom training tasks, tournament alerts, and streak protection to keep your momentum alive. Enable notifications to keep your progress on track.',
+                'To build a strong chess foundation, consistency is key. We send reminders to you daily tailor-made custom training tasks, tournament alerts, and streak protection to keep your progress on track. Enable notifications to keep your progress on track.',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.inter(
                   color: ScholarlyTheme.textPrimary,

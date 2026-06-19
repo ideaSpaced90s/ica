@@ -19,13 +19,12 @@ import 'analysis/analysis_page.dart';
 import 'history_page.dart';
 import 'assignment/assignment_page.dart';
 import '../application/assignment_provider.dart';
-import '../services/notification_service.dart';
-
 import 'tutorial_page.dart';
 import 'about_us_page.dart';
 import 'settings_page.dart';
 import 'store/store_page.dart';
 import 'account_page.dart';
+import 'achievements_page.dart';
 
 import 'widgets/welcome_guide_page.dart';
 import 'widgets/notification_prompt_page.dart';
@@ -36,15 +35,8 @@ import 'shared/page_transition_overlay.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 
-import '../application/var_notifier.dart';
-
-// Provides the current active mobile tab index.
-final mobileNavIndexProvider = NotifierProvider<VarNotifier<int>, int>(() => VarNotifier(() => 0));
-
-// Registry of page-specific back button overrides, keyed by tab/page index.
-// Handlers return true if they handled the back event (preventing index 0 navigation),
-// or false if they want the shell to execute default navigation to Dashboard.
-final backButtonOverridesProvider = NotifierProvider<VarNotifier<Map<int, Future<bool> Function()>>, Map<int, Future<bool> Function()>>(() => VarNotifier(() => {}));
+import '../application/navigation_provider.dart';
+export '../application/navigation_provider.dart';
 
 
 class MobileNavigationShell extends ConsumerWidget {
@@ -52,10 +44,6 @@ class MobileNavigationShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    NotificationService.onNotificationClicked = (index) {
-      ref.read(mobileNavIndexProvider.notifier).state = index;
-    };
-
     final currentIndex = ref.watch(mobileNavIndexProvider);
     final bgState = ref.watch(battlegroundProvider);
     final isBgMatchActive = currentIndex == 2 && bgState.activeRatedMatchId != null;
@@ -85,6 +73,7 @@ class MobileNavigationShell extends ConsumerWidget {
       const StorePage(),
       const AssignmentPage(),
       const AccountPage(),
+      const AchievementsPage(),
     ];
 
     // Determine logical title based on active tab
@@ -116,6 +105,8 @@ class MobileNavigationShell extends ConsumerWidget {
           return 'ASSIGNMENT';
         case 12:
           return 'ACCOUNT';
+        case 13:
+          return 'ACHIEVEMENTS';
         default:
           return 'IDEASPACE CHESS ACADEMY';
       }
@@ -197,6 +188,14 @@ class MobileNavigationShell extends ConsumerWidget {
                   } else {
                     Scaffold.of(context).openDrawer();
                   }
+                } else if (currentIndex == 7) {
+                  // Tutorial page: show the GM Chanakya exit prompt when mid-lesson.
+                  // showTutorialExitPrompt returns false if on chapter select / completion overlay,
+                  // in which case we fall through to open the drawer normally.
+                  final tutorialHandled = await showTutorialExitPrompt(context, ref);
+                  if (!tutorialHandled && context.mounted) {
+                    Scaffold.of(context).openDrawer();
+                  }
                 } else {
                   Scaffold.of(context).openDrawer();
                 }
@@ -238,14 +237,18 @@ class MobileNavigationShell extends ConsumerWidget {
       ),
     );
 
-    if (showWelcome) {
+    if (showNotificationPrompt) {
       result = Stack(
         children: [
           result,
-          if (showNotificationPrompt)
-            const NotificationPromptPage()
-          else
-            const WelcomeGuidePage(),
+          const NotificationPromptPage(),
+        ],
+      );
+    } else if (showWelcome) {
+      result = Stack(
+        children: [
+          result,
+          const WelcomeGuidePage(),
         ],
       );
     }
@@ -624,6 +627,15 @@ class _MobileSidebarDrawer extends ConsumerWidget {
                   index: 8,
                   onTap: () {
                     _navigate(ref, context, 7);
+                  },
+                ),
+                _DrawerTile(
+                  label: 'Achievements',
+                  icon: Icons.military_tech_rounded,
+                  isSelected: currentIndex == 13,
+                  index: 13,
+                  onTap: () {
+                    _navigate(ref, context, 13);
                   },
                 ),
                 const Padding(
@@ -1145,73 +1157,76 @@ class _LazyIndexedStackChildState extends State<LazyIndexedStackChild> {
 Future<bool?> showExitAppConfirmationDialog(BuildContext context) async {
   return showDialog<bool>(
     context: context,
-    builder: (context) => AlertDialog(
-      backgroundColor: ScholarlyTheme.panelBase,
-      surfaceTintColor: ScholarlyTheme.accentBlue,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(28),
-        side: BorderSide(
-          color: ScholarlyTheme.accentBlue.withValues(alpha: 0.2),
-          width: 1,
+    builder: (context) => Dialog(
+      backgroundColor: Colors.transparent,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
+        decoration: BoxDecoration(
+          color: ScholarlyTheme.panelBase,
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(
+            color: ScholarlyTheme.panelStroke.withValues(alpha: 0.8),
+            width: 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.15),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => Navigator.pop(context, true),
+                customBorder: const CircleBorder(),
+                splashColor: Colors.redAccent.withValues(alpha: 0.2),
+                highlightColor: Colors.redAccent.withValues(alpha: 0.1),
+                child: Ink(
+                  width: 108,
+                  height: 108,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.redAccent.withValues(alpha: 0.1),
+                    border: Border.all(
+                      color: Colors.redAccent.withValues(alpha: 0.25),
+                      width: 2.5,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.redAccent.withValues(alpha: 0.08),
+                        blurRadius: 16,
+                        spreadRadius: 2,
+                      ),
+                    ],
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.power_settings_new_rounded,
+                      color: Colors.redAccent,
+                      size: 58,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'EXIT',
+              style: GoogleFonts.outfit(
+                fontWeight: FontWeight.w900,
+                color: ScholarlyTheme.textPrimary,
+                fontSize: 16,
+                letterSpacing: 2.0,
+              ),
+            ),
+          ],
         ),
       ),
-      title: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: ScholarlyTheme.accentBlue.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.power_settings_new_rounded,
-              color: ScholarlyTheme.accentBlue,
-              size: 24,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Exit App',
-            style: GoogleFonts.inter(
-              fontWeight: FontWeight.bold,
-              color: ScholarlyTheme.textPrimary,
-              fontSize: 20,
-            ),
-          ),
-        ],
-      ),
-      content: Text(
-        'Are you sure you want to exit IdeaSpace Chess Academy?',
-        textAlign: TextAlign.center,
-        style: GoogleFonts.inter(
-          color: ScholarlyTheme.textPrimary,
-          fontSize: 14,
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context, false),
-          child: Text(
-            'CANCEL',
-            style: GoogleFonts.inter(
-              color: ScholarlyTheme.textMuted,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.pop(context, true),
-          style: FilledButton.styleFrom(
-            backgroundColor: ScholarlyTheme.accentBlue,
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-          child: const Text('EXIT'),
-        ),
-      ],
     ),
   );
 }

@@ -1,5 +1,5 @@
 import 'dart:async';
-
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../domain/models/tutorial_constants.dart';
@@ -20,28 +20,67 @@ final showChapterSelectionProvider = NotifierProvider<VarNotifier<bool>, bool>((
 
 /// Provider tracking whether the notification prompt should be shown.
 class ShowNotificationPrompt extends Notifier<bool> {
+  static bool _dismissedInSession = false;
+
   @override
   bool build() {
+    if (_dismissedInSession) {
+      return false;
+    }
     final repo = ref.watch(tutorialProgressRepositoryProvider);
     final chessState = ref.watch(chessProvider);
-    return !repo.hasSeenWelcomeGuide() &&
-        !repo.hasPromptedNotification() &&
+    final user = FirebaseAuth.instance.currentUser;
+    final isGuest = user == null || user.isAnonymous;
+    if (isGuest) {
+      final tutorialState = ref.watch(tutorialProvider);
+      final hasCompletedChapter8 = tutorialState.progress.completedChapters.contains(8);
+      return !hasCompletedChapter8 && !chessState.isNotificationsEnabled;
+    }
+    return !repo.hasPromptedNotification() &&
         !chessState.isNotificationsEnabled;
   }
+
   @override
-  set state(bool value) => super.state = value;
+  set state(bool value) {
+    if (value) {
+      _dismissedInSession = false;
+    } else {
+      _dismissedInSession = true;
+    }
+    super.state = value;
+  }
 }
 final showNotificationPromptProvider = NotifierProvider<ShowNotificationPrompt, bool>(ShowNotificationPrompt.new);
 
 /// Provider tracking whether the welcome guide dialog should be displayed.
 class ShowWelcomeDialog extends Notifier<bool> {
+  static bool _dismissedInSession = false;
+
   @override
   bool build() {
+    if (_dismissedInSession) {
+      return false;
+    }
     final repo = ref.watch(tutorialProgressRepositoryProvider);
+    final user = FirebaseAuth.instance.currentUser;
+    final isGuest = user == null || user.isAnonymous;
+    if (isGuest) {
+      final tutorialState = ref.watch(tutorialProvider);
+      final hasCompletedChapter8 = tutorialState.progress.completedChapters.contains(8);
+      return !hasCompletedChapter8;
+    }
     return !repo.hasSeenWelcomeGuide();
   }
+
   @override
-  set state(bool value) => super.state = value;
+  set state(bool value) {
+    if (value) {
+      _dismissedInSession = false;
+    } else {
+      _dismissedInSession = true;
+    }
+    super.state = value;
+  }
 }
 final showWelcomeDialogProvider = NotifierProvider<ShowWelcomeDialog, bool>(ShowWelcomeDialog.new);
 
@@ -135,6 +174,8 @@ class OnboardingService {
   void startGuidedTour(GuidedTutorialLevel level) {
     ref.read(isOnboardingProvider.notifier).state = true;
     ref.read(showWelcomeDialogProvider.notifier).state = false;
+    final repo = ref.read(tutorialProgressRepositoryProvider);
+    unawaited(repo.setWelcomeGuideSeen(true));
     final startChap = GuidedTutorialFlow.startChapterFor(level);
     ref.read(onboardingTargetChapterProvider.notifier).state = startChap;
     ref.read(tutorialProvider.notifier).loadChapter(startChap);

@@ -72,7 +72,6 @@ class _ChapterCompletionOverlayState extends ConsumerState<ChapterCompletionOver
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(tutorialProvider);
-    final xpEarned = TutorialRewards.calculateXp(_earnedStars);
     final nextChapterId = state.currentLesson.chapterId + 1;
     final hasNextChapter = nextChapterId <= kTutorialChapterCount;
     final nextLesson = hasNextChapter ? TutorialLessonsDatabase.getLesson(nextChapterId) : null;
@@ -203,33 +202,7 @@ class _ChapterCompletionOverlayState extends ConsumerState<ChapterCompletionOver
                     ),
                   ),
 
-                  const SizedBox(height: 20),
-
-                  // XP summary bar
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: ScholarlyTheme.accentBlueSoft.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.stars_rounded, size: 20, color: ScholarlyTheme.accentBlue),
-                        const SizedBox(width: 8),
-                        Text(
-                          '+$xpEarned XP Earned',
-                          style: GoogleFonts.inter(
-                            color: ScholarlyTheme.accentBlue,
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 24),
 
                   // Actions block
                   SizedBox(

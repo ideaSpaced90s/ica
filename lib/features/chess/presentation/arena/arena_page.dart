@@ -1532,6 +1532,7 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
         ref,
         title: 'Daily Arena Game Limit Reached',
         description: 'You have played your 3 free Arena games for today. Upgrade to unlock unlimited games.',
+        onDismiss: () => exitToDashboardWithSidebar(context, ref),
       );
       return false;
     }

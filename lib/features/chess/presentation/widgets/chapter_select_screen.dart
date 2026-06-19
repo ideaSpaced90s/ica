@@ -178,15 +178,6 @@ class ChapterSelectScreen extends ConsumerWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: _MetricTile(
-                  label: 'XP',
-                  value: '$totalXp',
-                  icon: Icons.stars_rounded,
-                  color: ScholarlyTheme.realGold,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _MetricTile(
                   label: 'Done',
                   value: '$completedCount/$kTutorialChapterCount',
                   icon: Icons.check_circle_rounded,

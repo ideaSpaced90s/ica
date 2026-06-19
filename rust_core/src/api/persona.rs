@@ -17,7 +17,7 @@ fn get_jitter_amount(hash: u64, range: u64, offset: f64) -> f64 {
     if cfg!(test) {
         0.0
     } else {
-        ((hash % range) as f64 / 100.0) - offset
+        (((hash % range) as f64 / 100.0) - offset) / 100.0
     }
 }
 

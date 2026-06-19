@@ -105,8 +105,8 @@ class TutorialState {
 }
 
 class TutorialNotifier extends Notifier<TutorialState> {
-  late final TutorialProgressRepository _repository;
-  late final ChessSoundService _sounds;
+  late TutorialProgressRepository _repository;
+  late ChessSoundService _sounds;
   Timer? _hesitationTimer;
   bool _isDisposed = false;
 

@@ -876,7 +876,7 @@ class ChessNotifier extends Notifier<ChessState> {
       await loadSavedGames();
       _syncTimesToClockProvider();
       if (s.isNotificationsEnabled) {
-        ref.read(notificationServiceProvider).initialize();
+        await ref.read(notificationServiceProvider).initialize();
       }
     } catch (e) {
       debugPrint('Failed to load settings: $e');
@@ -924,7 +924,7 @@ class ChessNotifier extends Notifier<ChessState> {
         quietHoursStart: state.quietHoursStart,
         quietHoursEnd: state.quietHoursEnd,
       ));
-      _syncScheduledNotifications();
+      await _syncScheduledNotifications();
       ref.read(cloudSyncProvider.notifier).backup(silent: true);
     } catch (e) {
       debugPrint('Failed to save settings: $e');
@@ -976,10 +976,11 @@ class ChessNotifier extends Notifier<ChessState> {
 
   Future<void> toggleNotifications(bool enabled) async {
     state = state.copyWith(isNotificationsEnabled: enabled);
-    await _saveSettings();
     if (enabled) {
       await ref.read(notificationServiceProvider).initialize();
-    } else {
+    }
+    await _saveSettings();
+    if (!enabled) {
       await ref.read(notificationServiceProvider).cancelAllNotifications();
     }
   }
@@ -1487,6 +1488,7 @@ class ChessNotifier extends Notifier<ChessState> {
         } else {
           _currentCandidates.add(candidate);
         }
+        _currentCandidates.sort((a, b) => a.multipvIndex.compareTo(b.multipvIndex));
       }
     }
 
@@ -1661,7 +1663,10 @@ class ChessNotifier extends Notifier<ChessState> {
           speed: playstyleRaw?.speed ?? 0.7,
         );
 
-        final rustCandidates = candidates.map((c) => rust_chanakya.ChanakyaCandidate(
+        final sorted = List<CandidateMove>.from(candidates)
+          ..sort((a, b) => a.multipvIndex.compareTo(b.multipvIndex));
+
+        final rustCandidates = sorted.map((c) => rust_chanakya.ChanakyaCandidate(
           uciMove: c.uciMove,
           evaluation: c.evaluation,
         )).toList();

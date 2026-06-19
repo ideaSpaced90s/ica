@@ -433,13 +433,8 @@ Future<bool> showTutorialExitPrompt(BuildContext context, WidgetRef ref) async {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              FilledButton.icon(
-                onPressed: () => Navigator.of(dialogContext).pop('continue'),
-                icon: const Icon(Icons.play_arrow_rounded, size: 18),
-                label: Text(
-                  'CONTINUE',
-                  style: GoogleFonts.inter(fontWeight: FontWeight.w900),
-                ),
+              FilledButton(
+                onPressed: () => Navigator.of(dialogContext).pop('stay'),
                 style: FilledButton.styleFrom(
                   backgroundColor: ScholarlyTheme.accentBlue,
                   foregroundColor: Colors.white,
@@ -447,22 +442,9 @@ Future<bool> showTutorialExitPrompt(BuildContext context, WidgetRef ref) async {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              OutlinedButton(
-                onPressed: () => Navigator.of(dialogContext).pop('stay'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: ScholarlyTheme.textPrimary,
-                  side: BorderSide(
-                    color: ScholarlyTheme.panelStroke.withValues(alpha: 0.7),
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
                 child: Text(
                   'STAY',
-                  style: GoogleFonts.inter(fontWeight: FontWeight.w800),
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w900),
                 ),
               ),
               const SizedBox(height: 8),

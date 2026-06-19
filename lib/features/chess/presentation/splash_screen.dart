@@ -7,10 +7,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../application/chess_provider.dart';
+import '../application/tutorial_provider.dart';
 import '../services/cloud_sync_service.dart';
 import '../services/auth_service.dart';
 import 'mobile_navigation_shell.dart';
 import 'sign_in_page.dart';
+import 'widgets/notification_prompt_page.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -210,17 +212,54 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
       if (!mounted) return;
 
-      Navigator.of(context).pushReplacement(
-        PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) => hasSession
-              ? const MobileNavigationShell()
-              : const SignInPage(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return FadeTransition(opacity: animation, child: child);
-          },
-          transitionDuration: const Duration(milliseconds: 800),
-        ),
-      );
+      // Build the real destination widget once (shared by both paths below).
+      final Widget destination =
+          hasSession ? const MobileNavigationShell() : const SignInPage();
+
+      // Helper that pushes the real destination with the standard fade transition.
+      void pushDestination([BuildContext? routeContext]) {
+        final targetContext = routeContext ?? (mounted ? context : null);
+        if (targetContext == null) return;
+        Navigator.of(targetContext).pushReplacement(
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) => destination,
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+            transitionDuration: const Duration(milliseconds: 800),
+          ),
+        );
+      }
+
+      // Check whether the notification prompt should be shown before the main
+      // app shell. This happens on Android only, on the very first launch
+      // (before the user has ever been prompted).
+      final repo = ref.read(tutorialProgressRepositoryProvider);
+      final progress = await repo.loadProgress();
+      final chessState = ref.read(chessProvider);
+      final isGuest = user == null || user.isAnonymous;
+      final hasCompletedChapter8 = progress.completedChapters.contains(8);
+      final needsNotifPrompt = (isGuest ? !hasCompletedChapter8 : !repo.hasPromptedNotification()) &&
+          !chessState.isNotificationsEnabled;
+
+      if (needsNotifPrompt) {
+        // Push the notification prompt as a standalone full-screen route.
+        // It will call onDismissed() when the user taps either action,
+        // which then pushes the real destination.
+        if (!mounted) return;
+        Navigator.of(context).pushReplacement(
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) =>
+                NotificationPromptPage(onDismissed: pushDestination),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+            transitionDuration: const Duration(milliseconds: 600),
+          ),
+        );
+      } else {
+        pushDestination();
+      }
     }
   }
 

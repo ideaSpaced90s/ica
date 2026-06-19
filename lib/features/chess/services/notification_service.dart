@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
+import '../application/navigation_provider.dart';
 
 final notificationServiceProvider = Provider((ref) => NotificationService(ref));
 
@@ -11,15 +13,19 @@ class NotificationService {
   
   // Singleton instance of Flutter Local Notifications (Android)
   final FlutterLocalNotificationsPlugin _androidNotifications = FlutterLocalNotificationsPlugin();
-  
-  // Callback when a notification is clicked by the user
-  static void Function(int index)? onNotificationClicked;
 
   NotificationService(this.ref);
 
   /// Initialise notifications for the current platform
   Future<void> initialize() async {
-    tz.initializeTimeZones();
+    tz_data.initializeTimeZones();
+    try {
+      final String timeZoneName = await FlutterTimezone.getLocalTimezone();
+      tz.setLocalLocation(tz.getLocation(timeZoneName));
+    } catch (e) {
+      debugPrint('Failed to initialize local timezone, falling back to UTC: $e');
+      tz.setLocalLocation(tz.getLocation('UTC'));
+    }
     
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -31,9 +37,7 @@ class NotificationService {
     await _androidNotifications.initialize(
       initializationSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
-        if (onNotificationClicked != null) {
-          onNotificationClicked!(11); // Route to Assignment (11)
-        }
+        ref.read(mobileNavIndexProvider.notifier).state = 11; // Route to Assignment (11)
       },
     );
   }

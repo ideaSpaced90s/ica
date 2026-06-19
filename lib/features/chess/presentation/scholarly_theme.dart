@@ -205,6 +205,7 @@ class PremiumGradientText extends StatelessWidget {
   final String text;
   final TextStyle style;
   final Gradient gradient;
+  final TextAlign? textAlign;
 
   const PremiumGradientText(
     this.text, {
@@ -219,6 +220,7 @@ class PremiumGradientText extends StatelessWidget {
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     ),
+    this.textAlign,
   });
 
   @override
@@ -230,6 +232,7 @@ class PremiumGradientText extends StatelessWidget {
       ),
       child: Text(
         text,
+        textAlign: textAlign,
         style: style.copyWith(color: Colors.white),
       ),
     );

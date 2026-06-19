@@ -35,6 +35,10 @@ class _AccountPageState extends ConsumerState<AccountPage> {
     final storeNotifier = ref.read(storeProvider.notifier);
     final syncState = ref.watch(cloudSyncProvider);
     final syncNotifier = ref.read(cloudSyncProvider.notifier);
+    final authUser = ref.watch(authStateChangesProvider).value;
+    final isAnonymousUser = authUser?.isAnonymous ?? true;
+    // Show restore button only to signed-in (non-guest) users without an active subscription
+    final showRestorePurchase = !isAnonymousUser && !storeState.isPremium;
 
     // Filter registry for owned themes
     final ownedThemes = ThemeRegistry.allThemes.where((theme) {
@@ -289,6 +293,7 @@ class _AccountPageState extends ConsumerState<AccountPage> {
                           );
                           await repo.setIsGoogleSignedIn(false);
                           await repo.setWelcomeGuideSeen(false);
+                          await repo.setPromptedNotification(false);
                           await repo.setArenaIntroSeen(false);
                           await repo.setBattlegroundIntroSeen(false);
                           await repo.setPuzzlesIntroSeen(false);
@@ -302,6 +307,10 @@ class _AccountPageState extends ConsumerState<AccountPage> {
                                   .state =
                               true;
                           ref.read(showPuzzlesIntroProvider.notifier).state =
+                              true;
+                          ref.read(showWelcomeDialogProvider.notifier).state =
+                              true;
+                          ref.read(showNotificationPromptProvider.notifier).state =
                               true;
 
                           ref.read(mobileNavIndexProvider.notifier).state = 0;
@@ -342,52 +351,54 @@ class _AccountPageState extends ConsumerState<AccountPage> {
               ),
             ),
 
-            // Restore Purchases Section
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
-                child: JuicySectionHeader(
-                  title: 'PURCHASES',
-                  color: ScholarlyTheme.accentBlue,
-                ),
-              ),
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              sliver: SliverToBoxAdapter(
-                child: JuicyGlassCard(
-                  padding: EdgeInsets.zero,
-                  borderRadius: 24,
-                  child: Column(
-                    children: [
-                      _buildSettingsTile(
-                        label: 'Restore Previous Purchases',
-                        description: 'Re-link your Google Play purchases to this account',
-                        icon: Icons.restore_rounded,
-                        accentColor: ScholarlyTheme.accentBlue,
-                        onTap: () {
-                          ref
-                              .read(chessSoundServiceProvider)
-                              .playSfx(SoundEffect.uiClick);
-                          storeNotifier.restorePurchases();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Text(
-                                'Checking Google Play for previous purchases...',
-                              ),
-                              behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ],
+            // Restore Purchases Section — hidden for guests and already-subscribed users
+            if (showRestorePurchase) ...[
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+                  child: JuicySectionHeader(
+                    title: 'PURCHASES',
+                    color: ScholarlyTheme.accentBlue,
                   ),
                 ),
               ),
-            ),
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                sliver: SliverToBoxAdapter(
+                  child: JuicyGlassCard(
+                    padding: EdgeInsets.zero,
+                    borderRadius: 24,
+                    child: Column(
+                      children: [
+                        _buildSettingsTile(
+                          label: 'Restore Purchase',
+                          description: 'Re-link your Google Play purchases to this account',
+                          icon: Icons.restore_rounded,
+                          accentColor: ScholarlyTheme.accentBlue,
+                          onTap: () {
+                            ref
+                                .read(chessSoundServiceProvider)
+                                .playSfx(SoundEffect.uiClick);
+                            storeNotifier.restorePurchases();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text(
+                                  'Checking Google Play for previous purchases...',
+                                ),
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
 
             // Danger Zone Section
             SliverToBoxAdapter(
@@ -905,7 +916,7 @@ class _AccountPageState extends ConsumerState<AccountPage> {
     }
 
     return _buildSettingsTile(
-      label: isPlayGamesUser ? 'Cloud sync established' : 'Cloud Backup Sync',
+      label: isPlayGamesUser ? 'Cloud Sync Protected' : 'Cloud Backup Sync',
       description: syncState.lastSyncedAt != null
           ? 'Last synced: ${DateFormat.jm().format(syncState.lastSyncedAt!)}'
           : 'Auto-syncs settings and game history',
@@ -988,6 +999,8 @@ class _AccountPageState extends ConsumerState<AccountPage> {
 
         title: Text(
           label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: GoogleFonts.inter(
             color:
                 effectiveAccent ??

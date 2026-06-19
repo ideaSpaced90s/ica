@@ -697,6 +697,7 @@ class _PuzzlesPageState extends ConsumerState<PuzzlesPage> {
         ref,
         title: 'Daily Puzzle Limit Reached',
         description: 'You have solved/attempted your 3 free Puzzles for today. Upgrade to unlock unlimited puzzles.',
+        onDismiss: () => exitToDashboardWithSidebar(context, ref),
       );
       return false;
     }

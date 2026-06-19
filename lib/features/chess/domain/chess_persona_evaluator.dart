@@ -14,7 +14,10 @@ class ChessPersonaEvaluator {
     if (avatar.name == 'King' || avatar.name == 'Kingslayer') return defaultBestMove;
 
     try {
-      final rustCandidates = candidates.map((c) {
+      final sortedCandidates = List<CandidateMove>.from(candidates)
+        ..sort((a, b) => a.multipvIndex.compareTo(b.multipvIndex));
+
+      final rustCandidates = sortedCandidates.map((c) {
         return rust_persona.PersonaCandidate(
           uciMove: c.uciMove,
           evaluation: c.evaluation,

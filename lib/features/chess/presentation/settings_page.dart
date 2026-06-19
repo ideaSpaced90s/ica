@@ -69,7 +69,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         value: state.isHapticsEnabled,
                         onChanged: (v) => notifier.toggleHaptics(),
                       ),
-                      _SettingsTile(
+                      _NotificationSettingsTile(
                         label: 'Notifications',
                         description: 'Configure briefings, streak alerts, and quiet hours',
                         icon: Icons.notifications_active_rounded,
@@ -150,62 +150,7 @@ class _SettingsCategory extends StatelessWidget {
   }
 }
 
-class _SettingsTile extends ConsumerWidget {
-  final String label;
-  final String description;
-  final IconData icon;
-  final VoidCallback onTap;
 
-  const _SettingsTile({
-    required this.label,
-    required this.description,
-    required this.icon,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return ListTile(
-      onTap: () {
-        ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-        onTap();
-      },
-      leading: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.35),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: Colors.white.withValues(alpha: 0.5),
-            width: 1,
-          ),
-        ),
-        child: Icon(
-          icon,
-          color: ScholarlyTheme.textPrimary,
-          size: 20,
-        ),
-      ),
-      title: Text(
-        label,
-        style: GoogleFonts.inter(
-          color: ScholarlyTheme.textPrimary,
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      subtitle: Text(
-        description,
-        style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 11),
-      ),
-      trailing: const Icon(
-        Icons.chevron_right_rounded,
-        color: ScholarlyTheme.textSubtle,
-        size: 20,
-      ),
-    );
-  }
-}
 
 class _SettingsSwitchTile extends ConsumerWidget {
   final String label;
@@ -261,6 +206,111 @@ class _SettingsSwitchTile extends ConsumerWidget {
       activeThumbColor: ScholarlyTheme.accentBlue,
       activeTrackColor: ScholarlyTheme.accentBlue.withValues(alpha: 0.3),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+    );
+  }
+}
+
+class _NotificationSettingsTile extends ConsumerStatefulWidget {
+  final String label;
+  final String description;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _NotificationSettingsTile({
+    required this.label,
+    required this.description,
+    required this.icon,
+    required this.onTap,
+  });
+
+  @override
+  ConsumerState<_NotificationSettingsTile> createState() => _NotificationSettingsTileState();
+}
+
+class _NotificationSettingsTileState extends ConsumerState<_NotificationSettingsTile>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _arrowController;
+  late final Animation<Offset> _arrowAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _arrowController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    );
+
+    _arrowAnimation = Tween<Offset>(
+      begin: Offset.zero,
+      end: const Offset(0.3, 0.0),
+    ).animate(CurvedAnimation(
+      parent: _arrowController,
+      curve: Curves.easeInOut,
+    ));
+  }
+
+  @override
+  void dispose() {
+    _arrowController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isEnabled = ref.watch(chessProvider.select((s) => s.isNotificationsEnabled));
+
+    if (isEnabled) {
+      if (_arrowController.isAnimating) {
+        _arrowController.stop();
+        _arrowController.reset();
+      }
+    } else {
+      if (!_arrowController.isAnimating) {
+        _arrowController.repeat(reverse: true);
+      }
+    }
+
+    return ListTile(
+      onTap: () {
+        ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+        widget.onTap();
+      },
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.35),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.5),
+            width: 1,
+          ),
+        ),
+        child: Icon(
+          widget.icon,
+          color: ScholarlyTheme.textPrimary,
+          size: 20,
+        ),
+      ),
+      title: Text(
+        widget.label,
+        style: GoogleFonts.inter(
+          color: ScholarlyTheme.textPrimary,
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      subtitle: Text(
+        widget.description,
+        style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 11),
+      ),
+      trailing: SlideTransition(
+        position: _arrowAnimation,
+        child: const Icon(
+          Icons.chevron_right_rounded,
+          color: ScholarlyTheme.textSubtle,
+          size: 20,
+        ),
+      ),
     );
   }
 }

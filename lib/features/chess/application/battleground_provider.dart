@@ -759,6 +759,7 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
         } else {
           _currentCandidates.add(candidate);
         }
+        _currentCandidates.sort((a, b) => a.multipvIndex.compareTo(b.multipvIndex));
       }
     }
 

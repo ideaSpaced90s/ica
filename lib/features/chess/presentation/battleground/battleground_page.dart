@@ -913,6 +913,7 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
         ref,
         title: 'Daily Rated Game Limit Reached',
         description: 'You have played your 1 free Rated/Battleground game for today. Upgrade to unlock unlimited games.',
+        onDismiss: () => exitToDashboardWithSidebar(context, ref),
       );
       return false;
     }

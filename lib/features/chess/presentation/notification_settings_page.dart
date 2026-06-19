@@ -16,8 +16,47 @@ class NotificationSettingsPage extends ConsumerStatefulWidget {
   ConsumerState<NotificationSettingsPage> createState() => _NotificationSettingsPageState();
 }
 
-class _NotificationSettingsPageState extends ConsumerState<NotificationSettingsPage> {
+class _NotificationSettingsPageState extends ConsumerState<NotificationSettingsPage>
+    with SingleTickerProviderStateMixin {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  late final AnimationController _pulseController;
+  late final Animation<double> _scaleAnimation;
+  late final Animation<Color?> _glowColorAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+    
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.02).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+
+    _glowColorAnimation = ColorTween(
+      begin: ScholarlyTheme.accentBlue.withValues(alpha: 0.05),
+      end: ScholarlyTheme.accentBlue.withValues(alpha: 0.35),
+    ).animate(CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut));
+
+    _checkSystemPermissionSync();
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _checkSystemPermissionSync() async {
+    final status = await Permission.notification.status;
+    final isGranted = status.isGranted;
+    final state = ref.read(chessProvider);
+    if (!isGranted && state.isNotificationsEnabled) {
+      await ref.read(chessProvider.notifier).toggleNotifications(false);
+    }
+  }
 
   Future<bool> _requestNotificationPermission(BuildContext context) async {
     if (Platform.isAndroid) {
@@ -109,6 +148,17 @@ class _NotificationSettingsPageState extends ConsumerState<NotificationSettingsP
   Widget build(BuildContext context) {
     final state = ref.watch(chessProvider);
     final notifier = ref.read(chessProvider.notifier);
+
+    if (state.isNotificationsEnabled) {
+      if (_pulseController.isAnimating) {
+        _pulseController.stop();
+        _pulseController.reset();
+      }
+    } else {
+      if (!_pulseController.isAnimating) {
+        _pulseController.repeat(reverse: true);
+      }
+    }
     final soundService = ref.read(chessSoundServiceProvider);
 
     return AmbientScaffold(
@@ -151,61 +201,86 @@ class _NotificationSettingsPageState extends ConsumerState<NotificationSettingsP
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: JuicyGlassCard(
-                    padding: EdgeInsets.zero,
-                    borderRadius: 24,
-                    child: SwitchListTile(
-                      value: state.isNotificationsEnabled,
-                      onChanged: (enabled) async {
-                        soundService.playSfx(SoundEffect.switchToggle);
-                        if (enabled) {
-                          final granted = await _requestNotificationPermission(context);
-                          if (granted) {
-                            await notifier.toggleNotifications(true);
+                  child: AnimatedBuilder(
+                    animation: _pulseController,
+                    builder: (context, child) {
+                      return Transform.scale(
+                        scale: state.isNotificationsEnabled ? 1.0 : _scaleAnimation.value,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(24),
+                            boxShadow: state.isNotificationsEnabled
+                                ? []
+                                : [
+                                    BoxShadow(
+                                      color: _glowColorAnimation.value ?? Colors.transparent,
+                                      blurRadius: 14,
+                                      spreadRadius: 2,
+                                    ),
+                                  ],
+                          ),
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: JuicyGlassCard(
+                      padding: EdgeInsets.zero,
+                      borderRadius: 24,
+                      child: SwitchListTile(
+                        value: state.isNotificationsEnabled,
+                        onChanged: (enabled) async {
+                          soundService.playSfx(SoundEffect.switchToggle);
+                          if (enabled) {
+                            final granted = await _requestNotificationPermission(context);
+                            if (granted) {
+                              await notifier.toggleNotifications(true);
+                            }
+                          } else {
+                            await notifier.toggleNotifications(false);
                           }
-                        } else {
-                          await notifier.toggleNotifications(false);
-                        }
-                      },
-                      secondary: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: state.isNotificationsEnabled
-                              ? ScholarlyTheme.accentBlue.withValues(alpha: 0.15)
-                              : Colors.white.withValues(alpha: 0.35),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
+                        },
+                        secondary: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
                             color: state.isNotificationsEnabled
-                                ? ScholarlyTheme.accentBlue.withValues(alpha: 0.25)
-                                : Colors.white.withValues(alpha: 0.5),
-                            width: 1,
+                                ? ScholarlyTheme.accentBlue.withValues(alpha: 0.15)
+                                : ScholarlyTheme.accentBlue.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: state.isNotificationsEnabled
+                                  ? ScholarlyTheme.accentBlue.withValues(alpha: 0.25)
+                                  : ScholarlyTheme.accentBlue.withValues(alpha: 0.15),
+                              width: 1,
+                            ),
+                          ),
+                          child: Icon(
+                            state.isNotificationsEnabled
+                                ? Icons.notifications_active_rounded
+                                : Icons.notifications_off_rounded,
+                            color: state.isNotificationsEnabled
+                                ? ScholarlyTheme.accentBlue
+                                : ScholarlyTheme.accentBlue.withValues(alpha: 0.6),
+                            size: 20,
                           ),
                         ),
-                        child: Icon(
-                          state.isNotificationsEnabled
-                              ? Icons.notifications_active_rounded
-                              : Icons.notifications_off_rounded,
-                          color: state.isNotificationsEnabled
-                              ? ScholarlyTheme.accentBlue
-                              : ScholarlyTheme.textPrimary,
-                          size: 20,
+                        title: Text(
+                          'Notifications',
+                          style: GoogleFonts.inter(
+                            color: ScholarlyTheme.textPrimary,
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                      title: Text(
-                        'Master Toggle',
-                        style: GoogleFonts.inter(
-                          color: ScholarlyTheme.textPrimary,
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
+                        subtitle: Text(
+                          'Enable or disable all app notifications',
+                          style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 11),
                         ),
+                        activeThumbColor: ScholarlyTheme.accentBlue,
+                        activeTrackColor: ScholarlyTheme.accentBlue.withValues(alpha: 0.3),
+                        inactiveThumbColor: ScholarlyTheme.accentBlue.withValues(alpha: 0.6),
+                        inactiveTrackColor: ScholarlyTheme.accentBlue.withValues(alpha: 0.15),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                       ),
-                      subtitle: Text(
-                        'Enable or disable all app notifications',
-                        style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 11),
-                      ),
-                      activeThumbColor: ScholarlyTheme.accentBlue,
-                      activeTrackColor: ScholarlyTheme.accentBlue.withValues(alpha: 0.3),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                     ),
                   ),
                 ),
@@ -213,7 +288,7 @@ class _NotificationSettingsPageState extends ConsumerState<NotificationSettingsP
 
               const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
-              // Settings Categories (disabled if master toggle is false)
+              // Settings Categories (disabled if notifications are false)
               SliverList(
                 delegate: SliverChildListDelegate([
                   AnimatedOpacity(

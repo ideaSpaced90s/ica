@@ -6,13 +6,14 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../application/assignment_provider.dart';
 import '../application/battleground_provider.dart';
 import '../application/chess_provider.dart';
 import '../application/lifetime_xp_provider.dart';
 import '../domain/models/ai_avatar.dart';
+import '../domain/models/assignment_state.dart';
 import '../domain/models/lifetime_xp_state.dart';
 import '../domain/performance_ledger_entry.dart';
-import 'mobile_navigation_shell.dart';
 import 'scholarly_theme.dart';
 import 'widgets/ambient_scaffold.dart';
 
@@ -25,6 +26,7 @@ class AchievementsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final chessState = ref.watch(chessProvider);
     final bgState = ref.watch(battlegroundProvider);
+    final assignmentState = ref.watch(assignmentProvider);
     final wins = bgState.cachedLedgerEntries
         .where(
           (entry) =>
@@ -58,14 +60,49 @@ class AchievementsPage extends ConsumerWidget {
                 ),
               ),
             ),
-            if (wins.isEmpty)
-              SliverFillRemaining(
-                hasScrollBody: false,
-                child: _EmptyAchievements(
-                  onBattleground: () {
-                    ref.read(mobileNavIndexProvider.notifier).state = 2;
-                  },
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+                child: Text(
+                  'SEASON PERFORMANCE',
+                  style: GoogleFonts.outfit(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                    color: ScholarlyTheme.textMuted,
+                    letterSpacing: 0.5,
+                  ),
                 ),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
+                child: _FormFactorSeasonCard(state: assignmentState),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(18, 0, 18, 16),
+                child: _SeasonHistoryPanel(history: assignmentState.seasonHistory),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+                child: Text(
+                  '🏆 VICTORY GALLERY',
+                  style: GoogleFonts.outfit(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                    color: ScholarlyTheme.textMuted,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+            ),
+            if (wins.isEmpty)
+              const SliverToBoxAdapter(
+                child: _EmptyAchievements(),
               )
             else
               SliverPadding(
@@ -936,15 +973,13 @@ class _AchievementDetailPage extends StatelessWidget {
 }
 
 class _EmptyAchievements extends StatelessWidget {
-  const _EmptyAchievements({required this.onBattleground});
-
-  final VoidCallback onBattleground;
+  const _EmptyAchievements();
 
   @override
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
         child: JuicyGlassCard(
           borderRadius: 24,
           padding: const EdgeInsets.all(24),
@@ -983,22 +1018,6 @@ class _EmptyAchievements extends StatelessWidget {
                   fontSize: 13,
                   height: 1.45,
                   fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 20),
-              FilledButton.icon(
-                onPressed: onBattleground,
-                icon: const Icon(Icons.sports_martial_arts_rounded, size: 18),
-                label: Text(
-                  'ENTER BATTLEGROUND',
-                  style: GoogleFonts.inter(fontWeight: FontWeight.w900),
-                ),
-                style: FilledButton.styleFrom(
-                  backgroundColor: ScholarlyTheme.accentBlue,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
                 ),
               ),
             ],
@@ -1160,6 +1179,307 @@ class _DetailSection extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           child,
+        ],
+      ),
+    );
+  }
+}
+
+Color _getRankColor(String rank) {
+  switch (rank.toLowerCase()) {
+    case 'bronze':
+      return const Color(0xFF92400E);
+    case 'silver':
+      return const Color(0xFF6B7280);
+    case 'gold':
+      return const Color(0xFFF59E0B);
+    case 'platinum':
+      return const Color(0xFF0D9488);
+    case 'diamond':
+      return const Color(0xFF7C3AED);
+    default:
+      return const Color(0xFF6B7280);
+  }
+}
+
+class _FormFactorSeasonCard extends StatelessWidget {
+  const _FormFactorSeasonCard({required this.state});
+
+  final AssignmentState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final currentLp = state.currentMonthLp;
+    final rank = state.formFactorRank;
+    final rankColor = _getRankColor(rank);
+
+    // Days remaining in month
+    final now = DateTime.now();
+    final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
+    final daysLeft = daysInMonth - now.day;
+
+    // Form Factor Progress toward next rank
+    int nextRankLp = 300;
+    int currentRankStartLp = 0;
+    if (currentLp >= 2000) {
+      nextRankLp = 3000; // soft cap
+      currentRankStartLp = 2000;
+    } else if (currentLp >= 1200) {
+      nextRankLp = 2000;
+      currentRankStartLp = 1200;
+    } else if (currentLp >= 700) {
+      nextRankLp = 1200;
+      currentRankStartLp = 700;
+    } else if (currentLp >= 300) {
+      nextRankLp = 700;
+      currentRankStartLp = 300;
+    }
+
+    final double lpProgress = ((currentLp - currentRankStartLp) / (nextRankLp - currentRankStartLp)).clamp(0.0, 1.0);
+
+    return JuicyGlassCard(
+      padding: const EdgeInsets.all(20),
+      borderRadius: 20,
+      backgroundColor: ScholarlyTheme.backgroundDark.withValues(alpha: 0.85),
+      borderColor: rankColor.withValues(alpha: 0.4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.shield_rounded, color: rankColor, size: 22),
+                  const SizedBox(width: 8),
+                  Text(
+                    '⚔️ FORM FACTOR',
+                    style: GoogleFonts.outfit(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white12,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '$daysLeft Days Left',
+                  style: GoogleFonts.jetBrainsMono(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white70,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '${rank.toUpperCase()} RANK',
+                style: GoogleFonts.outfit(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                  color: rankColor,
+                ),
+              ),
+              Text(
+                '${NumberFormat("#,###").format(currentLp)} LP',
+                style: GoogleFonts.jetBrainsMono(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: lpProgress,
+              minHeight: 6,
+              backgroundColor: Colors.white10,
+              color: rankColor,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '${state.monthlyWins}W • ${state.monthlyDraws}D • ${state.monthlyLosses}L',
+                style: GoogleFonts.jetBrainsMono(
+                  fontSize: 12,
+                  color: Colors.white70,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Text(
+                'Assignments LP: +${state.monthlyAssignmentsCompleted * 15}',
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  color: Colors.white54,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SeasonHistoryPanel extends StatelessWidget {
+  const _SeasonHistoryPanel({required this.history});
+
+  final List<MonthlySeasonHistory> history;
+
+  @override
+  Widget build(BuildContext context) {
+    return JuicyGlassCard(
+      padding: const EdgeInsets.all(18),
+      borderRadius: 20,
+      borderColor: Colors.teal.withValues(alpha: 0.3),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.history_edu_rounded, color: Colors.teal, size: 18),
+                  const SizedBox(width: 8),
+                  Text(
+                    '📜 SEASONS HISTORY',
+                    style: GoogleFonts.outfit(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.teal,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ),
+              Text(
+                '${history.length} Seasons',
+                style: GoogleFonts.inter(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: ScholarlyTheme.textMuted,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (history.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: Text(
+                'No season data recorded yet. Your rank will archive here at the end of the month!',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: ScholarlyTheme.textMuted,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: history.length,
+              separatorBuilder: (context, index) => const Divider(color: ScholarlyTheme.panelStroke, height: 16),
+              itemBuilder: (context, index) {
+                final season = history[history.length - 1 - index]; // Show newest first
+                final rankColor = _getRankColor(season.rank);
+
+                // Parse month ID like "2026-06" to friendly "June 2026"
+                String displayMonth = season.monthId;
+                try {
+                  final parts = season.monthId.split('-');
+                  if (parts.length == 2) {
+                    final year = int.parse(parts[0]);
+                    final month = int.parse(parts[1]);
+                    final date = DateTime(year, month, 1);
+                    displayMonth = DateFormat('MMMM yyyy').format(date);
+                  }
+                } catch (_) {}
+
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              displayMonth,
+                              style: GoogleFonts.outfit(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: ScholarlyTheme.textPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${season.wins}W • ${season.draws}D • ${season.losses}L • ${season.assignmentsCompleted} Assignments',
+                              style: GoogleFonts.jetBrainsMono(
+                                fontSize: 11,
+                                color: ScholarlyTheme.textMuted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: rankColor.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: rankColor.withValues(alpha: 0.4), width: 1),
+                            ),
+                            child: Text(
+                              season.rank.toUpperCase(),
+                              style: GoogleFonts.outfit(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w900,
+                                color: rankColor,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${NumberFormat("#,###").format(season.lp)} LP',
+                            style: GoogleFonts.jetBrainsMono(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: ScholarlyTheme.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
         ],
       ),
     );
