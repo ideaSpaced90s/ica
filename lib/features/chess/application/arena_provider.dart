@@ -618,20 +618,6 @@ class ArenaNotifier extends Notifier<ArenaState> {
           : score / 100.0;
     }
 
-    if (parsed['type'] == 'info') {
-      final now = DateTime.now();
-      if (now.difference(_lastInfoUpdateTime).inMilliseconds < 250) {
-        return;
-      }
-      _lastInfoUpdateTime = now;
-    }
-
-    state = state.copyWith(
-      analysis: {...state.analysis, ...parsed},
-      currentEvaluation: newEval ?? state.currentEvaluation,
-      engineReady: true,
-    );
-
     if (parsed.containsKey('multipv') && parsed.containsKey('pv')) {
       final mpv = parsed['multipv'] as int;
       final pvList = parsed['pv'] as List<String>;
@@ -700,6 +686,20 @@ class ArenaNotifier extends Notifier<ArenaState> {
         _makeEngineMove(bestMoveToPlay);
       }
     }
+
+    if (parsed['type'] == 'info') {
+      final now = DateTime.now();
+      if (now.difference(_lastInfoUpdateTime).inMilliseconds < 250) {
+        return;
+      }
+      _lastInfoUpdateTime = now;
+    }
+
+    state = state.copyWith(
+      analysis: {...state.analysis, ...parsed},
+      currentEvaluation: newEval ?? state.currentEvaluation,
+      engineReady: true,
+    );
   }
 
   void _makeEngineMove(String move) {
