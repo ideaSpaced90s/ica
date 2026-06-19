@@ -50,13 +50,15 @@ class AchievementsPage extends ConsumerWidget {
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(18, 18, 18, 12),
-                child: _AchievementHeader(
+                child: _UserEloStrengthCard(
                   userName: chessState.userName,
                   avatarPath: chessState.userAvatarPath,
                   elo: bgState.consolidatedRating,
                   streak: bgState.totalWinningStreak,
-                  xpState: xpState,
-                  xpNotifier: xpNotifier,
+                  totalGames: bgState.totalRatedGamesCount,
+                  bulletElo: bgState.bulletElo,
+                  blitzElo: bgState.blitzElo,
+                  rapidElo: bgState.rapidElo,
                 ),
               ),
             ),
@@ -84,6 +86,29 @@ class AchievementsPage extends ConsumerWidget {
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(18, 0, 18, 16),
                 child: _SeasonHistoryPanel(history: assignmentState.seasonHistory),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+                child: Text(
+                  '⚡ LIFETIME XP',
+                  style: GoogleFonts.outfit(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                    color: ScholarlyTheme.textMuted,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(18, 0, 18, 16),
+                child: _LifetimeXpCard(
+                  xpState: xpState,
+                  xpNotifier: xpNotifier,
+                ),
               ),
             ),
             SliverToBoxAdapter(
@@ -247,20 +272,209 @@ class _VictoryAchievement {
   }
 }
 
-class _AchievementHeader extends StatelessWidget {
-  const _AchievementHeader({
+class _UserEloStrengthCard extends StatelessWidget {
+  const _UserEloStrengthCard({
     required this.userName,
     required this.avatarPath,
     required this.elo,
     required this.streak,
-    required this.xpState,
-    required this.xpNotifier,
+    required this.totalGames,
+    required this.bulletElo,
+    required this.blitzElo,
+    required this.rapidElo,
   });
 
   final String userName;
   final String avatarPath;
   final int elo;
   final int streak;
+  final int totalGames;
+  final int bulletElo;
+  final int blitzElo;
+  final int rapidElo;
+
+  @override
+  Widget build(BuildContext context) {
+    final matchedAvatar = AiAvatar.getBestMatch(elo);
+
+    return JuicyGlassCard(
+      borderRadius: 24,
+      padding: const EdgeInsets.all(20),
+      borderColor: ScholarlyTheme.accentBlue.withValues(alpha: 0.3),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // User Avatar & Name
+          Row(
+            children: [
+              _UserAvatar(path: avatarPath, size: 64),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      userName,
+                      style: GoogleFonts.outfit(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        color: ScholarlyTheme.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(
+                          matchedAvatar.icon,
+                          color: matchedAvatar.color,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            '${matchedAvatar.name} Level (${matchedAvatar.fideRatingRange} FIDE)',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: ScholarlyTheme.textMuted,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          const Divider(color: ScholarlyTheme.panelStroke, height: 1),
+          const SizedBox(height: 18),
+
+          // Main Elo & Streak display
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              Column(
+                children: [
+                  Text(
+                    'CURRENT ELO',
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      color: ScholarlyTheme.textMuted,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.analytics_rounded, color: ScholarlyTheme.accentBlue, size: 24),
+                      const SizedBox(width: 6),
+                      Text(
+                        '$elo',
+                        style: GoogleFonts.outfit(
+                          fontSize: 32,
+                          fontWeight: FontWeight.w900,
+                          color: ScholarlyTheme.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              Container(height: 36, width: 1, color: ScholarlyTheme.panelStroke),
+              Column(
+                children: [
+                  Text(
+                    'WINNING STREAK',
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      color: ScholarlyTheme.textMuted,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.local_fire_department_rounded, color: Color(0xFFF59E0B), size: 24),
+                      const SizedBox(width: 6),
+                      Text(
+                        '$streak',
+                        style: GoogleFonts.outfit(
+                          fontSize: 32,
+                          fontWeight: FontWeight.w900,
+                          color: ScholarlyTheme.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          const Divider(color: ScholarlyTheme.panelStroke, height: 1),
+          const SizedBox(height: 16),
+
+          // Sub-ratings: Bullet, Blitz, Rapid ELOs
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _SubRatingColumn(label: '🚄 Bullet', value: '$bulletElo'),
+              _SubRatingColumn(label: '⚡ Blitz', value: '$blitzElo'),
+              _SubRatingColumn(label: '🐢 Rapid', value: '$rapidElo'),
+              _SubRatingColumn(label: '📊 Games', value: '$totalGames'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SubRatingColumn extends StatelessWidget {
+  const _SubRatingColumn({required this.label, required this.value});
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 10,
+            color: ScholarlyTheme.textMuted,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: GoogleFonts.jetBrainsMono(
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            color: ScholarlyTheme.textPrimary,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _LifetimeXpCard extends StatelessWidget {
+  const _LifetimeXpCard({
+    required this.xpState,
+    required this.xpNotifier,
+  });
+
   final LifetimeXpState xpState;
   final LifetimeXpNotifier xpNotifier;
 
@@ -305,30 +519,24 @@ class _AchievementHeader extends StatelessWidget {
           // Header info
           Row(
             children: [
-              _UserAvatar(path: avatarPath, size: 58),
-              const SizedBox(width: 14),
+              const Icon(
+                Icons.bolt_rounded,
+                color: Color(0xFFF59E0B),
+                size: 32,
+              ),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.bolt_rounded,
-                          color: Color(0xFFF59E0B),
-                          size: 20,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          '⚡ LIFETIME XP',
-                          style: GoogleFonts.outfit(
-                            color: const Color(0xFFF59E0B),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 1.2,
-                          ),
-                        ),
-                      ],
+                    Text(
+                      'TOTAL LIFETIME XP',
+                      style: GoogleFonts.outfit(
+                        color: const Color(0xFFF59E0B),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.2,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     PremiumGradientText(
@@ -409,19 +617,6 @@ class _AchievementHeader extends StatelessWidget {
               _XpSourceColumn('📝 Reviews', '+${NumberFormat("#,###").format(xpNotifier.reviewsXp)}'),
             ],
           ),
-          const SizedBox(height: 16),
-          const Divider(color: ScholarlyTheme.panelStroke, height: 1),
-          const SizedBox(height: 14),
-
-          // Elo & Streak Info
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _StatMiniChip(label: 'CURRENT ELO', value: '$elo', icon: Icons.speed_rounded, color: ScholarlyTheme.accentBlue),
-              Container(height: 20, width: 1, color: ScholarlyTheme.panelStroke),
-              _StatMiniChip(label: 'WINNING STREAK', value: '$streak', icon: Icons.local_fire_department_rounded, color: const Color(0xFFF59E0B)),
-            ],
-          ),
         ],
       ),
     );
@@ -447,38 +642,6 @@ class _XpSourceColumn extends StatelessWidget {
         Text(
           value,
           style: GoogleFonts.jetBrainsMono(fontSize: 13, fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary),
-        ),
-      ],
-    );
-  }
-}
-
-class _StatMiniChip extends StatelessWidget {
-  final String label;
-  final String value;
-  final IconData icon;
-  final Color color;
-
-  const _StatMiniChip({required this.label, required this.value, required this.icon, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, color: color, size: 18),
-        const SizedBox(width: 8),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: GoogleFonts.inter(fontSize: 9, color: ScholarlyTheme.textMuted, fontWeight: FontWeight.bold),
-            ),
-            Text(
-              value,
-              style: GoogleFonts.jetBrainsMono(fontSize: 14, fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary),
-            ),
-          ],
         ),
       ],
     );
