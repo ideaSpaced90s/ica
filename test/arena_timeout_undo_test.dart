@@ -54,12 +54,23 @@ class FakeSavedGameRepository extends Fake implements SavedGameRepository {
 }
 
 class FakeSettingsRepository extends Fake implements SettingsRepository {
+  AppSettings _settings = AppSettings();
+
   @override
   Future<AppSettings> loadSettings({bool forceReload = false}) async {
-    return AppSettings();
+    return _settings;
   }
   @override
-  Future<void> saveSettings(AppSettings settings) async {}
+  Future<void> saveSettings(AppSettings settings) async {
+    _settings = settings;
+  }
+  @override
+  Future<AppSettings> updateSettings(
+    AppSettings Function(AppSettings current) updater,
+  ) async {
+    _settings = updater(_settings);
+    return _settings;
+  }
 }
 
 void main() {

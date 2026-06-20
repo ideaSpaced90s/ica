@@ -804,7 +804,7 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
         text = "Go to Academy → Historical Cinema — watch until the final move";
         break;
       case DailyTaskType.analysis:
-        text = "Go to Study Lab — perform move analysis on a saved game";
+        text = "Find a lost rated game, favorite it to add to Game Library in Analysis, and make at least 10 moves/variations to study the loss.";
         break;
     }
 
@@ -900,8 +900,10 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      "Apprentice, you have successfully completed the assignment:",
+                      "You have successfully completed the assignment:",
                       textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.inter(
                         fontSize: 13,
                         color: ScholarlyTheme.textPrimary,

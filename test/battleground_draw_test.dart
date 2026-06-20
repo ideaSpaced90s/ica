@@ -75,10 +75,7 @@ class FakeChessSoundService extends Fake implements ChessSoundService {
 
 class FakeChessHapticsService extends Fake implements ChessHapticsService {
   @override
-  Future<void> selection() async {}
-
-  @override
-  void updateSettings({required bool hapticsEnabled}) {}
+  dynamic noSuchMethod(Invocation invocation) => Future<void>.value();
 }
 
 class FakeAuthService extends Fake implements AuthService {
@@ -101,12 +98,23 @@ class FakeSavedGameRepository extends Fake implements SavedGameRepository {
 }
 
 class FakeSettingsRepository extends Fake implements SettingsRepository {
+  AppSettings _settings = AppSettings();
+
   @override
   Future<AppSettings> loadSettings({bool forceReload = false}) async {
-    return AppSettings();
+    return _settings;
   }
   @override
-  Future<void> saveSettings(AppSettings settings) async {}
+  Future<void> saveSettings(AppSettings settings) async {
+    _settings = settings;
+  }
+  @override
+  Future<AppSettings> updateSettings(
+    AppSettings Function(AppSettings current) updater,
+  ) async {
+    _settings = updater(_settings);
+    return _settings;
+  }
 }
 
 void main() {

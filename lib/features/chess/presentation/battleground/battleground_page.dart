@@ -979,8 +979,6 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Are you sure you want to resign?', textAlign: TextAlign.center),
-            const SizedBox(height: 12),
             Text('This will count as an immediate defeat and your rating will decrease.', textAlign: TextAlign.center, style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 12, height: 1.5)),
           ],
         ),
@@ -1018,8 +1016,6 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Are you sure you want to offer a draw?', textAlign: TextAlign.center),
-            const SizedBox(height: 12),
             Text('You can make at most 3 draw offers per game. Offers remaining: $remainingOffers.', textAlign: TextAlign.center, style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 12, height: 1.5)),
           ],
         ),

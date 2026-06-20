@@ -11,7 +11,6 @@ import '../../domain/chess_game.dart';
 
 import '../shared/themes/chess_theme.dart';
 import '../shared/widgets/chess_piece_widget.dart';
-import '../shared/widgets/orbiting_star_animation.dart';
 import '../shared/widgets/promotion_overlay.dart';
 // Removed unused import
 
@@ -115,8 +114,6 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
                             _isStartOrEndSquare(squareName, bgState.lastMove);
                         final isLastMoveInBetween =
                             _isInBetweenSquare(squareName, bgState.lastMove);
-                        final isThreatened = bgState.threatenedSquares
-                            .contains(squareName);
                         final isPremoveStartOrEnd =
                             bgState.premoveFrom == squareName ||
                             bgState.premoveTo == squareName;
@@ -167,11 +164,8 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
                                       ? const Duration(milliseconds: 160)
                                       : Duration.zero,
                                   curve: Curves.easeOutCubic,
-                                  decoration: BoxDecoration(
-                                    color: isLight
-                                        ? chessTheme.lightSquare
-                                        : chessTheme.darkSquare,
-                                    border: chessTheme.getSquareBorder(isSelected, isDragHover),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.transparent,
                                   ),
                                   child: Material(
                                     color: Colors.transparent,
@@ -182,20 +176,60 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
                                       ),
                                       child: Stack(
                                         children: [
-                                          // 3. Square Texture/Painter (Classic has none)
-                                          if (chessTheme.getSquarePainter(
-                                                isLight,
-                                                0,
-                                              ) !=
-                                              null)
-                                            CustomPaint(
-                                              painter: chessTheme
-                                                  .getSquarePainter(
-                                                    isLight,
-                                                    0.0,
+                                          // Background tile (with press animation)
+                                          Positioned.fill(
+                                            child: AnimatedScale(
+                                              scale: isSelected ? 0.93 : 1.0,
+                                              duration: const Duration(milliseconds: 200),
+                                              curve: Curves.easeOutCubic,
+                                              child: Stack(
+                                                children: [
+                                                  Positioned.fill(
+                                                    child: AnimatedContainer(
+                                                      duration: ref.read(chessProvider.notifier).isAnimationTypeEnabled('feedback')
+                                                          ? const Duration(milliseconds: 160)
+                                                          : Duration.zero,
+                                                      curve: Curves.easeOutCubic,
+                                                      decoration: BoxDecoration(
+                                                        color: isLight
+                                                            ? chessTheme.lightSquare
+                                                            : chessTheme.darkSquare,
+                                                        borderRadius: BorderRadius.circular(isSelected ? 6.0 : 0.0),
+                                                        border: chessTheme.getSquareBorder(isSelected, isDragHover),
+                                                      ),
+                                                    ),
                                                   ),
-                                              size: Size.infinite,
+                                                  if (chessTheme.getSquarePainter(isLight, 0) != null)
+                                                    Positioned.fill(
+                                                      child: ClipRRect(
+                                                        borderRadius: BorderRadius.circular(isSelected ? 6.0 : 0.0),
+                                                        child: CustomPaint(
+                                                          painter: chessTheme.getSquarePainter(isLight, 0.0),
+                                                          size: Size.infinite,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  if (isLastMoveStartOrEnd || isLastMoveInBetween)
+                                                    Positioned.fill(
+                                                      child: ClipRRect(
+                                                        borderRadius: BorderRadius.circular(isSelected ? 6.0 : 0.0),
+                                                        child: TweenAnimationBuilder<double>(
+                                                          key: ValueKey('lm_${bgState.lastMove}'),
+                                                          tween: Tween(
+                                                            begin: isLastMoveStartOrEnd ? 0.35 : 0.15,
+                                                            end: isLastMoveStartOrEnd ? 0.24 : 0.09,
+                                                          ),
+                                                          duration: Duration.zero,
+                                                          builder: (context, opacity, _) {
+                                                            return chessTheme.buildLastMoveHighlight(context, opacity);
+                                                          },
+                                                        ),
+                                                      ),
+                                                    ),
+                                                ],
+                                              ),
                                             ),
+                                          ),
                                           // 4. Selection Effects
                                           if (isSelected)
                                             chessTheme.buildSelectionRing(context),
@@ -205,49 +239,16 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
                                               context,
                                               piece != null,
                                             ),
-                                          if (isThreatened &&
-                                              ref
-                                                  .read(
-                                                    chessProvider.notifier,
-                                                  )
-                                                  .isAnimationTypeEnabled(
-                                                    'indicators',
-                                                  ))
-                                            const OrbitingStarAnimation(
-                                              color: Colors.redAccent,
-                                              isActive: true,
-                                              isCircle: true,
-                                            ),
-                                          // 6. Last Move Highlight (Classic uses opacity)
-                                          if (isLastMoveStartOrEnd || isLastMoveInBetween)
-                                            TweenAnimationBuilder<double>(
-                                              key: ValueKey(
-                                                'lm_${bgState.lastMove}',
-                                              ),
-                                              tween: Tween(
-                                                begin: isLastMoveStartOrEnd ? 0.35 : 0.15,
-                                                end: isLastMoveStartOrEnd ? 0.24 : 0.09,
-                                              ),
-                                              duration: Duration.zero,
-                                              curve: Curves.easeOutCubic,
-                                              builder: (context, opacity, _) {
-                                                return chessTheme
-                                                    .buildLastMoveHighlight(
-                                                      context,
-                                                      opacity,
-                                                    );
-                                              },
-                                            ),
-                                          if (isPremoveStartOrEnd)
-                                            Container(
-                                              decoration: BoxDecoration(
-                                                color: Colors.redAccent.withValues(alpha: 0.25),
-                                                border: Border.all(
-                                                  color: Colors.redAccent,
-                                                  width: 2.0,
-                                                ),
-                                              ),
-                                            ),
+                                           if (isPremoveStartOrEnd)
+                                             Container(
+                                               decoration: BoxDecoration(
+                                                 color: Colors.green.withValues(alpha: 0.25),
+                                                 border: Border.all(
+                                                   color: Colors.green,
+                                                   width: 2.0,
+                                                 ),
+                                               ),
+                                             ),
                                            Builder(
                                              builder: (context) {
                                                 final localPiece = piece;
@@ -271,12 +272,17 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
                                                  ),
                                                );
 
-                                               if (isGhostPiece) {
-                                                 pieceWidget = Opacity(
-                                                   opacity: 0.5,
-                                                   child: pieceWidget,
-                                                 );
-                                               }
+                                                if (isGhostPiece) {
+                                                  pieceWidget = Opacity(
+                                                    opacity: 0.5,
+                                                    child: pieceWidget,
+                                                  );
+                                                }
+
+                                                pieceWidget = BattlegroundPieceEffectsWrapper(
+                                                  isSelected: isSelected && !isGhostPiece,
+                                                  child: pieceWidget,
+                                                );
 
                                                if (squareName == _dropSquare) {
                                                  pieceWidget = AnimatedBuilder(
@@ -408,6 +414,10 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
     final bgState = ref.read(battlegroundProvider);
     final displayGame = ChessGame(fen: bgState.currentBoardFen);
 
+    if (ref.read(chessProvider).isHapticsEnabled) {
+      ref.read(chessHapticsServiceProvider).selection();
+    }
+
     if (_selectedSquare != null && _legalTargets.contains(squareName)) {
       ref.read(battlegroundProvider.notifier).makeMove(_selectedSquare!, squareName);
       _clearSelection();
@@ -450,10 +460,16 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
     if (isPlayerTurn) {
       if (piece.color == chess_lib.Color.WHITE && !isWhiteTurn) {
         _clearSelection();
+        if (ref.read(chessProvider).isHapticsEnabled) {
+          ref.read(chessHapticsServiceProvider).errorFeedback();
+        }
         return;
       }
       if (piece.color == chess_lib.Color.BLACK && isWhiteTurn) {
         _clearSelection();
+        if (ref.read(chessProvider).isHapticsEnabled) {
+          ref.read(chessHapticsServiceProvider).errorFeedback();
+        }
         return;
       }
     } else {
@@ -461,6 +477,9 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
       if (!isPlayerPiece) {
         _clearSelection();
         ref.read(battlegroundProvider.notifier).clearPremove();
+        if (ref.read(chessProvider).isHapticsEnabled) {
+          ref.read(chessHapticsServiceProvider).errorFeedback();
+        }
         return;
       }
       // Clear current pre-move when starting a new selection during opponent's turn
@@ -585,3 +604,191 @@ class _BattlegroundBoardState extends ConsumerState<BattlegroundBoard>
     );
   }
 }
+
+class BattlegroundPieceEffectsWrapper extends StatefulWidget {
+  final Widget child;
+  final bool isSelected;
+
+  const BattlegroundPieceEffectsWrapper({
+    super.key,
+    required this.child,
+    required this.isSelected,
+  });
+
+  @override
+  State<BattlegroundPieceEffectsWrapper> createState() =>
+      _BattlegroundPieceEffectsWrapperState();
+}
+
+class _BattlegroundPieceEffectsWrapperState
+    extends State<BattlegroundPieceEffectsWrapper>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2800),
+    );
+    if (widget.isSelected) {
+      _ctrl.repeat();
+    }
+  }
+
+  @override
+  void didUpdateWidget(BattlegroundPieceEffectsWrapper oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isSelected != oldWidget.isSelected) {
+      if (widget.isSelected) {
+        if (!_ctrl.isAnimating) _ctrl.repeat();
+      } else {
+        _ctrl.stop();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedScale(
+      scale: widget.isSelected ? 1.12 : 1.0,
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeOutCubic,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          // Back layer: passes behind the piece (z <= 0)
+          if (widget.isSelected)
+            Positioned.fill(
+              child: AnimatedBuilder(
+                animation: _ctrl,
+                builder: (context, _) {
+                  return CustomPaint(
+                    painter: _SelectionOrbitPainter(
+                      progress: _ctrl.value,
+                      frontPass: false,
+                    ),
+                  );
+                },
+              ),
+            ),
+          // Chess piece
+          widget.child,
+          // Front layer: passes in front of the piece (z > 0)
+          if (widget.isSelected)
+            Positioned.fill(
+              child: AnimatedBuilder(
+                animation: _ctrl,
+                builder: (context, _) {
+                  return CustomPaint(
+                    painter: _SelectionOrbitPainter(
+                      progress: _ctrl.value,
+                      frontPass: true,
+                    ),
+                  );
+                },
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SelectionOrbitPainter extends CustomPainter {
+  final double progress;
+  final bool frontPass;
+
+  static const _tilt = 22.0 * pi / 180.0; // 22° tilt
+  static const _trailCount = 28;
+  static const Color _headColor = Color(0xFFF59E0B);
+
+  const _SelectionOrbitPainter({required this.progress, required this.frontPass});
+
+  static ({double x, double y, double z}) _orbit(
+    double theta,
+    double cx,
+    double headY,
+    double R,
+  ) {
+    final sinT = sin(theta);
+    final cosT = cos(theta);
+    return (
+      x: cx + R * cosT,
+      y: headY - R * sinT * sin(_tilt),
+      z: R * sinT * cos(_tilt),
+    );
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final cx = size.width * 0.5;
+    final headY = size.height * 0.25; // forehead position
+    final R = size.width * 0.22;
+
+    // Current head angle (full circle per loop)
+    final theta0 = progress * 2 * pi;
+
+    // Build and draw the comet trail (newest -> oldest)
+    for (int i = 0; i < _trailCount; i++) {
+      final trailFrac = i / _trailCount;
+      final trailSpan = 1.0 * pi; // half-orbit trail length
+      final theta = theta0 - trailFrac * trailSpan;
+
+      final p = _orbit(theta, cx, headY, R);
+
+      // Depth filter: only draw on the correct layer
+      if (frontPass && p.z <= 0) continue;
+      if (!frontPass && p.z > 0) continue;
+
+      final alpha = (1.0 - trailFrac).clamp(0.0, 1.0);
+      final radius = (3.5 - trailFrac * 2.8).clamp(0.4, 3.5);
+
+      // Scale brightness by depth for a subtle 3-D cue
+      final depthFade = ((p.z / R + 1.0) * 0.5).clamp(0.3, 1.0);
+
+      final paint = Paint()
+        ..color = _headColor.withValues(alpha: alpha * 0.92 * depthFade)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, 1.0 + trailFrac * 2.5);
+
+      canvas.drawCircle(Offset(p.x, p.y), radius, paint);
+    }
+
+    // Draw the bright star head on the correct layer
+    final head = _orbit(theta0, cx, headY, R);
+    if ((frontPass && head.z > 0) || (!frontPass && head.z <= 0)) {
+      final pulse = (sin(progress * pi * 14) + 1) / 2;
+      final headR = 2.2 + pulse * 1.8;
+      final glowR = 5.0 + pulse * 3.0;
+
+      // Glow
+      canvas.drawCircle(
+        Offset(head.x, head.y),
+        glowR,
+        Paint()
+          ..color = _headColor.withValues(alpha: 0.55)
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, glowR),
+      );
+      // White hot core
+      canvas.drawCircle(
+        Offset(head.x, head.y),
+        headR,
+        Paint()
+          ..color = Colors.white
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.5),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_SelectionOrbitPainter old) =>
+      old.progress != progress || old.frontPass != frontPass;
+}
+

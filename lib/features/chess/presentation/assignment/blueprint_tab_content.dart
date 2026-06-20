@@ -563,8 +563,8 @@ class _BlueprintTabContentState extends ConsumerState<BlueprintTabContent>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 '🏝️ ${tier.name.toUpperCase()} ISLAND TRAINING',
@@ -575,6 +575,7 @@ class _BlueprintTabContentState extends ConsumerState<BlueprintTabContent>
                   letterSpacing: 0.5,
                 ),
               ),
+              const SizedBox(height: 4),
               Text(
                 'Focus: ${tier.scotomaFocus}',
                 style: GoogleFonts.inter(

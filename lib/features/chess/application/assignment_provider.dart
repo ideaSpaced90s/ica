@@ -646,7 +646,7 @@ class AssignmentNotifier extends Notifier<AssignmentState> {
     // 4. Saved Game Analysis Task
     final analysisTask = DailyTask(
       title: "Saved Game Analysis",
-      description: "Analyze a saved/completed game in Study Lab by making at least 10 moves/variations.",
+      description: "Find a lost rated game and favorite it so it appears in your Game Library on the Analysis page. From there, open that game and make at least 10 moves/variations to study how the game is analyzed and why it was lost.",
       taskType: DailyTaskType.analysis,
       targetId: "analysis",
       targetValue: 10,

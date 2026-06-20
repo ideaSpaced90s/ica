@@ -1045,7 +1045,19 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
       );
     }
 
-    // Haptics and SFX are disabled in Battleground for snappiness
+    // Haptics enabled in Battleground when globally enabled, SFX disabled for snappiness
+    if (ref.read(chessProvider).isHapticsEnabled) {
+      final move = state.game.history.isEmpty ? null : state.game.history.last;
+      if (state.game.inCheckmate) {
+        _hapticsService.mateBurst();
+      } else if (state.game.inCheck) {
+        _hapticsService.checkPulse();
+      } else if (move?.move.captured != null) {
+        _hapticsService.heavyRook();
+      } else {
+        _hapticsService.softTap();
+      }
+    }
 
     final threatened = <String>[];
     final opponentColor = state.game.turn;
@@ -1804,7 +1816,11 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
   }
 
   void _triggerHeartbeatIfRequired(Duration time) {
-    // Heartbeat haptics disabled in Battleground for snappiness
+    if (ref.read(chessProvider).isHapticsEnabled &&
+        time <= const Duration(seconds: 10) &&
+        time.inMilliseconds % 1000 == 0) {
+      _hapticsService.heartbeat();
+    }
   }
 
   Future<void> _handleClockTimeout(String side) async {

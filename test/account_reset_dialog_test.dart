@@ -37,9 +37,7 @@ class FakeChessSoundService extends Fake implements ChessSoundService {
 
 class FakeChessHapticsService extends Fake implements ChessHapticsService {
   @override
-  Future<void> selection() async {}
-  @override
-  void updateSettings({required bool hapticsEnabled}) {}
+  dynamic noSuchMethod(Invocation invocation) => Future<void>.value();
 }
 
 class FakeCloudSyncNotifier extends CloudSyncNotifier {
