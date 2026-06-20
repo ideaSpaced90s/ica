@@ -17,6 +17,8 @@ import 'themes/academy_scholar_theme.dart';
 import '../widgets/ambient_scaffold.dart';
 import '../mobile_navigation_shell.dart';
 import 'dart:ui';
+import '../../application/store_provider.dart';
+import '../widgets/premium_nudge_overlay.dart';
 
 
 class AcademyPage extends ConsumerStatefulWidget {
@@ -1158,6 +1160,19 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
   Widget build(BuildContext context) {
     final state = ref.watch(chessProvider);
     final notifier = ref.read(chessProvider.notifier);
+
+    final storeState = ref.watch(storeProvider);
+    final storeNotifier = ref.read(storeProvider.notifier);
+    final isPremium = storeState.isPremium;
+    final isLimitReached = !isPremium && !storeNotifier.canUseChipPrompt() && !(state.recentMoves.isNotEmpty && !state.game.gameOver);
+
+    if (isLimitReached) {
+      return const PremiumNudgeOverlay(
+        isFullScreen: true,
+        title: 'Daily Academy Limit Reached',
+        description: 'You have used your 5 free AI chipsets for today. Upgrade to unlock unlimited coaching.',
+      );
+    }
 
     ref.listen<int>(mobileNavIndexProvider, (previous, current) {
       if (previous == 3 && current != 3) {

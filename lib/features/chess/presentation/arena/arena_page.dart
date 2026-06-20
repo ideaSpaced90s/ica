@@ -114,6 +114,7 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
       final arenaState = ref.read(arenaProvider);
       if (arenaState.recentMoves.isNotEmpty && !arenaState.isGameOver) {
         if (!arenaState.isPaused) {
+
           ref.read(arenaProvider.notifier).togglePause();
         }
       }
@@ -123,6 +124,20 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(arenaProvider);
+
+    final storeState = ref.watch(storeProvider);
+    final storeNotifier = ref.read(storeProvider.notifier);
+    final isPremium = storeState.isPremium;
+    final isLimitReached = !isPremium && !storeNotifier.canPlayArenaGame() && !(state.recentMoves.isNotEmpty && !state.isGameOver);
+
+    if (isLimitReached) {
+      return const PremiumNudgeOverlay(
+        isFullScreen: true,
+        title: 'Daily Arena Game Limit Reached',
+        description: 'You have played your 3 free Arena games for today. Upgrade to unlock unlimited games.',
+      );
+    }
+
     final showIntro = ref.watch(showArenaIntroProvider);
     final isLandscape = MediaQuery.of(context).size.width > MediaQuery.of(context).size.height;
 

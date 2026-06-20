@@ -22,6 +22,8 @@ import '../../application/onboarding_provider.dart';
 import '../../application/historical_cinema_provider.dart';
 import '../../application/tutorial_provider.dart';
 import '../academy/historical_cinema_page.dart';
+import '../../application/store_provider.dart';
+import '../widgets/premium_nudge_overlay.dart';
 
 class AssignmentPage extends ConsumerStatefulWidget {
   const AssignmentPage({super.key});
@@ -163,8 +165,6 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
             ],
             if (state.isCalibrated) ...[
               _buildCalendarStrip(state),
-              const SizedBox(height: 16),
-              _buildStreakCard(state),
               const SizedBox(height: 20),
             ],
             Row(
@@ -224,94 +224,77 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
       return SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
         padding: const EdgeInsets.all(24),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Left Column (Tasks and Greetings)
-            Expanded(
-              flex: state.isCalibrated ? 6 : 10,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (state.isCalibrated) ...[
-                    _buildChanakyaGreeting(state),
-                    const SizedBox(height: 20),
-                  ],
-                  if (state.isCalibrated &&
-                      state.goalDeadline != null &&
-                      DateTime.now().isAfter(state.goalDeadline!) &&
-                      bgState.consolidatedRating < state.goalElo) ...[
-                    _buildRevisionWarningCard(state),
-                    const SizedBox(height: 20),
-                  ],
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        "TODAY'S TRAINING",
-                        style: GoogleFonts.outfit(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: ScholarlyTheme.textPrimary,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                      if (state.isCalibrated)
-                        TextButton.icon(
-                          icon: const Icon(Icons.refresh_rounded, size: 16),
-                          label: Text("Reset", style: GoogleFonts.inter(fontSize: 11)),
-                          onPressed: () {
-                            ref.read(assignmentProvider.notifier).forceResetDaily();
-                          },
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  if (!state.isCalibrated)
-                    _buildCalibrationCard(state, bgState)
-                  else ...[
-                    ListView.separated(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: state.dailyTasks.length,
-                      separatorBuilder: (context, index) => const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        final task = state.dailyTasks[index];
-                        return _buildTaskCard(context, task, index, state);
-                      },
-                    ),
-                    const SizedBox(height: 24),
+        child: Center(
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 1000),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (state.isCalibrated) ...[
+                  _buildChanakyaGreeting(state),
+                  const SizedBox(height: 20),
+                  _buildCalendarStrip(state),
+                  const SizedBox(height: 24),
+                ],
+                if (state.isCalibrated &&
+                    state.goalDeadline != null &&
+                    DateTime.now().isAfter(state.goalDeadline!) &&
+                    bgState.consolidatedRating < state.goalElo) ...[
+                  _buildRevisionWarningCard(state),
+                  const SizedBox(height: 20),
+                ],
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
                     Text(
-                      "WEEKLY TRAINING GOAL",
+                      "TODAY'S TRAINING",
                       style: GoogleFonts.outfit(
-                        fontSize: 16,
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
                         color: ScholarlyTheme.textPrimary,
                         letterSpacing: 0.5,
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    _buildWeeklyGoalCard(context, state),
-                  ],
-                ],
-              ),
-            ),
-            if (state.isCalibrated) ...[
-              const SizedBox(width: 24),
-              // Right Column (Attendance Ledger & Streak Card)
-              Expanded(
-                flex: 4,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildCalendarStrip(state),
-                    const SizedBox(height: 16),
-                    _buildStreakCard(state),
+                    if (state.isCalibrated)
+                      TextButton.icon(
+                        icon: const Icon(Icons.refresh_rounded, size: 16),
+                        label: Text("Reset", style: GoogleFonts.inter(fontSize: 11)),
+                        onPressed: () {
+                          ref.read(assignmentProvider.notifier).forceResetDaily();
+                        },
+                      ),
                   ],
                 ),
-              ),
-            ],
-          ],
+                const SizedBox(height: 12),
+                if (!state.isCalibrated)
+                  _buildCalibrationCard(state, bgState)
+                else ...[
+                  ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: state.dailyTasks.length,
+                    separatorBuilder: (context, index) => const SizedBox(height: 12),
+                    itemBuilder: (context, index) {
+                      final task = state.dailyTasks[index];
+                      return _buildTaskCard(context, task, index, state);
+                    },
+                  ),
+                  const SizedBox(height: 28),
+                  Text(
+                    "WEEKLY TRAINING GOAL",
+                    style: GoogleFonts.outfit(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: ScholarlyTheme.textPrimary,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildWeeklyGoalCard(context, state),
+                ],
+              ],
+            ),
+          ),
         ),
       );
     }
@@ -376,69 +359,68 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
     final dateList = List.generate(7, (index) => today.subtract(Duration(days: 6 - index)));
 
     return JuicyGlassCard(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
       borderRadius: 16,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Padding(
-            padding: const EdgeInsets.only(left: 8.0, bottom: 10),
+            padding: const EdgeInsets.only(bottom: 16),
             child: Text(
               "ATTENDANCE LEDGER",
               style: GoogleFonts.outfit(
-                fontSize: 10,
+                fontSize: 12,
                 fontWeight: FontWeight.bold,
                 color: ScholarlyTheme.textMuted,
-                letterSpacing: 0.5,
+                letterSpacing: 1.0,
               ),
             ),
           ),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: dateList.map((date) {
-                final dateKey = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
-                final isToday = date.year == today.year && date.month == today.month && date.day == today.day;
-                
-                // For today: show green checkmark if all done, amber "?" if in progress,
-                // never a red cross (the day isn't finished yet).
-                // For past days: read from the persistent history log.
-                bool? pastCompleted;
-                bool todayAllDone = false;
-                if (isToday) {
-                  todayAllDone = state.dailyTasks.isNotEmpty && state.dailyTasks.every((t) => t.isCompleted);
-                } else {
-                  pastCompleted = state.historyLog[dateKey];
-                }
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: dateList.map((date) {
+              final dateKey = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+              final isToday = date.year == today.year && date.month == today.month && date.day == today.day;
+              
+              // For today: show green checkmark if all done, amber "?" if in progress,
+              // never a red cross (the day isn't finished yet).
+              // For past days: read from the persistent history log.
+              bool? pastCompleted;
+              bool todayAllDone = false;
+              if (isToday) {
+                todayAllDone = state.dailyTasks.isNotEmpty && state.dailyTasks.every((t) => t.isCompleted);
+              } else {
+                pastCompleted = state.historyLog[dateKey];
+              }
 
-                Widget icon;
-                if (isToday) {
-                  if (todayAllDone) {
-                    icon = const Icon(Icons.check_circle_rounded, color: Colors.green, size: 18);
-                  } else {
-                    // Day is still live — show a pending "?" in amber
-                    icon = const Icon(Icons.help_outline_rounded, color: Colors.amber, size: 18);
-                  }
-                } else if (pastCompleted == true) {
-                  icon = const Icon(Icons.check_circle_rounded, color: Colors.green, size: 18);
-                } else if (pastCompleted == false) {
-                  icon = const Icon(Icons.cancel_rounded, color: Colors.redAccent, size: 18);
+              Widget icon;
+              if (isToday) {
+                if (todayAllDone) {
+                  icon = const Icon(Icons.check_circle_rounded, color: Colors.green, size: 22);
                 } else {
-                  // Future date or no record — empty circle
-                  icon = Container(
-                    width: 16,
-                    height: 16,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: ScholarlyTheme.textSubtle, width: 2),
-                    ),
-                  );
+                  // Day is still live — show a pending "?" in amber
+                  icon = const Icon(Icons.help_outline_rounded, color: Colors.amber, size: 22);
                 }
+              } else if (pastCompleted == true) {
+                icon = const Icon(Icons.check_circle_rounded, color: Colors.green, size: 22);
+              } else if (pastCompleted == false) {
+                icon = const Icon(Icons.cancel_rounded, color: Colors.redAccent, size: 22);
+              } else {
+                // Future date or no record — empty circle
+                icon = Container(
+                  width: 20,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: ScholarlyTheme.textSubtle, width: 2),
+                  ),
+                );
+              }
 
-                return Container(
-                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+              return Expanded(
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
                   decoration: BoxDecoration(
                     color: isToday
                         ? ScholarlyTheme.accentBlue.withValues(alpha: 0.15)
@@ -459,31 +441,32 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
                         : null,
                   ),
                   child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
                         DateFormat('E').format(date).toUpperCase(),
                         style: GoogleFonts.inter(
-                          fontSize: 9,
+                          fontSize: 10,
                           fontWeight: isToday ? FontWeight.bold : FontWeight.w500,
                           color: isToday ? ScholarlyTheme.accentBlue : ScholarlyTheme.textMuted,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 6),
                       Text(
                         date.day.toString(),
                         style: GoogleFonts.jetBrainsMono(
-                          fontSize: 12,
+                          fontSize: 15,
                           fontWeight: FontWeight.bold,
                           color: isToday ? ScholarlyTheme.accentBlue : ScholarlyTheme.textPrimary,
                         ),
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 8),
                       icon,
                     ],
                   ),
-                );
-              }).toList(),
-            ),
+                ),
+              );
+            }).toList(),
           ),
         ],
       ),
@@ -734,6 +717,17 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
 
     switch (task.taskType) {
       case DailyTaskType.arena:
+        final storeState = ref.read(storeProvider);
+        final storeNotifier = ref.read(storeProvider.notifier);
+        if (!storeState.isPremium && !storeNotifier.canPlayRatedGame()) {
+          PremiumNudgeOverlay.show(
+            context,
+            ref,
+            title: 'Daily Rated Game Limit Reached',
+            description: 'You have played your 1 free Rated/Battleground game for today. Upgrade to unlock unlimited games.',
+          );
+          return;
+        }
         ref.read(battlegroundProvider.notifier).launchAssignmentMatch(
           avatarId: task.targetId,
           baseTime: const Duration(minutes: 10),
@@ -742,6 +736,17 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
         ref.read(mobileNavIndexProvider.notifier).state = 2; // Battleground tab
         break;
       case DailyTaskType.puzzle:
+        final storeState = ref.read(storeProvider);
+        final storeNotifier = ref.read(storeProvider.notifier);
+        if (!storeState.isPremium && !storeNotifier.canSolvePuzzle()) {
+          PremiumNudgeOverlay.show(
+            context,
+            ref,
+            title: 'Daily Puzzle Limit Reached',
+            description: 'You have solved/attempted your 3 free Puzzles for today. Upgrade to unlock unlimited puzzles.',
+          );
+          return;
+        }
         ref.read(mobileNavIndexProvider.notifier).state = 4; // Puzzles tab
         break;
       case DailyTaskType.tutorial:
@@ -1280,91 +1285,7 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
     );
   }
 
-  Widget _buildStreakCard(AssignmentState state) {
-    int streak = _calculateStreak(state);
 
-    return JuicyGlassCard(
-      padding: const EdgeInsets.all(16),
-      borderRadius: 16,
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.orange.withValues(alpha: 0.15),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.local_fire_department_rounded,
-              color: Colors.orangeAccent,
-              size: 28,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "CURRENT DAILY STREAK",
-                  style: GoogleFonts.outfit(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w900,
-                    color: ScholarlyTheme.textMuted,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  "$streak ${streak == 1 ? 'Day' : 'Days'}",
-                  style: GoogleFonts.outfit(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: ScholarlyTheme.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  streak > 0 
-                      ? "Keep the fire burning, Apprentice!"
-                      : "Start your streak today!",
-                  style: GoogleFonts.inter(
-                    fontSize: 11,
-                    color: ScholarlyTheme.textMuted,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  int _calculateStreak(AssignmentState state) {
-    int streak = 0;
-    final today = DateTime.now();
-    final todayCompleted = state.dailyTasks.isNotEmpty && state.dailyTasks.every((t) => t.isCompleted);
-
-    DateTime checkDate;
-    if (todayCompleted) {
-      streak = 1;
-      checkDate = today.subtract(const Duration(days: 1));
-    } else {
-      checkDate = today.subtract(const Duration(days: 1));
-    }
-
-    while (true) {
-      final key = "${checkDate.year}-${checkDate.month.toString().padLeft(2, '0')}-${checkDate.day.toString().padLeft(2, '0')}";
-      if (state.historyLog[key] == true) {
-        streak++;
-        checkDate = checkDate.subtract(const Duration(days: 1));
-      } else {
-        break;
-      }
-    }
-    return streak;
-  }
 }
 
 class JuicyCompletionBanner extends StatefulWidget {

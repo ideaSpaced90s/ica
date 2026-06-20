@@ -84,6 +84,7 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
       if (resigned == true) {
         await ref.read(battlegroundProvider.notifier).resignRatedGame();
         return false; // let the default exit to dashboard happen
+
       }
       return true; // stay on page
     }
@@ -105,6 +106,19 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(battlegroundProvider);
+
+    final storeState = ref.watch(storeProvider);
+    final storeNotifier = ref.read(storeProvider.notifier);
+    final isPremium = storeState.isPremium;
+    final isLimitReached = !isPremium && !storeNotifier.canPlayRatedGame() && state.activeRatedMatchId == null;
+
+    if (isLimitReached) {
+      return const PremiumNudgeOverlay(
+        isFullScreen: true,
+        title: 'Daily Rated Game Limit Reached',
+        description: 'You have played your 1 free Rated/Battleground game for today. Upgrade to unlock unlimited games.',
+      );
+    }
 
     ref.listen<BattlegroundState>(battlegroundProvider, (previous, next) {
       final wasGameOver = (previous?.game.gameOver ?? false) || (previous?.isTimeOut ?? false);

@@ -164,7 +164,7 @@ class _PremiumLimitSheetState extends State<PremiumLimitSheet> {
                     onPressed: () {
                       ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
                       Navigator.pop(context); // Close bottom sheet
-                      ref.read(mobileNavIndexProvider.notifier).state = 11; // Switch to Store tab
+                      ref.read(mobileNavIndexProvider.notifier).state = 10; // Switch to Store tab
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: ScholarlyTheme.accentBlue,

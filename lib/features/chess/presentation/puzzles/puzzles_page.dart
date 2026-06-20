@@ -139,225 +139,238 @@ class _PuzzlesPageState extends ConsumerState<PuzzlesPage> {
   ) {
     final bool isSolved = state.puzzleMovesRemaining.isEmpty;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const SizedBox(height: 12),
-        // 1. Puzzle Info Header (Moved to top)
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          child: _PuzzleStatusHeader(state: state),
-        ),
-
-        // Pressure Cooker Countdown Timer
-        if (state.isPressureCookerActive && !isSolved) ...[
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-            child: PressureCookerTimer(),
-          ),
-        ],
-
-        if (state.isWrongMoveAttempted && !isSolved)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.red.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: Colors.redAccent.withValues(alpha: 0.3),
-                  width: 1.2,
-                ),
-              ),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.warning_amber_rounded,
-                    color: Colors.redAccent,
-                    size: 16,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Incorrect move. Try again!',
-                      style: GoogleFonts.inter(
-                        color: Colors.red.shade800,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: constraints.maxHeight,
             ),
-          ),
-
-        const SizedBox(height: 8), // Snug spacing to keep board directly below Toughness Header
-
-        // 2. Board (Centered in the middle area)
-        const AspectRatio(
-          aspectRatio: 1.0,
-          child: PuzzlesBoard(alignment: Alignment.center),
-        ),
-
-        // GM Chanakya speech bubble
-        if (state.commentaryHistory.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.95),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: ScholarlyTheme.accentBlue.withValues(alpha: 0.3),
-                  width: 1.5,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.15),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            child: IntrinsicHeight(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      image: DecorationImage(
-                        image: AssetImage('assets/persona/gm_chanakya.png'),
-                        fit: BoxFit.cover,
-                      ),
-                    ),
+                  const SizedBox(height: 12),
+                  // 1. Puzzle Info Header (Moved to top)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    child: _PuzzleStatusHeader(state: state),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "GM CHANAKYA",
-                          style: GoogleFonts.outfit(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: ScholarlyTheme.accentBlue,
-                            letterSpacing: 0.8,
+
+                  // Pressure Cooker Countdown Timer
+                  if (state.isPressureCookerActive && !isSolved) ...[
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                      child: PressureCookerTimer(),
+                    ),
+                  ],
+
+                  if (state.isWrongMoveAttempted && !isSolved)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.redAccent.withValues(alpha: 0.3),
+                            width: 1.2,
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        RichText(
-                          text: TextSpan(
-                            style: GoogleFonts.comicNeue(
-                              fontSize: 16,
-                              color: const Color(0xFF1E293B),
-                              fontWeight: FontWeight.w500,
-                              height: 1.35,
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.warning_amber_rounded,
+                              color: Colors.redAccent,
+                              size: 16,
                             ),
-                            children: _buildHighlightedText(state.commentaryHistory.last.text),
-                          ),
-                        ),
-                        if (isSolved) ...[
-                          const SizedBox(height: 10),
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: ElevatedButton.icon(
-                              onPressed: () async {
-                                if (state.solvedCount >= 5) {
-                                  await ref.read(puzzlesProvider.notifier).exitPuzzleMode();
-                                  if (context.mounted) {
-                                    ref.read(mobileNavIndexProvider.notifier).state = 1; // Back to Arena
-                                  }
-                                } else {
-                                  if (!_checkPuzzleLimitAndUpsell(context, ref)) return;
-                                  ref.read(storeProvider.notifier).recordPuzzle();
-                                  notifier.nextPrescriptionPuzzle(silent: true);
-                                }
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF10B981), // Emerald
-                                foregroundColor: Colors.white,
-                                elevation: 0,
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                              icon: const Icon(Icons.arrow_forward_rounded, size: 14),
-                              label: Text(
-                                state.solvedCount >= 5 ? 'Test Progress in Arena' : 'Move to Next Puzzle',
-                                style: GoogleFonts.outfit(
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Incorrect move. Try again!',
+                                style: GoogleFonts.inter(
+                                  color: Colors.red.shade800,
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
-                                  letterSpacing: 0.5,
                                 ),
                               ),
                             ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                  const SizedBox(height: 8), // Snug spacing to keep board directly below Toughness Header
+
+                  // 2. Board (Centered in the middle area)
+                  const AspectRatio(
+                    aspectRatio: 1.0,
+                    child: PuzzlesBoard(alignment: Alignment.center),
+                  ),
+
+                  // GM Chanakya speech bubble
+                  if (state.commentaryHistory.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.95),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: ScholarlyTheme.accentBlue.withValues(alpha: 0.3),
+                            width: 1.5,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.15),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: 44,
+                              height: 44,
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                image: DecorationImage(
+                                  image: AssetImage('assets/persona/gm_chanakya.png'),
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "GM CHANAKYA",
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: ScholarlyTheme.accentBlue,
+                                      letterSpacing: 0.8,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  RichText(
+                                    text: TextSpan(
+                                      style: GoogleFonts.comicNeue(
+                                        fontSize: 16,
+                                        color: const Color(0xFF1E293B),
+                                        fontWeight: FontWeight.w500,
+                                        height: 1.35,
+                                      ),
+                                      children: _buildHighlightedText(state.commentaryHistory.last.text),
+                                    ),
+                                  ),
+                                  if (isSolved) ...[
+                                    const SizedBox(height: 10),
+                                    Align(
+                                      alignment: Alignment.centerRight,
+                                      child: ElevatedButton.icon(
+                                        onPressed: () async {
+                                          if (state.solvedCount >= 5) {
+                                            await ref.read(puzzlesProvider.notifier).exitPuzzleMode();
+                                            if (context.mounted) {
+                                              ref.read(mobileNavIndexProvider.notifier).state = 1; // Back to Arena
+                                            }
+                                          } else {
+                                            if (!_checkPuzzleLimitAndUpsell(context, ref)) return;
+                                            ref.read(storeProvider.notifier).recordPuzzle();
+                                            notifier.nextPrescriptionPuzzle(silent: true);
+                                          }
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: const Color(0xFF10B981), // Emerald
+                                          foregroundColor: Colors.white,
+                                          elevation: 0,
+                                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                        ),
+                                        icon: const Icon(Icons.arrow_forward_rounded, size: 14),
+                                        label: Text(
+                                          state.solvedCount >= 5 ? 'Test Progress in Arena' : 'Move to Next Puzzle',
+                                          style: GoogleFonts.outfit(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                            letterSpacing: 0.5,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                  // Spacer to push actions/banner to bottom
+                  const Spacer(),
+
+                  // 3. Actions / Solved CTA Buttons
+                  if (!isSolved)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 4, 12, 16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _CompactActionIcon(
+                            icon: state.isBulbGlowing
+                                ? Icons.lightbulb_rounded
+                                : Icons.lightbulb_outline_rounded,
+                            tooltip: 'Hint',
+                            isEnabled: !state.isHintLoading,
+                            isActive: state.isBulbGlowing,
+                            activeColor: ScholarlyTheme.accentYellowSoft,
+                            activeIconColor: ScholarlyTheme.accentYellow,
+                            onTap: () => notifier.requestHint(),
+                          ),
+                          const SizedBox(width: 16),
+                          _CompactActionIcon(
+                            icon: Icons.replay_rounded,
+                            tooltip: 'Reset Puzzle',
+                            isEnabled: true,
+                            onTap: () => notifier.resetPuzzleLine(),
+                          ),
+                          const SizedBox(width: 16),
+                          _CompactActionIcon(
+                            icon: Icons.skip_next_rounded,
+                            tooltip: 'Skip Puzzle',
+                            isEnabled: true,
+                            onTap: () async {
+                              if (state.solvedCount >= 5) {
+                                await ref.read(puzzlesProvider.notifier).exitPuzzleMode();
+                                if (context.mounted) {
+                                  ref.read(mobileNavIndexProvider.notifier).state = 1; // Back to Arena
+                                }
+                              } else {
+                                if (!_checkPuzzleLimitAndUpsell(context, ref)) return;
+                                ref.read(storeProvider.notifier).recordPuzzle();
+                                notifier.nextPrescriptionPuzzle(silent: true);
+                              }
+                            },
                           ),
                         ],
-                      ],
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),
           ),
-
-        // Spacer to push actions/banner to bottom
-        const Spacer(),
-
-        // 3. Actions / Solved CTA Buttons
-        if (!isSolved)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 4, 12, 16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _CompactActionIcon(
-                  icon: state.isBulbGlowing
-                      ? Icons.lightbulb_rounded
-                      : Icons.lightbulb_outline_rounded,
-                  tooltip: 'Hint',
-                  isEnabled: !state.isHintLoading,
-                  isActive: state.isBulbGlowing,
-                  activeColor: ScholarlyTheme.accentYellowSoft,
-                  activeIconColor: ScholarlyTheme.accentYellow,
-                  onTap: () => notifier.requestHint(),
-                ),
-                const SizedBox(width: 16),
-                _CompactActionIcon(
-                  icon: Icons.replay_rounded,
-                  tooltip: 'Reset Puzzle',
-                  isEnabled: true,
-                  onTap: () => notifier.resetPuzzleLine(),
-                ),
-                const SizedBox(width: 16),
-                _CompactActionIcon(
-                  icon: Icons.skip_next_rounded,
-                  tooltip: 'Skip Puzzle',
-                  isEnabled: true,
-                  onTap: () async {
-                    if (state.solvedCount >= 5) {
-                      await ref.read(puzzlesProvider.notifier).exitPuzzleMode();
-                      if (context.mounted) {
-                        ref.read(mobileNavIndexProvider.notifier).state = 1; // Back to Arena
-                      }
-                    } else {
-                      if (!_checkPuzzleLimitAndUpsell(context, ref)) return;
-                      ref.read(storeProvider.notifier).recordPuzzle();
-                      notifier.nextPrescriptionPuzzle(silent: true);
-                    }
-                  },
-                ),
-              ],
-            ),
-          ),
-      ],
+        );
+      },
     );
   }
 
@@ -610,6 +623,21 @@ class _PuzzlesPageState extends ConsumerState<PuzzlesPage> {
     final notifier = ref.read(puzzlesProvider.notifier);
     final showIntro = ref.watch(showPuzzlesIntroProvider);
     final isLandscape = MediaQuery.of(context).size.width > MediaQuery.of(context).size.height;
+
+    final storeState = ref.watch(storeProvider);
+    final storeNotifier = ref.read(storeProvider.notifier);
+    final isPremium = storeState.isPremium;
+    final isLimitReached = !isPremium &&
+        !storeNotifier.canSolvePuzzle() &&
+        !(state.isPuzzleMode && state.currentPuzzle != null && state.puzzleMovesRemaining.isNotEmpty);
+
+    if (isLimitReached) {
+      return const PremiumNudgeOverlay(
+        isFullScreen: true,
+        title: 'Daily Puzzle Limit Reached',
+        description: 'You have solved/attempted your 3 free Puzzles for today. Upgrade to unlock unlimited puzzles.',
+      );
+    }
 
     ref.listen<int>(mobileNavIndexProvider, (previous, current) {
       if (previous == 4 && current != 4) {
@@ -876,12 +904,14 @@ class _PuzzleStatusHeader extends ConsumerWidget {
                               ),
                             ),
                             const SizedBox(width: 6),
-                            Text(
-                              '${state.isPlayerWhite ? "White" : "Black"} to play • ${_getInstructionText(p)}',
-                              style: GoogleFonts.inter(
-                                fontSize: 11.0,
-                                color: ScholarlyTheme.textPrimary,
-                                fontWeight: FontWeight.w700,
+                            Expanded(
+                              child: Text(
+                                '${state.isPlayerWhite ? "White" : "Black"} to play • ${_getInstructionText(p)}',
+                                style: GoogleFonts.inter(
+                                  fontSize: 11.0,
+                                  color: ScholarlyTheme.textPrimary,
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
                             ),
                           ],

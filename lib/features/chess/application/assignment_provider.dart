@@ -393,11 +393,15 @@ class AssignmentNotifier extends Notifier<AssignmentState> {
   }
 
   void _unlockCalibration(int baselineRating) {
+    final updatedHistory = Map<String, bool>.from(state.historyLog);
+    updatedHistory.removeWhere((key, value) => value == false);
+
     state = state.copyWith(
       isCalibrated: true,
       startElo: baselineRating,
       goalElo: baselineRating + 150, // Baseline goal ELO +150
       goalDeadline: DateTime.now().add(const Duration(days: 30)),
+      historyLog: updatedHistory,
     );
     generateActiveTasks(baselineRating, isNewDay: true);
     _saveState();
@@ -419,7 +423,7 @@ class AssignmentNotifier extends Notifier<AssignmentState> {
           state.dailyTasks.every((t) => t.isCompleted);
 
       final updatedHistory = Map<String, bool>.from(state.historyLog);
-      if (state.dailyTasks.isNotEmpty) {
+      if (state.isCalibrated && state.dailyTasks.isNotEmpty) {
         updatedHistory[dateKey] = allDone;
       }
 
@@ -915,6 +919,7 @@ class AssignmentNotifier extends Notifier<AssignmentState> {
   }
 
   void _checkAllDailyCompleted() {
+    if (!state.isCalibrated) return;
     // Check daily completion of the 4 daily tasks (Arena, Puzzle, Cinema, Analysis)
     final dailyOnly = state.dailyTasks.where((t) => t.taskType != DailyTaskType.tutorial && t.taskType != DailyTaskType.attendance);
     if (dailyOnly.isNotEmpty && dailyOnly.every((t) => t.isCompleted)) {

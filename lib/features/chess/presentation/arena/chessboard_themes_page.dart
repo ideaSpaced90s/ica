@@ -190,7 +190,7 @@ class ChessboardThemesPage extends ConsumerWidget {
           Navigator.of(context).popUntil((route) => route.isFirst);
         } else {
           // Switch to Store tab, set store tab index to 1 (Themes Tab), and set highlight theme
-          ref.read(mobileNavIndexProvider.notifier).state = 11;
+          ref.read(mobileNavIndexProvider.notifier).state = 10;
           ref.read(storeTabProvider.notifier).state = 1;
           ref.read(storeHighlightThemeIdProvider.notifier).state = theme.id;
           Navigator.of(context).popUntil((route) => route.isFirst);
