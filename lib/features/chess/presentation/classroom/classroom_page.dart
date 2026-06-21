@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -577,7 +579,7 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
                   _buildFullMovesTab(studyState, studyNotifier),
                   _buildFullLibraryTab(studyState, studyNotifier),
                   _buildFullClassTab(state, studyState, studyNotifier),
-                  _buildFullEngineTab(studyState, studyNotifier),
+                  _buildFullChatTab(),
                   _buildFullConnectTab(state),
                 ],
               ),
@@ -604,7 +606,7 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
               Tab(icon: Icon(Icons.list_alt_rounded, size: 20), text: 'Moves'),
               Tab(icon: Icon(Icons.folder_copy_rounded, size: 20), text: 'Library'),
               Tab(icon: Icon(Icons.school_rounded, size: 20), text: 'Class'),
-              Tab(icon: Icon(Icons.analytics_rounded, size: 20), text: 'Engine'),
+              Tab(icon: Icon(Icons.chat_bubble_rounded, size: 20), text: 'Chat'),
               Tab(icon: Icon(Icons.sensors_rounded, size: 20), text: 'Connect'),
             ],
           ),
@@ -688,7 +690,7 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
     );
   }
 
-  Widget _buildFullEngineTab(StudyLabState studyState, StudyLabNotifier studyNotifier) {
+  Widget _buildFullChatTab() {
     return Container(
       margin: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -696,7 +698,16 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
         border: Border.all(color: ScholarlyTheme.panelStroke),
         borderRadius: BorderRadius.circular(16),
       ),
-      child: _buildEngineTab(studyState, studyNotifier),
+      child: Center(
+        child: Text(
+          'Chat Coming Soon',
+          style: GoogleFonts.outfit(
+            color: ScholarlyTheme.textMuted,
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ),
     );
   }
 
@@ -811,6 +822,8 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
       return _buildInlineClockSettings(studyState, studyNotifier);
     } else if (_activeClassroomTool == 'navigation') {
       return _buildMoveNavigationPanel(studyState, studyNotifier);
+    } else if (_activeClassroomTool == 'engine') {
+      return _buildInlineEnginePanel(studyState, studyNotifier);
     }
 
     // Default clean area
@@ -1337,6 +1350,35 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
                   ],
                 ),
               ),
+              const SizedBox(height: 16),
+              TextButton.icon(
+                onPressed: () {
+                  ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                  studyNotifier.flipBoard();
+                },
+                icon: const Icon(
+                  Icons.flip_camera_android_rounded,
+                  color: ScholarlyTheme.accentBlue,
+                  size: 18,
+                ),
+                label: Text(
+                  'Flip Board',
+                  style: GoogleFonts.outfit(
+                    color: ScholarlyTheme.accentBlue,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  backgroundColor: ScholarlyTheme.accentBlue.withValues(alpha: 0.05),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    side: BorderSide(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.2)),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -1512,11 +1554,17 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
             },
           ),
           IconButton(
-            icon: const Icon(Icons.flip_camera_android_rounded, color: ScholarlyTheme.accentBlue, size: 20),
-            tooltip: 'Flip Board',
+            icon: Icon(
+              Icons.smart_toy_rounded,
+              color: _activeClassroomTool == 'engine' ? Colors.green : ScholarlyTheme.accentBlue,
+              size: 20,
+            ),
+            tooltip: 'Engine Analysis',
             onPressed: () {
               ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-              studyNotifier.flipBoard();
+              setState(() {
+                _activeClassroomTool = _activeClassroomTool == 'engine' ? null : 'engine';
+              });
             },
           ),
         ],
@@ -1998,12 +2046,12 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
   }
 
   // --- TAB 3: STOCKFISH ENGINE ---
-  Widget _buildEngineTab(StudyLabState studyState, StudyLabNotifier studyNotifier) {
+  Widget _buildInlineEnginePanel(StudyLabState studyState, StudyLabNotifier studyNotifier) {
     final engineState = ref.watch(analysisEngineControllerProvider);
     final engineNotifier = ref.read(analysisEngineControllerProvider.notifier);
 
     return Padding(
-      padding: const EdgeInsets.all(12.0),
+      padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 6.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -2011,98 +2059,122 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Stockfish Analysis',
-                style: GoogleFonts.outfit(color: ScholarlyTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 13),
+                'Engine Analysis',
+                style: GoogleFonts.outfit(color: ScholarlyTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 12),
               ),
-              Switch(
-                value: engineState.isEngineOn,
-                activeThumbColor: ScholarlyTheme.accentBlue,
-                onChanged: (val) {
-                  ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                  engineNotifier.toggleEngine(val, studyState.activeFen);
-                  if (!val) {
-                    setState(() {
-                      _enginePlayMode = EnginePlayMode.manual;
-                    });
-                  }
-                },
+              SizedBox(
+                height: 24,
+                child: Transform.scale(
+                  scale: 0.75,
+                  child: Switch(
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    value: engineState.isEngineOn,
+                    activeThumbColor: ScholarlyTheme.accentBlue,
+                    onChanged: (val) {
+                      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                      engineNotifier.toggleEngine(val, studyState.activeFen);
+                      if (!val) {
+                        setState(() {
+                          _enginePlayMode = EnginePlayMode.manual;
+                        });
+                      }
+                    },
+                  ),
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
 
           if (engineState.isEngineOn) ...[
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.03),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Evaluation Score:', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 12)),
-                  Text(
-                    engineState.isMate && engineState.mateIn != null
-                        ? 'Mate in ${engineState.mateIn!.abs()}'
-                        : '${(engineState.evalScore ?? 0.0) > 0 ? "+" : ""}${engineState.evalScore?.toStringAsFixed(1) ?? "0.0"}',
-                    style: GoogleFonts.jetBrainsMono(
-                      color: ScholarlyTheme.textPrimary,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    height: 28,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.03),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Eval:', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 10, fontWeight: FontWeight.w500)),
+                        Text(
+                          engineState.isMate && engineState.mateIn != null
+                              ? 'Mate ${engineState.mateIn!.abs()}'
+                              : '${(engineState.evalScore ?? 0.0) > 0 ? "+" : ""}${engineState.evalScore?.toStringAsFixed(1) ?? "0.0"}',
+                          style: GoogleFonts.jetBrainsMono(
+                            color: ScholarlyTheme.textPrimary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Engine Mode:', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 12)),
-                DropdownButton<EnginePlayMode>(
-                  value: _enginePlayMode,
-                  dropdownColor: ScholarlyTheme.panelBase,
-                  style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 12, fontWeight: FontWeight.bold),
-                  onChanged: (val) {
-                    if (val != null) {
-                      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                      setState(() {
-                        _enginePlayMode = val;
-                        _waitingForImmediateMove = true;
-                      });
-                      _checkAutoEngineMove();
-                    }
-                  },
-                  items: const [
-                    DropdownMenuItem(value: EnginePlayMode.manual, child: Text('Manual Mode')),
-                    DropdownMenuItem(value: EnginePlayMode.autoWhite, child: Text('Auto White')),
-                    DropdownMenuItem(value: EnginePlayMode.autoBlack, child: Text('Auto Black')),
-                    DropdownMenuItem(value: EnginePlayMode.engineVsEngine, child: Text('Self-Play (EvE)')),
-                  ],
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Container(
+                    height: 28,
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.03),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Center(
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<EnginePlayMode>(
+                          value: _enginePlayMode,
+                          dropdownColor: ScholarlyTheme.panelBase,
+                          isDense: true,
+                          isExpanded: true,
+                          icon: const Icon(Icons.arrow_drop_down_rounded, color: ScholarlyTheme.accentBlue, size: 16),
+                          style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 10, fontWeight: FontWeight.bold),
+                          onChanged: (val) {
+                            if (val != null) {
+                              ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                              setState(() {
+                                _enginePlayMode = val;
+                                _waitingForImmediateMove = true;
+                              });
+                              _checkAutoEngineMove();
+                            }
+                          },
+                          items: const [
+                            DropdownMenuItem(value: EnginePlayMode.manual, child: Text('Manual')),
+                            DropdownMenuItem(value: EnginePlayMode.autoWhite, child: Text('Auto White')),
+                            DropdownMenuItem(value: EnginePlayMode.autoBlack, child: Text('Auto Black')),
+                            DropdownMenuItem(value: EnginePlayMode.engineVsEngine, child: Text('Self-Play')),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 4),
 
             Text(
               'RECOMMENDED LINES:',
-              style: GoogleFonts.outfit(fontSize: 10, letterSpacing: 0.5, color: ScholarlyTheme.textMuted, fontWeight: FontWeight.bold),
+              style: GoogleFonts.outfit(fontSize: 9, letterSpacing: 0.5, color: ScholarlyTheme.textMuted, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 2),
             Expanded(
               child: engineState.topLines.isEmpty
-                  ? Center(child: Text('Calculating best moves...', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 11)))
+                  ? Center(child: Text('Calculating best moves...', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 10)))
                   : ListView.builder(
                       itemCount: engineState.topLines.length,
                       itemBuilder: (context, index) {
                         final line = engineState.topLines[index];
                         return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          padding: const EdgeInsets.symmetric(vertical: 2),
                           child: Text(
                             '#${index + 1} (${line.eval > 0 ? "+" : ""}${line.eval.toStringAsFixed(1)}): ${line.moves.take(5).join(" ")}',
-                            style: GoogleFonts.jetBrainsMono(fontSize: 11, color: ScholarlyTheme.textPrimary),
+                            style: GoogleFonts.jetBrainsMono(fontSize: 10, color: ScholarlyTheme.textPrimary),
                             overflow: TextOverflow.ellipsis,
                           ),
                         );
@@ -2112,7 +2184,7 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
           ] else ...[
             Expanded(
               child: Center(
-                child: Text('Engine is inactive.\nTurn on analysis to calculate moves.', textAlign: TextAlign.center, style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 12)),
+                child: Text('Engine is inactive.\nTurn on analysis to calculate moves.', textAlign: TextAlign.center, style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 11)),
               ),
             ),
           ],
@@ -2633,40 +2705,36 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
 
   Future<void> _importPgnFromFile(BuildContext context, StudyLabNotifier notifier) async {
     ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-    final controller = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: ScholarlyTheme.panelBase,
-        title: Text('Import PGN', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary)),
-        content: TextField(
-          controller: controller,
-          maxLines: 8,
-          style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 12),
-          decoration: const InputDecoration(
-            hintText: 'Paste PGN text here...',
-            hintStyle: TextStyle(color: ScholarlyTheme.textMuted),
-            border: OutlineInputBorder(),
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pgn'],
+      );
+      if (result == null || result.files.single.path == null) return;
+
+      final path = result.files.single.path!;
+      final file = File(path);
+      final pgnText = await file.readAsString();
+
+      notifier.importPgn(pgnText);
+      notifier.markDirty();
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('PGN Imported successfully!'), backgroundColor: Colors.green),
+        );
+      }
+    } catch (e) {
+      debugPrint('PGN Import failed: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to import PGN: $e'),
+            backgroundColor: Colors.redAccent,
           ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              final pgn = controller.text.trim();
-              if (pgn.isNotEmpty) {
-                notifier.importPgn(pgn);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('PGN imported successfully!')),
-                );
-              }
-            },
-            child: const Text('Import', style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-    );
+        );
+      }
+    }
   }
 
   Future<void> _promptSaveStudyName(BuildContext context, StudyLabNotifier notifier) async {
