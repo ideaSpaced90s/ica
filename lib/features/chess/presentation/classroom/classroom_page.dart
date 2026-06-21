@@ -538,6 +538,7 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
 
     // Sync board FEN to student when teacher makes move
     ref.listen<String>(studyLabProvider.select((s) => s.activeFen), (previous, next) {
+      ref.read(analysisEngineControllerProvider.notifier).setFen(next);
       _checkAutoEngineMove();
       if (state.isJoined && state.isTeacher && state.syncToTeacher) {
         ref.read(localClassroomProvider.notifier).updateTeacherBoardFen(next);
@@ -605,7 +606,7 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
             tabs: const [
               Tab(icon: Icon(Icons.list_alt_rounded, size: 20), text: 'Moves'),
               Tab(icon: Icon(Icons.folder_copy_rounded, size: 20), text: 'Library'),
-              Tab(icon: Icon(Icons.school_rounded, size: 20), text: 'Class'),
+              Tab(icon: Icon(Icons.school_rounded, size: 20), text: 'Board'),
               Tab(icon: Icon(Icons.chat_bubble_rounded, size: 20), text: 'Chat'),
               Tab(icon: Icon(Icons.sensors_rounded, size: 20), text: 'Connect'),
             ],
@@ -1126,142 +1127,495 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
     );
   }
 
+  Widget _buildClockStatusButton({
+    required String label,
+    required bool isActive,
+    required VoidCallback onTap,
+  }) {
+    return SizedBox(
+      width: 42,
+      height: 24,
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          decoration: BoxDecoration(
+            color: isActive 
+                ? ScholarlyTheme.accentBlue.withValues(alpha: 0.15) 
+                : ScholarlyTheme.panelStroke.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: isActive 
+                  ? ScholarlyTheme.accentBlue.withValues(alpha: 0.6) 
+                  : ScholarlyTheme.panelStroke.withValues(alpha: 0.15),
+              width: isActive ? 1.5 : 1.0,
+            ),
+            boxShadow: isActive ? [
+              BoxShadow(
+                color: ScholarlyTheme.accentBlue.withValues(alpha: 0.25),
+                blurRadius: 6,
+                spreadRadius: 1,
+              )
+            ] : null,
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: GoogleFonts.outfit(
+                color: isActive ? ScholarlyTheme.accentBlue : ScholarlyTheme.textMuted,
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildInlineClockSettings(StudyLabState studyState, StudyLabNotifier studyNotifier) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Row 1: Clock Status Selectable Buttons and Controls (Start/Pause, Reset)
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('CHESS CLOCK / TIMER', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13, color: ScholarlyTheme.accentBlue)),
-              IconButton(
-                icon: const Icon(Icons.close_rounded, size: 18, color: ScholarlyTheme.textMuted),
-                onPressed: () {
+              Icon(
+                Icons.alarm_rounded,
+                size: 16,
+                color: _showTimer ? ScholarlyTheme.accentBlue : ScholarlyTheme.textMuted,
+              ),
+              const SizedBox(width: 6),
+              _buildClockStatusButton(
+                label: 'ON',
+                isActive: _showTimer,
+                onTap: () {
                   ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
                   setState(() {
-                    _activeClassroomTool = null;
+                    _showTimer = true;
                   });
                 },
               ),
-            ],
-          ),
-          const Divider(height: 8, color: ScholarlyTheme.panelStroke),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Clock Status:', style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 12, fontWeight: FontWeight.bold)),
-              Row(
-                children: [
-                  Text(_showTimer ? 'ON' : 'OFF', style: GoogleFonts.inter(color: _showTimer ? Colors.green : ScholarlyTheme.textMuted, fontSize: 11, fontWeight: FontWeight.bold)),
-                  const SizedBox(width: 8),
-                  Switch(
-                    value: _showTimer,
-                    activeThumbColor: ScholarlyTheme.accentBlue,
-                    onChanged: (val) {
+              const SizedBox(width: 4),
+              _buildClockStatusButton(
+                label: 'OFF',
+                isActive: !_showTimer,
+                onTap: () {
+                  ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                  setState(() {
+                    _showTimer = false;
+                    _isClockRunning = false;
+                    _chessClockTimer?.cancel();
+                  });
+                },
+              ),
+              
+              if (_showTimer) ...[
+                const SizedBox(width: 8),
+                Container(
+                  height: 16,
+                  width: 1,
+                  color: ScholarlyTheme.panelStroke.withValues(alpha: 0.3),
+                ),
+                const SizedBox(width: 8),
+                
+                // Play/Pause Action Button
+                Expanded(
+                  child: InkWell(
+                    onTap: () {
                       ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
                       setState(() {
-                        _showTimer = val;
-                        if (!val) {
-                          _isClockRunning = false;
+                        _isClockRunning = !_isClockRunning;
+                        if (_isClockRunning) {
+                          _showTimer = true;
+                          _startChessClock();
+                        } else {
                           _chessClockTimer?.cancel();
                         }
                       });
                     },
+                    borderRadius: BorderRadius.circular(6),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      padding: const EdgeInsets.symmetric(vertical: 5),
+                      decoration: BoxDecoration(
+                        color: _isClockRunning 
+                            ? Colors.orangeAccent.withValues(alpha: 0.1) 
+                            : Colors.green.withValues(alpha: 0.1),
+                        border: Border.all(
+                          color: _isClockRunning 
+                              ? Colors.orangeAccent.withValues(alpha: 0.4) 
+                              : Colors.green.withValues(alpha: 0.4),
+                        ),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            _isClockRunning ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                            size: 13,
+                            color: _isClockRunning ? Colors.orangeAccent : Colors.green,
+                          ),
+                          const SizedBox(width: 3),
+                          Text(
+                            _isClockRunning ? 'Pause' : 'Start',
+                            style: GoogleFonts.outfit(
+                              fontSize: 10,
+                              color: _isClockRunning ? Colors.orangeAccent : Colors.green,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(width: 5),
+                
+                // Reset Action Button
+                Expanded(
+                  child: InkWell(
+                    onTap: () {
+                      _resetTimer();
+                    },
+                    borderRadius: BorderRadius.circular(6),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 5),
+                      decoration: BoxDecoration(
+                        color: ScholarlyTheme.panelStroke.withValues(alpha: 0.05),
+                        border: Border.all(
+                          color: ScholarlyTheme.panelStroke.withValues(alpha: 0.15),
+                        ),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.refresh_rounded,
+                            size: 13,
+                            color: ScholarlyTheme.textPrimary,
+                          ),
+                          const SizedBox(width: 3),
+                          Text(
+                            'Reset',
+                            style: GoogleFonts.outfit(
+                              fontSize: 10,
+                              color: ScholarlyTheme.textPrimary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ] else ...[
+                const Spacer(),
+              ],
             ],
           ),
           const SizedBox(height: 8),
 
+          // Row 2: Presets Header and Horizontal Scroll List
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _isClockRunning ? Colors.orangeAccent : Colors.green,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                  ),
-                  icon: Icon(_isClockRunning ? Icons.pause_rounded : Icons.play_arrow_rounded, size: 14),
-                  label: Text(_isClockRunning ? 'Pause' : 'Start', style: const TextStyle(fontSize: 11)),
-                  onPressed: () {
-                    ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                    setState(() {
-                      _isClockRunning = !_isClockRunning;
-                      if (_isClockRunning) {
-                        _showTimer = true;
-                        _startChessClock();
-                      } else {
-                        _chessClockTimer?.cancel();
-                      }
-                    });
-                  },
+              Text(
+                'TIME PRESETS:',
+                style: GoogleFonts.outfit(
+                  fontSize: 9, 
+                  letterSpacing: 0.5, 
+                  color: ScholarlyTheme.textMuted, 
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+              if (_showTimer)
+                Text(
+                  'Active: ${_baseTimeDuration.inMinutes}m${_incrementDuration.inSeconds > 0 ? "+${_incrementDuration.inSeconds}" : ""}',
+                  style: GoogleFonts.jetBrainsMono(
+                    fontSize: 9, 
+                    color: ScholarlyTheme.accentBlue, 
+                    fontWeight: FontWeight.bold,
                   ),
-                  icon: const Icon(Icons.refresh_rounded, size: 14),
-                  label: const Text('Reset', style: TextStyle(fontSize: 11)),
-                  onPressed: () {
-                    _resetTimer();
-                  },
                 ),
-              ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 4),
+          SizedBox(
+            height: 26,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                _buildPresetChip(const Duration(minutes: 1), const Duration(seconds: 0), "1m"),
+                _buildPresetChip(const Duration(minutes: 3), const Duration(seconds: 2), "3+2"),
+                _buildPresetChip(const Duration(minutes: 5), const Duration(seconds: 0), "5m"),
+                _buildPresetChip(const Duration(minutes: 10), const Duration(seconds: 0), "10m"),
+                _buildPresetChip(const Duration(minutes: 15), const Duration(seconds: 10), "15+10"),
+                _buildPresetChip(const Duration(minutes: 30), const Duration(seconds: 0), "30m"),
+                _buildPresetChip(null, null, "Custom..."),
+              ],
+            ),
+          ),
+          
+          const SizedBox(height: 8),
 
-          Text('SELECT PRESETS:', style: GoogleFonts.outfit(fontSize: 9, letterSpacing: 0.5, color: ScholarlyTheme.textMuted, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 6),
-          GridView(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3, childAspectRatio: 2.2, crossAxisSpacing: 6, mainAxisSpacing: 6),
+          // Custom Time Control Sliders (moved inline one line below presets)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _buildPresetButton(const Duration(minutes: 1), const Duration(seconds: 0), "1m"),
-              _buildPresetButton(const Duration(minutes: 3), const Duration(seconds: 2), "3+2"),
-              _buildPresetButton(const Duration(minutes: 5), const Duration(seconds: 0), "5m"),
-              _buildPresetButton(const Duration(minutes: 10), const Duration(seconds: 0), "10m"),
-              _buildPresetButton(const Duration(minutes: 15), const Duration(seconds: 10), "15+10"),
-              _buildPresetButton(const Duration(minutes: 30), const Duration(seconds: 0), "30m"),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'CUSTOM BASE TIME:',
+                    style: GoogleFonts.outfit(
+                      fontSize: 9,
+                      letterSpacing: 0.5,
+                      color: ScholarlyTheme.textMuted,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    '${_baseTimeDuration.inMinutes} min',
+                    style: GoogleFonts.jetBrainsMono(
+                      fontSize: 10,
+                      color: ScholarlyTheme.accentBlue,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              SliderTheme(
+                data: SliderTheme.of(context).copyWith(
+                  trackHeight: 2,
+                  thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                  overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
+                  activeTrackColor: ScholarlyTheme.accentBlue,
+                  inactiveTrackColor: ScholarlyTheme.panelStroke.withValues(alpha: 0.15),
+                  thumbColor: ScholarlyTheme.accentBlue,
+                  overlayColor: ScholarlyTheme.accentBlue.withValues(alpha: 0.12),
+                ),
+                child: Slider(
+                  value: _baseTimeDuration.inMinutes.toDouble().clamp(0.0, 60.0),
+                  min: 0,
+                  max: 60,
+                  divisions: 60,
+                  onChanged: (val) {
+                    final newMin = val.round();
+                    setState(() {
+                      _baseTimeDuration = Duration(minutes: newMin);
+                      _whiteTimeLeft = _baseTimeDuration;
+                      _blackTimeLeft = _baseTimeDuration;
+                      _isClockRunning = false;
+                      _showTimer = true;
+                    });
+                    _chessClockTimer?.cancel();
+                  },
+                  onChangeEnd: (val) {
+                    ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                  },
+                ),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'CUSTOM INCREMENT:',
+                    style: GoogleFonts.outfit(
+                      fontSize: 9,
+                      letterSpacing: 0.5,
+                      color: ScholarlyTheme.textMuted,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    '+${_incrementDuration.inSeconds} sec',
+                    style: GoogleFonts.jetBrainsMono(
+                      fontSize: 10,
+                      color: ScholarlyTheme.accentBlue,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              SliderTheme(
+                data: SliderTheme.of(context).copyWith(
+                  trackHeight: 2,
+                  thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                  overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
+                  activeTrackColor: ScholarlyTheme.accentBlue,
+                  inactiveTrackColor: ScholarlyTheme.panelStroke.withValues(alpha: 0.15),
+                  thumbColor: ScholarlyTheme.accentBlue,
+                  overlayColor: ScholarlyTheme.accentBlue.withValues(alpha: 0.12),
+                ),
+                child: Slider(
+                  value: _incrementDuration.inSeconds.toDouble().clamp(0.0, 60.0),
+                  min: 0,
+                  max: 60,
+                  divisions: 60,
+                  onChanged: (val) {
+                    final newInc = val.round();
+                    setState(() {
+                      _incrementDuration = Duration(seconds: newInc);
+                      _whiteTimeLeft = _baseTimeDuration;
+                      _blackTimeLeft = _baseTimeDuration;
+                      _isClockRunning = false;
+                      _showTimer = true;
+                    });
+                    _chessClockTimer?.cancel();
+                  },
+                  onChangeEnd: (val) {
+                    ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                  },
+                ),
+              ),
             ],
-          ),
-          const SizedBox(height: 10),
-          OutlinedButton(
-            style: OutlinedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6))),
-            onPressed: () {
-              _showCustomTimerDialog(context);
-            },
-            child: const Text('Custom Timer...', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildPresetButton(Duration base, Duration inc, String label) {
-    return ElevatedButton(
-      style: ElevatedButton.styleFrom(
-        padding: EdgeInsets.zero, 
-        backgroundColor: Colors.black.withValues(alpha: 0.04), 
-        foregroundColor: ScholarlyTheme.textPrimary, 
-        elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+  Widget _buildPresetChip(Duration? base, Duration? inc, String label) {
+    final bool isCustom = base == null || inc == null;
+    bool isActive = false;
+    
+    if (_showTimer) {
+      if (isCustom) {
+        isActive = 
+            !(_baseTimeDuration == const Duration(minutes: 1) && _incrementDuration == const Duration(seconds: 0)) &&
+            !(_baseTimeDuration == const Duration(minutes: 3) && _incrementDuration == const Duration(seconds: 2)) &&
+            !(_baseTimeDuration == const Duration(minutes: 5) && _incrementDuration == const Duration(seconds: 0)) &&
+            !(_baseTimeDuration == const Duration(minutes: 10) && _incrementDuration == const Duration(seconds: 0)) &&
+            !(_baseTimeDuration == const Duration(minutes: 15) && _incrementDuration == const Duration(seconds: 10)) &&
+            !(_baseTimeDuration == const Duration(minutes: 30) && _incrementDuration == const Duration(seconds: 0));
+      } else {
+        isActive = _baseTimeDuration == base && _incrementDuration == inc;
+      }
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(right: 6.0),
+      child: GestureDetector(
+        onTap: () {
+          if (isCustom) {
+            ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+            setState(() {
+              _whiteTimeLeft = _baseTimeDuration;
+              _blackTimeLeft = _baseTimeDuration;
+              _isClockRunning = false;
+              _showTimer = true;
+            });
+            _chessClockTimer?.cancel();
+          } else {
+            _setTimerPreset(base, inc, label);
+          }
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: BoxDecoration(
+            color: isActive 
+                ? ScholarlyTheme.accentBlue.withValues(alpha: 0.15) 
+                : ScholarlyTheme.panelStroke.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isActive 
+                  ? ScholarlyTheme.accentBlue.withValues(alpha: 0.6) 
+                  : ScholarlyTheme.panelStroke.withValues(alpha: 0.15),
+              width: isActive ? 1.5 : 1.0,
+            ),
+            boxShadow: isActive ? [
+              BoxShadow(
+                color: ScholarlyTheme.accentBlue.withValues(alpha: 0.25),
+                blurRadius: 6,
+                spreadRadius: 1,
+              )
+            ] : null,
+          ),
+          child: Center(
+            child: Text(
+              isCustom && isActive 
+                  ? '${_baseTimeDuration.inMinutes}m${_incrementDuration.inSeconds > 0 ? "+${_incrementDuration.inSeconds}" : ""}'
+                  : label,
+              style: GoogleFonts.outfit(
+                color: isActive ? ScholarlyTheme.accentBlue : ScholarlyTheme.textPrimary,
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
       ),
-      onPressed: () {
-        _setTimerPreset(base, inc, label);
-      },
-      child: Text(label, style: const TextStyle(fontSize: 10)),
     );
+  }
+
+  Future<void> _handleResetBoard(StudyLabState studyState, StudyLabNotifier studyNotifier) async {
+    ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+    
+    const defaultFen = chess_lib.Chess.DEFAULT_POSITION;
+    final isNotBaseState = studyState.activeFen != defaultFen || studyState.nodes.isNotEmpty;
+    
+    if (isNotBaseState) {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: ScholarlyTheme.panelBase,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text(
+            'Reset Board?',
+            style: GoogleFonts.outfit(
+              color: ScholarlyTheme.textPrimary,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: Text(
+            'This will reset the board to the starting position and wipe out your current moves and progress.',
+            style: GoogleFonts.inter(
+              color: ScholarlyTheme.textMuted,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(
+                'Cancel',
+                style: GoogleFonts.inter(color: ScholarlyTheme.textMuted),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text(
+                'Proceed',
+                style: TextStyle(
+                  color: Colors.redAccent,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+      
+      if (confirm == true) {
+        studyNotifier.loadPositionSetup(defaultFen);
+        // Clear dirty flag so it resets clean
+        studyNotifier.clearDirty();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Board reset to starting position.')),
+          );
+        }
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Board is already in the starting position.')),
+      );
+    }
   }
 
   Widget _buildMoveNavigationPanel(StudyLabState studyState, StudyLabNotifier studyNotifier) {
@@ -1272,21 +1626,25 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                'MOVE NAVIGATION',
-                style: GoogleFonts.outfit(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 11,
-                  color: ScholarlyTheme.textMuted,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              const SizedBox(height: 16),
               Container(
                 decoration: BoxDecoration(
-                  color: ScholarlyTheme.panelStroke.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: ScholarlyTheme.panelStroke.withValues(alpha: 0.15)),
+                  gradient: LinearGradient(
+                    colors: [
+                      ScholarlyTheme.panelStroke.withValues(alpha: 0.05),
+                      ScholarlyTheme.panelStroke.withValues(alpha: 0.12),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: ScholarlyTheme.panelStroke.withValues(alpha: 0.2)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.03),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -1351,33 +1709,66 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
                 ),
               ),
               const SizedBox(height: 16),
-              TextButton.icon(
-                onPressed: () {
-                  ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                  studyNotifier.flipBoard();
-                },
-                icon: const Icon(
-                  Icons.flip_camera_android_rounded,
-                  color: ScholarlyTheme.accentBlue,
-                  size: 18,
-                ),
-                label: Text(
-                  'Flip Board',
-                  style: GoogleFonts.outfit(
-                    color: ScholarlyTheme.accentBlue,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.5,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  TextButton.icon(
+                    onPressed: () {
+                      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                      studyNotifier.flipBoard();
+                    },
+                    icon: const Icon(
+                      Icons.flip_camera_android_rounded,
+                      color: ScholarlyTheme.accentBlue,
+                      size: 16,
+                    ),
+                    label: Text(
+                      'Flip Board',
+                      style: GoogleFonts.outfit(
+                        color: ScholarlyTheme.accentBlue,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      backgroundColor: ScholarlyTheme.accentBlue.withValues(alpha: 0.05),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        side: BorderSide(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.2)),
+                      ),
+                    ),
                   ),
-                ),
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  backgroundColor: ScholarlyTheme.accentBlue.withValues(alpha: 0.05),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    side: BorderSide(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.2)),
+                  const SizedBox(width: 12),
+                  TextButton.icon(
+                    onPressed: () {
+                      _handleResetBoard(studyState, studyNotifier);
+                    },
+                    icon: const Icon(
+                      Icons.refresh_rounded,
+                      color: Colors.redAccent,
+                      size: 16,
+                    ),
+                    label: Text(
+                      'Reset Board',
+                      style: GoogleFonts.outfit(
+                        color: Colors.redAccent,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      backgroundColor: Colors.redAccent.withValues(alpha: 0.05),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        side: BorderSide(color: Colors.redAccent.withValues(alpha: 0.2)),
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
             ],
           ),
@@ -2046,121 +2437,139 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
   }
 
   // --- TAB 3: STOCKFISH ENGINE ---
+  void _setEnginePlayMode(EnginePlayMode mode, StudyLabState studyState, AnalysisEngineController engineNotifier) {
+    ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+    setState(() {
+      if (_enginePlayMode == mode) {
+        _enginePlayMode = EnginePlayMode.manual;
+      } else {
+        _enginePlayMode = mode;
+        
+        final isWhiteToMove = !studyState.activeFen.contains(' b ');
+        if ((mode == EnginePlayMode.autoWhite && isWhiteToMove) ||
+            (mode == EnginePlayMode.autoBlack && !isWhiteToMove) ||
+            mode == EnginePlayMode.engineVsEngine) {
+          _waitingForImmediateMove = true;
+        }
+
+        // Ensure engine is on
+        final engineState = ref.read(analysisEngineControllerProvider);
+        if (!engineState.isEngineOn) {
+          engineNotifier.toggleEngine(true, studyState.activeFen);
+        }
+      }
+    });
+    _checkAutoEngineMove();
+  }
+
+  Widget _buildGlowButton({
+    required String label,
+    required bool isActive,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          height: 28,
+          decoration: BoxDecoration(
+            color: isActive 
+                ? ScholarlyTheme.accentBlue.withValues(alpha: 0.15) 
+                : ScholarlyTheme.panelStroke.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: isActive 
+                  ? ScholarlyTheme.accentBlue.withValues(alpha: 0.6) 
+                  : ScholarlyTheme.panelStroke.withValues(alpha: 0.15),
+              width: isActive ? 1.5 : 1.0,
+            ),
+            boxShadow: isActive ? [
+              BoxShadow(
+                color: ScholarlyTheme.accentBlue.withValues(alpha: 0.25),
+                blurRadius: 6,
+                spreadRadius: 1,
+              )
+            ] : null,
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: GoogleFonts.outfit(
+                color: isActive ? ScholarlyTheme.accentBlue : ScholarlyTheme.textMuted,
+                fontSize: 10.5,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildInlineEnginePanel(StudyLabState studyState, StudyLabNotifier studyNotifier) {
     final engineState = ref.watch(analysisEngineControllerProvider);
     final engineNotifier = ref.read(analysisEngineControllerProvider.notifier);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 6.0),
+      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Engine Analysis',
-                style: GoogleFonts.outfit(color: ScholarlyTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 12),
+              _buildGlowButton(
+                label: 'Analysis',
+                isActive: engineState.isEngineOn,
+                onTap: () {
+                  ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                  final nextVal = !engineState.isEngineOn;
+                  engineNotifier.toggleEngine(nextVal, studyState.activeFen);
+                  if (!nextVal) {
+                    setState(() {
+                      _enginePlayMode = EnginePlayMode.manual;
+                    });
+                  }
+                },
               ),
-              SizedBox(
-                height: 24,
-                child: Transform.scale(
-                  scale: 0.75,
-                  child: Switch(
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    value: engineState.isEngineOn,
-                    activeThumbColor: ScholarlyTheme.accentBlue,
-                    onChanged: (val) {
-                      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                      engineNotifier.toggleEngine(val, studyState.activeFen);
-                      if (!val) {
-                        setState(() {
-                          _enginePlayMode = EnginePlayMode.manual;
-                        });
-                      }
-                    },
-                  ),
-                ),
+              const SizedBox(width: 5),
+              _buildGlowButton(
+                label: 'White',
+                isActive: _enginePlayMode == EnginePlayMode.autoWhite && engineState.isEngineOn,
+                onTap: () => _setEnginePlayMode(EnginePlayMode.autoWhite, studyState, engineNotifier),
+              ),
+              const SizedBox(width: 5),
+              _buildGlowButton(
+                label: 'Black',
+                isActive: _enginePlayMode == EnginePlayMode.autoBlack && engineState.isEngineOn,
+                onTap: () => _setEnginePlayMode(EnginePlayMode.autoBlack, studyState, engineNotifier),
+              ),
+              const SizedBox(width: 5),
+              _buildGlowButton(
+                label: 'Self',
+                isActive: _enginePlayMode == EnginePlayMode.engineVsEngine && engineState.isEngineOn,
+                onTap: () => _setEnginePlayMode(EnginePlayMode.engineVsEngine, studyState, engineNotifier),
               ),
             ],
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
 
           if (engineState.isEngineOn) ...[
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded(
-                  child: Container(
-                    height: 28,
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.03),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('Eval:', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 10, fontWeight: FontWeight.w500)),
-                        Text(
-                          engineState.isMate && engineState.mateIn != null
-                              ? 'Mate ${engineState.mateIn!.abs()}'
-                              : '${(engineState.evalScore ?? 0.0) > 0 ? "+" : ""}${engineState.evalScore?.toStringAsFixed(1) ?? "0.0"}',
-                          style: GoogleFonts.jetBrainsMono(
-                            color: ScholarlyTheme.textPrimary,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 10,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                Text(
+                  'RECOMMENDED LINES:',
+                  style: GoogleFonts.outfit(fontSize: 9, letterSpacing: 0.5, color: ScholarlyTheme.textMuted, fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Container(
-                    height: 28,
-                    padding: const EdgeInsets.symmetric(horizontal: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.03),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Center(
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<EnginePlayMode>(
-                          value: _enginePlayMode,
-                          dropdownColor: ScholarlyTheme.panelBase,
-                          isDense: true,
-                          isExpanded: true,
-                          icon: const Icon(Icons.arrow_drop_down_rounded, color: ScholarlyTheme.accentBlue, size: 16),
-                          style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 10, fontWeight: FontWeight.bold),
-                          onChanged: (val) {
-                            if (val != null) {
-                              ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                              setState(() {
-                                _enginePlayMode = val;
-                                _waitingForImmediateMove = true;
-                              });
-                              _checkAutoEngineMove();
-                            }
-                          },
-                          items: const [
-                            DropdownMenuItem(value: EnginePlayMode.manual, child: Text('Manual')),
-                            DropdownMenuItem(value: EnginePlayMode.autoWhite, child: Text('Auto White')),
-                            DropdownMenuItem(value: EnginePlayMode.autoBlack, child: Text('Auto Black')),
-                            DropdownMenuItem(value: EnginePlayMode.engineVsEngine, child: Text('Self-Play')),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
+                Text(
+                  engineState.isMate && engineState.mateIn != null
+                      ? 'Eval: Mate ${engineState.mateIn!.abs()}'
+                      : 'Eval: ${(engineState.evalScore ?? 0.0) > 0 ? "+" : ""}${engineState.evalScore?.toStringAsFixed(1) ?? "0.0"}',
+                  style: GoogleFonts.jetBrainsMono(fontSize: 10, color: ScholarlyTheme.accentBlue, fontWeight: FontWeight.bold),
                 ),
               ],
-            ),
-            const SizedBox(height: 4),
-
-            Text(
-              'RECOMMENDED LINES:',
-              style: GoogleFonts.outfit(fontSize: 9, letterSpacing: 0.5, color: ScholarlyTheme.textMuted, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 2),
             Expanded(
@@ -2184,7 +2593,7 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
           ] else ...[
             Expanded(
               child: Center(
-                child: Text('Engine is inactive.\nTurn on analysis to calculate moves.', textAlign: TextAlign.center, style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 11)),
+                child: Text('Engine is inactive.\nTurn on Analysis to start.', textAlign: TextAlign.center, style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 11)),
               ),
             ),
           ],
@@ -2778,49 +3187,7 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
     );
   }
 
-  void _showCustomTimerDialog(BuildContext context) {
-    ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-    final minutesController = TextEditingController(text: _baseTimeDuration.inMinutes.toString());
-    final incrementController = TextEditingController(text: _incrementDuration.inSeconds.toString());
 
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: ScholarlyTheme.panelBase,
-        title: Text('Custom Time Control', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: minutesController,
-              keyboardType: TextInputType.number,
-              style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary),
-              decoration: const InputDecoration(labelText: 'Minutes (Base)'),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: incrementController,
-              keyboardType: TextInputType.number,
-              style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary),
-              decoration: const InputDecoration(labelText: 'Seconds (Increment)'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              final min = int.tryParse(minutesController.text.trim()) ?? 10;
-              final inc = int.tryParse(incrementController.text.trim()) ?? 0;
-              _setTimerPreset(Duration(minutes: min), Duration(seconds: inc), "$min+$inc");
-            },
-            child: const Text('Apply', style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _CategoryMetadata {
