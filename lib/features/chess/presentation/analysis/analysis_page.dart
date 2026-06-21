@@ -176,91 +176,63 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
     BoxConstraints constraints,
   ) {
     final double boardSize = constraints.maxWidth;
-    final double fixedHeaderHeight = boardSize + (state.isGuessingMode ? 46.0 : 0.0);
 
-    return Stack(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // 1. Scrollable content behind the board
-        Positioned.fill(
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Top spacing matching the fixed board height
-                SizedBox(height: fixedHeaderHeight),
-
-                // VCR controls & action buttons (under icons)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
-                  child: _buildUnifiedControlPanel(
-                    context,
-                    state,
-                    notifier,
-                    boardSize,
-                    isPortrait: true,
+        if (state.isGuessingMode)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
+            child: Container(
+              height: 38,
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+              decoration: BoxDecoration(
+                color: ScholarlyTheme.accentBlue.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'GUESS THE MOVE TRAINING',
+                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 11, color: ScholarlyTheme.accentBlue),
                   ),
-                ),
-
-                // Horizontal page views for engine and moves
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
-                  child: _buildHorizontalPanels(
-                    context,
-                    state,
-                    notifier,
-                    boardSize,
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(color: ScholarlyTheme.accentBlue, borderRadius: BorderRadius.circular(4)),
+                    child: Text(
+                      '${state.guessedNodes.length} CORRECT',
+                      style: GoogleFonts.inter(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
                   ),
-                ),
-
-                // Bottom padding to avoid navigation bar overlap
-                const SizedBox(height: 100),
-              ],
+                ],
+              ),
             ),
+          ),
+        _buildBoardWithEval(context, state, notifier, boardSize),
+
+        // VCR controls & action buttons
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+          child: _buildUnifiedControlPanel(
+            context,
+            state,
+            notifier,
+            boardSize,
+            isPortrait: true,
           ),
         ),
 
-        // 2. Fixed chessboard at the top
-        Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          child: Container(
-            color: ScholarlyTheme.backgroundStart,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (state.isGuessingMode)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
-                    child: Container(
-                      height: 38,
-                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                      decoration: BoxDecoration(
-                        color: ScholarlyTheme.accentBlue.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'GUESS THE MOVE TRAINING',
-                            style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 11, color: ScholarlyTheme.accentBlue),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(color: ScholarlyTheme.accentBlue, borderRadius: BorderRadius.circular(4)),
-                            child: Text(
-                              '${state.guessedNodes.length} CORRECT',
-                              style: GoogleFonts.inter(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                _buildBoardWithEval(context, state, notifier, boardSize),
-              ],
+        // Horizontal page views for engine and moves, taking up the remaining height
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12.0, 4.0, 12.0, 12.0),
+            child: _buildHorizontalPanels(
+              context,
+              state,
+              notifier,
+              boardSize,
+              isExpanded: true,
             ),
           ),
         ),
@@ -394,8 +366,9 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
     BuildContext context,
     StudyLabState state,
     StudyLabNotifier notifier,
-    double boardSize,
-  ) {
+    double boardSize, {
+    bool isExpanded = false,
+  }) {
     final engineState = ref.watch(analysisEngineControllerProvider);
     final isEngineOn = engineState.isEngineOn;
 
@@ -403,7 +376,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
       padding: const EdgeInsets.fromLTRB(12, 12, 4, 12),
       borderRadius: 16,
       child: SizedBox(
-        height: 170, // Fixed height to avoid vertical scrolling entirely
+        height: isExpanded ? null : 170, // Fixed height or auto height depending on context
         child: Row(
           children: [
             // Left side: PageView content
@@ -585,16 +558,16 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
                         }
                       },
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 2.0),
+                        padding: const EdgeInsets.symmetric(vertical: 5.0),
                         child: Row(
                           children: [
                             Container(
-                              width: 18,
+                              width: 22,
                               alignment: Alignment.center,
                               child: Text(
                                 '#${line.pvIndex}',
                                 style: GoogleFonts.jetBrainsMono(
-                                  fontSize: 10,
+                                  fontSize: 12,
                                   fontWeight: FontWeight.bold,
                                   color: ScholarlyTheme.textMuted,
                                 ),
@@ -605,17 +578,18 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
                               child: Text(
                                 movesText,
                                 style: GoogleFonts.jetBrainsMono(
-                                  fontSize: 11,
+                                  fontSize: 13,
                                   color: ScholarlyTheme.textPrimary,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
+                            const SizedBox(width: 8),
                             Text(
                               evalText,
                               style: GoogleFonts.jetBrainsMono(
-                                fontSize: 11,
+                                fontSize: 13,
                                 fontWeight: FontWeight.bold,
                                 color: line.eval >= 0 ? Colors.green : Colors.redAccent,
                               ),
