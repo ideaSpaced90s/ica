@@ -80,6 +80,7 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
 
   // Engine Autoplay state
   EnginePlayMode _enginePlayMode = EnginePlayMode.manual;
+  String _selectedEngineTab = 'log';
   Timer? _autoEngineMoveTimer;
   bool _isEngineThinking = false;
   bool _waitingForImmediateMove = false;
@@ -652,7 +653,7 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
                 controller: _tabController,
                 physics: const NeverScrollableScrollPhysics(), // Disable swipe gestures to avoid conflicting with chessboard dragging
                 children: [
-                  _buildFullMovesTab(studyState, studyNotifier),
+                  _buildFullRegisterTab(),
                   _buildFullLibraryTab(studyState, studyNotifier),
                   _buildFullClassTab(state, studyState, studyNotifier),
                   _buildFullChatTab(),
@@ -679,7 +680,7 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
               ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
             },
             tabs: const [
-              Tab(icon: Icon(Icons.list_alt_rounded, size: 20), text: 'Moves'),
+              Tab(icon: Icon(Icons.assignment_rounded, size: 20), text: 'Register'),
               Tab(icon: Icon(Icons.folder_copy_rounded, size: 20), text: 'Library'),
               Tab(icon: Icon(Icons.school_rounded, size: 20), text: 'Board'),
               Tab(icon: Icon(Icons.chat_bubble_rounded, size: 20), text: 'Chat'),
@@ -720,36 +721,23 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
     );
   }
 
-  Widget _buildFullMovesTab(StudyLabState studyState, StudyLabNotifier studyNotifier) {
+  Widget _buildFullRegisterTab() {
     return Container(
       margin: const EdgeInsets.all(12),
-      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: ScholarlyTheme.panelBase,
         border: Border.all(color: ScholarlyTheme.panelStroke),
         borderRadius: BorderRadius.circular(16),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'GAME NOTATION',
-                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14, color: ScholarlyTheme.accentBlue),
-              ),
-              Text(
-                'Moves Played: ${studyState.nodes.length - 1}',
-                style: GoogleFonts.inter(fontSize: 11, color: ScholarlyTheme.textMuted),
-              ),
-            ],
+      child: Center(
+        child: Text(
+          'Register Coming Soon',
+          style: GoogleFonts.outfit(
+            color: ScholarlyTheme.textMuted,
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
           ),
-          const Divider(height: 20, color: ScholarlyTheme.panelStroke),
-          Expanded(
-            child: _buildMovesTab(studyState, studyNotifier),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -2041,30 +2029,7 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
   // Obsolete _buildRightPanel removed
 
   // --- TAB 1: MOVES NOTATION PANE ---
-  Widget _buildMovesTab(StudyLabState studyState, StudyLabNotifier studyNotifier) {
-    final List<Widget> moveChips = [];
-    _buildMoveTreeChips(studyState, studyNotifier, null, moveChips, 0);
 
-    if (moveChips.isEmpty) {
-      return Center(
-        child: Text(
-          'No moves played yet.\nMake a move on the board to start.',
-          textAlign: TextAlign.center,
-          style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 12),
-        ),
-      );
-    }
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(12.0),
-      child: Wrap(
-        spacing: 4,
-        runSpacing: 6,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: moveChips,
-      ),
-    );
-  }
 
   void _buildMoveTreeChips(
     StudyLabState state,
@@ -2600,17 +2565,38 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
           Row(
             children: [
               _buildGlowButton(
-                label: 'Analysis',
-                isActive: engineState.isEngineOn,
+                label: 'Log',
+                isActive: _selectedEngineTab == 'log',
                 onTap: () {
                   ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                  final nextVal = !engineState.isEngineOn;
-                  engineNotifier.toggleEngine(nextVal, studyState.activeFen);
-                  if (!nextVal) {
+                  setState(() {
+                    _selectedEngineTab = 'log';
+                  });
+                },
+              ),
+              const SizedBox(width: 5),
+              _buildGlowButton(
+                label: 'Analysis',
+                isActive: _selectedEngineTab == 'analysis' && engineState.isEngineOn,
+                onTap: () {
+                  ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                  if (_selectedEngineTab != 'analysis') {
                     setState(() {
-                      _enginePlayMode = EnginePlayMode.manual;
-                      _isAutoMode = false;
+                      _selectedEngineTab = 'analysis';
                     });
+                    if (!engineState.isEngineOn) {
+                      engineNotifier.toggleEngine(true, studyState.activeFen);
+                    }
+                  } else {
+                    // if already on analysis, toggle engine
+                    final nextVal = !engineState.isEngineOn;
+                    engineNotifier.toggleEngine(nextVal, studyState.activeFen);
+                    if (!nextVal) {
+                      setState(() {
+                        _enginePlayMode = EnginePlayMode.manual;
+                        _isAutoMode = false;
+                      });
+                    }
                   }
                 },
               ),
@@ -2640,49 +2626,80 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
           ),
           const SizedBox(height: 6),
 
-          if (engineState.isEngineOn) ...[
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'RECOMMENDED LINES:',
-                  style: GoogleFonts.outfit(fontSize: 9, letterSpacing: 0.5, color: ScholarlyTheme.textMuted, fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  engineState.isMate && engineState.mateIn != null
-                      ? 'Eval: Mate ${engineState.mateIn!.abs()}'
-                      : 'Eval: ${(engineState.evalScore ?? 0.0) > 0 ? "+" : ""}${engineState.evalScore?.toStringAsFixed(1) ?? "0.0"}',
-                  style: GoogleFonts.jetBrainsMono(fontSize: 10, color: ScholarlyTheme.accentBlue, fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-            const SizedBox(height: 2),
+          if (_selectedEngineTab == 'log')
             Expanded(
-              child: engineState.topLines.isEmpty
-                  ? Center(child: Text('Calculating best moves...', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 10)))
-                  : ListView.builder(
-                      itemCount: engineState.topLines.length,
-                      itemBuilder: (context, index) {
-                        final line = engineState.topLines[index];
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 2),
-                          child: Text(
-                            '#${index + 1} (${line.eval > 0 ? "+" : ""}${line.eval.toStringAsFixed(1)}): ${line.moves.take(5).join(" ")}',
-                            style: GoogleFonts.jetBrainsMono(fontSize: 10, color: ScholarlyTheme.textPrimary),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        );
-                      },
-                    ),
-            ),
-          ] else ...[
-            Expanded(
-              child: Center(
-                child: Text('Engine is inactive.\nTurn on Analysis to start.', textAlign: TextAlign.center, style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 11)),
+              child: _buildInlineMovesLog(studyState, studyNotifier),
+            )
+          else ...[
+            if (engineState.isEngineOn) ...[
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'RECOMMENDED LINES:',
+                    style: GoogleFonts.outfit(fontSize: 9, letterSpacing: 0.5, color: ScholarlyTheme.textMuted, fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    engineState.isMate && engineState.mateIn != null
+                        ? 'Eval: Mate ${engineState.mateIn!.abs()}'
+                        : 'Eval: ${(engineState.evalScore ?? 0.0) > 0 ? "+" : ""}${engineState.evalScore?.toStringAsFixed(1) ?? "0.0"}',
+                    style: GoogleFonts.jetBrainsMono(fontSize: 10, color: ScholarlyTheme.accentBlue, fontWeight: FontWeight.bold),
+                  ),
+                ],
               ),
-            ),
+              const SizedBox(height: 2),
+              Expanded(
+                child: engineState.topLines.isEmpty
+                    ? Center(child: Text('Calculating best moves...', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 10)))
+                    : ListView.builder(
+                        itemCount: engineState.topLines.length,
+                        itemBuilder: (context, index) {
+                          final line = engineState.topLines[index];
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 2),
+                            child: Text(
+                              '#${index + 1} (${line.eval > 0 ? "+" : ""}${line.eval.toStringAsFixed(1)}): ${line.moves.take(5).join(" ")}',
+                              style: GoogleFonts.jetBrainsMono(fontSize: 10, color: ScholarlyTheme.textPrimary),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ] else ...[
+              Expanded(
+                child: Center(
+                  child: Text('Engine is inactive.\nTurn on Analysis to start.', textAlign: TextAlign.center, style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 11)),
+                ),
+              ),
+            ],
           ],
         ],
+      ),
+    );
+  }
+
+  Widget _buildInlineMovesLog(StudyLabState studyState, StudyLabNotifier studyNotifier) {
+    final List<Widget> moveChips = [];
+    _buildMoveTreeChips(studyState, studyNotifier, null, moveChips, 0);
+
+    if (moveChips.isEmpty) {
+      return Center(
+        child: Text(
+          'No moves played yet.\nMake a move on the board to start.',
+          textAlign: TextAlign.center,
+          style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 10),
+        ),
+      );
+    }
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 2.0),
+      child: Wrap(
+        spacing: 4,
+        runSpacing: 4,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: moveChips,
       ),
     );
   }
