@@ -9,7 +9,7 @@ import '../../../application/study_lab_provider.dart';
 import '../../../application/practice_lab_provider.dart';
 import '../../../services/chess_sound_service.dart';
 import '../../scholarly_theme.dart';
-import '../themes/sparring_classic_theme.dart';
+import '../themes/analysis_classic_theme.dart';
 
 class PracticeLabBoard extends ConsumerStatefulWidget {
   final double boardSize;
@@ -136,7 +136,7 @@ class _PracticeLabBoardState extends ConsumerState<PracticeLabBoard> {
 
   @override
   Widget build(BuildContext context) {
-    const theme = SparringClassicTheme();
+    const theme = AnalysisClassicTheme();
 
     final studyState = ref.watch(studyLabProvider);
     final state = ref.watch(practiceLabProvider);
@@ -167,27 +167,30 @@ class _PracticeLabBoardState extends ConsumerState<PracticeLabBoard> {
         state.isSessionActive &&
         state.viewingMoveIndex == null;
     final isFlipped = widget.isFlippedOverride ?? state.isBoardFlipped;
+    final isMobile = MediaQuery.of(context).size.width <= 800;
+    final borderRadius = isMobile ? BorderRadius.zero : BorderRadius.circular(16);
+    final boxShadow = isMobile ? null : ScholarlyTheme.boardShadow;
 
     return Center(
       child: Container(
         width: widget.boardSize,
         height: widget.boardSize,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: ScholarlyTheme.boardShadow,
+          borderRadius: borderRadius,
+          boxShadow: boxShadow,
         ),
         child: Stack(
           clipBehavior: Clip.none,
           children: [
             // Frame / Background
             ClipRRect(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: borderRadius,
               child: theme.buildBackground(context, true),
             ),
 
             // Squares Grid
             ClipRRect(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: borderRadius,
               child: GridView.builder(
                 padding: EdgeInsets.zero,
                 physics: const NeverScrollableScrollPhysics(),
@@ -359,7 +362,7 @@ class _PracticeLabBoardState extends ConsumerState<PracticeLabBoard> {
             if (state.pendingPromoFrom != null && state.pendingPromoTo != null) ...[
               Positioned.fill(
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: borderRadius,
                   child: GestureDetector(
                     onTap: () {
                       _clearSelection();
@@ -376,14 +379,14 @@ class _PracticeLabBoardState extends ConsumerState<PracticeLabBoard> {
               ),
               Center(
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: borderRadius,
                   child: BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
                     child: Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.85),
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: borderRadius,
                         border: Border.all(color: Colors.white.withValues(alpha: 0.55), width: 1.5),
                         boxShadow: ScholarlyTheme.cardShadow,
                       ),

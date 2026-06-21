@@ -38,7 +38,8 @@ class _BoardEditorTabState extends ConsumerState<BoardEditorTab> {
   @override
   void initState() {
     super.initState();
-    _resetToDefaultPosition();
+    final activeFen = ref.read(studyLabProvider).activeFen;
+    _loadFenToBoardPieces(activeFen);
   }
 
   void _resetToDefaultPosition() {
@@ -174,9 +175,54 @@ class _BoardEditorTabState extends ConsumerState<BoardEditorTab> {
       return;
     }
 
-    // Success - load into study board!
-    ref.read(studyLabProvider.notifier).loadPositionSetup(fen);
-    widget.onApply();
+    // Success - Show cautionary confirmation dialog before loading setup
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: ScholarlyTheme.panelBase,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: ScholarlyTheme.panelStroke, width: 1.5),
+        ),
+        title: Text(
+          'Update Board State?',
+          style: GoogleFonts.inter(
+            fontWeight: FontWeight.bold,
+            color: ScholarlyTheme.textPrimary,
+          ),
+        ),
+        content: Text(
+          'This will clear all moves and custom variations in the analysis board. Do you want to proceed?',
+          style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 13),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.inter(color: ScholarlyTheme.textMuted),
+            ),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(context);
+              ref.read(studyLabProvider.notifier).loadPositionSetup(fen);
+              widget.onApply();
+            },
+            style: FilledButton.styleFrom(
+              backgroundColor: ScholarlyTheme.accentBlue,
+            ),
+            child: Text(
+              'Proceed',
+              style: GoogleFonts.inter(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildPiecePalette(WidgetRef ref) {
@@ -261,23 +307,24 @@ class _BoardEditorTabState extends ConsumerState<BoardEditorTab> {
   }
 
   Widget _buildChessboard(double boardSize, AnalysisClassicTheme theme) {
+    final isMobile = MediaQuery.of(context).size.width <= 800;
     return Container(
       width: boardSize,
       height: boardSize,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: ScholarlyTheme.boardShadow,
+        borderRadius: BorderRadius.circular(isMobile ? 0 : 16),
+        boxShadow: isMobile ? null : ScholarlyTheme.boardShadow,
       ),
       child: Stack(
         children: [
           // Board theme background
           ClipRRect(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(isMobile ? 0 : 16),
             child: theme.buildBackground(context, true),
           ),
           // Grid of squares
           ClipRRect(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(isMobile ? 0 : 16),
             child: GridView.builder(
               physics: const NeverScrollableScrollPhysics(),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -503,7 +550,9 @@ class _BoardEditorTabState extends ConsumerState<BoardEditorTab> {
 
     // Compute board width
     final screenWidth = MediaQuery.of(context).size.width;
-    final boardSize = (screenWidth > 500 ? 400.0 : screenWidth - 32).clamp(280.0, 480.0);
+    final boardSize = screenWidth > 800
+        ? (screenWidth > 500 ? 400.0 : screenWidth - 32).clamp(280.0, 480.0)
+        : screenWidth; // Edge-to-edge for mobile viewports
 
     if (screenWidth > 800) {
       // Landscape: Board on the left (fixed), controls on the right (scrollable)
@@ -544,10 +593,8 @@ class _BoardEditorTabState extends ConsumerState<BoardEditorTab> {
       return Column(
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8.0),
-            child: Center(
-              child: _buildChessboard(boardSize, theme),
-            ),
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: _buildChessboard(boardSize, theme),
           ),
           Expanded(
             child: SingleChildScrollView(
