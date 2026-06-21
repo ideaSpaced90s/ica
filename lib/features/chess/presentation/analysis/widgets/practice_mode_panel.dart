@@ -255,6 +255,16 @@ class _PracticeModePanelState extends ConsumerState<PracticeModePanel> {
                           onPressed: () => ref.read(practiceLabProvider.notifier).navigateToMove(null),
                         ),
                       ),
+
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: const Icon(Icons.stop_circle_rounded, color: Colors.redAccent, size: 28),
+                      tooltip: 'Stop Sparring Session',
+                      onPressed: () {
+                        final studyState = ref.read(studyLabProvider);
+                        ref.read(practiceLabProvider.notifier).endSession(studyState.activeFen);
+                      },
+                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -731,6 +741,16 @@ class _PracticeModePanelState extends ConsumerState<PracticeModePanel> {
                         onPressed: () => ref.read(practiceLabProvider.notifier).navigateToMove(null),
                       ),
                     ),
+
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(Icons.stop_circle_rounded, color: Colors.redAccent, size: 28),
+                    tooltip: 'Stop Sparring Session',
+                    onPressed: () {
+                      final studyState = ref.read(studyLabProvider);
+                      ref.read(practiceLabProvider.notifier).endSession(studyState.activeFen);
+                    },
+                  ),
                   
                 ],
               ),

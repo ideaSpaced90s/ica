@@ -6,14 +6,19 @@ import '../../application/study_lab_provider.dart';
 import '../scholarly_theme.dart';
 import 'themes/analysis_classic_theme.dart';
 
-class PositionSetupPage extends ConsumerStatefulWidget {
-  const PositionSetupPage({super.key});
+class BoardEditorTab extends ConsumerStatefulWidget {
+  final VoidCallback onApply;
+
+  const BoardEditorTab({
+    super.key,
+    required this.onApply,
+  });
 
   @override
-  ConsumerState<PositionSetupPage> createState() => _PositionSetupPageState();
+  ConsumerState<BoardEditorTab> createState() => _BoardEditorTabState();
 }
 
-class _PositionSetupPageState extends ConsumerState<PositionSetupPage> {
+class _BoardEditorTabState extends ConsumerState<BoardEditorTab> {
   // Current board state for setup (represented as 8x8 map)
   final Map<String, String> _boardPieces = {};
 
@@ -171,7 +176,7 @@ class _PositionSetupPageState extends ConsumerState<PositionSetupPage> {
 
     // Success - load into study board!
     ref.read(studyLabProvider.notifier).loadPositionSetup(fen);
-    Navigator.pop(context);
+    widget.onApply();
   }
 
   Widget _buildPiecePalette(WidgetRef ref) {
@@ -440,25 +445,53 @@ class _PositionSetupPageState extends ConsumerState<PositionSetupPage> {
   }
 
   Widget _buildActionButtons() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        OutlinedButton.icon(
-          style: OutlinedButton.styleFrom(
-            foregroundColor: Colors.redAccent,
-            side: const BorderSide(color: Colors.redAccent),
-          ),
-          icon: const Icon(Icons.clear),
-          label: const Text('Clear Board'),
-          onPressed: _clearBoard,
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.redAccent,
+                  side: const BorderSide(color: Colors.redAccent),
+                ),
+                icon: const Icon(Icons.clear, size: 16),
+                label: const Text('Clear Board', style: TextStyle(fontSize: 12)),
+                onPressed: _clearBoard,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: ScholarlyTheme.textMuted,
+                  side: const BorderSide(color: ScholarlyTheme.panelStroke),
+                ),
+                icon: const Icon(Icons.settings_backup_restore, size: 16),
+                label: const Text('Reset Start', style: TextStyle(fontSize: 12)),
+                onPressed: _resetToDefaultPosition,
+              ),
+            ),
+          ],
         ),
-        OutlinedButton.icon(
-          style: OutlinedButton.styleFrom(
-            foregroundColor: ScholarlyTheme.textMuted,
+        const SizedBox(height: 12),
+        ElevatedButton.icon(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: ScholarlyTheme.accentBlue,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            elevation: 2,
           ),
-          icon: const Icon(Icons.settings_backup_restore),
-          label: const Text('Reset Start'),
-          onPressed: _resetToDefaultPosition,
+          icon: const Icon(Icons.check, size: 20),
+          label: const Text(
+            'Apply Setup to Board',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          ),
+          onPressed: _saveSetup,
         ),
       ],
     );
@@ -472,87 +505,72 @@ class _PositionSetupPageState extends ConsumerState<PositionSetupPage> {
     final screenWidth = MediaQuery.of(context).size.width;
     final boardSize = (screenWidth > 500 ? 400.0 : screenWidth - 32).clamp(280.0, 480.0);
 
-    return Scaffold(
-      backgroundColor: ScholarlyTheme.backgroundStart,
-      appBar: AppBar(
-        backgroundColor: ScholarlyTheme.backgroundStart,
-        elevation: 0,
-        title: Text(
-          'Board Editor',
-          style: GoogleFonts.outfit(
-            fontWeight: FontWeight.bold,
-            color: ScholarlyTheme.textPrimary,
-          ),
-        ),
-        actions: [
-          TextButton.icon(
-            icon: const Icon(Icons.check, color: ScholarlyTheme.accentBlue),
-            label: Text(
-              'Apply',
-              style: GoogleFonts.inter(
-                fontWeight: FontWeight.bold,
-                color: ScholarlyTheme.accentBlue,
+    if (screenWidth > 800) {
+      // Landscape: Board on the left (fixed), controls on the right (scrollable)
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Left Column: Chessboard
+            SizedBox(
+              width: boardSize,
+              child: Center(
+                child: _buildChessboard(boardSize, theme),
               ),
             ),
-            onPressed: _saveSetup,
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12),
-          child: screenWidth > 800
-              ? Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+            const SizedBox(width: 24),
+            // Right Column: Editing Tools (Scrollable)
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Left Column: Chessboard
-                    Expanded(
-                      flex: 5,
-                      child: Center(
-                        child: _buildChessboard(boardSize, theme),
-                      ),
-                    ),
-                    const SizedBox(width: 24),
-                    // Right Column: Editing Tools
-                    Expanded(
-                      flex: 6,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          _buildPiecePalette(ref),
-                          const SizedBox(height: 16),
-                          _buildSettingsPanel(),
-                          const SizedBox(height: 16),
-                          _buildActionButtons(),
-                        ],
-                      ),
-                    ),
-                  ],
-                )
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    // 1. Board Editor
-                    Center(
-                      child: _buildChessboard(boardSize, theme),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // 2. Piece Palette
                     _buildPiecePalette(ref),
                     const SizedBox(height: 16),
-
-                    // 3. Settings / Options panel
                     _buildSettingsPanel(),
                     const SizedBox(height: 16),
-
-                    // 4. Utility Action Buttons
                     _buildActionButtons(),
-                    const SizedBox(height: 32),
                   ],
                 ),
+              ),
+            ),
+          ],
         ),
-      ),
-    );
+      );
+    } else {
+      // Portrait: Board on top (fixed), controls below (scrollable)
+      return Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8.0),
+            child: Center(
+              child: _buildChessboard(boardSize, theme),
+            ),
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const SizedBox(height: 8),
+                    _buildPiecePalette(ref),
+                    const SizedBox(height: 16),
+                    _buildSettingsPanel(),
+                    const SizedBox(height: 16),
+                    _buildActionButtons(),
+                    const SizedBox(height: 100), // Spacing for bottom navbar
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
   }
 }

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:chess/chess.dart' as chess_lib;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -13,6 +14,8 @@ import '../../services/chess_sound_service.dart';
 import 'analysis_board.dart';
 import 'position_setup_page.dart';
 import 'workspace_page.dart';
+import 'widgets/game_report_panel.dart';
+import 'widgets/practice_mode_panel.dart';
 import '../mobile_navigation_shell.dart';
 
 class AnalysisPage extends ConsumerStatefulWidget {
@@ -25,11 +28,15 @@ class AnalysisPage extends ConsumerStatefulWidget {
 class _AnalysisPageState extends ConsumerState<AnalysisPage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
+  int _currentTabIndex = 0;
   bool _isAutoPlaying = false;
   Timer? _autoPlayTimer;
+  late final PageController _horizontalPageController;
+  int _activeHorizontalPage = 1; // Default to Move Notation (page 1)
 
   @override
   void dispose() {
+    _horizontalPageController.dispose();
     _autoPlayTimer?.cancel();
     ref.read(backButtonOverridesProvider.notifier).update((map) {
       final newMap = Map<int, Future<bool> Function()>.from(map);
@@ -70,6 +77,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
   @override
   void initState() {
     super.initState();
+    _horizontalPageController = PageController(initialPage: 1);
     Future.microtask(() => ref.read(chessProvider.notifier).loadSavedGames());
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -81,6 +89,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
     });
   }
 
+
   Widget _buildLandscapeLayout(
     BuildContext context,
     StudyLabState state,
@@ -88,10 +97,9 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
     BoxConstraints constraints,
   ) {
     final double paddingHorizontal = 16.0;
-    // Increased board size headroom since action bar is moved to the sidebar
     final double boardSize = math.min(
-      (constraints.maxWidth * 0.55) - 36,
-      constraints.maxHeight - 140,
+      constraints.maxWidth * 0.55,
+      constraints.maxHeight - 110,
     );
 
     return Padding(
@@ -153,13 +161,110 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
                 Expanded(
                   child: _buildNotationPane(context, state, notifier, isScrollable: true),
                 ),
-                const SizedBox(height: 12),
-                _buildActionBar(context, state, notifier),
               ],
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildPortraitLayout(
+    BuildContext context,
+    StudyLabState state,
+    StudyLabNotifier notifier,
+    BoxConstraints constraints,
+  ) {
+    final double boardSize = constraints.maxWidth;
+    final double fixedHeaderHeight = boardSize + (state.isGuessingMode ? 46.0 : 0.0);
+
+    return Stack(
+      children: [
+        // 1. Scrollable content behind the board
+        Positioned.fill(
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Top spacing matching the fixed board height
+                SizedBox(height: fixedHeaderHeight),
+
+                // VCR controls & action buttons (under icons)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+                  child: _buildUnifiedControlPanel(
+                    context,
+                    state,
+                    notifier,
+                    boardSize,
+                    isPortrait: true,
+                  ),
+                ),
+
+                // Horizontal page views for engine and moves
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
+                  child: _buildHorizontalPanels(
+                    context,
+                    state,
+                    notifier,
+                    boardSize,
+                  ),
+                ),
+
+                // Bottom padding to avoid navigation bar overlap
+                const SizedBox(height: 100),
+              ],
+            ),
+          ),
+        ),
+
+        // 2. Fixed chessboard at the top
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          child: Container(
+            color: ScholarlyTheme.backgroundStart,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (state.isGuessingMode)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
+                    child: Container(
+                      height: 38,
+                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: ScholarlyTheme.accentBlue.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'GUESS THE MOVE TRAINING',
+                            style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 11, color: ScholarlyTheme.accentBlue),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(color: ScholarlyTheme.accentBlue, borderRadius: BorderRadius.circular(4)),
+                            child: Text(
+                              '${state.guessedNodes.length} CORRECT',
+                              style: GoogleFonts.inter(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                _buildBoardWithEval(context, state, notifier, boardSize),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -173,103 +278,65 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
       ref.read(analysisEngineControllerProvider.notifier).setFen(next);
     });
 
+    Widget activeTabBody;
+    switch (_currentTabIndex) {
+      case 0:
+        activeTabBody = LayoutBuilder(
+          builder: (context, constraints) {
+            final isLandscape = constraints.maxWidth > constraints.maxHeight;
+            if (isLandscape) {
+              return _buildLandscapeLayout(context, state, notifier, constraints);
+            }
+            return _buildPortraitLayout(context, state, notifier, constraints);
+          },
+        );
+        break;
+      case 1:
+        activeTabBody = GameLibraryTab(
+          onGameLoaded: () {
+            setState(() {
+              _currentTabIndex = 0;
+            });
+          },
+        );
+        break;
+      case 2:
+        activeTabBody = BoardEditorTab(
+          onApply: () {
+            setState(() {
+              _currentTabIndex = 0;
+            });
+          },
+        );
+        break;
+      case 3:
+        activeTabBody = const GameReportPanel();
+        break;
+      case 4:
+        activeTabBody = const PracticeModePanel();
+        break;
+      default:
+        activeTabBody = const SizedBox.shrink();
+    }
+
     return AmbientScaffold(
-        scaffoldKey: _scaffoldKey,
-        blob1Color: const Color(0xFFF3E8FF),
-        blob2Color: const Color(0xFFDBEAFE),
-        blob3Color: const Color(0xFFFEF3C7),
-        body: SafeArea(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final isLandscape = constraints.maxWidth > constraints.maxHeight;
-              if (isLandscape) {
-                return _buildLandscapeLayout(context, state, notifier, constraints);
-              }
-
-              final bool isWide = constraints.maxWidth > 800;
-              final double paddingHorizontal = isWide ? 16.0 : 12.0;
-              final double boardSize = math.min(
-                constraints.maxWidth - (paddingHorizontal * 2) - 36,
-                constraints.maxHeight * 0.48,
-              );
-
-              return Padding(
-                padding: EdgeInsets.symmetric(horizontal: paddingHorizontal),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const SizedBox(height: 4),
-                    // Board Editor setup indicator in Guessing Mode
-                    if (state.isGuessingMode)
-                      Container(
-                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                        margin: const EdgeInsets.only(bottom: 8),
-                        decoration: BoxDecoration(
-                          color: ScholarlyTheme.accentBlue.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'GUESS THE MOVE TRAINING',
-                              style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 11, color: ScholarlyTheme.accentBlue),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(color: ScholarlyTheme.accentBlue, borderRadius: BorderRadius.circular(4)),
-                              child: Text(
-                                '${state.guessedNodes.length} CORRECT',
-                                style: GoogleFonts.inter(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                    // Chessboard & Unified Control Panel grouped together
-                    Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _buildBoardWithEval(context, state, notifier, boardSize),
-                          _buildUnifiedControlPanel(context, state, notifier, boardSize),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-
-                    // Engine Outputs & Notation Pane
-                    Expanded(
-                      child: Align(
-                        alignment: Alignment.topCenter,
-                        child: SingleChildScrollView(
-                          physics: const BouncingScrollPhysics(),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              _buildEnginePanel(context),
-                              if (ref.watch(analysisEngineControllerProvider).isEngineOn)
-                                const SizedBox(height: 8),
-                              _buildNotationPane(context, state, notifier),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-
-                    // Action/Settings Bar at the bottom
-                    _buildActionBar(context, state, notifier),
-                    const SizedBox(height: 8),
-                  ],
-                ),
-              );
-            },
-          ),
-        ),
-      );
+      scaffoldKey: _scaffoldKey,
+      blob1Color: const Color(0xFFF3E8FF),
+      blob2Color: const Color(0xFFDBEAFE),
+      blob3Color: const Color(0xFFFEF3C7),
+      bottomNavigationBar: PremiumBottomNavBar(
+        currentIndex: _currentTabIndex,
+        onTap: (index) {
+          ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+          setState(() {
+            _currentTabIndex = index;
+          });
+        },
+      ),
+      body: SafeArea(
+        child: activeTabBody,
+      ),
+    );
   }
 
   Widget _buildBoardWithEval(
@@ -287,113 +354,338 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
     );
   }
 
-  Widget _buildEnginePanel(BuildContext context) {
+  Widget _buildCompactSelectorIcon(int index, IconData icon, String tooltip) {
+    final isSelected = _activeHorizontalPage == index;
+    final activeColor = ScholarlyTheme.accentBlue;
+    final inactiveColor = ScholarlyTheme.textMuted.withValues(alpha: 0.5);
+
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: () {
+          _horizontalPageController.animateToPage(
+            index,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+          );
+        },
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: isSelected ? activeColor.withValues(alpha: 0.1) : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isSelected ? activeColor.withValues(alpha: 0.2) : Colors.transparent,
+            ),
+          ),
+          child: Icon(
+            icon,
+            color: isSelected ? activeColor : inactiveColor,
+            size: 18,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHorizontalPanels(
+    BuildContext context,
+    StudyLabState state,
+    StudyLabNotifier notifier,
+    double boardSize,
+  ) {
+    final engineState = ref.watch(analysisEngineControllerProvider);
+    final isEngineOn = engineState.isEngineOn;
+
+    return JuicyGlassCard(
+      padding: const EdgeInsets.fromLTRB(12, 12, 4, 12),
+      borderRadius: 16,
+      child: SizedBox(
+        height: 170, // Fixed height to avoid vertical scrolling entirely
+        child: Row(
+          children: [
+            // Left side: PageView content
+            Expanded(
+              child: PageView(
+                controller: _horizontalPageController,
+                onPageChanged: (index) {
+                  setState(() {
+                    _activeHorizontalPage = index;
+                  });
+                },
+                children: [
+                  // Page 0: Engine Analysis
+                  isEngineOn
+                      ? _buildEnginePanel(context, hasCard: false)
+                      : Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.bolt,
+                                size: 28,
+                                color: ScholarlyTheme.textMuted.withValues(alpha: 0.4),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'Engine is Off',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: ScholarlyTheme.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Enable analysis under the board.',
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.inter(
+                                  fontSize: 10,
+                                  color: ScholarlyTheme.textMuted,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                  // Page 1: Move Notation
+                  _buildNotationPane(context, state, notifier, isScrollable: true, hasCard: false),
+                ],
+              ),
+            ),
+            // Right side: Vertical Stack of Icon switchers
+            Container(
+              width: 1.5,
+              margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
+              color: ScholarlyTheme.panelStroke.withValues(alpha: 0.3),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildCompactSelectorIcon(0, Icons.bolt, 'Engine Analysis'),
+                  const SizedBox(height: 10),
+                  _buildCompactSelectorIcon(1, Icons.list_alt_rounded, 'Move Notation'),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _convertUciListToSan(String startFen, List<String> uciMoves, int limit) {
+    try {
+      final chess = chess_lib.Chess.fromFEN(startFen);
+      final List<String> sanMoves = [];
+      for (final uci in uciMoves.take(limit)) {
+        if (uci.length < 4) break;
+        final from = uci.substring(0, 2);
+        final to = uci.substring(2, 4);
+        final promotion = uci.length > 4 ? uci[4] : null;
+
+        final moves = chess.generate_moves();
+        chess_lib.Move? matchedMove;
+        for (final m in moves) {
+          final mFrom = chess_lib.Chess.algebraic(m.from);
+          final mTo = chess_lib.Chess.algebraic(m.to);
+          final mPromo = m.promotion?.name;
+          if (mFrom == from && mTo == to && (promotion == null || mPromo == promotion)) {
+            matchedMove = m;
+            break;
+          }
+        }
+
+        if (matchedMove != null) {
+          final san = chess.move_to_san(matchedMove);
+          chess.make_move(matchedMove);
+          sanMoves.add(san);
+        } else {
+          break;
+        }
+      }
+      if (sanMoves.isEmpty) return uciMoves.take(limit).join(' ');
+      return sanMoves.join(' ');
+    } catch (e) {
+      debugPrint("Error converting UCI moves to SAN: $e");
+      return uciMoves.take(limit).join(' ');
+    }
+  }
+
+  Widget _buildEnginePanel(BuildContext context, {bool hasCard = true}) {
     final engineState = ref.watch(analysisEngineControllerProvider);
     if (!engineState.isEngineOn) return const SizedBox.shrink();
 
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.bolt, size: 14, color: Colors.orangeAccent),
+                const SizedBox(width: 4),
+                Text(
+                  'ENGINE - Depth ${engineState.currentDepth}',
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: ScholarlyTheme.textMuted,
+                  ),
+                ),
+              ],
+            ),
+            if (engineState.isAnalyzing)
+              const SizedBox(
+                width: 10,
+                height: 10,
+                child: CircularProgressIndicator(strokeWidth: 1.5, color: Colors.orangeAccent),
+              ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Expanded(
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (engineState.topLines.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Text(
+                      'Calculating...',
+                      style: GoogleFonts.inter(fontSize: 11, fontStyle: FontStyle.italic, color: ScholarlyTheme.textMuted),
+                    ),
+                  )
+                else
+                  ...engineState.topLines.map((line) {
+                    final evalText = line.isMate && line.mateIn != null
+                        ? 'M${line.mateIn}'
+                        : '${line.eval > 0 ? "+" : ""}${line.eval.toStringAsFixed(2)}';
+
+                    final state = ref.read(studyLabProvider);
+                    final movesText = _convertUciListToSan(state.activeFen, line.moves, 4);
+
+                    return GestureDetector(
+                      onTap: () {
+                        if (line.moves.isNotEmpty) {
+                          final firstMove = line.moves.first;
+                          if (firstMove.length >= 4) {
+                            final from = firstMove.substring(0, 2);
+                            final to = firstMove.substring(2, 4);
+                            final promo = firstMove.length > 4 ? firstMove[4] : '';
+                            ref.read(studyLabProvider.notifier).makeMove(from, to, promo);
+                          }
+                        }
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2.0),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 18,
+                              alignment: Alignment.center,
+                              child: Text(
+                                '#${line.pvIndex}',
+                                style: GoogleFonts.jetBrainsMono(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: ScholarlyTheme.textMuted,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                movesText,
+                                style: GoogleFonts.jetBrainsMono(
+                                  fontSize: 11,
+                                  color: ScholarlyTheme.textPrimary,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            Text(
+                              evalText,
+                              style: GoogleFonts.jetBrainsMono(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: line.eval >= 0 ? Colors.green : Colors.redAccent,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+
+    if (!hasCard) return Padding(padding: const EdgeInsets.symmetric(horizontal: 6.0), child: content);
     return JuicyGlassCard(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       borderRadius: 16,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  const Icon(Icons.bolt, size: 14, color: Colors.orangeAccent),
-                  const SizedBox(width: 4),
-                  Text(
-                    'ENGINE - Depth ${engineState.currentDepth}',
-                    style: GoogleFonts.inter(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: ScholarlyTheme.textMuted,
-                    ),
-                  ),
-                ],
-              ),
-              if (engineState.isAnalyzing)
-                const SizedBox(
-                  width: 10,
-                  height: 10,
-                  child: CircularProgressIndicator(strokeWidth: 1.5, color: Colors.orangeAccent),
-                ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          if (engineState.topLines.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Text(
-                'Calculating...',
-                style: GoogleFonts.inter(fontSize: 11, fontStyle: FontStyle.italic, color: ScholarlyTheme.textMuted),
-              ),
-            )
-          else
-            ...engineState.topLines.map((line) {
-              final evalText = line.isMate && line.mateIn != null
-                  ? 'M${line.mateIn}'
-                  : '${line.eval > 0 ? "+" : ""}${line.eval.toStringAsFixed(2)}';
+      child: content,
+    );
+  }
 
-              final movesText = line.moves.take(4).join(' ');
-
-              return GestureDetector(
-                onTap: () {
-                  if (line.moves.isNotEmpty) {
-                    final firstMove = line.moves.first;
-                    if (firstMove.length >= 4) {
-                      final from = firstMove.substring(0, 2);
-                      final to = firstMove.substring(2, 4);
-                      final promo = firstMove.length > 4 ? firstMove[4] : '';
-                      ref.read(studyLabProvider.notifier).makeMove(from, to, promo);
+  Widget _buildSaveStudyButton(BuildContext context, StudyLabState state, StudyLabNotifier notifier) {
+    final isDirty = state.isDirty && state.nodes.isNotEmpty;
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        _CompactBoxButton(
+          tooltip: isDirty ? 'Save Study (Unsaved Changes)' : 'Save Study',
+          activeColor: const Color(0xFF00E676),
+          isActive: isDirty,
+          onTap: isDirty
+              ? () async {
+                  ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                  if (state.libraryIndex != null) {
+                    final success = await notifier.saveExistingStudyInLibrary(state.libraryIndex!);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            success ? 'Study saved successfully!' : 'Failed to save study.',
+                            style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                          ),
+                          backgroundColor: success ? const Color(0xFF00E676) : Colors.redAccent,
+                        ),
+                      );
                     }
+                  } else {
+                    _showSaveStudyDialog(context, notifier, state);
                   }
-                },
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2.0),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 18,
-                        alignment: Alignment.center,
-                        child: Text(
-                          '#${line.pvIndex}',
-                          style: GoogleFonts.jetBrainsMono(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: ScholarlyTheme.textMuted,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          movesText,
-                          style: GoogleFonts.jetBrainsMono(
-                            fontSize: 11,
-                            color: ScholarlyTheme.textPrimary,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      Text(
-                        evalText,
-                        style: GoogleFonts.jetBrainsMono(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: line.eval >= 0 ? Colors.green : Colors.redAccent,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }),
-        ],
-      ),
+                }
+              : null,
+          child: const Icon(Icons.save_rounded),
+        ),
+        if (isDirty)
+          Positioned(
+            top: -2,
+            right: -2,
+            child: Container(
+              width: 8,
+              height: 8,
+              decoration: const BoxDecoration(
+                color: Color(0xFFFF6B35),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+      ],
     );
   }
 
@@ -401,17 +693,19 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
     BuildContext context,
     StudyLabState state,
     StudyLabNotifier notifier,
-    double boardSize,
-  ) {
+    double boardSize, {
+    bool isPortrait = false,
+  }) {
     final activeIndex = state.currentNodeIndex;
     final bool hasActiveNode = activeIndex != null && activeIndex < state.nodes.length;
     final activeNode = hasActiveNode ? state.nodes[activeIndex] : null;
 
-    final double contentWidth = boardSize + 36 - 16; // Subtract horizontal card padding (8 * 2 = 16)
+    final double panelWidth = isPortrait ? boardSize - 24 : boardSize;
 
     return SizedBox(
-      width: boardSize + 36, // Match Chessboard + EvalBar width exactly
+      width: panelWidth,
       child: JuicyGlassCard(
+
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         borderRadius: 12,
         child: Column(
@@ -420,119 +714,126 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
             // Row 1: VCR Navigation Controls
             FittedBox(
               fit: BoxFit.scaleDown,
-              child: SizedBox(
-                width: contentWidth,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _CompactBoxButton(
-                      tooltip: 'Go to Start',
-                      activeColor: const Color(0xFF29B6F6), // Vibrant Cyan/Blue
-                      onTap: state.currentNodeIndex != null
-                          ? () {
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  FlashingEngineButton(
+                    isEngineOn: ref.watch(analysisEngineControllerProvider).isEngineOn,
+                    size: 24,
+                    onTap: () {
+                      final engineState = ref.read(analysisEngineControllerProvider);
+                      ref.read(analysisEngineControllerProvider.notifier).toggleEngine(!engineState.isEngineOn, state.activeFen);
+                      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiToggle);
+                    },
+                  ),
+                  Container(width: 1.5, height: 24, color: ScholarlyTheme.panelStroke.withValues(alpha: 0.5)),
+                  _CompactBoxButton(
+                    tooltip: 'Go to Start',
+                    activeColor: const Color(0xFF29B6F6), // Vibrant Cyan/Blue
+                    onTap: state.currentNodeIndex != null
+                        ? () {
+                            _stopAutoPlay();
+                            notifier.selectNode(null);
+                            ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
+                          }
+                        : null,
+                    child: const Icon(Icons.first_page_rounded),
+                  ),
+                  _CompactBoxButton(
+                    tooltip: 'Undo Move',
+                    activeColor: const Color(0xFF69F0AE), // Vibrant Green
+                    onTap: state.canUndo
+                        ? () {
+                            _stopAutoPlay();
+                            notifier.undo();
+                            ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
+                          }
+                        : null,
+                    child: const Icon(Icons.chevron_left_rounded),
+                  ),
+                  _CompactBoxButton(
+                    tooltip: 'Redo Move',
+                    activeColor: const Color(0xFF69F0AE), // Vibrant Green
+                    onTap: state.canRedo
+                        ? () {
+                            _stopAutoPlay();
+                            notifier.redo();
+                            ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
+                          }
+                        : null,
+                    child: const Icon(Icons.chevron_right_rounded),
+                  ),
+                  _CompactBoxButton(
+                    tooltip: 'Go to End',
+                    activeColor: const Color(0xFF29B6F6), // Vibrant Cyan/Blue
+                    onTap: state.canRedo
+                        ? () {
+                            _stopAutoPlay();
+                            int? current = state.currentNodeIndex;
+                            while (true) {
+                              final children = current == null
+                                  ? state.nodes.where((n) => n.parentIndex == null).toList()
+                                  : state.nodes[current].childIndices.map((idx) => state.nodes[idx]).toList();
+                              if (children.isEmpty) break;
+                              current = children.first.index;
+                            }
+                            notifier.selectNode(current);
+                            ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
+                          }
+                        : null,
+                    child: const Icon(Icons.last_page_rounded),
+                  ),
+                  Container(width: 1.5, height: 24, color: ScholarlyTheme.panelStroke.withValues(alpha: 0.5)),
+                  _CompactBoxButton(
+                    tooltip: 'Flip Board',
+                    activeColor: const Color(0xFFD500F9), // Vibrant Purple
+                    isActive: state.isBoardFlipped,
+                    onTap: () {
+                      notifier.flipBoard();
+                      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
+                    },
+                    child: const Icon(Icons.flip_camera_android_rounded),
+                  ),
+                  _CompactBoxButton(
+                    tooltip: 'Reset Position',
+                    activeColor: const Color(0xFFFF5252), // Vibrant Red
+                    onTap: state.nodes.isNotEmpty
+                        ? () {
+                            _showResetConfirmation(context, notifier);
+                          }
+                        : null,
+                    child: const Icon(Icons.refresh_rounded),
+                  ),
+                  Container(width: 1.5, height: 24, color: ScholarlyTheme.panelStroke.withValues(alpha: 0.5)),
+                  _CompactBoxButton(
+                    tooltip: _isAutoPlaying ? 'Pause' : 'Play Through',
+                    activeColor: const Color(0xFF69F0AE), // Green
+                    isActive: _isAutoPlaying,
+                    onTap: state.nodes.isNotEmpty
+                        ? () {
+                            if (_isAutoPlaying) {
                               _stopAutoPlay();
-                              notifier.selectNode(null);
-                              ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
+                            } else {
+                              _startAutoPlay(notifier);
                             }
-                          : null,
-                      child: const Icon(Icons.first_page_rounded),
-                    ),
-                    _CompactBoxButton(
-                      tooltip: 'Undo Move',
-                      activeColor: const Color(0xFF69F0AE), // Vibrant Green
-                      onTap: state.canUndo
-                          ? () {
-                              _stopAutoPlay();
-                              notifier.undo();
-                              ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
-                            }
-                          : null,
-                      child: const Icon(Icons.chevron_left_rounded),
-                    ),
-                    _CompactBoxButton(
-                      tooltip: 'Redo Move',
-                      activeColor: const Color(0xFF69F0AE), // Vibrant Green
-                      onTap: state.canRedo
-                          ? () {
-                              _stopAutoPlay();
-                              notifier.redo();
-                              ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
-                            }
-                          : null,
-                      child: const Icon(Icons.chevron_right_rounded),
-                    ),
-                    _CompactBoxButton(
-                      tooltip: 'Go to End',
-                      activeColor: const Color(0xFF29B6F6), // Vibrant Cyan/Blue
-                      onTap: state.canRedo
-                          ? () {
-                              _stopAutoPlay();
-                              int? current = state.currentNodeIndex;
-                              while (true) {
-                                final children = current == null
-                                    ? state.nodes.where((n) => n.parentIndex == null).toList()
-                                    : state.nodes[current].childIndices.map((idx) => state.nodes[idx]).toList();
-                                if (children.isEmpty) break;
-                                current = children.first.index;
-                              }
-                              notifier.selectNode(current);
-                              ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
-                            }
-                          : null,
-                      child: const Icon(Icons.last_page_rounded),
-                    ),
-                    Container(width: 1.5, height: 24, color: ScholarlyTheme.panelStroke.withValues(alpha: 0.5)),
-                    _CompactBoxButton(
-                      tooltip: 'Flip Board',
-                      activeColor: const Color(0xFFD500F9), // Vibrant Purple
-                      isActive: state.isBoardFlipped,
-                      onTap: () {
-                        notifier.flipBoard();
-                        ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
-                      },
-                      child: const Icon(Icons.flip_camera_android_rounded),
-                    ),
-                    _CompactBoxButton(
-                      tooltip: 'Reset Position',
-                      activeColor: const Color(0xFFFF5252), // Vibrant Red
-                      onTap: state.nodes.isNotEmpty
-                          ? () {
-                              _showResetConfirmation(context, notifier);
-                            }
-                          : null,
-                      child: const Icon(Icons.refresh_rounded),
-                    ),
-                    Container(width: 1.5, height: 24, color: ScholarlyTheme.panelStroke.withValues(alpha: 0.5)),
-                    _CompactBoxButton(
-                      tooltip: _isAutoPlaying ? 'Pause' : 'Play Through',
-                      activeColor: const Color(0xFF69F0AE), // Green
-                      isActive: _isAutoPlaying,
-                      onTap: state.nodes.isNotEmpty
-                          ? () {
-                              if (_isAutoPlaying) {
-                                _stopAutoPlay();
-                              } else {
-                                _startAutoPlay(notifier);
-                              }
-                              ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiToggle);
-                            }
-                          : null,
-                      child: Icon(_isAutoPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded),
-                    ),
-                    _CompactBoxButton(
-                      tooltip: 'Stop',
-                      activeColor: const Color(0xFFFF5252),
-                      onTap: (_isAutoPlaying || state.currentNodeIndex != null)
-                          ? () {
-                              _stopAutoPlay();
-                              notifier.selectNode(null);
-                              ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
-                            }
-                          : null,
-                      child: const Icon(Icons.stop_rounded),
-                    ),
-                  ],
-                ),
+                            ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiToggle);
+                          }
+                        : null,
+                    child: Icon(_isAutoPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded),
+                  ),
+                  _CompactBoxButton(
+                    tooltip: 'Stop',
+                    activeColor: const Color(0xFFFF5252),
+                    onTap: (_isAutoPlaying || state.currentNodeIndex != null)
+                        ? () {
+                            _stopAutoPlay();
+                            notifier.selectNode(null);
+                            ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
+                          }
+                        : null,
+                    child: const Icon(Icons.stop_rounded),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 6),
@@ -544,42 +845,41 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
               opacity: hasActiveNode ? 1.0 : 0.4,
               child: FittedBox(
                 fit: BoxFit.scaleDown,
-                child: SizedBox(
-                  width: contentWidth,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      ...MoveAnnotation.values.where((a) => a != MoveAnnotation.none).map((ann) {
-                        final isApplied = activeNode?.annotation == ann;
-                        final color = _getChipColor(ann);
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    ...MoveAnnotation.values.where((a) => a != MoveAnnotation.none).map((ann) {
+                      final isApplied = activeNode?.annotation == ann;
+                      final color = _getChipColor(ann);
 
-                        return _CompactBoxButton(
-                          tooltip: ann.name.toUpperCase(),
-                          activeColor: color,
-                          isActive: isApplied,
-                          onTap: hasActiveNode
-                              ? () {
-                                  notifier.setAnnotation(
-                                    activeNode!.index,
-                                    isApplied ? MoveAnnotation.none : ann,
-                                  );
-                                }
-                              : null,
-                          child: Text(_getGlyph(ann)),
-                        );
-                      }),
-                      Container(width: 1.5, height: 24, color: ScholarlyTheme.panelStroke.withValues(alpha: 0.5)),
-                      _CompactBoxButton(
-                        tooltip: 'Add move comment',
-                        activeColor: ScholarlyTheme.accentBlue,
-                        isActive: activeNode?.comment.isNotEmpty == true,
-                        onTap: hasActiveNode ? () => _showCommentDialog(context, activeNode!, notifier) : null,
-                        child: Icon(
-                          activeNode?.comment.isNotEmpty == true ? Icons.comment : Icons.comment_outlined,
-                        ),
+                      return _CompactBoxButton(
+                        tooltip: ann.name.toUpperCase(),
+                        activeColor: color,
+                        isActive: isApplied,
+                        onTap: hasActiveNode
+                            ? () {
+                                notifier.setAnnotation(
+                                  activeNode!.index,
+                                  isApplied ? MoveAnnotation.none : ann,
+                                );
+                              }
+                            : null,
+                        child: Text(_getGlyph(ann)),
+                      );
+                    }),
+                    Container(width: 1.5, height: 24, color: ScholarlyTheme.panelStroke.withValues(alpha: 0.5)),
+                    _CompactBoxButton(
+                      tooltip: 'Add move comment',
+                      activeColor: ScholarlyTheme.accentBlue,
+                      isActive: activeNode?.comment.isNotEmpty == true,
+                      onTap: hasActiveNode ? () => _showCommentDialog(context, activeNode!, notifier) : null,
+                      child: Icon(
+                        activeNode?.comment.isNotEmpty == true ? Icons.comment : Icons.comment_outlined,
                       ),
-                    ],
-                  ),
+                    ),
+                    Container(width: 1.5, height: 24, color: ScholarlyTheme.panelStroke.withValues(alpha: 0.5)),
+                    _buildSaveStudyButton(context, state, notifier),
+                  ],
                 ),
               ),
             ),
@@ -720,135 +1020,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
     );
   }
 
-  Widget _buildActionBar(BuildContext context, StudyLabState state, StudyLabNotifier notifier) {
-    final isDirty = state.isDirty && state.nodes.isNotEmpty;
-    final engineState = ref.watch(analysisEngineControllerProvider);
 
-    return JuicyGlassCard(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      borderRadius: 16,
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              icon: const Icon(Icons.import_export_rounded, color: Colors.teal, size: 28),
-              onPressed: () {
-                ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const WorkspacePage(initialTabIndex: 0)),
-                );
-              },
-              tooltip: 'Import / Export PGN',
-            ),
-            IconButton(
-              icon: const Icon(Icons.library_books_rounded, color: ScholarlyTheme.realGold, size: 26),
-              onPressed: () {
-                ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const WorkspacePage(initialTabIndex: 1)),
-                );
-              },
-              tooltip: 'Game Library',
-            ),
-            // --- Direct Save Study Button ---
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                IconButton(
-                  icon: Icon(
-                    Icons.save_rounded,
-                    color: isDirty ? const Color(0xFF00E676) : ScholarlyTheme.textMuted.withValues(alpha: 0.5),
-                    size: 26,
-                  ),
-                  onPressed: isDirty
-                      ? () async {
-                          ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                          if (state.libraryIndex != null) {
-                            final success = await notifier.saveExistingStudyInLibrary(state.libraryIndex!);
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    success ? 'Study saved successfully!' : 'Failed to save study.',
-                                    style: GoogleFonts.inter(fontWeight: FontWeight.bold),
-                                  ),
-                                  backgroundColor: success ? const Color(0xFF00E676) : Colors.redAccent,
-                                ),
-                              );
-                            }
-                          } else {
-                            _showSaveStudyDialog(context, notifier, state);
-                          }
-                        }
-                      : null,
-                  tooltip: isDirty ? 'Save Study (Unsaved Changes)' : 'Save Study (No Changes)',
-                ),
-                if (isDirty)
-                  Positioned(
-                    top: 6,
-                    right: 6,
-                    child: Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFFF6B35),
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            // --- Toggle Engine / Flash Button ---
-            FlashingEngineButton(
-              isEngineOn: engineState.isEngineOn,
-              onTap: () {
-                ref.read(analysisEngineControllerProvider.notifier).toggleEngine(!engineState.isEngineOn, state.activeFen);
-                ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiToggle);
-              },
-            ),
-            IconButton(
-              icon: const Icon(Icons.sports_esports_rounded, color: Colors.purpleAccent, size: 26),
-              onPressed: () {
-                ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const WorkspacePage(initialTabIndex: 2)),
-                );
-              },
-              tooltip: 'Sparring',
-            ),
-            IconButton(
-              icon: const Icon(Icons.analytics_rounded, color: Colors.redAccent, size: 26),
-              onPressed: () {
-                ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const WorkspacePage(initialTabIndex: 3)),
-                );
-              },
-              tooltip: 'Full Game Report',
-            ),
-            IconButton(
-              icon: const Icon(Icons.grid_on_rounded, color: Colors.blueAccent, size: 26),
-              onPressed: () {
-                ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const PositionSetupPage()),
-                );
-              },
-              tooltip: 'Board Editor',
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   void _showSaveStudyDialog(BuildContext context, StudyLabNotifier notifier, StudyLabState state) {
     final defaultName = (state.metadata.event.isNotEmpty &&
@@ -1171,98 +1343,86 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
     StudyLabState state,
     StudyLabNotifier notifier, {
     bool isScrollable = false,
+    bool hasCard = true,
   }) {
     final List<Widget> moveChips = [];
     _buildMoveTreeChips(state, notifier, null, moveChips, 0);
 
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: isScrollable ? MainAxisSize.max : MainAxisSize.min,
+      children: [
+        if (state.commentary != null) ...[
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            margin: const EdgeInsets.only(bottom: 6),
+            decoration: BoxDecoration(
+              color: ScholarlyTheme.accentBlue.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              state.commentary!,
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: ScholarlyTheme.accentBlue,
+              ),
+            ),
+          ),
+        ],
+        if (isScrollable)
+          Expanded(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: moveChips.isEmpty
+                  ? Container(
+                      padding: const EdgeInsets.all(16),
+                      alignment: Alignment.center,
+                      child: Text(
+                        'No moves played yet. Play some moves on the board!',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          color: ScholarlyTheme.textMuted,
+                        ),
+                      ),
+                    )
+                  : Wrap(
+                      spacing: 6.0,
+                      runSpacing: 8.0,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: moveChips,
+                    ),
+            ),
+          )
+        else
+          moveChips.isEmpty
+              ? Container(
+                  padding: const EdgeInsets.all(16),
+                  alignment: Alignment.center,
+                  child: Text(
+                    'No moves played yet. Play some moves on the board!',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      color: ScholarlyTheme.textMuted,
+                    ),
+                  ),
+                )
+              : Wrap(
+                  spacing: 6.0,
+                  runSpacing: 8.0,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: moveChips,
+                ),
+      ],
+    );
+
+    if (!hasCard) return Padding(padding: const EdgeInsets.symmetric(horizontal: 6.0), child: content);
     return JuicyGlassCard(
       padding: const EdgeInsets.all(12),
       borderRadius: 16,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: isScrollable ? MainAxisSize.max : MainAxisSize.min,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.list_alt_rounded, size: 16, color: ScholarlyTheme.accentBlue),
-              const SizedBox(width: 6),
-              Text(
-                'NOTATION PANE',
-                style: GoogleFonts.inter(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: ScholarlyTheme.accentBlue,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              const Spacer(),
-              if (state.commentary != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: ScholarlyTheme.accentBlue.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.25)),
-                  ),
-                  child: Text(
-                    state.commentary!,
-                    style: GoogleFonts.inter(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: ScholarlyTheme.accentBlue,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          if (isScrollable)
-            Expanded(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                child: moveChips.isEmpty
-                    ? Container(
-                        padding: const EdgeInsets.all(16),
-                        alignment: Alignment.center,
-                        child: Text(
-                          'No moves played yet. Play some moves on the board!',
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.inter(
-                            fontSize: 11,
-                            color: ScholarlyTheme.textMuted,
-                          ),
-                        ),
-                      )
-                    : Wrap(
-                        spacing: 6.0,
-                        runSpacing: 8.0,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: moveChips,
-                      ),
-              ),
-            )
-          else
-            moveChips.isEmpty
-                ? Container(
-                    padding: const EdgeInsets.all(16),
-                    alignment: Alignment.center,
-                    child: Text(
-                      'No moves played yet. Play some moves on the board!',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        color: ScholarlyTheme.textMuted,
-                      ),
-                    ),
-                  )
-                : Wrap(
-                    spacing: 6.0,
-                    runSpacing: 8.0,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: moveChips,
-                  ),
-        ],
-      ),
+      child: content,
     );
   }
 
@@ -1281,9 +1441,9 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
     final isWhite = !mainNode.fen.contains(' b ');
 
     if (isWhite) {
-      chips.add(Text(' $moveNumber.', style: GoogleFonts.jetBrainsMono(color: ScholarlyTheme.textMuted, fontSize: 13, fontWeight: FontWeight.bold)));
+      chips.add(Text(' $moveNumber.', style: GoogleFonts.jetBrainsMono(color: ScholarlyTheme.textMuted, fontSize: 11, fontWeight: FontWeight.bold)));
     } else if (parentIdx == null) {
-      chips.add(Text(' ${math.max(1, moveNumber - 1)}...', style: GoogleFonts.jetBrainsMono(color: ScholarlyTheme.textMuted, fontSize: 13, fontWeight: FontWeight.bold)));
+      chips.add(Text(' ${math.max(1, moveNumber - 1)}...', style: GoogleFonts.jetBrainsMono(color: ScholarlyTheme.textMuted, fontSize: 11, fontWeight: FontWeight.bold)));
     }
 
     final isCurrent = state.currentNodeIndex == mainNode.index;
@@ -1314,7 +1474,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
             style: GoogleFonts.inter(
               color: isCurrent ? Colors.white : ScholarlyTheme.textPrimary,
               fontWeight: isCurrent ? FontWeight.bold : FontWeight.w600,
-              fontSize: 13,
+              fontSize: 11,
             ),
           ),
         ),
@@ -1323,7 +1483,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
 
     for (int i = 1; i < children.length; i++) {
       final sideNode = children[i];
-      chips.add(Text(' (', style: GoogleFonts.inter(color: ScholarlyTheme.textSubtle, fontSize: 13)));
+      chips.add(Text(' (', style: GoogleFonts.inter(color: ScholarlyTheme.textSubtle, fontSize: 11)));
 
       final isSideCurrent = state.currentNodeIndex == sideNode.index;
       final String sideGlyph = _getNAGSymbol(sideNode.annotation);
@@ -1353,7 +1513,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
               style: GoogleFonts.inter(
                 color: isSideCurrent ? Colors.white : ScholarlyTheme.textPrimary,
                 fontWeight: isSideCurrent ? FontWeight.bold : FontWeight.w600,
-                fontSize: 13,
+                fontSize: 11,
               ),
             ),
           ),
@@ -1361,7 +1521,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
       );
 
       _buildMoveTreeChips(state, notifier, sideNode.index, chips, depth + 1);
-      chips.add(Text(')', style: GoogleFonts.inter(color: ScholarlyTheme.textSubtle, fontSize: 13)));
+      chips.add(Text(')', style: GoogleFonts.inter(color: ScholarlyTheme.textSubtle, fontSize: 11)));
     }
 
     _buildMoveTreeChips(state, notifier, mainNode.index, chips, depth);
@@ -1556,8 +1716,8 @@ class _CompactBoxButtonState extends State<_CompactBoxButton>
         child: ScaleTransition(
           scale: _scaleAnimation,
           child: Container(
-            width: 38,
-            height: 38,
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
               color: bgColor,
               borderRadius: BorderRadius.circular(8),
@@ -1694,3 +1854,82 @@ class _FlashingEngineButtonState extends State<FlashingEngineButton> with Single
     );
   }
 }
+
+class PremiumBottomNavBar extends StatelessWidget {
+  final int currentIndex;
+  final ValueChanged<int> onTap;
+
+  const PremiumBottomNavBar({
+    super.key,
+    required this.currentIndex,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 72,
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.85),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.6), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _buildNavItem(0, 'Board', Icons.grid_on_rounded),
+          _buildNavItem(1, 'Library', Icons.library_books_rounded),
+          _buildNavItem(2, 'Editor', Icons.design_services_rounded),
+          _buildNavItem(3, 'Report', Icons.analytics_rounded),
+          _buildNavItem(4, 'Sparring', Icons.sports_esports_rounded),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNavItem(int index, String label, IconData icon) {
+    final isSelected = currentIndex == index;
+    final activeColor = ScholarlyTheme.accentBlue;
+    final inactiveColor = ScholarlyTheme.textMuted.withValues(alpha: 0.7);
+
+    return InkWell(
+      onTap: () => onTap(index),
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? activeColor.withValues(alpha: 0.1) : Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? activeColor : inactiveColor,
+              size: 24,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: GoogleFonts.outfit(
+                fontSize: 10,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                color: isSelected ? activeColor : inactiveColor,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+

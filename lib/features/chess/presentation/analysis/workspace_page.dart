@@ -17,25 +17,21 @@ import '../scholarly_theme.dart';
 import '../../application/study_lab_provider.dart';
 import '../../application/chess_provider.dart';
 import '../../services/chess_sound_service.dart';
-import '../../application/analysis_engine_controller.dart';
-import '../../application/practice_lab_provider.dart';
-import 'widgets/game_report_panel.dart';
-import 'widgets/practice_mode_panel.dart';
 
-class WorkspacePage extends ConsumerStatefulWidget {
-  final int initialTabIndex;
 
-  const WorkspacePage({
+class GameLibraryTab extends ConsumerStatefulWidget {
+  final VoidCallback onGameLoaded;
+
+  const GameLibraryTab({
     super.key,
-    required this.initialTabIndex,
+    required this.onGameLoaded,
   });
 
   @override
-  ConsumerState<WorkspacePage> createState() => _WorkspacePageState();
+  ConsumerState<GameLibraryTab> createState() => _GameLibraryTabState();
 }
 
-class _WorkspacePageState extends ConsumerState<WorkspacePage> {
-  late int _workspaceTabIndex;
+class _GameLibraryTabState extends ConsumerState<GameLibraryTab> {
   Future<List<rust_pgn.PgnGameRecord>>? _libraryFuture;
 
   int _librarySubTabIndex = 0;
@@ -47,7 +43,6 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
   @override
   void initState() {
     super.initState();
-    _workspaceTabIndex = widget.initialTabIndex;
     _loadFolders();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(chessProvider.notifier).loadSavedGames();
@@ -164,186 +159,56 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
     final state = ref.watch(studyLabProvider);
     final notifier = ref.read(studyLabProvider.notifier);
 
-    String title = 'WORKSPACE';
-    Widget overlayBody = const SizedBox.shrink();
-
-    switch (_workspaceTabIndex) {
-      case 0:
-        title = 'IMPORT / EXPORT';
-        overlayBody = _buildImpoExpoOverlayTab(context, state, notifier);
-        break;
-      case 1:
-        title = 'GAME LIBRARY';
-        overlayBody = _buildGameLibraryOverlayTab(context, state, notifier);
-        break;
-      case 2:
-        title = 'SPARRING';
-        overlayBody = const PracticeModePanel();
-        break;
-      case 3:
-        title = 'GAME REPORT';
-        overlayBody = const GameReportPanel();
-        break;
-    }
-
-    return Scaffold(
-      backgroundColor: ScholarlyTheme.backgroundStart,
-      appBar: AppBar(
-        backgroundColor: ScholarlyTheme.backgroundStart,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_ios_new_rounded,
-            color: ScholarlyTheme.textPrimary,
-            size: 20,
-          ),
-          onPressed: () {
-            ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-            if (_workspaceTabIndex == 2) {
-              final practiceState = ref.read(practiceLabProvider);
-              if (practiceState.isSessionActive) {
-                final studyState = ref.read(studyLabProvider);
-                ref.read(practiceLabProvider.notifier).endSession(studyState.activeFen);
-                return;
-              }
-            }
-            Navigator.pop(context);
-          },
-        ),
-        title: Text(
-          title,
-          style: GoogleFonts.outfit(
-            fontWeight: FontWeight.bold,
-            color: ScholarlyTheme.textPrimary,
-          ),
-        ),
-        centerTitle: true,
-        actions: _workspaceTabIndex == 3
-            ? [
-                Builder(
-                  builder: (context) {
-                    final engineState = ref.watch(analysisEngineControllerProvider);
-                    final hasReport = engineState.classifications.isNotEmpty;
-                    if (!hasReport || engineState.isAnalyzing) {
-                      return const SizedBox.shrink();
-                    }
-                    return Container(
-                      margin: const EdgeInsets.only(right: 12),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: ScholarlyTheme.panelStroke),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: IconButton(
-                        icon: const Icon(
-                          Icons.analytics_outlined,
-                          color: ScholarlyTheme.textPrimary,
-                          size: 20,
-                        ),
-                        tooltip: 'Re-Analyze Game',
-                        onPressed: () {
-                          final studyLabState = ref.read(studyLabProvider);
-                          ref.read(analysisEngineControllerProvider.notifier).classifyFullGame(
-                                studyLabState.nodes,
-                                studyLabState.startFen,
-                              );
-                        },
-                      ),
-                    );
-                  },
-                ),
-              ]
-            : null,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-        child: Column(
-          children: [
-            Expanded(
-              child: overlayBody,
-            ),
-          ],
-        ),
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      child: _buildGameLibraryOverlayTab(context, state, notifier),
     );
   }
 
-
-
-  Widget _buildImpoExpoOverlayTab(
-    BuildContext context,
-    StudyLabState state,
-    StudyLabNotifier notifier,
-  ) {
-    return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: _buildActionTile(
-                  title: 'IMPORT PGN',
-                  subtitle: 'Select PGN File',
-                  icon: Icons.file_upload_rounded,
-                  color: ScholarlyTheme.accentBlue,
-                  onTap: () => _importPgnFromFile(context, notifier),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildActionTile(
-                  title: 'EXPORT PGN',
-                  subtitle: 'Save to Downloads',
-                  icon: Icons.file_download_rounded,
-                  color: Colors.teal,
-                  onTap: () => _showExportSelectionDialog(context, notifier),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActionTile({
-    required String title,
-    required String subtitle,
+  Widget _buildCompactIconButton({
     required IconData icon,
-    required Color color,
+    required Color iconColor,
     required VoidCallback onTap,
+    required String tooltip,
   }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: JuicyGlassCard(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-        borderRadius: 16,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: color, size: 28),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              title,
-              style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold, color: color),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              subtitle,
-              style: GoogleFonts.inter(fontSize: 10, color: ScholarlyTheme.textMuted),
-            ),
-          ],
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(
+            color: ScholarlyTheme.panelBase,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: ScholarlyTheme.panelStroke),
+          ),
+          child: Icon(
+            icon,
+            color: iconColor,
+            size: 18,
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _buildCompactImportButton(BuildContext context, StudyLabNotifier notifier) {
+    return _buildCompactIconButton(
+      icon: Icons.file_upload_rounded,
+      iconColor: ScholarlyTheme.accentBlue,
+      onTap: () => _importPgnFromFile(context, notifier),
+      tooltip: 'Import PGN',
+    );
+  }
+
+  Widget _buildCompactExportButton(BuildContext context, StudyLabNotifier notifier) {
+    return _buildCompactIconButton(
+      icon: Icons.file_download_rounded,
+      iconColor: Colors.teal,
+      onTap: () => _showExportSelectionDialog(context, notifier),
+      tooltip: 'Export PGN',
     );
   }
 
@@ -662,26 +527,27 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            Center(
+              child: Text(
+                'GAME LIBRARY',
+                style: GoogleFonts.outfit(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.2,
+                  color: ScholarlyTheme.textPrimary,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'GAME LIBRARY',
-                  style: GoogleFonts.outfit(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: ScholarlyTheme.textPrimary,
-                  ),
-                ),
-                TextButton.icon(
-                  icon: const Icon(Icons.save_outlined, size: 14),
-                  label: const Text('Save Current'),
-                  onPressed: () => _promptSaveStudyName(context, notifier),
-                ),
+                Expanded(child: _buildSearchBar()),
+                const SizedBox(width: 8),
+                _buildCompactImportButton(context, notifier),
+                const SizedBox(width: 8),
+                _buildCompactExportButton(context, notifier),
               ],
             ),
-            const SizedBox(height: 8),
-            _buildSearchBar(),
             const SizedBox(height: 8),
             _buildLibrarySubTabBar(),
             const SizedBox(height: 12),
@@ -807,6 +673,7 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
           onOrganizeFolders: () => _showFolderSelectionDialog(context, item),
           onEditStudy: _promptEditStudyHeaders,
           ref: ref,
+          onGameLoaded: widget.onGameLoaded,
         );
       },
     );
@@ -973,6 +840,7 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
                       onOrganizeFolders: () => _showFolderSelectionDialog(context, item),
                       onEditStudy: _promptEditStudyHeaders,
                       ref: ref,
+                      onGameLoaded: widget.onGameLoaded,
                     );
                   },
                 ),
@@ -1142,47 +1010,6 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
     );
   }
 
-  void _promptSaveStudyName(BuildContext context, StudyLabNotifier notifier) {
-    final controller = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: ScholarlyTheme.panelBase,
-          title: Text('Save Current Study', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary)),
-          content: TextField(
-            controller: controller,
-            decoration: InputDecoration(
-              hintText: 'Enter study name (e.g. Ruy Lopez Study)',
-              hintStyle: GoogleFonts.inter(color: ScholarlyTheme.textMuted),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('Cancel', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted)),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: ScholarlyTheme.accentBlue),
-              onPressed: () async {
-                if (controller.text.trim().isEmpty) return;
-                await notifier.saveCurrentGameToLibrary(controller.text.trim());
-                if (context.mounted) {
-                  Navigator.pop(context);
-                  _refreshLibrary();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Study saved successfully!'), backgroundColor: Colors.green),
-                  );
-                }
-              },
-              child: Text('Save', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   void _promptEditStudyHeaders(BuildContext context, StudyLabNotifier notifier, int index, rust_pgn.PgnGameRecord record) {
     final eventController = TextEditingController(text: record.header.event);
     final siteController = TextEditingController(text: record.header.site);
@@ -1305,6 +1132,7 @@ class GameLibraryItemCardWidget extends StatefulWidget {
   final VoidCallback onOrganizeFolders;
   final void Function(BuildContext, StudyLabNotifier, int, rust_pgn.PgnGameRecord) onEditStudy;
   final WidgetRef ref;
+  final VoidCallback onGameLoaded;
 
   const GameLibraryItemCardWidget({
     super.key,
@@ -1314,6 +1142,7 @@ class GameLibraryItemCardWidget extends StatefulWidget {
     required this.onOrganizeFolders,
     required this.onEditStudy,
     required this.ref,
+    required this.onGameLoaded,
   });
 
   @override
@@ -1661,7 +1490,7 @@ class _GameLibraryItemCardWidgetState extends State<GameLibraryItemCardWidget>
           backgroundColor: Colors.green,
         ),
       );
-      Navigator.pop(context);
+      widget.onGameLoaded();
     }
   }
 }
