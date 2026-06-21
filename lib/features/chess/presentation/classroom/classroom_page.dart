@@ -83,6 +83,8 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
   Timer? _autoEngineMoveTimer;
   bool _isEngineThinking = false;
   bool _waitingForImmediateMove = false;
+  bool _isAutoMode = false;
+  String? _lastConcludedFen;
 
   // Library Explorer state
   String _librarySearchQuery = '';
@@ -249,7 +251,7 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
             _whiteTimeLeft = Duration.zero;
             _isClockRunning = false;
             _chessClockTimer?.cancel();
-            _playTimeOutSound();
+            _showGameConclusionDialog('Black won on time');
           } else {
             _whiteTimeLeft = newTime;
           }
@@ -259,7 +261,7 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
             _blackTimeLeft = Duration.zero;
             _isClockRunning = false;
             _chessClockTimer?.cancel();
-            _playTimeOutSound();
+            _showGameConclusionDialog('White won on time');
           } else {
             _blackTimeLeft = newTime;
           }
@@ -291,10 +293,52 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
     _chessClockTimer?.cancel();
   }
 
-  void _playTimeOutSound() {
+
+  void _showGameConclusionDialog(String message) {
+    if (!mounted) return;
     ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Time Out! Game Over.'), backgroundColor: Colors.redAccent),
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: ScholarlyTheme.panelBase,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          'Game Concluded',
+          style: GoogleFonts.outfit(
+            color: ScholarlyTheme.textPrimary,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.emoji_events_rounded,
+              color: Colors.amber,
+              size: 48,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                color: ScholarlyTheme.textPrimary,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              'Close',
+              style: GoogleFonts.inter(color: ScholarlyTheme.accentBlue, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -345,12 +389,10 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
     final isWhiteToMove = !studyState.activeFen.contains(' b ');
 
     bool shouldPlay = false;
-    if (_enginePlayMode == EnginePlayMode.engineVsEngine) {
-      shouldPlay = true;
-    } else if (_enginePlayMode == EnginePlayMode.autoWhite && isWhiteToMove) {
-      shouldPlay = true;
+    if (_enginePlayMode == EnginePlayMode.autoWhite && isWhiteToMove) {
+      shouldPlay = _isAutoMode || _waitingForImmediateMove;
     } else if (_enginePlayMode == EnginePlayMode.autoBlack && !isWhiteToMove) {
-      shouldPlay = true;
+      shouldPlay = _isAutoMode || _waitingForImmediateMove;
     }
 
     if (shouldPlay) {
@@ -360,6 +402,13 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
 
       final bool isImmediate = _waitingForImmediateMove;
       _waitingForImmediateMove = false; // Reset the flag
+
+      // If this was a single tap play (not auto), reset mode back to manual immediately
+      if (!_isAutoMode) {
+        setState(() {
+          _enginePlayMode = EnginePlayMode.manual;
+        });
+      }
 
       if (!isEngineUpdate || isImmediate) {
         _autoEngineMoveTimer?.cancel();
@@ -542,6 +591,32 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
       _checkAutoEngineMove();
       if (state.isJoined && state.isTeacher && state.syncToTeacher) {
         ref.read(localClassroomProvider.notifier).updateTeacherBoardFen(next);
+      }
+
+      // Check game conclusion (checkmate, draw, stalemate)
+      final chess = chess_lib.Chess.fromFEN(next);
+      if (chess.game_over && _lastConcludedFen != next) {
+        _lastConcludedFen = next;
+        setState(() {
+          _isClockRunning = false;
+        });
+        _chessClockTimer?.cancel();
+
+        String msg = 'Game Concluded';
+        if (chess.in_checkmate) {
+          final winner = chess.turn == chess_lib.Color.WHITE ? 'Black' : 'White';
+          msg = '$winner won by checkmate';
+        } else if (chess.in_stalemate) {
+          msg = 'Draw by stalemate';
+        } else if (chess.in_draw) {
+          msg = 'Game drawn';
+        }
+
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _showGameConclusionDialog(msg);
+        });
+      } else if (!chess.game_over) {
+        _lastConcludedFen = null;
       }
     });
 
@@ -2437,18 +2512,19 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
   }
 
   // --- TAB 3: STOCKFISH ENGINE ---
-  void _setEnginePlayMode(EnginePlayMode mode, StudyLabState studyState, AnalysisEngineController engineNotifier) {
+  void _setEnginePlayMode(EnginePlayMode mode, StudyLabState studyState, AnalysisEngineController engineNotifier, {required bool isAuto}) {
     ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
     setState(() {
-      if (_enginePlayMode == mode) {
+      if (_enginePlayMode == mode && _isAutoMode == isAuto) {
         _enginePlayMode = EnginePlayMode.manual;
+        _isAutoMode = false;
       } else {
         _enginePlayMode = mode;
+        _isAutoMode = isAuto;
         
         final isWhiteToMove = !studyState.activeFen.contains(' b ');
         if ((mode == EnginePlayMode.autoWhite && isWhiteToMove) ||
-            (mode == EnginePlayMode.autoBlack && !isWhiteToMove) ||
-            mode == EnginePlayMode.engineVsEngine) {
+            (mode == EnginePlayMode.autoBlack && !isWhiteToMove)) {
           _waitingForImmediateMove = true;
         }
 
@@ -2465,28 +2541,32 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
   Widget _buildGlowButton({
     required String label,
     required bool isActive,
+    Color? activeColor,
     required VoidCallback onTap,
+    VoidCallback? onLongPress,
   }) {
+    final Color buttonColor = activeColor ?? ScholarlyTheme.accentBlue;
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
+        onLongPress: onLongPress,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           height: 28,
           decoration: BoxDecoration(
             color: isActive 
-                ? ScholarlyTheme.accentBlue.withValues(alpha: 0.15) 
+                ? buttonColor.withValues(alpha: 0.15) 
                 : ScholarlyTheme.panelStroke.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(6),
             border: Border.all(
               color: isActive 
-                  ? ScholarlyTheme.accentBlue.withValues(alpha: 0.6) 
+                  ? buttonColor.withValues(alpha: 0.6) 
                   : ScholarlyTheme.panelStroke.withValues(alpha: 0.15),
               width: isActive ? 1.5 : 1.0,
             ),
             boxShadow: isActive ? [
               BoxShadow(
-                color: ScholarlyTheme.accentBlue.withValues(alpha: 0.25),
+                color: buttonColor.withValues(alpha: 0.25),
                 blurRadius: 6,
                 spreadRadius: 1,
               )
@@ -2496,7 +2576,7 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
             child: Text(
               label,
               style: GoogleFonts.outfit(
-                color: isActive ? ScholarlyTheme.accentBlue : ScholarlyTheme.textMuted,
+                color: isActive ? buttonColor : ScholarlyTheme.textMuted,
                 fontSize: 10.5,
                 fontWeight: FontWeight.bold,
                 letterSpacing: 0.5,
@@ -2529,6 +2609,7 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
                   if (!nextVal) {
                     setState(() {
                       _enginePlayMode = EnginePlayMode.manual;
+                      _isAutoMode = false;
                     });
                   }
                 },
@@ -2537,19 +2618,23 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
               _buildGlowButton(
                 label: 'White',
                 isActive: _enginePlayMode == EnginePlayMode.autoWhite && engineState.isEngineOn,
-                onTap: () => _setEnginePlayMode(EnginePlayMode.autoWhite, studyState, engineNotifier),
+                activeColor: _isAutoMode ? Colors.green : ScholarlyTheme.accentBlue,
+                onTap: () => _setEnginePlayMode(EnginePlayMode.autoWhite, studyState, engineNotifier, isAuto: false),
+                onLongPress: () => _setEnginePlayMode(EnginePlayMode.autoWhite, studyState, engineNotifier, isAuto: true),
               ),
               const SizedBox(width: 5),
               _buildGlowButton(
                 label: 'Black',
                 isActive: _enginePlayMode == EnginePlayMode.autoBlack && engineState.isEngineOn,
-                onTap: () => _setEnginePlayMode(EnginePlayMode.autoBlack, studyState, engineNotifier),
+                activeColor: _isAutoMode ? Colors.green : ScholarlyTheme.accentBlue,
+                onTap: () => _setEnginePlayMode(EnginePlayMode.autoBlack, studyState, engineNotifier, isAuto: false),
+                onLongPress: () => _setEnginePlayMode(EnginePlayMode.autoBlack, studyState, engineNotifier, isAuto: true),
               ),
               const SizedBox(width: 5),
               _buildGlowButton(
                 label: 'Self',
-                isActive: _enginePlayMode == EnginePlayMode.engineVsEngine && engineState.isEngineOn,
-                onTap: () => _setEnginePlayMode(EnginePlayMode.engineVsEngine, studyState, engineNotifier),
+                isActive: _enginePlayMode == EnginePlayMode.manual && engineState.isEngineOn,
+                onTap: () => _setEnginePlayMode(EnginePlayMode.manual, studyState, engineNotifier, isAuto: false),
               ),
             ],
           ),

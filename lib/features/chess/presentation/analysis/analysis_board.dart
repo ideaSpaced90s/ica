@@ -13,6 +13,7 @@ import '../../services/chess_sound_service.dart';
 import '../../services/local_classroom_service.dart';
 import '../scholarly_theme.dart';
 import 'themes/analysis_classic_theme.dart';
+import '../shared/widgets/promotion_overlay.dart';
 
 class StudyLabChessBoard extends ConsumerStatefulWidget {
   final StudyLabState state;
@@ -588,112 +589,34 @@ class _StudyLabChessBoardState extends ConsumerState<StudyLabChessBoard> {
                     ),
                   ),
 
-                  // Promotion Selection overlay
-                  if (_pendingPromoFrom != null && _pendingPromoTo != null) ...[
-                    Positioned.fill(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _pendingPromoFrom = null;
-                              _pendingPromoTo = null;
-                            });
-                          },
-                          child: BackdropFilter(
-                            filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
-                            child: Container(
-                              color: Colors.black.withValues(alpha: 0.35),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    Center(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: BackdropFilter(
-                          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                          child: Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.85),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: Colors.white.withValues(alpha: 0.55), width: 1.5),
-                              boxShadow: ScholarlyTheme.cardShadow,
-                            ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  'CHOOSE ASCENSION',
-                                  style: GoogleFonts.outfit(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                    letterSpacing: 1.5,
-                                    color: ScholarlyTheme.textPrimary,
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: ['Q', 'N', 'R', 'B'].map((type) {
-                                    final isWhite = chess.get(_pendingPromoFrom!)?.color == chess_lib.Color.WHITE;
-                                    return GestureDetector(
-                                      onTap: () {
-                                        _executeMoveOrPromo(
-                                          _pendingPromoFrom!,
-                                          _pendingPromoTo!,
-                                          type.toLowerCase(),
-                                          chess,
-                                        );
-                                        setState(() {
-                                          _pendingPromoFrom = null;
-                                          _pendingPromoTo = null;
-                                          _selectedSquare = null;
-                                          _legalTargets = const [];
-                                        });
-                                      },
-                                      child: Container(
-                                        margin: const EdgeInsets.symmetric(horizontal: 5),
-                                        width: 54,
-                                        height: 54,
-                                        decoration: BoxDecoration(
-                                          color: Colors.white.withValues(alpha: 0.9),
-                                          borderRadius: BorderRadius.circular(12),
-                                          border: Border.all(color: ScholarlyTheme.panelStroke, width: 1.2),
-                                          boxShadow: ScholarlyTheme.cardShadow,
-                                        ),
-                                        padding: const EdgeInsets.all(6),
-                                        child: theme.buildPiece(context, type, isWhite, false, 0),
-                                      ),
-                                    );
-                                  }).toList(),
-                                ),
-                                const SizedBox(height: 8),
-                                GestureDetector(
-                                  onTap: () {
-                                    setState(() {
-                                      _pendingPromoFrom = null;
-                                      _pendingPromoTo = null;
-                                    });
-                                  },
-                                  child: Text(
-                                    'TAP OUTSIDE TO CANCEL',
-                                    style: GoogleFonts.inter(
-                                      color: ScholarlyTheme.textMuted,
-                                      fontSize: 9,
-                                      letterSpacing: 0.8,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                  // Premium Pawn Promotion Overlay
+                  PromotionOverlay(
+                    theme: theme,
+                    isPromotingOverride: _pendingPromoFrom != null && _pendingPromoTo != null,
+                    isWhiteOverride: _pendingPromoFrom != null
+                        ? chess.get(_pendingPromoFrom!)?.color == chess_lib.Color.WHITE
+                        : true,
+                    onCompleteOverride: (piece) {
+                      _executeMoveOrPromo(
+                        _pendingPromoFrom!,
+                        _pendingPromoTo!,
+                        piece,
+                        chess,
+                      );
+                      setState(() {
+                        _pendingPromoFrom = null;
+                        _pendingPromoTo = null;
+                        _selectedSquare = null;
+                        _legalTargets = const [];
+                      });
+                    },
+                    onCancelOverride: () {
+                      setState(() {
+                        _pendingPromoFrom = null;
+                        _pendingPromoTo = null;
+                      });
+                    },
+                  ),
 
                 // 4. Locked Overlay for Students
                 if (classroomState.isJoined && !classroomState.isTeacher && classroomState.boardsLocked)
