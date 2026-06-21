@@ -137,8 +137,8 @@ fn select_ai_avatar(elo: i32, worst_scotoma: &str) -> (String, String) {
     let id = format!("avatar_{}", target_idx);
     let name = match target_idx {
         0 => "Sparky",
-        1 => "Pawnzy",
-        2 => "Coward",
+        1 => "Pawzy",
+        2 => "Timorous",
         3 => "Rookie",
         4 => "Scholar",
         5 => "Molly",

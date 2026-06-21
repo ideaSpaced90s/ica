@@ -118,7 +118,7 @@ The 20 personas, ordered from lowest to highest difficulty, are:
 | 14 | Sentinel | 2150 - 2300 | 14 | 4 | 14 | 2% | 8% | Positional trap specialist, lulls opponents with solid play. | Indigo |
 | 15 | Murphy | 2300 - 2450 | 16 | 4 | 15 | 0.5% | 2% | Board-wide pawn storms, opens files for rapid rook attacks. | Soft Red |
 | 16 | Titan | 2450 - 2600 | 18 | 1 | 18 | 0.5% | 2% | Grandmaster precision, strong relentless positional squeeze. | Amber |
-| 17 | Alien | 2600 - 2750 | 18 | 12 | 19 | 0.5% | 2% | AlphaZero-style bot, highly complex and unintuitive moves. | Neon Green |
+| 17 | Alien | 2600 - 2750 | 18 | 6 | 14 | 0.5% | 2% | AlphaZero-style bot, highly complex and unintuitive moves. | Neon Green |
 | 18 | Champ | 2750 - 2900 | 18 | 1 | 20 | 0.5% | 2% | Complete universal player, flawless openings/endgame book. | Gold |
 | 19 | King | 2850 - 3200+ | 20 | 1 | 22 | 0% | 0% | Ultimate apex, near-perfect computational engine, zero error. | Platinum |
 

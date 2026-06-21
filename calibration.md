@@ -18,18 +18,18 @@ Below is the master specification sheet for all 20 AI Avatars, ordered by target
 | **5** | **Molly** | `1100 - 1200` | Conservative Defender | 5 | 7 / 4 | 10 | 32 | -50 | 0% | 1.0 | 10% | 1.25% |
 | **6** | **Berkserker** | `1200 - 1350` | Reckless Attacker | 6 | 8 / 4 | 10 | 32 | +100 | 0% | 0.9 | 9% | 0.8% |
 | **7** | **Blaire** | `1350 - 1500` | Tactical Blitzer | 7 | 9 / 5 | 8 | 32 | +50 | 0% | 0.6 | 6% | 0.5% |
-| **8** | **Python** | `1500 - 1600` | Positional Squeezer | 8 | 10 / 6 | 4 | 128 | N/A (0) | 0% | 0.4 | 4% | 0.2% |
-| **9** | **Gambit** | `1600 - 1700` | Dynamic Imbalances | 9 | 11 / 7 | 4 | 128 | +80 | 0% | 0.5 | 5% | 0.15% |
-| **10** | **Trapper** | `1700 - 1800` | Opening Trap Specialist | 10 | 12 / 8 | 4 | 128 | N/A (0) | 0% | 0.4 | 4% | 0.1% |
-| **11** | **Assassin** | `1800 - 1900` | Relentless Attacking Hunter | 11 | 13 / 9 | 4 | 128 | +100 | 0% | 0.35 | 3.5% | 0.08% |
-| **12** | **Vala** | `1900 - 2000` | Seasoned Tactician | 12 | 14 / 10 | 4 | 128 | N/A (0) | 0% | 0.3 | 3% | 0.06% |
-| **13** | **Magician** | `2000 - 2150` | Creative Attacker | 13 | 15 / 12 | 3 | 128 | +100 | 0% | 0.3 | 0.25 | 2.5% | 0.05% |
-| **14** | **Sentinel** | `2150 - 2300` | Candidate Master | 14 | 16 / 14 | 2 | 128 | N/A (0) | 0% | 0.2 | 2% | 0.03% |
-| **15** | **Murphy** | `2300 - 2450` | Sea Storm Tactician | 16 | 17 / 15 | 2 | 128 | +80 | 0% | 0.15 | 1.5% | 0.02% |
-| **16** | **Titan** | `2450 - 2600` | Grandmaster (Positional) | 18 | 18 / 18 | 1 | 256 | N/A (0) | 0% | 0.1 | 1% | 0% |
-| **17** | **Alien** | `2600 - 2750` | Algorithmic Entity (AlphaZero) | 18 | 19 / 19 | 12 | 256 | N/A (0) | 0% | 0.3 | 3% | 0.5% |
-| **18** | **Champ** | `2750 - 2900` | Universal Legend | 18 | 20 / 20 | 1 | 256 | N/A (0) | 0% | 0.05 | 0.5% | 0% |
-| **19** | **King** | `2850 - 3200+` | The Ultimate Apex | 20 | 22 / 22 | 1 | 256 | N/A (0) | 0% | 0.0 | 0% | 0% |
+| **8** | **Python** | `1500 - 1600` | Positional Squeezer | 8 | 10 / 6 | 4 | 64 | N/A (0) | 0% | 0.4 | 4% | 0.2% |
+| **9** | **Gambit** | `1600 - 1700` | Dynamic Imbalances | 9 | 11 / 7 | 4 | 64 | +80 | 0% | 0.5 | 5% | 0.15% |
+| **10** | **Trapper** | `1700 - 1800` | Opening Trap Specialist | 10 | 12 / 8 | 4 | 64 | N/A (0) | 0% | 0.4 | 4% | 0.1% |
+| **11** | **Assassin** | `1800 - 1900` | Relentless Attacking Hunter | 11 | 13 / 9 | 4 | 64 | +100 | 0% | 0.35 | 3.5% | 0.08% |
+| **12** | **Vala** | `1900 - 2000` | Seasoned Tactician | 12 | 14 / 10 | 4 | 64 | N/A (0) | 0% | 0.3 | 3% | 0.06% |
+| **13** | **Magician** | `2000 - 2150` | Creative Attacker | 13 | 15 / 12 | 3 | 64 | +100 | 0% | 0.3 | 0.25 | 2.5% | 0.05% |
+| **14** | **Sentinel** | `2150 - 2300` | Candidate Master | 14 | 16 / 14 | 2 | 64 | N/A (0) | 0% | 0.2 | 2% | 0.03% |
+| **15** | **Murphy** | `2300 - 2450` | Sea Storm Tactician | 16 | 17 / 15 | 2 | 64 | +80 | 0% | 0.15 | 1.5% | 0.02% |
+| **16** | **Titan** | `2450 - 2600` | Grandmaster (Positional) | 18 | 18 / 18 | 1 | 64 | N/A (0) | 0% | 0.1 | 1% | 0% |
+| **17** | **Alien** | `2600 - 2750` | Algorithmic Entity (AlphaZero) | 18 | 14 / 14 | 6 | 64 | N/A (0) | 0% | 0.3 | 3% | 0.5% |
+| **18** | **Champ** | `2750 - 2900` | Universal Legend | 18 | 20 / 20 | 1 | 64 | N/A (0) | 0% | 0.05 | 0.5% | 0% |
+| **19** | **King** | `2850 - 3200+` | The Ultimate Apex | 20 | 22 / 22 | 1 | 64 | N/A (0) | 0% | 0.0 | 0% | 0% |
 
 > [!NOTE]
 > Depth differences represent limits imposed on the Dart UI spec card display vs the actual depth parameter executed in the Rust Stockfish engine setup. Where there is a discrepancy, the Rust value overrides.
@@ -223,11 +223,9 @@ The detailed weights, gate thresholds, and behavior rules implemented in [person
 
 ## 4. Discovered String Mismatches (UI vs Rust Core)
 
-> [!WARNING]
-> There are active mismatches between the avatar names configured on the Dart UI side and what the Rust core expect. This causes some personas to play under default settings instead of their custom behaviors.
->
-> 1. **Timorous vs Coward**: The Dart UI names the avatar `'Timorous'`, but the Rust engine matching rules in `persona.rs` and `assignment.rs` look for `"Coward"`. Because there is no `"Timorous"` case, it hits the fallback case. This defaults Timorous' settings to `multi_pv: 4, skill_level: 10, depth: 8` and a blunder gate threshold of `9999.0` (acting like a medium-strength chaotic bot).
-> 2. **Pawzy vs Pawnzy**: The Dart UI uses `'Pawzy'`. While `persona.rs` maps `"Pawzy" | "Pawnzy"` correctly, `assignment.rs` only defines `"Pawnzy"`, causing mismatch behavior in assignments.
->
-> **Recommended Fix**: Add `"Timorous"` as an explicit match alias wherever `"Coward"` is evaluated in `persona.rs` and `assignment.rs` so that it plays using its defensive retreats profile.
+> [!NOTE]
+> Previously discovered string mismatches have been resolved:
+> 
+> 1. **Timorous vs Coward**: Resolved by adding `"Timorous"` as a match alias wherever `"Coward"` is evaluated in `persona.rs` and `assignment.rs`.
+> 2. **Pawzy vs Pawnzy**: Resolved by mapping both `"Pawzy"` and `"Pawnzy"` in the Rust engine (`assignment.rs` and `persona.rs`).
 

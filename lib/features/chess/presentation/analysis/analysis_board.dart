@@ -10,6 +10,7 @@ import '../../application/chess_provider.dart';
 import '../../application/study_lab_provider.dart';
 import '../../application/analysis_engine_controller.dart';
 import '../../services/chess_sound_service.dart';
+import '../../services/local_classroom_service.dart';
 import '../scholarly_theme.dart';
 import 'themes/analysis_classic_theme.dart';
 
@@ -17,12 +18,14 @@ class StudyLabChessBoard extends ConsumerStatefulWidget {
   final StudyLabState state;
   final StudyLabNotifier notifier;
   final double boardSize;
+  final bool showEvalBar;
 
   const StudyLabChessBoard({
     super.key,
     required this.state,
     required this.notifier,
     required this.boardSize,
+    this.showEvalBar = true,
   });
 
   @override
@@ -65,8 +68,8 @@ class _StudyLabChessBoardState extends ConsumerState<StudyLabChessBoard> {
     return '${files[fileIndex]}${ranks[rankIndex]}';
   }
 
-  String? _getSquareFromOffset(Offset localOffset) {
-    final sqSize = widget.boardSize / 8;
+  String? _getSquareFromOffset(Offset localOffset, double boardSize) {
+    final sqSize = boardSize / 8;
     final col = (localOffset.dx / sqSize).floor().clamp(0, 7);
     final row = (localOffset.dy / sqSize).floor().clamp(0, 7);
     return _getSquareName(row, col, widget.state.isBoardFlipped);
@@ -202,7 +205,7 @@ class _StudyLabChessBoardState extends ConsumerState<StudyLabChessBoard> {
       });
     } else {
       final isCapture = chess.get(to) != null;
-      widget.notifier.makeMove(from, to);
+      _executeMoveOrPromo(from, to, '', chess);
 
       if (isCapture) {
         ref.read(chessSoundServiceProvider).playSfx(SoundEffect.capture);
@@ -214,12 +217,68 @@ class _StudyLabChessBoardState extends ConsumerState<StudyLabChessBoard> {
     }
   }
 
+  void _executeMoveOrPromo(String from, String to, String promotion, chess_lib.Chess chess) {
+    final classroomState = ref.read(localClassroomProvider);
+    final spectatedStudent = ref.read(activeSpectatedStudentProvider);
+    final takeoverMode = ref.read(takeoverModeProvider);
+
+    if (classroomState.isJoined) {
+      if (classroomState.isTeacher) {
+        if (spectatedStudent != null) {
+          if (takeoverMode) {
+            widget.notifier.makeMove(from, to, promotion);
+            final tempChess = chess_lib.Chess.fromFEN(chess.fen);
+            tempChess.move({
+              'from': from,
+              'to': to,
+              if (promotion.isNotEmpty) 'promotion': promotion,
+            });
+            ref.read(localClassroomProvider.notifier).updateStudentBoardFenByTeacher(spectatedStudent, tempChess.fen);
+          }
+        } else {
+          widget.notifier.makeMove(from, to, promotion);
+        }
+      } else {
+        if (!classroomState.boardsLocked && !classroomState.syncToTeacher) {
+          widget.notifier.makeMove(from, to, promotion);
+          final tempChess = chess_lib.Chess.fromFEN(chess.fen);
+          tempChess.move({
+            'from': from,
+            'to': to,
+            if (promotion.isNotEmpty) 'promotion': promotion,
+          });
+          ref.read(localClassroomProvider.notifier).updateStudentBoardFen(tempChess.fen);
+        }
+      }
+    } else {
+      widget.notifier.makeMove(from, to, promotion);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     const theme = AnalysisClassicTheme();
 
+    final classroomState = ref.watch(localClassroomProvider);
+    final spectatedStudent = ref.watch(activeSpectatedStudentProvider);
+    final takeoverMode = ref.watch(takeoverModeProvider);
+
+    final bool isInteractionDisabled = classroomState.isJoined && (
+      (classroomState.isTeacher && spectatedStudent != null && !takeoverMode) ||
+      (!classroomState.isTeacher && (classroomState.boardsLocked || classroomState.syncToTeacher))
+    );
+
     final chess = chess_lib.Chess.fromFEN(widget.state.activeFen);
-    final squareSize = widget.boardSize / 8;
+
+    final engineState = ref.watch(analysisEngineControllerProvider);
+    final showEval = widget.showEvalBar && engineState.isEngineOn;
+    const double evalBarWidth = 6.0;
+    const double evalBarPadding = 4.0;
+    final double actualBoardSize = showEval
+        ? (widget.boardSize - evalBarWidth - evalBarPadding)
+        : widget.boardSize;
+
+    final squareSize = actualBoardSize / 8;
 
     String? lastMoveFrom;
     String? lastMoveTo;
@@ -244,28 +303,29 @@ class _StudyLabChessBoardState extends ConsumerState<StudyLabChessBoard> {
       allArrows.add(BoardArrow(from: _drawStartSquare!, to: _hoverSquare!, color: _currentColor));
     }
 
-    final engineState = ref.watch(analysisEngineControllerProvider);
-
     return Row(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 1. Eval Bar
-        EvalBar(
-          evalScore: engineState.evalScore,
-          isMate: engineState.isMate,
-          mateIn: engineState.mateIn,
-          isEngineOn: engineState.isEngineOn,
-          isFlipped: widget.state.isBoardFlipped,
-          height: widget.boardSize,
-        ),
-        const SizedBox(width: 12),
+        if (showEval) ...[
+          // 1. Eval Bar
+          EvalBar(
+            evalScore: engineState.evalScore,
+            isMate: engineState.isMate,
+            mateIn: engineState.mateIn,
+            isEngineOn: engineState.isEngineOn,
+            isFlipped: widget.state.isBoardFlipped,
+            height: actualBoardSize,
+            width: evalBarWidth,
+          ),
+          const SizedBox(width: evalBarPadding),
+        ],
 
         // 2. Chessboard
         Listener(
           onPointerDown: (event) {
             if (event.buttons == kSecondaryMouseButton) {
-              final sq = _getSquareFromOffset(event.localPosition);
+              final sq = _getSquareFromOffset(event.localPosition, actualBoardSize);
               setState(() {
                 _drawStartSquare = sq;
                 _currentColor = _detectColor(event);
@@ -274,7 +334,7 @@ class _StudyLabChessBoardState extends ConsumerState<StudyLabChessBoard> {
           },
           onPointerMove: (event) {
             if (event.buttons == kSecondaryMouseButton && _drawStartSquare != null) {
-              final sq = _getSquareFromOffset(event.localPosition);
+              final sq = _getSquareFromOffset(event.localPosition, actualBoardSize);
               setState(() {
                 _hoverSquare = sq;
               });
@@ -282,7 +342,7 @@ class _StudyLabChessBoardState extends ConsumerState<StudyLabChessBoard> {
           },
           onPointerUp: (event) {
             if (_drawStartSquare != null && event.buttons == 0) {
-              final endSquare = _getSquareFromOffset(event.localPosition);
+              final endSquare = _getSquareFromOffset(event.localPosition, actualBoardSize);
               if (endSquare != null) {
                 _handleMarkupComplete(_drawStartSquare!, endSquare);
               }
@@ -294,7 +354,7 @@ class _StudyLabChessBoardState extends ConsumerState<StudyLabChessBoard> {
           },
           child: GestureDetector(
             onLongPressStart: (details) {
-              final sq = _getSquareFromOffset(details.localPosition);
+              final sq = _getSquareFromOffset(details.localPosition, actualBoardSize);
               setState(() {
                 _drawStartSquare = sq;
                 _currentColor = 'green';
@@ -302,7 +362,7 @@ class _StudyLabChessBoardState extends ConsumerState<StudyLabChessBoard> {
             },
             onLongPressMoveUpdate: (details) {
               if (_drawStartSquare != null) {
-                final sq = _getSquareFromOffset(details.localPosition);
+                final sq = _getSquareFromOffset(details.localPosition, actualBoardSize);
                 setState(() {
                   _hoverSquare = sq;
                 });
@@ -310,7 +370,7 @@ class _StudyLabChessBoardState extends ConsumerState<StudyLabChessBoard> {
             },
             onLongPressEnd: (details) {
               if (_drawStartSquare != null) {
-                final endSquare = _getSquareFromOffset(details.localPosition);
+                final endSquare = _getSquareFromOffset(details.localPosition, actualBoardSize);
                 if (endSquare != null) {
                   _handleMarkupComplete(_drawStartSquare!, endSquare);
                 }
@@ -321,8 +381,8 @@ class _StudyLabChessBoardState extends ConsumerState<StudyLabChessBoard> {
               }
             },
             child: Container(
-              width: widget.boardSize,
-              height: widget.boardSize,
+              width: actualBoardSize,
+              height: actualBoardSize,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: ScholarlyTheme.boardShadow,
@@ -339,7 +399,9 @@ class _StudyLabChessBoardState extends ConsumerState<StudyLabChessBoard> {
                   // Squares Grid Layout
                   ClipRRect(
                     borderRadius: BorderRadius.circular(16),
-                    child: GridView.builder(
+                    child: AbsorbPointer(
+                      absorbing: isInteractionDisabled,
+                      child: GridView.builder(
                       padding: EdgeInsets.zero,
                       physics: const NeverScrollableScrollPhysics(),
                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -504,12 +566,13 @@ class _StudyLabChessBoardState extends ConsumerState<StudyLabChessBoard> {
                         );
                       },
                     ),
+                    ),
                   ),
 
                   // 3. Arrow Paint Overlay
                   IgnorePointer(
                     child: CustomPaint(
-                      size: Size(widget.boardSize, widget.boardSize),
+                      size: Size(actualBoardSize, actualBoardSize),
                       painter: BoardArrowPainter(
                         arrows: allArrows,
                         isFlipped: widget.state.isBoardFlipped,
@@ -570,10 +633,11 @@ class _StudyLabChessBoardState extends ConsumerState<StudyLabChessBoard> {
                                     final isWhite = chess.get(_pendingPromoFrom!)?.color == chess_lib.Color.WHITE;
                                     return GestureDetector(
                                       onTap: () {
-                                        widget.notifier.makeMove(
+                                        _executeMoveOrPromo(
                                           _pendingPromoFrom!,
                                           _pendingPromoTo!,
                                           type.toLowerCase(),
+                                          chess,
                                         );
                                         setState(() {
                                           _pendingPromoFrom = null;
@@ -622,6 +686,143 @@ class _StudyLabChessBoardState extends ConsumerState<StudyLabChessBoard> {
                       ),
                     ),
                   ],
+
+                // 4. Locked Overlay for Students
+                if (classroomState.isJoined && !classroomState.isTeacher && classroomState.boardsLocked)
+                  Positioned.fill(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                        child: Container(
+                          color: Colors.black.withValues(alpha: 0.4),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(
+                                Icons.lock_rounded,
+                                color: Colors.white,
+                                size: 48,
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'EYES ON THE TEACHER',
+                                style: GoogleFonts.outfit(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 2.0,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'Your board is locked by the teacher.',
+                                style: GoogleFonts.inter(
+                                  color: Colors.white.withValues(alpha: 0.7),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // 5. Mirroring Badge for Students
+                if (classroomState.isJoined && !classroomState.isTeacher && classroomState.syncToTeacher && !classroomState.boardsLocked)
+                  Positioned(
+                    top: 12,
+                    right: 12,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.65),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.5), width: 1.5),
+                        boxShadow: [
+                          BoxShadow(
+                            color: ScholarlyTheme.accentBlue.withValues(alpha: 0.25),
+                            blurRadius: 8,
+                            spreadRadius: 1,
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: const BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: ScholarlyTheme.accentBlue,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Mirroring Teacher',
+                            style: GoogleFonts.outfit(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                // 6. Spectating/Takeover Badge for Teacher
+                if (classroomState.isJoined && classroomState.isTeacher && spectatedStudent != null)
+                  Positioned(
+                    top: 12,
+                    left: 12,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.75),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: takeoverMode ? Colors.green : Colors.amber,
+                          width: 1.5,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: (takeoverMode ? Colors.green : Colors.amber).withValues(alpha: 0.25),
+                            blurRadius: 8,
+                            spreadRadius: 1,
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: takeoverMode ? Colors.green : Colors.amber,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            takeoverMode
+                                ? 'Takeover Mode: ${classroomState.students[spectatedStudent]?.displayName ?? "Student"}'
+                                : 'Spectating: ${classroomState.students[spectatedStudent]?.displayName ?? "Student"} (Read-Only)',
+                            style: GoogleFonts.outfit(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -726,6 +927,7 @@ class EvalBar extends StatelessWidget {
   final bool isEngineOn;
   final bool isFlipped;
   final double height;
+  final double width;
 
   const EvalBar({
     super.key,
@@ -735,33 +937,13 @@ class EvalBar extends StatelessWidget {
     required this.isEngineOn,
     required this.isFlipped,
     required this.height,
+    this.width = 6.0,
   });
 
   @override
   Widget build(BuildContext context) {
     if (!isEngineOn) {
-      return Container(
-        width: 24,
-        height: height,
-        decoration: BoxDecoration(
-          color: ScholarlyTheme.panelStroke.withValues(alpha: 0.3),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: ScholarlyTheme.panelStroke, width: 1.5),
-        ),
-        child: const Center(
-          child: RotatedBox(
-            quarterTurns: 1,
-            child: Text(
-              'OFF',
-              style: TextStyle(
-                fontSize: 8,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey,
-              ),
-            ),
-          ),
-        ),
-      );
+      return const SizedBox.shrink();
     }
 
     final score = evalScore ?? 0.0;
@@ -774,21 +956,22 @@ class EvalBar extends StatelessWidget {
       whiteRatio = mateIn! > 0 ? 0.95 : 0.05;
     }
 
-    final displayText = isMate && mateIn != null
-        ? 'M${mateIn!.abs()}'
-        : '${score > 0 ? "+" : ""}${score.toStringAsFixed(1)}';
-
     return Container(
-      width: 24,
+      width: width,
       height: height,
       decoration: BoxDecoration(
-        color: ScholarlyTheme.panelBase,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: ScholarlyTheme.panelStroke, width: 1.5),
-        boxShadow: ScholarlyTheme.cardShadow,
+        color: Colors.black,
+        borderRadius: BorderRadius.circular(3),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 4,
+            spreadRadius: 0.5,
+          ),
+        ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(3),
         child: TweenAnimationBuilder<double>(
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeOutCubic,
@@ -800,7 +983,7 @@ class EvalBar extends StatelessWidget {
               children: [
                 // Top Color Fill
                 Container(
-                  color: isFlipped ? Colors.white : const Color(0xFF1E1E1E),
+                  color: isFlipped ? Colors.white : Colors.black,
                 ),
                 // Bottom Color Fill
                 Align(
@@ -808,29 +991,7 @@ class EvalBar extends StatelessWidget {
                   child: FractionallySizedBox(
                     heightFactor: 1.0 - topHeightShare,
                     child: Container(
-                      color: isFlipped ? const Color(0xFF1E1E1E) : Colors.white,
-                    ),
-                  ),
-                ),
-                // Rotated Evaluation Score Label
-                Align(
-                  alignment: isFlipped
-                      ? (value > 0.5 ? Alignment.bottomCenter : Alignment.topCenter)
-                      : (value > 0.5 ? Alignment.topCenter : Alignment.bottomCenter),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: RotatedBox(
-                      quarterTurns: 1,
-                      child: Text(
-                        displayText,
-                        style: GoogleFonts.inter(
-                          fontSize: 9,
-                          fontWeight: FontWeight.bold,
-                          color: (isFlipped && value > 0.5) || (!isFlipped && value < 0.5)
-                              ? Colors.white
-                              : Colors.black,
-                        ),
-                      ),
+                      color: isFlipped ? Colors.black : Colors.white,
                     ),
                   ),
                 ),

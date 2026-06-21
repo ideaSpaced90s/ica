@@ -119,18 +119,18 @@ class AiAvatar {
     if (name == 'Molly') return 32;
     if (name == 'Berkserker') return 32;
     if (name == 'Blaire') return 32;
-    if (name == 'Python') return 128;
-    if (name == 'Gambit') return 128;
-    if (name == 'Trapper') return 128;
-    if (name == 'Assassin') return 128;
-    if (name == 'Vala') return 128;
-    if (name == 'Magician') return 128;
-    if (name == 'Sentinel') return 128;
-    if (name == 'Murphy') return 128;
-    if (name == 'Titan') return 256;
-    if (name == 'Alien') return 256;
-    if (name == 'Champ') return 256;
-    if (name == 'King') return 256;
+    if (name == 'Python') return 64;
+    if (name == 'Gambit') return 64;
+    if (name == 'Trapper') return 64;
+    if (name == 'Assassin') return 64;
+    if (name == 'Vala') return 64;
+    if (name == 'Magician') return 64;
+    if (name == 'Sentinel') return 64;
+    if (name == 'Murphy') return 64;
+    if (name == 'Titan') return 64;
+    if (name == 'Alien') return 64;
+    if (name == 'Champ') return 64;
+    if (name == 'King') return 64;
     return 16;
   }
 

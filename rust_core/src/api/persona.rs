@@ -154,7 +154,7 @@ pub fn get_persona_config(avatar_name: String) -> PersonaConfig {
     match avatar_name.as_str() {
         "Sparky" => PersonaConfig { multi_pv: 45, skill_level: 0, depth: 1 },
         "Pawzy" | "Pawnzy" => PersonaConfig { multi_pv: 30, skill_level: 1, depth: 2 },
-        "Coward" => PersonaConfig { multi_pv: 20, skill_level: 2, depth: 3 },
+        "Timorous" | "Coward" => PersonaConfig { multi_pv: 20, skill_level: 2, depth: 3 },
         "Rookie" | "Rook-ie" => PersonaConfig { multi_pv: 15, skill_level: 3, depth: 5 },
         "Scholar" => PersonaConfig { multi_pv: 12, skill_level: 4, depth: 6 },
         "Molly" => PersonaConfig { multi_pv: 10, skill_level: 5, depth: 7 },
@@ -169,7 +169,7 @@ pub fn get_persona_config(avatar_name: String) -> PersonaConfig {
         "Sentinel" => PersonaConfig { multi_pv: 2, skill_level: 14, depth: 16 },
         "Murphy" => PersonaConfig { multi_pv: 2, skill_level: 16, depth: 17 },
         "Titan" => PersonaConfig { multi_pv: 1, skill_level: 18, depth: 18 },
-        "Alien" => PersonaConfig { multi_pv: 12, skill_level: 18, depth: 19 },
+        "Alien" => PersonaConfig { multi_pv: 6, skill_level: 18, depth: 14 },
         "Champ" => PersonaConfig { multi_pv: 1, skill_level: 18, depth: 20 },
         "King" | "Kingslayer" => PersonaConfig { multi_pv: 1, skill_level: 20, depth: 22 },
         _ => PersonaConfig { multi_pv: 4, skill_level: 10, depth: 8 }, // Default fallback
@@ -211,7 +211,7 @@ pub fn select_persona_move_rust(
     let random_prob = match avatar_name.as_str() {
         "Sparky" => 75.0,
         "Pawzy" | "Pawnzy" => 35.0,
-        "Coward" => 15.0,
+        "Timorous" | "Coward" => 15.0,
         "Rookie" | "Rook-ie" => 5.0,
         _ => 0.0,
     };
@@ -241,7 +241,7 @@ pub fn select_persona_move_rust(
     let gate_threshold = match avatar_name.as_str() {
         "Sparky" => 9999.0, // practically no gate
         "Pawzy" | "Pawnzy" => 5.0,
-        "Coward" => 3.0,
+        "Timorous" | "Coward" => 3.0,
         "Rookie" | "Rook-ie" => 2.0,
         "Scholar" => 1.2,
         "Molly" => 1.0,
@@ -518,7 +518,7 @@ pub fn select_persona_move_rust(
             let hash = simple_hash(&(candidate.uci_move.clone() + &fen));
             let jitter = get_jitter_amount(hash, 4, 0.02);
             weight += jitter;
-        } else if avatar_name == "Coward" {
+        } else if avatar_name == "Coward" || avatar_name == "Timorous" {
             let is_retreat = if turn_color == Color::White {
                 to_sq.rank() < from_sq.rank()
             } else {
@@ -871,5 +871,16 @@ mod tests {
         ];
         let chosen = select_persona_move_rust(fen, candidates, "Berserker".to_string(), false, 2);
         assert_eq!(chosen, "d4f5");
+    }
+
+    #[test]
+    fn test_alien_persona() {
+        let fen = "r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3".to_string();
+        let candidates = vec![
+            PersonaCandidate { uci_move: "f1b5".to_string(), evaluation: 0.3 },
+            PersonaCandidate { uci_move: "f1c4".to_string(), evaluation: 0.3 },
+        ];
+        let chosen = select_persona_move_rust(fen, candidates, "Alien".to_string(), false, 12);
+        assert!(!chosen.is_empty());
     }
 }
