@@ -54,6 +54,7 @@ class _StudyLabChessBoardState extends ConsumerState<StudyLabChessBoard> {
     if (oldWidget.state.activeFen != widget.state.activeFen) {
       _selectedSquare = null;
       _legalTargets = const [];
+      _playMoveSoundForFenTransition(oldWidget.state.activeFen, widget.state.activeFen);
     }
   }
 
@@ -213,14 +214,7 @@ class _StudyLabChessBoardState extends ConsumerState<StudyLabChessBoard> {
         _pendingPromoTo = to;
       });
     } else {
-      final isCapture = chess.get(to) != null;
       _executeMoveOrPromo(from, to, '', chess);
-
-      if (isCapture) {
-        ref.read(chessSoundServiceProvider).playSfx(SoundEffect.capture);
-      } else {
-        ref.read(chessSoundServiceProvider).playSfx(SoundEffect.move);
-      }
       ref.read(chessHapticsServiceProvider).selection();
       _clearSelection();
     }
@@ -261,6 +255,54 @@ class _StudyLabChessBoardState extends ConsumerState<StudyLabChessBoard> {
       }
     } else {
       widget.notifier.makeMove(from, to, promotion);
+    }
+  }
+
+  void _playMoveSoundForFenTransition(String prevFen, String nextFen) {
+    if (prevFen == nextFen) return;
+    try {
+      final prevChess = chess_lib.Chess.fromFEN(prevFen);
+      
+      final moves = prevChess.generate_moves();
+      bool isGameMove = false;
+      bool isCapture = false;
+      bool isCastling = false;
+      bool isPromotion = false;
+      bool isCheck = false;
+
+      for (final m in moves) {
+        prevChess.move(m);
+        if (prevChess.fen == nextFen) {
+          isGameMove = true;
+          isCapture = m.captured != null;
+          isCastling = (m.flags & 32) != 0 || (m.flags & 64) != 0;
+          isPromotion = m.promotion != null;
+          isCheck = prevChess.in_check;
+          prevChess.undo();
+          break;
+        }
+        prevChess.undo();
+      }
+
+      final soundService = ref.read(chessSoundServiceProvider);
+      if (isGameMove) {
+        if (isCheck) {
+          soundService.playSfx(SoundEffect.check);
+        } else if (isPromotion) {
+          soundService.playSfx(SoundEffect.promote);
+        } else if (isCapture) {
+          soundService.playSfx(SoundEffect.capture);
+        } else if (isCastling) {
+          soundService.playSfx(SoundEffect.castle);
+        } else {
+          soundService.playSfx(SoundEffect.move);
+        }
+      } else {
+        soundService.playSfx(SoundEffect.uiNavigate);
+      }
+    } catch (e) {
+      debugPrint("Error parsing chess FEN transition for sound: $e");
+      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.move);
     }
   }
 
