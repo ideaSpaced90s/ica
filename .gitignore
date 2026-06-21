@@ -61,3 +61,6 @@ scratch/
 # Text log files
 *.txt
 
+# Database / temporary binary exports
+games.db
+games_db.b64

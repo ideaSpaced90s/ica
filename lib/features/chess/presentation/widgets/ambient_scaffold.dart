@@ -8,6 +8,7 @@ import 'ambient_flow_backdrop.dart';
 class AmbientScaffold extends StatelessWidget {
   final Widget body;
   final Widget? drawer;
+  final Widget? bottomNavigationBar;
   final GlobalKey<ScaffoldState>? scaffoldKey;
 
   // Optional per-screen palette
@@ -23,6 +24,7 @@ class AmbientScaffold extends StatelessWidget {
     super.key,
     required this.body,
     this.drawer,
+    this.bottomNavigationBar,
     this.scaffoldKey,
     this.blob1Color = const Color(0xFFDBEAFE),
     this.blob2Color = const Color(0xFFFEF3C7),
@@ -37,6 +39,7 @@ class AmbientScaffold extends StatelessWidget {
       key: scaffoldKey,
       backgroundColor: const Color(0xFFF8F9FA),
       drawer: drawer,
+      bottomNavigationBar: bottomNavigationBar,
       extendBodyBehindAppBar: extendBodyBehindAppBar,
       extendBody: extendBody,
       body: Stack(

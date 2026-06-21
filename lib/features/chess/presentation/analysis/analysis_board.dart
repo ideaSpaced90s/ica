@@ -19,6 +19,8 @@ class StudyLabChessBoard extends ConsumerStatefulWidget {
   final StudyLabNotifier notifier;
   final double boardSize;
   final bool showEvalBar;
+  final bool isEditorMode;
+  final void Function(String square)? onSquareTap;
 
   const StudyLabChessBoard({
     super.key,
@@ -26,6 +28,8 @@ class StudyLabChessBoard extends ConsumerStatefulWidget {
     required this.notifier,
     required this.boardSize,
     this.showEvalBar = true,
+    this.isEditorMode = false,
+    this.onSquareTap,
   });
 
   @override
@@ -174,6 +178,10 @@ class _StudyLabChessBoardState extends ConsumerState<StudyLabChessBoard> {
   }
 
   void _handleSquareTap(String squareName, chess_lib.Chess chess) {
+    if (widget.isEditorMode && widget.onSquareTap != null) {
+      widget.onSquareTap!(squareName);
+      return;
+    }
     if (_selectedSquare != null && _legalTargets.contains(squareName)) {
       _handleMove(_selectedSquare!, squareName, chess);
     } else {
