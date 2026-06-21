@@ -365,7 +365,7 @@ class AiAvatar {
       fideRatingRange: '2600 - 2750',
       playingStyle: 'AlphaZero-style bot. Plays bizarre, unintuitive moves that are incredibly strong positionally.',
       skillLevel: 18,
-      depth: 19,
+      depth: 14,
       icon: Icons.rocket_launch_rounded,
       color: Color(0xFFA5D6A7), // Neon Green
       imagePath: 'assets/persona_vector/alien.svg',

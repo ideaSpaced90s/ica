@@ -23,7 +23,7 @@ Below is the master specification sheet for all 20 AI Avatars, ordered by target
 | **10** | **Trapper** | `1700 - 1800` | Opening Trap Specialist | 10 | 12 / 8 | 4 | 64 | N/A (0) | 0% | 0.4 | 4% | 0.1% |
 | **11** | **Assassin** | `1800 - 1900` | Relentless Attacking Hunter | 11 | 13 / 9 | 4 | 64 | +100 | 0% | 0.35 | 3.5% | 0.08% |
 | **12** | **Vala** | `1900 - 2000` | Seasoned Tactician | 12 | 14 / 10 | 4 | 64 | N/A (0) | 0% | 0.3 | 3% | 0.06% |
-| **13** | **Magician** | `2000 - 2150` | Creative Attacker | 13 | 15 / 12 | 3 | 64 | +100 | 0% | 0.3 | 0.25 | 2.5% | 0.05% |
+| **13** | **Magician** | `2000 - 2150` | Creative Attacker | 13 | 15 / 12 | 3 | 64 | +100 | 0% | 0.25 | 2.5% | 0.05% |
 | **14** | **Sentinel** | `2150 - 2300` | Candidate Master | 14 | 16 / 14 | 2 | 64 | N/A (0) | 0% | 0.2 | 2% | 0.03% |
 | **15** | **Murphy** | `2300 - 2450` | Sea Storm Tactician | 16 | 17 / 15 | 2 | 64 | +80 | 0% | 0.15 | 1.5% | 0.02% |
 | **16** | **Titan** | `2450 - 2600` | Grandmaster (Positional) | 18 | 18 / 18 | 1 | 64 | N/A (0) | 0% | 0.1 | 1% | 0% |
@@ -44,7 +44,7 @@ The Dart UI interacts with the Stockfish processes using standard UCI commands. 
    ```uci
    setoption name Hash value <hashSize>
    ```
-   *Enforces the memory limit mapped to each avatar (e.g., `16`, `32`, `128`, or `256` MB).*
+   *Enforces the memory limit mapped to each avatar (e.g., `16`, `32`, or `64` MB).*
 
 2. **Contempt Options**:
    ```uci
