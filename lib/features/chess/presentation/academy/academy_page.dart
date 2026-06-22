@@ -51,6 +51,7 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
     );
     // Listener to handle panel collapse: ensure the commentary list scrolls to the latest message.
     _slideController.addListener(() {
+      setState(() {});
       // When the panel is fully collapsed (value == 0.0), scroll to the bottom if we have multiple messages.
       if (_slideController.value == 0.0) {
         final historyLength = ref.read(chessProvider).commentaryHistory.length;
@@ -819,9 +820,10 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
     );
   }
 
-  Widget _buildHorizontalActionBar(BuildContext context, ChessState state, ChessNotifier notifier) {
+  Widget _buildHorizontalActionBar(BuildContext context, ChessState state, ChessNotifier notifier, {bool isDocked = false}) {
     final isPlayerTurn = state.isPlayerWhite == (state.game.turn == chess_lib.Color.WHITE);
-    return AnimatedSwitcher(
+    
+    Widget content = AnimatedSwitcher(
       duration: const Duration(milliseconds: 400),
       transitionBuilder: (Widget child, Animation<double> animation) {
         return SlideTransition(
@@ -836,75 +838,111 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
         );
       },
       child: state.activeTacticIndex != null
-          ? const KeyedSubtree(
-              key: ValueKey('tactics_playback_horizontal'),
-              child: TacticsPlaybackControls(axis: Axis.horizontal),
+          ? KeyedSubtree(
+              key: const ValueKey('tactics_playback_horizontal'),
+              child: TacticsPlaybackControls(
+                axis: Axis.horizontal,
+                isFlat: isDocked,
+              ),
             )
-          : Container(
-              key: const ValueKey('normal_horizontal_action_bar'),
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.35),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.5),
-                  width: 1.5,
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                AcademyPendulumIndicator(
+                  isFrozen: state.isTacticsModeActive && !isPlayerTurn,
+                  isActive: !state.isTacticsModeActive && !state.game.gameOver && !isPlayerTurn,
+                  isChanakya: true,
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.03),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
+                const SizedBox(width: 12),
+                _PremiumActionIcon(
+                  icon: Icons.add_box_rounded,
+                  tooltip: 'New Game',
+                  baseColor: const Color(0xFF10B981),
+                  isEnabled: !state.isTacticsModeActive,
+                  isFlat: isDocked,
+                  onTap: !state.isTacticsModeActive ? () => _handleNewGame(context, ref) : null,
+                ),
+                const SizedBox(width: 12),
+                _PremiumActionIcon(
+                  icon: Icons.undo_rounded,
+                  tooltip: 'Undo',
+                  baseColor: const Color(0xFFF59E0B),
+                  isEnabled: !state.isTacticsModeActive && state.isAcademyBlunderActive,
+                  isBlinking: !state.isTacticsModeActive && state.isAcademyBlunderActive,
+                  isFlat: isDocked,
+                  onTap: (!state.isTacticsModeActive && state.isAcademyBlunderActive) ? () => notifier.undo() : null,
+                ),
+                const SizedBox(width: 12),
+                _PremiumActionIcon(
+                  icon: state.showLog
+                      ? Icons.chat_bubble_outline_rounded
+                      : Icons.history_edu_rounded,
+                  tooltip: 'Toggle Log',
+                  baseColor: const Color(0xFF3B82F6),
+                  isEnabled: !state.isTacticsModeActive,
+                  isActive: state.showLog,
+                  isFlat: isDocked,
+                  onTap: !state.isTacticsModeActive ? () => notifier.toggleLog() : null,
+                ),
+                const SizedBox(width: 12),
+                AcademyPendulumIndicator(
+                  isFrozen: state.isTacticsModeActive && isPlayerTurn,
+                  isActive: !state.isTacticsModeActive && !state.game.gameOver && isPlayerTurn,
+                  isChanakya: false,
+                ),
+                if (isDocked) ...[
+                  const SizedBox(width: 12),
+                  _PremiumActionIcon(
+                    imagePath: 'assets/persona/gm_chanakya.png',
+                    tooltip: 'Consult GM Chanakya',
+                    baseColor: ScholarlyTheme.accentGold,
+                    isFlat: isDocked,
+                    onTap: () => _slideController.forward(),
                   ),
                 ],
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  AcademyPendulumIndicator(
-                    isFrozen: state.isTacticsModeActive && !isPlayerTurn,
-                    isActive: !state.isTacticsModeActive && !state.game.gameOver && !isPlayerTurn,
-                    isChanakya: true,
-                  ),
-                  const SizedBox(width: 12),
-                  _PremiumActionIcon(
-                    icon: Icons.add_box_rounded,
-                    tooltip: 'New Game',
-                    baseColor: const Color(0xFF10B981),
-                    isEnabled: !state.isTacticsModeActive,
-                    onTap: !state.isTacticsModeActive ? () => _handleNewGame(context, ref) : null,
-                  ),
-                  const SizedBox(width: 12),
-                  _PremiumActionIcon(
-                    icon: Icons.undo_rounded,
-                    tooltip: 'Undo',
-                    baseColor: const Color(0xFFF59E0B),
-                    isEnabled: !state.isTacticsModeActive && state.isAcademyBlunderActive,
-                    isBlinking: !state.isTacticsModeActive && state.isAcademyBlunderActive,
-                    onTap: (!state.isTacticsModeActive && state.isAcademyBlunderActive) ? () => notifier.undo() : null,
-                  ),
-                  const SizedBox(width: 12),
-                  _PremiumActionIcon(
-                    icon: state.showLog
-                        ? Icons.chat_bubble_outline_rounded
-                        : Icons.history_edu_rounded,
-                    tooltip: 'Toggle Log',
-                    baseColor: const Color(0xFF3B82F6),
-                    isEnabled: !state.isTacticsModeActive,
-                    isActive: state.showLog,
-                    onTap: !state.isTacticsModeActive ? () => notifier.toggleLog() : null,
-                  ),
-                  const SizedBox(width: 12),
-                  AcademyPendulumIndicator(
-                    isFrozen: state.isTacticsModeActive && isPlayerTurn,
-                    isActive: !state.isTacticsModeActive && !state.game.gameOver && isPlayerTurn,
-                    isChanakya: false,
-                  ),
-                ],
-              ),
+              ],
             ),
     );
+
+    if (isDocked) {
+      return Container(
+        decoration: BoxDecoration(
+          color: ScholarlyTheme.panelBase,
+          border: Border(top: BorderSide(color: ScholarlyTheme.panelStroke.withValues(alpha: 0.15))),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: content,
+            ),
+          ),
+        ),
+      );
+    } else {
+      return Container(
+        key: const ValueKey('normal_horizontal_action_bar'),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.35),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.5),
+            width: 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: content,
+      );
+    }
   }
 
   Widget _buildLandscapeLayout(
@@ -980,6 +1018,7 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
                             state: state,
                             physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
                             controller: _chatScrollController,
+                            isExpanded: true,
                           ),
                   ),
                 ],
@@ -997,55 +1036,7 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
     double factor,
   ) {
     if (factor == 0.0) {
-      return Container(
-        margin: const EdgeInsets.symmetric(horizontal: 12.0),
-        height: 56.0,
-        child: GestureDetector(
-          onTap: () => _slideController.forward(),
-          onVerticalDragUpdate: (details) {
-            final delta = -details.primaryDelta! / MediaQuery.of(context).size.height;
-            _slideController.value = (_slideController.value + delta * 1.5).clamp(0.0, 1.0);
-          },
-          onVerticalDragEnd: (details) {
-            final velocity = details.primaryVelocity ?? 0;
-            if (velocity < -300 || _slideController.value > 0.4) {
-              _slideController.forward();
-            } else {
-              _slideController.reverse();
-            }
-          },
-          child: JuicyGlassCard(
-            borderRadius: 20.0,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const CircleAvatar(
-                      radius: 14,
-                      backgroundImage: AssetImage('assets/persona/gm_chanakya.png'),
-                    ),
-                    const SizedBox(width: 10),
-                    Text(
-                      'GM Chanakya',
-                      style: GoogleFonts.inter(
-                        color: ScholarlyTheme.textPrimary,
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                _BlinkingUpwardArrow(
-                  onTap: () => _slideController.forward(),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
+      return const SizedBox.shrink();
     }
 
     final double borderRadius = _lerp(20.0, 0.0, factor);
@@ -1119,7 +1110,7 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
       margin: EdgeInsets.symmetric(horizontal: horizontalPadding),
       child: JuicyGlassCard(
         borderRadius: borderRadius,
-        padding: EdgeInsets.fromLTRB(10, 6, 10, factor > 0.8 ? 24 : 6),
+        padding: EdgeInsets.fromLTRB(factor > 0.8 ? 0 : 10, 6, factor > 0.8 ? 0 : 10, factor > 0.8 ? 0 : 6),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -1138,15 +1129,19 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
                 },
                 blendMode: BlendMode.dstIn,
                 child: state.showLog
-                    ? _buildMoveLog(
-                        context,
-                        state,
-                        const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                    ? Padding(
+                        padding: EdgeInsets.symmetric(horizontal: factor > 0.8 ? 10.0 : 0.0),
+                        child: _buildMoveLog(
+                          context,
+                          state,
+                          const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                        ),
                       )
                     : CommentaryHistory(
                         state: state,
                         physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
                         controller: _chatScrollController,
+                        isExpanded: factor > 0.8,
                       ),
               ),
             ),
@@ -1185,11 +1180,18 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
       }
     });
 
+    final mediaQuery = MediaQuery.of(context);
+    final isLandscape = mediaQuery.size.width > mediaQuery.size.height;
+
     return AmbientScaffold(
         scaffoldKey: _scaffoldKey,
+        extendBody: true,
         blob1Color: const Color(0xFFDBEAFE),
         blob2Color: const Color(0xFFD1FAE5),
         blob3Color: const Color(0xFFFEF3C7),
+        bottomNavigationBar: (!isLandscape && _slideController.value == 0.0)
+            ? _buildHorizontalActionBar(context, state, notifier, isDocked: true)
+            : null,
         body: SafeArea(
           top: false,
           left: false,
@@ -1199,8 +1201,8 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
               children: [
                 LayoutBuilder(
                   builder: (context, constraints) {
-                    final isLandscape = constraints.maxWidth > constraints.maxHeight;
-                    if (isLandscape) {
+                    final isLandscapeLayout = constraints.maxWidth > constraints.maxHeight;
+                    if (isLandscapeLayout) {
                       return _buildLandscapeLayout(context, state, notifier, constraints);
                     }                    final totalWidth = constraints.maxWidth;
                     final totalHeight = constraints.maxHeight;
@@ -1249,8 +1251,6 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
                                               height: boardSizeCollapsed,
                                               child: const AcademyBoard(alignment: Alignment.center),
                                             ),
-                                            const SizedBox(height: 16),
-                                            _buildHorizontalActionBar(context, state, notifier),
                                             const Spacer(),
                                           ],
                                         ),
@@ -1321,22 +1321,26 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
 
 class _PremiumActionIcon extends StatefulWidget {
   const _PremiumActionIcon({
-    required this.icon,
+    this.icon,
+    this.imagePath,
     required this.onTap,
     required this.baseColor,
     this.tooltip,
     this.isEnabled = true,
     this.isActive = false,
     this.isBlinking = false,
+    this.isFlat = false,
   });
 
-  final IconData icon;
+  final IconData? icon;
+  final String? imagePath;
   final VoidCallback? onTap;
   final Color baseColor;
   final String? tooltip;
   final bool isEnabled;
   final bool isActive;
   final bool isBlinking;
+  final bool isFlat;
 
   @override
   State<_PremiumActionIcon> createState() => _PremiumActionIconState();
@@ -1401,37 +1405,51 @@ class _PremiumActionIconState extends State<_PremiumActionIcon>
           builder: (context, child) {
             final opacity = widget.isBlinking ? _blinkAnimation.value : 1.0;
 
-            final Color bgColor = !widget.isEnabled
-                ? Colors.grey.withValues(alpha: 0.08)
-                : widget.isBlinking
-                    ? Colors.redAccent.withValues(alpha: 0.25 * opacity)
-                    : _isPressed
-                        ? themeColor.withValues(alpha: 0.35)
-                        : _isHovered
-                            ? themeColor.withValues(alpha: 0.22)
-                            : widget.isActive
-                                ? themeColor.withValues(alpha: 0.20)
-                                : Colors.white.withValues(alpha: 0.45);
+            final Color bgColor = widget.isFlat
+                ? Colors.transparent
+                : (!widget.isEnabled
+                    ? Colors.grey.withValues(alpha: 0.08)
+                    : widget.isBlinking
+                        ? Colors.redAccent.withValues(alpha: 0.25 * opacity)
+                        : _isPressed
+                            ? themeColor.withValues(alpha: 0.35)
+                            : _isHovered
+                                ? themeColor.withValues(alpha: 0.22)
+                                : widget.isActive
+                                    ? themeColor.withValues(alpha: 0.20)
+                                    : Colors.white.withValues(alpha: 0.45));
 
-            final Color borderColor = !widget.isEnabled
-                ? Colors.grey.withValues(alpha: 0.20)
-                : widget.isBlinking
-                    ? Colors.redAccent.withValues(alpha: 0.6 * opacity)
-                    : _isPressed
-                        ? themeColor.withValues(alpha: 0.8)
-                        : _isHovered
-                            ? themeColor.withValues(alpha: 0.7)
-                            : widget.isActive
-                                ? themeColor.withValues(alpha: 0.6)
-                                : Colors.white.withValues(alpha: 0.7);
+            final Color borderColor = widget.isFlat
+                ? Colors.transparent
+                : (!widget.isEnabled
+                    ? Colors.grey.withValues(alpha: 0.20)
+                    : widget.isBlinking
+                        ? Colors.redAccent.withValues(alpha: 0.6 * opacity)
+                        : _isPressed
+                            ? themeColor.withValues(alpha: 0.8)
+                            : _isHovered
+                                ? themeColor.withValues(alpha: 0.7)
+                                : widget.isActive
+                                    ? themeColor.withValues(alpha: 0.6)
+                                    : Colors.white.withValues(alpha: 0.7));
 
-            final Color iconColor = !widget.isEnabled
-                ? ScholarlyTheme.textSubtle
-                : widget.isBlinking
-                    ? Colors.redAccent.withValues(alpha: 0.3 + 0.7 * opacity)
-                    : _isHovered || widget.isActive || _isPressed
-                        ? themeColor
-                        : themeColor.withValues(alpha: 0.85);
+            final Color iconColor = widget.isFlat
+                ? (!widget.isEnabled
+                    ? ScholarlyTheme.textMuted.withValues(alpha: 0.35)
+                    : widget.isBlinking
+                        ? Colors.redAccent.withValues(alpha: 0.3 + 0.7 * opacity)
+                        : widget.isActive
+                            ? ScholarlyTheme.accentBlue
+                            : _isHovered || _isPressed
+                                ? widget.baseColor
+                                : ScholarlyTheme.textMuted)
+                : (!widget.isEnabled
+                    ? ScholarlyTheme.textSubtle
+                    : widget.isBlinking
+                        ? Colors.redAccent.withValues(alpha: 0.3 + 0.7 * opacity)
+                        : _isHovered || widget.isActive || _isPressed
+                            ? themeColor
+                            : themeColor.withValues(alpha: 0.85));
 
             final double scale = _isPressed
                 ? 0.92
@@ -1451,25 +1469,39 @@ class _PremiumActionIconState extends State<_PremiumActionIcon>
                 shape: BoxShape.circle,
                 border: Border.all(
                   color: borderColor,
-                  width: 1.5,
+                  width: widget.isFlat ? 0.0 : 1.5,
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: widget.isEnabled && (_isHovered || widget.isActive || widget.isBlinking)
-                        ? themeColor.withValues(alpha: widget.isBlinking ? 0.35 * opacity : 0.22)
-                        : Colors.black.withValues(alpha: 0.03),
-                    blurRadius: _isHovered ? 12 : 6,
-                    spreadRadius: _isHovered ? 1 : 0,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+                boxShadow: widget.isFlat
+                    ? null
+                    : [
+                        BoxShadow(
+                          color: widget.isEnabled && (_isHovered || widget.isActive || widget.isBlinking)
+                              ? themeColor.withValues(alpha: widget.isBlinking ? 0.35 * opacity : 0.22)
+                              : Colors.black.withValues(alpha: 0.03),
+                          blurRadius: _isHovered ? 12 : 6,
+                          spreadRadius: _isHovered ? 1 : 0,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
               ),
               child: Center(
-                child: Icon(
-                  widget.icon,
-                  size: 20,
-                  color: iconColor,
-                ),
+                child: widget.imagePath != null
+                    ? Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          image: DecorationImage(
+                            image: AssetImage(widget.imagePath!),
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      )
+                    : Icon(
+                        widget.icon ?? Icons.help,
+                        size: 20,
+                        color: iconColor,
+                      ),
               ),
             );
 

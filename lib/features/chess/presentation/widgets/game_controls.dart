@@ -139,11 +139,13 @@ class ActionIconButton extends ConsumerStatefulWidget {
     this.shouldBlink = false,
     this.onBlinkComplete,
     this.isBlinkingContinuous = false,
+    this.isFlat = false,
   });
 
   final bool shouldBlink;
   final VoidCallback? onBlinkComplete;
   final bool isBlinkingContinuous;
+  final bool isFlat;
 
   final IconData icon;
   final VoidCallback? onTap;
@@ -321,37 +323,41 @@ class _ActionIconButtonState extends ConsumerState<ActionIconButton> with Ticker
               duration: const Duration(milliseconds: 150),
               width: size + 16,
               height: size + 16,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(14),
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: widget.isEnabled
-                      ? theme.colors
-                      : const [Color(0xFFE2E8F0), Color(0xFFCBD5E1)],
-                ),
-                border: Border.all(
-                  color: widget.isEnabled
-                      ? theme.borderColor.withValues(alpha: 0.6)
-                      : const Color(0xFFE2E8F0),
-                  width: 1.5,
-                ),
-                boxShadow: [
-                  if (widget.isEnabled)
-                    BoxShadow(
-                      color: theme.glowColor.withValues(alpha: glowOpacity),
-                      blurRadius: glowBlur,
-                      spreadRadius: glowSpread,
-                      offset: const Offset(0, 3),
+              decoration: widget.isFlat
+                  ? const BoxDecoration(
+                      color: Colors.transparent,
+                    )
+                  : BoxDecoration(
+                      borderRadius: BorderRadius.circular(14),
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: widget.isEnabled
+                            ? theme.colors
+                            : const [Color(0xFFE2E8F0), Color(0xFFCBD5E1)],
+                      ),
+                      border: Border.all(
+                        color: widget.isEnabled
+                            ? theme.borderColor.withValues(alpha: 0.6)
+                            : const Color(0xFFE2E8F0),
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        if (widget.isEnabled)
+                          BoxShadow(
+                            color: theme.glowColor.withValues(alpha: glowOpacity),
+                            blurRadius: glowBlur,
+                            spreadRadius: glowSpread,
+                            offset: const Offset(0, 3),
+                          ),
+                      ],
                     ),
-                ],
-              ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: Stack(
                   children: [
                     // Physical Gel Gloss Shine Overlay
-                    if (widget.isEnabled)
+                    if (widget.isEnabled && !widget.isFlat)
                       Positioned.fill(
                         child: Container(
                           decoration: BoxDecoration(
@@ -374,7 +380,11 @@ class _ActionIconButtonState extends ConsumerState<ActionIconButton> with Ticker
                       child: Icon(
                         widget.icon,
                         color: widget.isEnabled
-                            ? theme.iconColor
+                            ? (widget.isFlat
+                                ? (widget.isActive
+                                    ? (widget.activeIconColor ?? ScholarlyTheme.accentBlue)
+                                    : (widget.iconColor ?? ScholarlyTheme.textMuted))
+                                : theme.iconColor)
                             : const Color(0xFF94A3B8),
                         size: size,
                       ),

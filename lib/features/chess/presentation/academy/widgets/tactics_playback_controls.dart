@@ -7,9 +7,11 @@ class TacticsPlaybackControls extends ConsumerWidget {
   const TacticsPlaybackControls({
     super.key,
     this.axis = Axis.vertical,
+    this.isFlat = false,
   });
 
   final Axis axis;
+  final bool isFlat;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -22,11 +24,13 @@ class TacticsPlaybackControls extends ConsumerWidget {
       _PlaybackActionIcon(
         icon: Icons.skip_previous_rounded,
         tooltip: 'Jump to Start',
+        isFlat: isFlat,
         onTap: () => notifier.jumpTactic(toStart: true),
       ),
       _PlaybackActionIcon(
         icon: Icons.chevron_left_rounded,
         tooltip: 'Previous Move',
+        isFlat: isFlat,
         onTap: () => notifier.stepTactic(-1),
       ),
       _PlaybackActionIcon(
@@ -34,21 +38,25 @@ class TacticsPlaybackControls extends ConsumerWidget {
         tooltip: isPlaying ? 'Pause Tactic' : 'Play Tactic',
         isActive: isPlaying,
         isBlinking: isPlaying,
+        isFlat: isFlat,
         onTap: () => notifier.toggleTacticPlayback(),
       ),
       _PlaybackActionIcon(
         icon: Icons.stop_rounded,
         tooltip: 'Stop & Close',
+        isFlat: isFlat,
         onTap: () => notifier.stopTacticPlayback(),
       ),
       _PlaybackActionIcon(
         icon: Icons.chevron_right_rounded,
         tooltip: 'Next Move',
+        isFlat: isFlat,
         onTap: () => notifier.stepTactic(1),
       ),
       _PlaybackActionIcon(
         icon: Icons.skip_next_rounded,
         tooltip: 'Jump to End',
+        isFlat: isFlat,
         onTap: () => notifier.jumpTactic(toStart: false),
       ),
     ];
@@ -87,6 +95,7 @@ class _PlaybackActionIcon extends StatefulWidget {
     this.tooltip,
     this.isActive = false,
     this.isBlinking = false,
+    this.isFlat = false,
   });
 
   final IconData icon;
@@ -94,6 +103,7 @@ class _PlaybackActionIcon extends StatefulWidget {
   final String? tooltip;
   final bool isActive;
   final bool isBlinking;
+  final bool isFlat;
 
   @override
   State<_PlaybackActionIcon> createState() => _PlaybackActionIconState();
@@ -160,31 +170,43 @@ class _PlaybackActionIconState extends State<_PlaybackActionIcon>
             builder: (context, child) {
               final opacity = widget.isBlinking ? _blinkAnimation.value : 1.0;
 
-              final Color bgColor = widget.isBlinking
-                  ? themeColor.withValues(alpha: 0.25 * opacity)
-                  : _isPressed
-                      ? themeColor.withValues(alpha: 0.35)
-                      : _isHovered
-                          ? themeColor.withValues(alpha: 0.22)
-                          : widget.isActive
-                              ? themeColor.withValues(alpha: 0.20)
-                              : Colors.white.withValues(alpha: 0.45);
+              final Color bgColor = widget.isFlat
+                  ? Colors.transparent
+                  : (widget.isBlinking
+                      ? themeColor.withValues(alpha: 0.25 * opacity)
+                      : _isPressed
+                          ? themeColor.withValues(alpha: 0.35)
+                          : _isHovered
+                              ? themeColor.withValues(alpha: 0.22)
+                              : widget.isActive
+                                  ? themeColor.withValues(alpha: 0.20)
+                                  : Colors.white.withValues(alpha: 0.45));
 
-              final Color borderColor = widget.isBlinking
-                  ? themeColor.withValues(alpha: 0.6 * opacity)
-                  : _isPressed
-                      ? themeColor.withValues(alpha: 0.8)
-                      : _isHovered
-                          ? themeColor.withValues(alpha: 0.7)
-                          : widget.isActive
-                              ? themeColor.withValues(alpha: 0.6)
-                              : Colors.white.withValues(alpha: 0.7);
+              final Color borderColor = widget.isFlat
+                  ? Colors.transparent
+                  : (widget.isBlinking
+                      ? themeColor.withValues(alpha: 0.6 * opacity)
+                      : _isPressed
+                          ? themeColor.withValues(alpha: 0.8)
+                          : _isHovered
+                              ? themeColor.withValues(alpha: 0.7)
+                              : widget.isActive
+                                  ? themeColor.withValues(alpha: 0.6)
+                                  : Colors.white.withValues(alpha: 0.7));
 
-              final Color iconColor = widget.isBlinking
-                  ? themeColor.withValues(alpha: 0.3 + 0.7 * opacity)
-                  : _isHovered || widget.isActive || _isPressed
-                      ? themeColor
-                      : themeColor.withValues(alpha: 0.85);
+              final Color iconColor = widget.isFlat
+                  ? (widget.isBlinking
+                      ? themeColor.withValues(alpha: 0.3 + 0.7 * opacity)
+                      : widget.isActive
+                          ? ScholarlyTheme.accentBlue
+                          : _isHovered || _isPressed
+                              ? themeColor
+                              : ScholarlyTheme.textMuted)
+                  : (widget.isBlinking
+                      ? themeColor.withValues(alpha: 0.3 + 0.7 * opacity)
+                      : _isHovered || widget.isActive || _isPressed
+                          ? themeColor
+                          : themeColor.withValues(alpha: 0.85));
 
               final double scale = _isPressed
                   ? 0.92
@@ -204,17 +226,19 @@ class _PlaybackActionIconState extends State<_PlaybackActionIcon>
                   shape: BoxShape.circle,
                   border: Border.all(
                     color: borderColor,
-                    width: 1.5,
+                    width: widget.isFlat ? 0.0 : 1.5,
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: _isHovered || widget.isActive || widget.isBlinking
-                          ? themeColor.withValues(alpha: widget.isBlinking ? 0.35 * opacity : 0.22)
-                          : Colors.black.withValues(alpha: 0.03),
-                      blurRadius: _isHovered ? 12 : 6,
-                      spreadRadius: _isHovered ? 2 : 0,
-                    ),
-                  ],
+                  boxShadow: widget.isFlat
+                      ? null
+                      : [
+                          BoxShadow(
+                            color: _isHovered || widget.isActive || widget.isBlinking
+                                ? themeColor.withValues(alpha: widget.isBlinking ? 0.35 * opacity : 0.22)
+                                : Colors.black.withValues(alpha: 0.03),
+                            blurRadius: _isHovered ? 12 : 6,
+                            spreadRadius: _isHovered ? 2 : 0,
+                          ),
+                        ],
                 ),
                 child: Center(
                   child: Icon(

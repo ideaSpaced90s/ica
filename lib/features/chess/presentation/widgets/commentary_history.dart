@@ -15,11 +15,18 @@ import '../mobile_navigation_shell.dart';
 import 'premium_nudge_overlay.dart';
 
 class CommentaryHistory extends ConsumerStatefulWidget {
-  const CommentaryHistory({super.key, required this.state, this.physics, this.controller});
+  const CommentaryHistory({
+    super.key,
+    required this.state,
+    this.physics,
+    this.controller,
+    this.isExpanded = false,
+  });
 
   final ChessState state;
   final ScrollPhysics? physics;
   final ScrollController? controller;
+  final bool isExpanded;
 
   @override
   ConsumerState<CommentaryHistory> createState() => _CommentaryHistoryState();
@@ -255,13 +262,18 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
       );
     }
 
+    final bottomPadding = widget.isExpanded
+        ? 8.0 + MediaQuery.of(context).padding.bottom
+        : 8.0;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+      padding: EdgeInsets.fromLTRB(10, 8, 10, bottomPadding),
       decoration: BoxDecoration(
-        color: ScholarlyTheme.backgroundStart.withValues(alpha: 0.5),
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(16),
-          bottomRight: Radius.circular(16),
+        color: ScholarlyTheme.panelBase,
+        border: Border(top: BorderSide(color: ScholarlyTheme.panelStroke.withValues(alpha: 0.15))),
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(widget.isExpanded ? 0 : 24),
+          bottomRight: Radius.circular(widget.isExpanded ? 0 : 24),
         ),
       ),
       child: Row(
@@ -314,26 +326,17 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
         color: Colors.transparent,
         child: InkWell(
           onTap: isBusy ? null : () => _handlePromptTap(label),
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(10),
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-            decoration: BoxDecoration(
-              color: isBusy 
-                  ? ScholarlyTheme.panelStroke.withValues(alpha: 0.2)
-                  : ScholarlyTheme.panelStroke.withValues(alpha: 0.5),
-              border: Border.all(
-                color: isBusy
-                    ? ScholarlyTheme.panelStroke.withValues(alpha: 0.3)
-                    : ScholarlyTheme.accentBlue.withValues(alpha: 0.3),
-                width: 1,
-              ),
-              borderRadius: BorderRadius.circular(6),
+            decoration: const BoxDecoration(
+              color: Colors.transparent,
             ),
             child: Icon(
               icon,
-              size: 18,
+              size: 20,
               color: isBusy
-                  ? ScholarlyTheme.textSubtle
+                  ? ScholarlyTheme.textMuted.withValues(alpha: 0.35)
                   : ScholarlyTheme.accentBlue,
             ),
           ),

@@ -189,6 +189,9 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
     return Scaffold(
         key: _scaffoldKey,
         backgroundColor: ScholarlyTheme.backgroundStart,
+        bottomNavigationBar: isLandscape
+            ? null
+            : _buildRatedActionRow(context, ref, state, isDocked: true),
         body: Stack(
           children: [
             const AmbientFlowBackdrop(),
@@ -437,7 +440,6 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
   }
 
   Widget _buildPortraitLayout(BuildContext context, WidgetRef ref, BattlegroundState state) {
-    final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
     final isTurn = _isPlayerTurn(state);
     final isFlipped = state.isBoardFlipped;
     final topPieces = isFlipped ? state.game.capturedByWhite : state.game.capturedByBlack;
@@ -568,111 +570,126 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
             ],
           ),
         ),
-        // Rated Actions (5 icons, Dice in middle, special sizes)
-        if (!isKeyboardOpen) ...[
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: JuicyGlassCard(
-              borderRadius: 24,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              child: _buildRatedActionRow(context, ref, state),
-            ),
-          ),
-        ],
       ],
     );
   }
 
-  Widget _buildRatedActionRow(BuildContext context, WidgetRef ref, BattlegroundState state) {
-    final isMatchActive = state.activeRatedMatchId != null;
+  Widget _buildRatedActionRow(BuildContext context, WidgetRef ref, BattlegroundState state, {bool isDocked = false}) {
+    if (isDocked) {
+      return Container(
+        decoration: BoxDecoration(
+          color: ScholarlyTheme.panelBase,
+          border: Border(top: BorderSide(color: ScholarlyTheme.panelStroke.withValues(alpha: 0.15))),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: _buildRatedActionButtons(context, ref, state, isDocked: true),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
 
     return FittedBox(
       fit: BoxFit.scaleDown,
       child: Row(
         mainAxisSize: MainAxisSize.min,
-        children: [
-          // 1. Draw Button (Handshake)
-          ActionIconButton(
-            icon: Icons.handshake_rounded,
-            size: 30,
-            isEnabled: isMatchActive && state.drawOffersCount < 3,
-            onTap: () async {
-              final remaining = 3 - state.drawOffersCount;
-              final confirm = await _showDrawConfirmationDialog(context, remaining);
-              if (confirm == true) {
-                if (!context.mounted) return;
-                _showDrawConsideringDialog(context);
-                
-                await Future.delayed(const Duration(milliseconds: 1500));
-                
-                if (!context.mounted) return;
-                Navigator.pop(context); // Close considering dialog
-                
-                final accepted = await ref.read(battlegroundProvider.notifier).offerDraw();
-                
-                if (!context.mounted) return;
-                if (!accepted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        'Opponent declined the draw offer.',
-                        style: GoogleFonts.inter(fontWeight: FontWeight.w500),
-                      ),
-                      backgroundColor: Colors.redAccent.withValues(alpha: 0.9),
-                      behavior: SnackBarBehavior.floating,
-                      duration: const Duration(seconds: 3),
-                    ),
-                  );
-                }
-              }
-            },
-          ),
-          const SizedBox(width: 16),
-          // 2. New Match Button (Dice)
-          ActionIconButton(
-            icon: Icons.casino_rounded,
-            size: 30,
-            onTap: () async {
-              if (isMatchActive) {
-                final resigned = await _showRatedNewGameDialog(context);
-                if (resigned == true) {
-                  if (context.mounted && !_checkRatedLimitAndUpsell(context, ref)) return;
-                  await ref.read(battlegroundProvider.notifier).resignRatedGame();
-                  if (context.mounted) {
-                    await _showModeSelectionDialog(context);
-                    if (context.mounted) {
-                      await _showTimeArenaSelectionDialog(context);
-                      _triggerDiceRoll();
-                    }
-                  }
-                }
-              } else {
-                if (!_checkRatedLimitAndUpsell(context, ref)) return;
+        children: _buildRatedActionButtons(context, ref, state, isDocked: false),
+      ),
+    );
+  }
+
+  List<Widget> _buildRatedActionButtons(BuildContext context, WidgetRef ref, BattlegroundState state, {required bool isDocked}) {
+    final isMatchActive = state.activeRatedMatchId != null;
+    return [
+      // 1. Draw Button (Handshake)
+      ActionIconButton(
+        icon: Icons.handshake_rounded,
+        size: 30,
+        isEnabled: isMatchActive && state.drawOffersCount < 3,
+        isFlat: isDocked,
+        onTap: () async {
+          final remaining = 3 - state.drawOffersCount;
+          final confirm = await _showDrawConfirmationDialog(context, remaining);
+          if (confirm == true) {
+            if (!context.mounted) return;
+            _showDrawConsideringDialog(context);
+            
+            await Future.delayed(const Duration(milliseconds: 1500));
+            
+            if (!context.mounted) return;
+            Navigator.pop(context); // Close considering dialog
+            
+            final accepted = await ref.read(battlegroundProvider.notifier).offerDraw();
+            
+            if (!context.mounted) return;
+            if (!accepted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'Opponent declined the draw offer.',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w500),
+                  ),
+                  backgroundColor: Colors.redAccent.withValues(alpha: 0.9),
+                  behavior: SnackBarBehavior.floating,
+                  duration: const Duration(seconds: 3),
+                ),
+              );
+            }
+          }
+        },
+      ),
+      SizedBox(width: isDocked ? 24 : 16),
+      // 2. New Match Button (Dice)
+      ActionIconButton(
+        icon: Icons.casino_rounded,
+        size: 30,
+        isFlat: isDocked,
+        onTap: () async {
+          if (isMatchActive) {
+            final resigned = await _showRatedNewGameDialog(context);
+            if (resigned == true) {
+              if (context.mounted && !_checkRatedLimitAndUpsell(context, ref)) return;
+              await ref.read(battlegroundProvider.notifier).resignRatedGame();
+              if (context.mounted) {
                 await _showModeSelectionDialog(context);
                 if (context.mounted) {
                   await _showTimeArenaSelectionDialog(context);
                   _triggerDiceRoll();
                 }
               }
-            },
-          ),
-          const SizedBox(width: 16),
-          // 3. Resign Button (Flag)
-          ActionIconButton(
-            icon: Icons.flag_rounded,
-            size: 30,
-            isEnabled: isMatchActive,
-            onTap: () async {
-              final confirm = await _showResignConfirmationDialog(context);
-              if (confirm == true) {
-                await ref.read(battlegroundProvider.notifier).resignRatedGame();
-              }
-            },
-          ),
-        ],
+            }
+          } else {
+            if (!_checkRatedLimitAndUpsell(context, ref)) return;
+            await _showModeSelectionDialog(context);
+            if (context.mounted) {
+              await _showTimeArenaSelectionDialog(context);
+              _triggerDiceRoll();
+            }
+          }
+        },
       ),
-    );
+      SizedBox(width: isDocked ? 24 : 16),
+      // 3. Resign Button (Flag)
+      ActionIconButton(
+        icon: Icons.flag_rounded,
+        size: 30,
+        isEnabled: isMatchActive,
+        isFlat: isDocked,
+        onTap: () async {
+          final confirm = await _showResignConfirmationDialog(context);
+          if (confirm == true) {
+            await ref.read(battlegroundProvider.notifier).resignRatedGame();
+          }
+        },
+      ),
+    ];
   }
 
 

@@ -178,6 +178,9 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
     return Scaffold(
         key: _scaffoldKey,
         backgroundColor: ScholarlyTheme.backgroundStart,
+        bottomNavigationBar: isLandscape
+            ? null
+            : _buildActionRow(context, ref, state, isDocked: true),
         body: Stack(
           children: [
             const AmbientFlowBackdrop(),
@@ -482,7 +485,6 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
   }
 
   Widget _buildPortraitLayout(BuildContext context, WidgetRef ref, ArenaState state) {
-    final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
     final isTurn = _isPlayerTurn(state);
     final isFlipped = state.isBoardFlipped;
     final topPieces = isFlipped ? state.game.capturedByWhite : state.game.capturedByBlack;
@@ -639,19 +641,32 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
             ],
           ),
         ),
-        // Actions wrapped in glass dock
-        if (!isKeyboardOpen) ...[
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: _buildActionRow(context, ref, state),
-          ),
-        ],
       ],
     );
   }
 
-  Widget _buildActionRow(BuildContext context, WidgetRef ref, ArenaState state) {
+  Widget _buildActionRow(BuildContext context, WidgetRef ref, ArenaState state, {bool isDocked = false}) {
+    if (isDocked) {
+      return Container(
+        decoration: BoxDecoration(
+          color: ScholarlyTheme.panelBase,
+          border: Border(top: BorderSide(color: ScholarlyTheme.panelStroke.withValues(alpha: 0.15))),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: _buildActionButtons(context, ref, state, isDocked: true),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(24),
       child: BackdropFilter(
@@ -677,127 +692,141 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
             fit: BoxFit.scaleDown,
             child: Row(
               mainAxisSize: MainAxisSize.min,
-              children: [
-                ActionIconButton(
-                  icon: Icons.add_box_rounded, // UNRATED uses +
-                  onTap: () => _handleNewGame(context, ref),
-                ),
-                const SizedBox(width: 8),
-                ActionIconButton(
-                  icon: Icons.undo_rounded,
-                  isEnabled: state.canUndo,
-                  onTap: state.canUndo ? () => ref.read(arenaProvider.notifier).undo() : null,
-                ),
-                const SizedBox(width: 8),
-                ActionIconButton(
-                  icon: Icons.redo_rounded,
-                  isEnabled: state.canRedo,
-                  onTap: state.canRedo ? () => ref.read(arenaProvider.notifier).redo() : null,
-                ),
-                const SizedBox(width: 8),
-                ActionIconButton(
-                  icon: Icons.flip_camera_android_outlined,
-                  isActive: state.isBoardFlipped,
-                  onTap: () => ref.read(arenaProvider.notifier).toggleBoardOrientation(),
-                ),
-                const SizedBox(width: 8),
-                ActionIconButton(
-                  icon: state.isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
-                  isActive: state.isPaused,
-                  onTap: () => ref.read(arenaProvider.notifier).togglePause(),
-                ),
-                const SizedBox(width: 8),
-                ActionIconButton(
-                  icon: state.isEngineVsEngine ? Icons.smart_toy_rounded : Icons.smart_toy_outlined,
-                  isActive: state.isEngineVsEngine,
-                  onTap: () {
-                    ref.read(arenaProvider.notifier).toggleEngineVsEngine();
-                    final updatedState = ref.read(arenaProvider);
-                    final isEvE = updatedState.isEngineVsEngine;
-                    final upEngineName = AiAvatar.getAvatar(updatedState.engineLevel).name;
-                    
-                    String message = '';
-                    if (isEvE) {
-                      final downEngineName = AiAvatar.getAvatar(updatedState.bottomAvatarId).name;
-                      message = 'The game will now be played between $upEngineName and $downEngineName.';
-                    } else {
-                      final userName = ref.read(chessProvider).userName;
-                      message = 'The game will now be played between $upEngineName and $userName.';
-                    }
-
-                    ScaffoldMessenger.of(context).clearSnackBars();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        behavior: SnackBarBehavior.floating,
-                        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                        backgroundColor: ScholarlyTheme.panelBase.withValues(alpha: 0.95),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          side: const BorderSide(color: ScholarlyTheme.accentBlue, width: 1.5),
-                        ),
-                        content: Row(
-                          children: [
-                            const Icon(Icons.smart_toy_rounded, color: ScholarlyTheme.accentBlue),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                message,
-                                style: GoogleFonts.inter(
-                                  color: ScholarlyTheme.textPrimary,
-                                  fontSize: 12.5,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(width: 8),
-                ActionIconButton(
-                  icon: Icons.flash_on_rounded,
-                  isBlinkingContinuous: ref.watch(chessProvider).quickPlay || state.isTemporaryQuickPlay,
-                  isActive: state.isEngineThinking && (!_isPlayerTurn(state) || state.isEngineVsEngine),
-                  isEnabled: !_isPlayerTurn(state) || state.isEngineVsEngine,
-                  activeColor: Colors.amber,
-                  activeIconColor: Colors.black,
-                  baseColor: (ref.watch(chessProvider).quickPlay || state.isTemporaryQuickPlay) ? Colors.amber : Colors.white.withValues(alpha: 0.12),
-                  iconColor: (ref.watch(chessProvider).quickPlay || state.isTemporaryQuickPlay) ? Colors.black : Colors.white.withValues(alpha: 0.35),
-                  onTap: () => ref.read(arenaProvider.notifier).activateTemporaryQuickPlay(),
-                ),
-                const SizedBox(width: 8),
-                ActionIconButton(
-                  icon: Icons.save_rounded,
-                  onTap: () => _handleSaveGame(context, ref),
-                ),
-                const SizedBox(width: 8),
-                ActionIconButton(
-                  icon: state.isBulbGlowing ? Icons.lightbulb_rounded : Icons.lightbulb_outline_rounded,
-                  isEnabled: !state.isHintLoading,
-                  isActive: state.isBulbGlowing,
-                  activeColor: ScholarlyTheme.accentYellowSoft,
-                  activeIconColor: ScholarlyTheme.accentYellow,
-                  onTap: () => ref.read(arenaProvider.notifier).requestHint(),
-                ),
-                const SizedBox(width: 8),
-                ActionIconButton(
-                  icon: Icons.settings_rounded,
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const ArenaSettingsPage(),
-                      ),
-                    );
-                  },
-                ),
-              ],
+              children: _buildActionButtons(context, ref, state, isDocked: false),
             ),
           ),
         ),
       ),
     );
+  }
+
+  List<Widget> _buildActionButtons(BuildContext context, WidgetRef ref, ArenaState state, {required bool isDocked}) {
+    return [
+      ActionIconButton(
+        icon: Icons.add_box_rounded, // UNRATED uses +
+        isFlat: isDocked,
+        onTap: () => _handleNewGame(context, ref),
+      ),
+      const SizedBox(width: 8),
+      ActionIconButton(
+        icon: Icons.undo_rounded,
+        isEnabled: state.canUndo,
+        isFlat: isDocked,
+        onTap: state.canUndo ? () => ref.read(arenaProvider.notifier).undo() : null,
+      ),
+      const SizedBox(width: 8),
+      ActionIconButton(
+        icon: Icons.redo_rounded,
+        isEnabled: state.canRedo,
+        isFlat: isDocked,
+        onTap: state.canRedo ? () => ref.read(arenaProvider.notifier).redo() : null,
+      ),
+      const SizedBox(width: 8),
+      ActionIconButton(
+        icon: Icons.flip_camera_android_outlined,
+        isActive: state.isBoardFlipped,
+        isFlat: isDocked,
+        onTap: () => ref.read(arenaProvider.notifier).toggleBoardOrientation(),
+      ),
+      const SizedBox(width: 8),
+      ActionIconButton(
+        icon: state.isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
+        isActive: state.isPaused,
+        isFlat: isDocked,
+        onTap: () => ref.read(arenaProvider.notifier).togglePause(),
+      ),
+      const SizedBox(width: 8),
+      ActionIconButton(
+        icon: state.isEngineVsEngine ? Icons.smart_toy_rounded : Icons.smart_toy_outlined,
+        isActive: state.isEngineVsEngine,
+        isFlat: isDocked,
+        onTap: () {
+          ref.read(arenaProvider.notifier).toggleEngineVsEngine();
+          final updatedState = ref.read(arenaProvider);
+          final isEvE = updatedState.isEngineVsEngine;
+          final upEngineName = AiAvatar.getAvatar(updatedState.engineLevel).name;
+          
+          String message = '';
+          if (isEvE) {
+            final downEngineName = AiAvatar.getAvatar(updatedState.bottomAvatarId).name;
+            message = 'The game will now be played between $upEngineName and $downEngineName.';
+          } else {
+            final userName = ref.read(chessProvider).userName;
+            message = 'The game will now be played between $upEngineName and $userName.';
+          }
+
+          ScaffoldMessenger.of(context).clearSnackBars();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              behavior: SnackBarBehavior.floating,
+              margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              backgroundColor: ScholarlyTheme.panelBase.withValues(alpha: 0.95),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: const BorderSide(color: ScholarlyTheme.accentBlue, width: 1.5),
+              ),
+              content: Row(
+                children: [
+                  const Icon(Icons.smart_toy_rounded, color: ScholarlyTheme.accentBlue),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      message,
+                      style: GoogleFonts.inter(
+                        color: ScholarlyTheme.textPrimary,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+      const SizedBox(width: 8),
+      ActionIconButton(
+        icon: Icons.flash_on_rounded,
+        isBlinkingContinuous: ref.watch(chessProvider).quickPlay || state.isTemporaryQuickPlay,
+        isActive: state.isEngineThinking && (!_isPlayerTurn(state) || state.isEngineVsEngine),
+        isEnabled: !_isPlayerTurn(state) || state.isEngineVsEngine,
+        isFlat: isDocked,
+        activeColor: Colors.amber,
+        activeIconColor: Colors.black,
+        baseColor: (ref.watch(chessProvider).quickPlay || state.isTemporaryQuickPlay) ? Colors.amber : Colors.white.withValues(alpha: 0.12),
+        iconColor: (ref.watch(chessProvider).quickPlay || state.isTemporaryQuickPlay) ? Colors.black : Colors.white.withValues(alpha: 0.35),
+        onTap: () => ref.read(arenaProvider.notifier).activateTemporaryQuickPlay(),
+      ),
+      const SizedBox(width: 8),
+      ActionIconButton(
+        icon: Icons.save_rounded,
+        isFlat: isDocked,
+        onTap: () => _handleSaveGame(context, ref),
+      ),
+      const SizedBox(width: 8),
+      ActionIconButton(
+        icon: state.isBulbGlowing ? Icons.lightbulb_rounded : Icons.lightbulb_outline_rounded,
+        isEnabled: !state.isHintLoading,
+        isActive: state.isBulbGlowing,
+        isFlat: isDocked,
+        activeColor: ScholarlyTheme.accentYellowSoft,
+        activeIconColor: ScholarlyTheme.accentYellow,
+        onTap: () => ref.read(arenaProvider.notifier).requestHint(),
+      ),
+      const SizedBox(width: 8),
+      ActionIconButton(
+        icon: Icons.settings_rounded,
+        isFlat: isDocked,
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => const ArenaSettingsPage(),
+            ),
+          );
+        },
+      ),
+    ];
   }
 
   Widget _buildPauseOverlay(BuildContext context, WidgetRef ref) {
