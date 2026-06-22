@@ -69,6 +69,10 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
   final TextEditingController _editorFenController = TextEditingController();
   
   late TabController _tabController;
+  late TabController _batchesTabController;
+  late TabController _libraryTabController;
+  late TabController _classTabController;
+  late TabController _auditorTabController;
   final bool _showEvalBar = true;
   String? _activeClassroomTool; // 'editor', 'clock', 'navigation', or null
   bool _isAutoplayRunning = false;
@@ -91,6 +95,29 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
   String _librarySearchQuery = '';
   int _librarySubTabIndex = 0; // 0: Studies, 1: Academy Games, 2: Historical Games
   Future<List<rust_pgn.PgnGameRecord>>? _libraryFuture;
+
+  // Batches state
+  int _batchesSubTabIndex = 0; // 0: Students, 1: Students' Profile, 2: Chats
+  MockStudent? _selectedStudentForProfile;
+
+  // Class state
+  int _classSubTabIndex = 0; // 0: State, 1: Spar, 2: Engine Tuner
+
+
+  // Auditor state
+  int _auditorSubTabIndex = 0; // 0: Teacher Profile, 1: Requests, 2: Registered Students, 3: Manage
+
+
+  // Mock data
+  final List<MockStudent> _mockStudents = [
+    MockStudent(name: 'Rohan Sharma', elo: '1450', puzzles: '1600', status: 'In Game', online: true, avatarUrl: '', role: 'Intermediate'),
+    MockStudent(name: 'Aanya Patel', elo: '1520', puzzles: '1750', status: 'Idle', online: true, avatarUrl: '', role: 'Intermediate'),
+    MockStudent(name: 'David Miller', elo: '1890', puzzles: '2100', status: 'Offline', online: false, avatarUrl: '', role: 'Advanced'),
+    MockStudent(name: 'Priya Iyer', elo: '1200', puzzles: '1350', status: 'Idle', online: true, avatarUrl: '', role: 'Beginner'),
+    MockStudent(name: 'Kabir Mehta', elo: '1650', puzzles: '1800', status: 'Offline', online: false, avatarUrl: '', role: 'Intermediate', accessGranted: false),
+  ];
+
+
 
   // Chess Clock / Timer state
   bool _showTimer = false;
@@ -118,6 +145,42 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
   void initState() {
     super.initState();
     _tabController = TabController(length: 5, vsync: this, initialIndex: 2);
+    
+    _batchesTabController = TabController(length: 3, vsync: this);
+    _batchesTabController.addListener(() {
+      if (_batchesSubTabIndex != _batchesTabController.index) {
+        setState(() {
+          _batchesSubTabIndex = _batchesTabController.index;
+        });
+      }
+    });
+
+    _libraryTabController = TabController(length: 3, vsync: this);
+    _libraryTabController.addListener(() {
+      if (_librarySubTabIndex != _libraryTabController.index) {
+        setState(() {
+          _librarySubTabIndex = _libraryTabController.index;
+        });
+      }
+    });
+
+    _classTabController = TabController(length: 3, vsync: this);
+    _classTabController.addListener(() {
+      if (_classSubTabIndex != _classTabController.index) {
+        setState(() {
+          _classSubTabIndex = _classTabController.index;
+        });
+      }
+    });
+
+    _auditorTabController = TabController(length: 4, vsync: this);
+    _auditorTabController.addListener(() {
+      if (_auditorSubTabIndex != _auditorTabController.index) {
+        setState(() {
+          _auditorSubTabIndex = _auditorTabController.index;
+        });
+      }
+    });
     
     // Bind current user to local classroom service
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -175,6 +238,10 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
     _meetUrlController.dispose();
     _editorFenController.dispose();
     _tabController.dispose();
+    _batchesTabController.dispose();
+    _libraryTabController.dispose();
+    _classTabController.dispose();
+    _auditorTabController.dispose();
     _autoEngineMoveTimer?.cancel();
     _chessClockTimer?.cancel();
     _autoplayTimer?.cancel();
@@ -653,11 +720,11 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
                 controller: _tabController,
                 physics: const NeverScrollableScrollPhysics(), // Disable swipe gestures to avoid conflicting with chessboard dragging
                 children: [
-                  _buildFullRegisterTab(),
+                  _buildFullBatchesTab(),
                   _buildFullLibraryTab(studyState, studyNotifier),
                   _buildFullClassTab(state, studyState, studyNotifier),
-                  _buildFullChatTab(),
-                  _buildFullConnectTab(state),
+                  _buildFullClassSectionTab(),
+                  _buildFullAuditorTab(state),
                 ],
               ),
             ),
@@ -680,11 +747,11 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
               ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
             },
             tabs: const [
-              Tab(icon: Icon(Icons.assignment_rounded, size: 20), text: 'Register'),
+              Tab(icon: Icon(Icons.group_work_rounded, size: 20), text: 'Batches'),
               Tab(icon: Icon(Icons.folder_copy_rounded, size: 20), text: 'Library'),
               Tab(icon: Icon(Icons.school_rounded, size: 20), text: 'Board'),
-              Tab(icon: Icon(Icons.chat_bubble_rounded, size: 20), text: 'Chat'),
-              Tab(icon: Icon(Icons.sensors_rounded, size: 20), text: 'Connect'),
+              Tab(icon: Icon(Icons.cast_for_education_rounded, size: 20), text: 'Class'),
+              Tab(icon: Icon(Icons.tune_rounded, size: 20), text: 'Auditor'),
             ],
           ),
         ),
@@ -720,8 +787,8 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
       ),
     );
   }
-
-  Widget _buildFullRegisterTab() {
+  Widget _buildFullBatchesTab() {
+    _selectedStudentForProfile ??= _mockStudents.first;
     return Container(
       margin: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -729,19 +796,91 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
         border: Border.all(color: ScholarlyTheme.panelStroke),
         borderRadius: BorderRadius.circular(16),
       ),
-      child: Center(
-        child: Text(
-          'Register Coming Soon',
-          style: GoogleFonts.outfit(
-            color: ScholarlyTheme.textMuted,
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
+            decoration: BoxDecoration(
+              border: Border(bottom: BorderSide(color: ScholarlyTheme.panelStroke.withValues(alpha: 0.15))),
+            ),
+            child: TabBar(
+              controller: _batchesTabController,
+              indicator: BoxDecoration(
+                color: ScholarlyTheme.accentBlueSoft,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              indicatorSize: TabBarIndicatorSize.tab,
+              dividerColor: Colors.transparent,
+              labelColor: ScholarlyTheme.accentBlue,
+              unselectedLabelColor: ScholarlyTheme.textMuted,
+              labelStyle: GoogleFonts.outfit(
+                fontWeight: FontWeight.bold,
+                fontSize: 11,
+              ),
+              unselectedLabelStyle: GoogleFonts.outfit(
+                fontWeight: FontWeight.w500,
+                fontSize: 11,
+              ),
+              onTap: (idx) {
+                ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+              },
+              tabs: const [
+                Tab(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.people_outline_rounded, size: 16),
+                        SizedBox(width: 6),
+                        Text('Students'),
+                      ],
+                    ),
+                  ),
+                ),
+                Tab(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.badge_outlined, size: 16),
+                        SizedBox(width: 6),
+                        Text("Students' Profile"),
+                      ],
+                    ),
+                  ),
+                ),
+                Tab(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.chat_bubble_outline_rounded, size: 16),
+                        SizedBox(width: 6),
+                        Text('Chats'),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
+          Expanded(
+            child: TabBarView(
+              controller: _batchesTabController,
+              children: [
+                _buildStudentsSubTab(),
+                _buildStudentsProfileSubTab(),
+                _buildChatsSubTab(),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
-
   Widget _buildFullLibraryTab(StudyLabState studyState, StudyLabNotifier studyNotifier) {
     return Container(
       margin: const EdgeInsets.all(12),
@@ -753,8 +892,7 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
       child: _buildLibraryTab(studyState, studyNotifier),
     );
   }
-
-  Widget _buildFullChatTab() {
+  Widget _buildFullClassSectionTab() {
     return Container(
       margin: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -762,28 +900,375 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
         border: Border.all(color: ScholarlyTheme.panelStroke),
         borderRadius: BorderRadius.circular(16),
       ),
-      child: Center(
-        child: Text(
-          'Chat Coming Soon',
-          style: GoogleFonts.outfit(
-            color: ScholarlyTheme.textMuted,
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
+            decoration: BoxDecoration(
+              border: Border(bottom: BorderSide(color: ScholarlyTheme.panelStroke.withValues(alpha: 0.15))),
+            ),
+            child: TabBar(
+              controller: _classTabController,
+              indicator: BoxDecoration(
+                color: ScholarlyTheme.accentBlueSoft,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              indicatorSize: TabBarIndicatorSize.tab,
+              dividerColor: Colors.transparent,
+              labelColor: ScholarlyTheme.accentBlue,
+              unselectedLabelColor: ScholarlyTheme.textMuted,
+              labelStyle: GoogleFonts.outfit(
+                fontWeight: FontWeight.bold,
+                fontSize: 11,
+              ),
+              unselectedLabelStyle: GoogleFonts.outfit(
+                fontWeight: FontWeight.w500,
+                fontSize: 11,
+              ),
+              onTap: (idx) {
+                ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+              },
+              tabs: const [
+                Tab(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.graphic_eq_rounded, size: 16),
+                        SizedBox(width: 6),
+                        Text('State'),
+                      ],
+                    ),
+                  ),
+                ),
+                Tab(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.bolt_rounded, size: 16),
+                        SizedBox(width: 6),
+                        Text('Spar'),
+                      ],
+                    ),
+                  ),
+                ),
+                Tab(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.tune_rounded, size: 16),
+                        SizedBox(width: 6),
+                        Text('Engine Tuner'),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
+          Expanded(
+            child: TabBarView(
+              controller: _classTabController,
+              children: [
+                _buildStateSubTab(),
+                _buildSparSubTab(),
+                _buildEngineTunerSubTab(),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }  Widget _buildFullAuditorTab(ClassroomState state) {
+    return Container(
+      margin: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: ScholarlyTheme.panelBase,
+        border: Border.all(color: ScholarlyTheme.panelStroke),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+            decoration: BoxDecoration(
+              border: Border(bottom: BorderSide(color: ScholarlyTheme.panelStroke.withValues(alpha: 0.15))),
+            ),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: TabBar(
+                controller: _auditorTabController,
+                isScrollable: true,
+                tabAlignment: TabAlignment.start,
+                indicator: BoxDecoration(
+                  color: ScholarlyTheme.accentBlueSoft,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                indicatorSize: TabBarIndicatorSize.tab,
+                dividerColor: Colors.transparent,
+                labelColor: ScholarlyTheme.accentBlue,
+                unselectedLabelColor: ScholarlyTheme.textMuted,
+                labelStyle: GoogleFonts.outfit(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 11,
+                ),
+                unselectedLabelStyle: GoogleFonts.outfit(
+                  fontWeight: FontWeight.w500,
+                  fontSize: 11,
+                ),
+                onTap: (idx) {
+                  ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                },
+                tabs: const [
+                  Tab(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.person_outline_rounded, size: 16),
+                        SizedBox(width: 6),
+                        Text('Teacher Profile'),
+                      ],
+                    ),
+                  ),
+                  Tab(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.notifications_none_rounded, size: 16),
+                        SizedBox(width: 6),
+                        Text('Requests'),
+                      ],
+                    ),
+                  ),
+                  Tab(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.check_circle_outline_rounded, size: 16),
+                        SizedBox(width: 6),
+                        Text('Registered Students'),
+                      ],
+                    ),
+                  ),
+                  Tab(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.tune_rounded, size: 16),
+                        SizedBox(width: 6),
+                        Text('Manage'),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Expanded(
+            child: TabBarView(
+              controller: _auditorTabController,
+              children: [
+                _buildTeacherProfileSubTab(),
+                _buildRequestsSubTab(state),
+                _buildRegisteredStudentsSubTab(state),
+                _buildManageSubTab(state),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildFullConnectTab(ClassroomState state) {
-    return Container(
-      margin: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: ScholarlyTheme.panelBase,
-        border: Border.all(color: ScholarlyTheme.panelStroke),
-        borderRadius: BorderRadius.circular(16),
+
+  Widget _buildStudentsSubTab() {
+    return const SizedBox.shrink();
+  }
+
+  Widget _buildStudentsProfileSubTab() {
+    return const SizedBox.shrink();
+  }
+
+  Widget _buildChatsSubTab() {
+    return const SizedBox.shrink();
+  }
+
+
+
+  Widget _buildStateSubTab() {
+    return const SizedBox.shrink();
+  }
+
+  Widget _buildSparSubTab() {
+    return const SizedBox.shrink();
+  }
+
+  Widget _buildEngineTunerSubTab() {
+    return const SizedBox.shrink();
+  }
+
+
+
+  Widget _buildTeacherProfileSubTab() {
+    return const SizedBox.shrink();
+  }
+
+  Widget _buildRequestsSubTab(ClassroomState state) {
+    return const SizedBox.shrink();
+  }
+
+  Widget _buildRegisteredStudentsSubTab(ClassroomState state) {
+    return DefaultTabController(
+      length: 2,
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
+            decoration: BoxDecoration(
+              border: Border(bottom: BorderSide(color: ScholarlyTheme.panelStroke.withValues(alpha: 0.15))),
+            ),
+            child: TabBar(
+              indicator: BoxDecoration(
+                color: ScholarlyTheme.accentBlueSoft,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              indicatorSize: TabBarIndicatorSize.tab,
+              dividerColor: Colors.transparent,
+              labelColor: ScholarlyTheme.accentBlue,
+              unselectedLabelColor: ScholarlyTheme.textMuted,
+              labelStyle: GoogleFonts.outfit(
+                fontWeight: FontWeight.bold,
+                fontSize: 10,
+              ),
+              unselectedLabelStyle: GoogleFonts.outfit(
+                fontWeight: FontWeight.w500,
+                fontSize: 10,
+              ),
+              tabs: const [
+                Tab(text: 'Granted'),
+                Tab(text: 'Revoked'),
+              ],
+            ),
+          ),
+          const Expanded(
+            child: TabBarView(
+              children: [
+                SizedBox.shrink(), // Granted tab (empty)
+                SizedBox.shrink(), // Revoked tab (empty)
+              ],
+            ),
+          ),
+        ],
       ),
-      child: _buildConnectTab(state),
+    );
+  }
+
+  Widget _buildManageSubTab(ClassroomState state) {
+    if (!state.isJoined) {
+      return _buildSetupPanel(state);
+    }
+    final notifier = ref.read(localClassroomProvider.notifier);
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'SESSION ADMINISTRATION',
+            style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 11, color: ScholarlyTheme.textMuted, letterSpacing: 0.5),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Sync Board to Students', style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 12)),
+              Switch(
+                value: state.syncToTeacher,
+                activeThumbColor: ScholarlyTheme.accentBlue,
+                onChanged: (val) {
+                  notifier.setSyncToTeacher(val);
+                },
+              ),
+            ],
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Lock Student Board Inputs', style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 12)),
+              Switch(
+                value: state.boardsLocked,
+                activeThumbColor: ScholarlyTheme.accentBlue,
+                onChanged: (val) {
+                  notifier.setBoardsLocked(val);
+                },
+              ),
+            ],
+          ),
+          const Divider(color: ScholarlyTheme.panelStroke),
+          const SizedBox(height: 8),
+          Text(
+            'Google Meet / Zoom URL',
+            style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 12, color: ScholarlyTheme.textPrimary),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _meetUrlController,
+                  style: GoogleFonts.inter(fontSize: 12, color: ScholarlyTheme.textPrimary),
+                  decoration: InputDecoration(
+                    hintText: 'https://meet.google.com/abc-defg-hij',
+                    hintStyle: const TextStyle(fontSize: 11, color: ScholarlyTheme.textMuted),
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: ScholarlyTheme.accentBlue,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                onPressed: () {
+                  ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                  final link = _meetUrlController.text.trim();
+                  notifier.updateMeetLink(link.isEmpty ? null : link);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Classroom meeting link updated.')),
+                  );
+                },
+                child: const Text('Update', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            icon: const Icon(Icons.exit_to_app_rounded, size: 16),
+            label: const Text('End Classroom Session', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+            onPressed: () async {
+              final confirm = await _handleBackPress();
+              if (!confirm) {
+                ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+              }
+            },
+          ),
+        ],
+      ),
     );
   }
 
@@ -2125,6 +2610,269 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
   }
 
   // --- TAB 2: LIBRARY EXPLORER ---
+  Widget _buildLibrarySavedGamesView(
+    StudyLabState studyState,
+    StudyLabNotifier studyNotifier,
+    HistoricalCinemaState cinemaState,
+    ChessState chessState,
+  ) {
+    return FutureBuilder<List<rust_pgn.PgnGameRecord>>(
+      future: _libraryFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final customRecords = snapshot.data ?? const [];
+        final List<ClassroomLibraryItem> allItems = [];
+
+        // Combine Studies
+        for (var i = 0; i < customRecords.length; i++) {
+          final record = customRecords[i];
+          final title = record.header.event.isNotEmpty ? record.header.event : "Custom Study #${i + 1}";
+          final moveCount = record.movesPgn.split(" ").where((m) => m.isNotEmpty && !m.contains(".")).length;
+          final details = "${record.header.white} vs ${record.header.black} | Moves: $moveCount";
+          
+          allItems.add(ClassroomLibraryItem(
+            id: "study_${record.index}",
+            type: ClassroomLibraryItemType.customStudy,
+            title: title,
+            details: details,
+            date: DateTime.now(),
+            data: record,
+          ));
+        }
+
+        // Combine Academy Games
+        for (final game in chessState.savedGames) {
+          if (game.isAcademyActive) {
+            final shortId = game.id.length >= 4 ? game.id.substring(0, 4) : game.id;
+            final title = game.customName != null && game.customName!.isNotEmpty
+                ? game.customName!
+                : 'Academy Game $shortId';
+            final details = '${game.isPlayerWhite ? "White" : "Black"} | Moves: ${game.recentMoves.length}';
+            
+            allItems.add(ClassroomLibraryItem(
+              id: "saved_${game.id}",
+              type: ClassroomLibraryItemType.academyGame,
+              title: title,
+              details: details,
+              date: game.savedAt,
+              data: game,
+            ));
+          }
+        }
+
+        final query = _librarySearchQuery.toLowerCase();
+        final filtered = allItems.where((item) {
+          return item.title.toLowerCase().contains(query) ||
+              item.details.toLowerCase().contains(query);
+        }).toList();
+
+        if (filtered.isEmpty) {
+          return Center(
+            child: Text('No saved games found.', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 12)),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          itemCount: filtered.length,
+          itemBuilder: (context, index) {
+            final item = filtered[index];
+            final isStudy = item.type == ClassroomLibraryItemType.customStudy;
+            return Card(
+              margin: const EdgeInsets.only(bottom: 6),
+              color: ScholarlyTheme.panelStroke.withValues(alpha: 0.1),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              child: ListTile(
+                dense: true,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                title: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: isStudy ? ScholarlyTheme.accentBlue.withValues(alpha: 0.15) : Colors.green.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        isStudy ? 'STUDY' : 'ACADEMY',
+                        style: GoogleFonts.inter(
+                          fontSize: 8,
+                          fontWeight: FontWeight.bold,
+                          color: isStudy ? ScholarlyTheme.accentBlue : Colors.green,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        item.title,
+                        style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 12, color: ScholarlyTheme.textPrimary),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                subtitle: Text(item.details, style: GoogleFonts.inter(fontSize: 10, color: ScholarlyTheme.textMuted)),
+                trailing: IconButton(
+                  icon: const Icon(Icons.play_arrow_rounded, color: ScholarlyTheme.accentBlue, size: 18),
+                  onPressed: () {
+                    ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                    if (item.type == ClassroomLibraryItemType.customStudy) {
+                      studyNotifier.loadPgnRecord(item.data as rust_pgn.PgnGameRecord, (item.data as rust_pgn.PgnGameRecord).index.toInt());
+                    } else if (item.type == ClassroomLibraryItemType.academyGame) {
+                      final savedGame = item.data as SavedGameEntry;
+                      ref.read(chessProvider.notifier).initializeAcademySession(customFen: savedGame.initialFen ?? savedGame.fen);
+                    }
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Loaded: ${item.title}'), duration: const Duration(seconds: 1)),
+                    );
+                  },
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildLibraryLegendsView(
+    StudyLabState studyState,
+    StudyLabNotifier studyNotifier,
+    HistoricalCinemaState cinemaState,
+    ChessState chessState,
+  ) {
+    return FutureBuilder<List<rust_pgn.PgnGameRecord>>(
+      future: _libraryFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final Map<String, List<ClassroomLibraryItem>> grouped = {};
+        for (final game in cinemaState.games) {
+          final item = ClassroomLibraryItem(
+            id: "cinema_${game.id}",
+            type: ClassroomLibraryItemType.historicalGame,
+            title: "${game.white} vs ${game.black}",
+            details: "${game.event} (${game.year}) | ${game.educationalTheme}",
+            date: DateTime.now(),
+            data: game,
+          );
+          
+          final query = _librarySearchQuery.toLowerCase();
+          if (query.isEmpty || 
+              item.title.toLowerCase().contains(query) || 
+              item.details.toLowerCase().contains(query) || 
+              game.category.toLowerCase().contains(query)) {
+            grouped.putIfAbsent(game.category, () => []).add(item);
+          }
+        }
+
+        if (grouped.isEmpty) {
+          return Center(
+            child: Text('No legend games found.', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 12)),
+          );
+        }
+
+        // Sort categories in the proper order as defined in the source
+        final sortedCategories = grouped.keys.toList()
+          ..sort((a, b) {
+            const categoryOrder = [
+              'cat_tactical',
+              'cat_positional',
+              'cat_dynamic',
+              'cat_endgame',
+              'cat_sacrifice',
+              'cat_hypermodern',
+              'cat_closed_systems',
+              'cat_sicilian_clashes',
+              'cat_initiative',
+              'cat_pawn_dynamics',
+              'cat_bishop_pair',
+              'cat_defensive_saves',
+            ];
+            int idxA = categoryOrder.indexWhere((key) => a.toLowerCase().contains(key));
+            int idxB = categoryOrder.indexWhere((key) => b.toLowerCase().contains(key));
+            if (idxA == -1) idxA = 999;
+            if (idxB == -1) idxB = 999;
+            return idxA.compareTo(idxB);
+          });
+
+        return ListView.builder(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          itemCount: sortedCategories.length,
+          itemBuilder: (context, index) {
+            final categoryName = sortedCategories[index];
+            final gamesInCategory = grouped[categoryName]!;
+            final metadata = _getCategoryMetadata(categoryName);
+            
+            return Card(
+              margin: const EdgeInsets.only(bottom: 8),
+              color: ScholarlyTheme.panelStroke.withValues(alpha: 0.05),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: ExpansionTile(
+                shape: const Border(),
+                collapsedShape: const Border(),
+                leading: Icon(metadata.icon, color: metadata.color, size: 20),
+                title: Text(
+                  metadata.title,
+                  style: GoogleFonts.outfit(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                    color: metadata.color,
+                  ),
+                ),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      metadata.subtitle,
+                      style: GoogleFonts.inter(fontSize: 9, color: ScholarlyTheme.textMuted),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${gamesInCategory.length} game${gamesInCategory.length > 1 ? "s" : ""}',
+                      style: GoogleFonts.inter(fontSize: 8, color: ScholarlyTheme.textMuted, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+                children: gamesInCategory.map((item) {
+                  return ListTile(
+                    dense: true,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                    title: Text(
+                      item.title,
+                      style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 11, color: ScholarlyTheme.textPrimary),
+                    ),
+                    subtitle: Text(
+                      item.details,
+                      style: GoogleFonts.inter(fontSize: 9, color: ScholarlyTheme.textMuted),
+                    ),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.play_arrow_rounded, color: ScholarlyTheme.accentBlue, size: 18),
+                      onPressed: () {
+                        ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                        final historical = item.data as HistoricalGame;
+                        studyNotifier.importPgn(historical.pgn);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Loaded: ${item.title}'), duration: const Duration(seconds: 1)),
+                        );
+                      },
+                    ),
+                  );
+                }).toList(),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget _buildLibraryTab(StudyLabState studyState, StudyLabNotifier studyNotifier) {
     _libraryFuture ??= studyNotifier.loadGamesFromLibrary();
     final chessState = ref.watch(chessProvider);
@@ -2132,12 +2880,25 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
 
     return Column(
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _buildLibrarySubTabButton(0, 'Saved Games'),
-            _buildLibrarySubTabButton(1, 'Legends'),
-            _buildLibrarySubTabButton(2, 'Source'),
+        TabBar(
+          controller: _libraryTabController,
+          indicatorColor: ScholarlyTheme.accentBlue,
+          indicatorSize: TabBarIndicatorSize.tab,
+          dividerColor: Colors.transparent,
+          labelColor: ScholarlyTheme.accentBlue,
+          unselectedLabelColor: ScholarlyTheme.textMuted,
+          labelStyle: GoogleFonts.inter(
+            fontWeight: FontWeight.bold,
+            fontSize: 11,
+          ),
+          unselectedLabelStyle: GoogleFonts.inter(
+            fontWeight: FontWeight.normal,
+            fontSize: 11,
+          ),
+          tabs: const [
+            Tab(text: 'Saved Games'),
+            Tab(text: 'Legends'),
+            Tab(text: 'Source'),
           ],
         ),
         if (_librarySubTabIndex != 2)
@@ -2161,251 +2922,14 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
             ),
           ),
         Expanded(
-          child: _librarySubTabIndex == 2
-              ? _buildLibrarySourceTab(studyNotifier)
-              : FutureBuilder<List<rust_pgn.PgnGameRecord>>(
-                  future: _libraryFuture,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-
-                    if (_librarySubTabIndex == 1) {
-                      // Legends Tab
-                      final Map<String, List<ClassroomLibraryItem>> grouped = {};
-                      for (final game in cinemaState.games) {
-                        final item = ClassroomLibraryItem(
-                          id: "cinema_${game.id}",
-                          type: ClassroomLibraryItemType.historicalGame,
-                          title: "${game.white} vs ${game.black}",
-                          details: "${game.event} (${game.year}) | ${game.educationalTheme}",
-                          date: DateTime.now(),
-                          data: game,
-                        );
-                        
-                        final query = _librarySearchQuery.toLowerCase();
-                        if (query.isEmpty || 
-                            item.title.toLowerCase().contains(query) || 
-                            item.details.toLowerCase().contains(query) || 
-                            game.category.toLowerCase().contains(query)) {
-                          grouped.putIfAbsent(game.category, () => []).add(item);
-                        }
-                      }
-
-                      if (grouped.isEmpty) {
-                        return Center(
-                          child: Text('No legend games found.', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 12)),
-                        );
-                      }
-
-                      // Sort categories in the proper order as defined in the source
-                      final sortedCategories = grouped.keys.toList()
-                        ..sort((a, b) {
-                          const categoryOrder = [
-                            'cat_tactical',
-                            'cat_positional',
-                            'cat_dynamic',
-                            'cat_endgame',
-                            'cat_sacrifice',
-                            'cat_hypermodern',
-                            'cat_closed_systems',
-                            'cat_sicilian_clashes',
-                            'cat_initiative',
-                            'cat_pawn_dynamics',
-                            'cat_bishop_pair',
-                            'cat_defensive_saves',
-                          ];
-                          int idxA = categoryOrder.indexWhere((key) => a.toLowerCase().contains(key));
-                          int idxB = categoryOrder.indexWhere((key) => b.toLowerCase().contains(key));
-                          if (idxA == -1) idxA = 999;
-                          if (idxB == -1) idxB = 999;
-                          return idxA.compareTo(idxB);
-                        });
-
-                      return ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        itemCount: sortedCategories.length,
-                        itemBuilder: (context, index) {
-                          final categoryName = sortedCategories[index];
-                          final gamesInCategory = grouped[categoryName]!;
-                          final metadata = _getCategoryMetadata(categoryName);
-                          
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            color: ScholarlyTheme.panelStroke.withValues(alpha: 0.05),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            child: ExpansionTile(
-                              shape: const Border(),
-                              collapsedShape: const Border(),
-                              leading: Icon(metadata.icon, color: metadata.color, size: 20),
-                              title: Text(
-                                metadata.title,
-                                style: GoogleFonts.outfit(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                  color: metadata.color,
-                                ),
-                              ),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    metadata.subtitle,
-                                    style: GoogleFonts.inter(fontSize: 9, color: ScholarlyTheme.textMuted),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    '${gamesInCategory.length} game${gamesInCategory.length > 1 ? "s" : ""}',
-                                    style: GoogleFonts.inter(fontSize: 8, color: ScholarlyTheme.textMuted, fontWeight: FontWeight.bold),
-                                  ),
-                                ],
-                              ),
-                              children: gamesInCategory.map((item) {
-                                return ListTile(
-                                  dense: true,
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
-                                  title: Text(
-                                    item.title,
-                                    style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 11, color: ScholarlyTheme.textPrimary),
-                                  ),
-                                  subtitle: Text(
-                                    item.details,
-                                    style: GoogleFonts.inter(fontSize: 9, color: ScholarlyTheme.textMuted),
-                                  ),
-                                  trailing: IconButton(
-                                    icon: const Icon(Icons.play_arrow_rounded, color: ScholarlyTheme.accentBlue, size: 18),
-                                    onPressed: () {
-                                      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                                      final historical = item.data as HistoricalGame;
-                                      studyNotifier.importPgn(historical.pgn);
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text('Loaded: ${item.title}'), duration: const Duration(seconds: 1)),
-                                      );
-                                    },
-                                  ),
-                                );
-                              }).toList(),
-                            ),
-                          );
-                        },
-                      );
-                    }
-
-                    // Saved Games Tab (index == 0)
-                    final customRecords = snapshot.data ?? const [];
-                    final List<ClassroomLibraryItem> allItems = [];
-
-                    // Combine Studies
-                    for (var i = 0; i < customRecords.length; i++) {
-                      final record = customRecords[i];
-                      final title = record.header.event.isNotEmpty ? record.header.event : "Custom Study #${i + 1}";
-                      final moveCount = record.movesPgn.split(" ").where((m) => m.isNotEmpty && !m.contains(".")).length;
-                      final details = "${record.header.white} vs ${record.header.black} | Moves: $moveCount";
-                      
-                      allItems.add(ClassroomLibraryItem(
-                        id: "study_${record.index}",
-                        type: ClassroomLibraryItemType.customStudy,
-                        title: title,
-                        details: details,
-                        date: DateTime.now(),
-                        data: record,
-                      ));
-                    }
-
-                    // Combine Academy Games
-                    for (final game in chessState.savedGames) {
-                      if (game.isAcademyActive) {
-                        final shortId = game.id.length >= 4 ? game.id.substring(0, 4) : game.id;
-                        final title = game.customName != null && game.customName!.isNotEmpty
-                            ? game.customName!
-                            : 'Academy Game $shortId';
-                        final details = '${game.isPlayerWhite ? "White" : "Black"} | Moves: ${game.recentMoves.length}';
-                        
-                        allItems.add(ClassroomLibraryItem(
-                          id: "saved_${game.id}",
-                          type: ClassroomLibraryItemType.academyGame,
-                          title: title,
-                          details: details,
-                          date: game.savedAt,
-                          data: game,
-                        ));
-                      }
-                    }
-
-                    final query = _librarySearchQuery.toLowerCase();
-                    final filtered = allItems.where((item) {
-                      return item.title.toLowerCase().contains(query) ||
-                          item.details.toLowerCase().contains(query);
-                    }).toList();
-
-                    if (filtered.isEmpty) {
-                      return Center(
-                        child: Text('No saved games found.', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 12)),
-                      );
-                    }
-
-                    return ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      itemCount: filtered.length,
-                      itemBuilder: (context, index) {
-                        final item = filtered[index];
-                        final isStudy = item.type == ClassroomLibraryItemType.customStudy;
-                        return Card(
-                          margin: const EdgeInsets.only(bottom: 6),
-                          color: ScholarlyTheme.panelStroke.withValues(alpha: 0.1),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          child: ListTile(
-                            dense: true,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
-                            title: Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: isStudy ? ScholarlyTheme.accentBlue.withValues(alpha: 0.15) : Colors.green.withValues(alpha: 0.15),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Text(
-                                    isStudy ? 'STUDY' : 'ACADEMY',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 8,
-                                      fontWeight: FontWeight.bold,
-                                      color: isStudy ? ScholarlyTheme.accentBlue : Colors.green,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    item.title,
-                                    style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 12, color: ScholarlyTheme.textPrimary),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            subtitle: Text(item.details, style: GoogleFonts.inter(fontSize: 10, color: ScholarlyTheme.textMuted)),
-                            trailing: IconButton(
-                              icon: const Icon(Icons.play_arrow_rounded, color: ScholarlyTheme.accentBlue, size: 18),
-                              onPressed: () {
-                                ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                                if (item.type == ClassroomLibraryItemType.customStudy) {
-                                  studyNotifier.loadPgnRecord(item.data as rust_pgn.PgnGameRecord, (item.data as rust_pgn.PgnGameRecord).index.toInt());
-                                } else if (item.type == ClassroomLibraryItemType.academyGame) {
-                                  final savedGame = item.data as SavedGameEntry;
-                                  ref.read(chessProvider.notifier).initializeAcademySession(customFen: savedGame.initialFen ?? savedGame.fen);
-                                }
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Loaded: ${item.title}'), duration: const Duration(seconds: 1)),
-                                );
-                              },
-                            ),
-                          ),
-                        );
-                      },
-                    );
-                  },
-                ),
+          child: TabBarView(
+            controller: _libraryTabController,
+            children: [
+              _buildLibrarySavedGamesView(studyState, studyNotifier, cinemaState, chessState),
+              _buildLibraryLegendsView(studyState, studyNotifier, cinemaState, chessState),
+              _buildLibrarySourceTab(studyNotifier),
+            ],
+          ),
         ),
       ],
     );
@@ -2445,36 +2969,6 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
     );
   }
 
-  Widget _buildLibrarySubTabButton(int index, String label) {
-    final isActive = _librarySubTabIndex == index;
-    return GestureDetector(
-      onTap: () {
-        ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-        setState(() {
-          _librarySubTabIndex = index;
-        });
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-        decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(
-              color: isActive ? ScholarlyTheme.accentBlue : Colors.transparent,
-              width: 2.0,
-            ),
-          ),
-        ),
-        child: Text(
-          label,
-          style: GoogleFonts.inter(
-            fontSize: 11,
-            fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-            color: isActive ? ScholarlyTheme.accentBlue : ScholarlyTheme.textMuted,
-          ),
-        ),
-      ),
-    );
-  }
 
   // --- TAB 3: STOCKFISH ENGINE ---
   void _setEnginePlayMode(EnginePlayMode mode, StudyLabState studyState, AnalysisEngineController engineNotifier, {required bool isAuto}) {
@@ -2705,79 +3199,9 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
   }
 
 
-  // --- TAB 5: CONNECT TAB ---
-  Widget _buildConnectTab(ClassroomState state) {
-    if (!state.isJoined) {
-      return _buildSetupPanel(state);
-    }
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            'CONNECTION DETAILS',
-            style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 11, color: ScholarlyTheme.textMuted, letterSpacing: 0.5),
-          ),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: ScholarlyTheme.panelStroke.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: ScholarlyTheme.panelStroke.withValues(alpha: 0.15)),
-            ),
-            child: Column(
-              children: [
-                _buildInfoRow('Status', 'Connected', valueColor: Colors.green),
-                const Divider(height: 16, color: ScholarlyTheme.panelStroke),
-                _buildInfoRow('Room ID', state.classroomId),
-                const Divider(height: 16, color: ScholarlyTheme.panelStroke),
-                _buildInfoRow('Role', state.isTeacher ? 'Host / Teacher' : 'Student'),
-                const Divider(height: 16, color: ScholarlyTheme.panelStroke),
-                _buildInfoRow('Mode', state.connectionMode == ConnectionMode.wifi ? 'Wi-Fi Socket' : 'Google Nearby'),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.redAccent,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            icon: const Icon(Icons.exit_to_app_rounded, size: 16),
-            label: const Text('Leave Session', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-            onPressed: () async {
-              final confirm = await _handleBackPress();
-              if (!confirm) {
-                ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-              }
-            },
-          ),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildInfoRow(String label, String value, {Color? valueColor}) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label, style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 11)),
-        Text(
-          value,
-          style: GoogleFonts.outfit(
-            color: valueColor ?? ScholarlyTheme.textPrimary,
-            fontWeight: FontWeight.bold,
-            fontSize: 11,
-          ),
-        ),
-      ],
-    );
-  }
+
 
   Widget _buildSetupPanel(ClassroomState state) {
     final notifier = ref.read(localClassroomProvider.notifier);
@@ -2787,28 +3211,7 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Connection Mode:', style: GoogleFonts.outfit(color: ScholarlyTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 13)),
-              DropdownButton<ConnectionMode>(
-                value: state.connectionMode,
-                dropdownColor: ScholarlyTheme.panelBase,
-                style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 12, fontWeight: FontWeight.bold),
-                onChanged: (val) {
-                  if (val != null) {
-                    ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                    notifier.setConnectionMode(val);
-                  }
-                },
-                items: const [
-                  DropdownMenuItem(value: ConnectionMode.wifi, child: Text('Wi-Fi Network')),
-                  DropdownMenuItem(value: ConnectionMode.nearby, child: Text('Google Nearby')),
-                ],
-              ),
-            ],
-          ),
-          const Divider(color: ScholarlyTheme.panelStroke),
+
 
           Text('Host a Classroom', style: GoogleFonts.outfit(color: ScholarlyTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 14)),
           const SizedBox(height: 6),
@@ -3399,4 +3802,52 @@ _CategoryMetadata _getCategoryMetadata(String category) {
     icon: Icons.movie_filter_rounded,
     color: ScholarlyTheme.accentBlue,
   );
+}
+
+class MockStudent {
+  final String name;
+  final String elo;
+  final String puzzles;
+  final String status;
+  final bool online;
+  final String avatarUrl;
+  final String role;
+  bool accessGranted;
+
+  MockStudent({
+    required this.name,
+    required this.elo,
+    required this.puzzles,
+    required this.status,
+    required this.online,
+    required this.avatarUrl,
+    required this.role,
+    this.accessGranted = true,
+  });
+}
+
+class MockChatMessage {
+  final String sender;
+  final String text;
+  final DateTime timestamp;
+  final bool isMe;
+
+  MockChatMessage({
+    required this.sender,
+    required this.text,
+    required this.timestamp,
+    required this.isMe,
+  });
+}
+
+class MockJoinRequest {
+  final String name;
+  final String elo;
+  final String time;
+
+  MockJoinRequest({
+    required this.name,
+    required this.elo,
+    required this.time,
+  });
 }
