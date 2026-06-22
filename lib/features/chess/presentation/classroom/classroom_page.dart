@@ -67,12 +67,15 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
   final TextEditingController _classIdController = TextEditingController();
   final TextEditingController _meetUrlController = TextEditingController();
   final TextEditingController _editorFenController = TextEditingController();
-  
+  String? _loginRole; // 'teacher', 'student', or null
   late TabController _tabController;
+  late TabController _studentTabController;
   late TabController _batchesTabController;
   late TabController _libraryTabController;
   late TabController _classTabController;
+  late TabController _studentClassTabController;
   late TabController _auditorTabController;
+  late TabController _studentAuditorTabController;
   final bool _showEvalBar = true;
   String? _activeClassroomTool; // 'editor', 'clock', 'navigation', or null
   bool _isAutoplayRunning = false;
@@ -144,7 +147,9 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
   @override
   void initState() {
     super.initState();
+
     _tabController = TabController(length: 5, vsync: this, initialIndex: 2);
+    _studentTabController = TabController(length: 3, vsync: this, initialIndex: 0);
     
     _batchesTabController = TabController(length: 3, vsync: this);
     _batchesTabController.addListener(() {
@@ -172,8 +177,9 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
         });
       }
     });
+    _studentClassTabController = TabController(length: 2, vsync: this);
 
-    _auditorTabController = TabController(length: 4, vsync: this);
+    _auditorTabController = TabController(length: 3, vsync: this);
     _auditorTabController.addListener(() {
       if (_auditorSubTabIndex != _auditorTabController.index) {
         setState(() {
@@ -181,6 +187,7 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
         });
       }
     });
+    _studentAuditorTabController = TabController(length: 2, vsync: this);
     
     // Bind current user to local classroom service
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -238,10 +245,13 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
     _meetUrlController.dispose();
     _editorFenController.dispose();
     _tabController.dispose();
+    _studentTabController.dispose();
     _batchesTabController.dispose();
     _libraryTabController.dispose();
     _classTabController.dispose();
+    _studentClassTabController.dispose();
     _auditorTabController.dispose();
+    _studentAuditorTabController.dispose();
     _autoEngineMoveTimer?.cancel();
     _chessClockTimer?.cancel();
     _autoplayTimer?.cancel();
@@ -272,6 +282,9 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
       );
       if (confirm == true) {
         await ref.read(localClassroomProvider.notifier).leaveClassroom();
+        setState(() {
+          _loginRole = null;
+        });
         return false; // Allow nav pop/exit to dashboard
       }
       return true; // Block pop
@@ -706,6 +719,60 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
       }
     });
 
+    if (_loginRole == null) {
+      return _buildLoginSelectionScreen(context);
+    }
+
+    if (_loginRole == 'student') {
+      return AmbientScaffold(
+        scaffoldKey: _scaffoldKey,
+        blob1Color: const Color(0xFFEFF6FF),
+        blob2Color: const Color(0xFFECFDF5),
+        blob3Color: const Color(0xFFFFFBEB),
+        body: SafeArea(
+          child: Column(
+            children: [
+              _buildHeader(state),
+              Expanded(
+                child: TabBarView(
+                  controller: _studentTabController,
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: [
+                    _buildFullClassTab(state, studyState, studyNotifier), // Board tab
+                    _buildStudentAuditorTab(state),                       // Auditor tab
+                    _buildStudentClassTab(),                              // Class tab
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        bottomNavigationBar: Container(
+          decoration: BoxDecoration(
+            color: ScholarlyTheme.panelBase,
+            border: Border(top: BorderSide(color: ScholarlyTheme.panelStroke.withValues(alpha: 0.15))),
+          ),
+          child: SafeArea(
+            child: TabBar(
+              controller: _studentTabController,
+              labelColor: const Color(0xFF10B981),
+              unselectedLabelColor: ScholarlyTheme.textMuted,
+              indicatorColor: Colors.transparent,
+              labelPadding: EdgeInsets.zero,
+              onTap: (idx) {
+                ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+              },
+              tabs: const [
+                Tab(icon: Icon(Icons.school_rounded, size: 20), text: 'Board'),
+                Tab(icon: Icon(Icons.tune_rounded, size: 20), text: 'Auditor'),
+                Tab(icon: Icon(Icons.cast_for_education_rounded, size: 20), text: 'Class'),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return AmbientScaffold(
       scaffoldKey: _scaffoldKey,
       blob1Color: const Color(0xFFEFF6FF),
@@ -1049,16 +1116,6 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.check_circle_outline_rounded, size: 16),
-                        SizedBox(width: 6),
-                        Text('Registered Students'),
-                      ],
-                    ),
-                  ),
-                  Tab(
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
                         Icon(Icons.tune_rounded, size: 16),
                         SizedBox(width: 6),
                         Text('Manage'),
@@ -1075,7 +1132,6 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
               children: [
                 _buildTeacherProfileSubTab(),
                 _buildRequestsSubTab(state),
-                _buildRegisteredStudentsSubTab(state),
                 _buildManageSubTab(state),
               ],
             ),
@@ -1115,58 +1171,216 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
 
 
   Widget _buildTeacherProfileSubTab() {
-    return const SizedBox.shrink();
-  }
+    final user = ref.watch(authStateChangesProvider).value;
+    final chessState = ref.watch(chessProvider);
+    final username = chessState.userName;
+    final avatarPath = chessState.userAvatarPath;
 
-  Widget _buildRequestsSubTab(ClassroomState state) {
-    return const SizedBox.shrink();
-  }
+    final seed = user?.email ?? user?.uid ?? 'anonymous';
+    final hash = _deterministicHash(seed);
+    final teacherId = 'TCH-${(hash % 90000) + 10000}';
+    final accountId = 'ACC-${(hash % 900000) + 100000}';
+    const validFrom = '2026-06-22';
+    const validTo = '2027-06-22';
 
-  Widget _buildRegisteredStudentsSubTab(ClassroomState state) {
-    return DefaultTabController(
-      length: 2,
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Profile Details Card
           Container(
-            padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
+            padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              border: Border(bottom: BorderSide(color: ScholarlyTheme.panelStroke.withValues(alpha: 0.15))),
+              color: ScholarlyTheme.panelBase,
+              border: Border.all(color: ScholarlyTheme.panelStroke),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: ScholarlyTheme.cardShadow,
             ),
-            child: TabBar(
-              indicator: BoxDecoration(
-                color: ScholarlyTheme.accentBlueSoft,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              indicatorSize: TabBarIndicatorSize.tab,
-              dividerColor: Colors.transparent,
-              labelColor: ScholarlyTheme.accentBlue,
-              unselectedLabelColor: ScholarlyTheme.textMuted,
-              labelStyle: GoogleFonts.outfit(
-                fontWeight: FontWeight.bold,
-                fontSize: 10,
-              ),
-              unselectedLabelStyle: GoogleFonts.outfit(
-                fontWeight: FontWeight.w500,
-                fontSize: 10,
-              ),
-              tabs: const [
-                Tab(text: 'Granted'),
-                Tab(text: 'Revoked'),
+            child: Column(
+              children: [
+                Container(
+                  width: 104,
+                  height: 104,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: ScholarlyTheme.accentBlue.withValues(alpha: 0.8),
+                      width: 3.5,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: ScholarlyTheme.accentBlue.withValues(alpha: 0.1),
+                        blurRadius: 12,
+                      ),
+                    ],
+                  ),
+                  child: ClipOval(
+                    child: avatarPath.startsWith('assets/')
+                        ? Image.asset(avatarPath, fit: BoxFit.cover)
+                        : Image.file(
+                            File(avatarPath),
+                            fit: BoxFit.cover,
+                          ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Grandmaster / Teacher',
+                  style: GoogleFonts.outfit(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: ScholarlyTheme.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Authorized Classroom Host',
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    color: ScholarlyTheme.textMuted,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                
+                // Account details rows
+                _buildProfileDetailRow('Username', username),
+                _buildProfileDetailRow('Account ID', accountId),
+                _buildProfileDetailRow('Teacher ID', teacherId),
+                _buildProfileDetailRow('Valid From', validFrom),
+                _buildProfileDetailRow('Valid To', validTo),
+                _buildProfileDetailRow('Account Status', 'Active', isStatus: true),
               ],
             ),
           ),
-          const Expanded(
-            child: TabBarView(
-              children: [
-                SizedBox.shrink(), // Granted tab (empty)
-                SizedBox.shrink(), // Revoked tab (empty)
-              ],
+          const SizedBox(height: 20),
+          
+          // Logout Button
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent.withValues(alpha: 0.15),
+              foregroundColor: Colors.redAccent,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () {
+              ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+              setState(() {
+                _loginRole = null;
+              });
+            },
+            icon: const Icon(Icons.logout_rounded, size: 16),
+            label: const Text('Logout Teacher Portal', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+          ),
+          const SizedBox(height: 24),
+          const Divider(color: ScholarlyTheme.panelStroke),
+          const SizedBox(height: 16),
+          
+          // Registered Students section
+          Text(
+            'REGISTERED STUDENTS',
+            style: GoogleFonts.outfit(
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+              color: ScholarlyTheme.textPrimary,
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            height: 250,
+            decoration: BoxDecoration(
+              color: ScholarlyTheme.panelBase,
+              border: Border.all(color: ScholarlyTheme.panelStroke),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: DefaultTabController(
+              length: 2,
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
+                    decoration: BoxDecoration(
+                      border: Border(bottom: BorderSide(color: ScholarlyTheme.panelStroke.withValues(alpha: 0.15))),
+                    ),
+                    child: TabBar(
+                      indicator: BoxDecoration(
+                        color: ScholarlyTheme.accentBlueSoft,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      indicatorSize: TabBarIndicatorSize.tab,
+                      dividerColor: Colors.transparent,
+                      labelColor: ScholarlyTheme.accentBlue,
+                      unselectedLabelColor: ScholarlyTheme.textMuted,
+                      labelStyle: GoogleFonts.outfit(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 10,
+                      ),
+                      unselectedLabelStyle: GoogleFonts.outfit(
+                        fontWeight: FontWeight.w500,
+                        fontSize: 10,
+                      ),
+                      tabs: const [
+                        Tab(text: 'Granted'),
+                        Tab(text: 'Revoked'),
+                      ],
+                    ),
+                  ),
+                  const Expanded(
+                    child: TabBarView(
+                      children: [
+                        Center(child: Text('No granted students in session', style: TextStyle(fontSize: 11, color: ScholarlyTheme.textMuted))),
+                        Center(child: Text('No revoked students', style: TextStyle(fontSize: 11, color: ScholarlyTheme.textMuted))),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
       ),
     );
   }
+
+  Widget _buildProfileDetailRow(String label, String value, {bool isStatus = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              color: ScholarlyTheme.textMuted,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: isStatus ? Colors.green : ScholarlyTheme.textPrimary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRequestsSubTab(ClassroomState state) {
+    return const SizedBox.shrink();
+  }
+
+
 
   Widget _buildManageSubTab(ClassroomState state) {
     if (!state.isJoined) {
@@ -3692,6 +3906,627 @@ class _ClassroomPageState extends ConsumerState<ClassroomPage> with TickerProvid
     );
   }
 
+  int _deterministicHash(String input) {
+    int hash = 5381;
+    for (int i = 0; i < input.length; i++) {
+      hash = ((hash << 5) + hash) + input.codeUnitAt(i);
+      hash = hash & 0xFFFFFFF;
+    }
+    return hash;
+  }
+
+  Widget _buildLoginSelectionScreen(BuildContext context) {
+    return AmbientScaffold(
+      scaffoldKey: _scaffoldKey,
+      blob1Color: const Color(0xFFEFF6FF),
+      blob2Color: const Color(0xFFECFDF5),
+      blob3Color: const Color(0xFFFFFBEB),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 24),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isWide = constraints.maxWidth > 600;
+                    final cardWidgets = [
+                      _buildRoleCard(
+                        title: 'Teacher Login',
+                        description: 'Host and manage classroom sessions, control student boards, and lead active studies.',
+                        icon: Icons.supervisor_account_rounded,
+                        color: ScholarlyTheme.accentBlue,
+                        bgColor: ScholarlyTheme.accentBlueSoft,
+                        onTap: () {
+                          ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                          setState(() {
+                            _loginRole = 'teacher';
+                          });
+                        },
+                      ),
+                      _buildRoleCard(
+                        title: 'Student Login',
+                        description: 'Join live classrooms, view the host\'s board, and participate in active spar matches.',
+                        icon: Icons.local_library_rounded,
+                        color: const Color(0xFF10B981),
+                        bgColor: const Color(0xFF10B981).withValues(alpha: 0.1),
+                        onTap: () {
+                          ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                          setState(() {
+                            _loginRole = 'student';
+                          });
+                        },
+                      ),
+                    ];
+
+                    if (isWide) {
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(child: cardWidgets[0]),
+                          const SizedBox(width: 24),
+                          Expanded(child: cardWidgets[1]),
+                        ],
+                      );
+                    } else {
+                      return Column(
+                        children: [
+                          cardWidgets[0],
+                          const SizedBox(height: 20),
+                          cardWidgets[1],
+                        ],
+                      );
+                    }
+                  },
+                ),
+                const SizedBox(height: 48),
+                Text(
+                  'Powered by IdeaSpace Chess Academy',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(
+                    color: ScholarlyTheme.textMuted.withValues(alpha: 0.7),
+                    fontSize: 11,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRoleCard({
+    required String title,
+    required String description,
+    required IconData icon,
+    required Color color,
+    required Color bgColor,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: ScholarlyTheme.panelBase,
+        border: Border.all(color: ScholarlyTheme.panelStroke.withValues(alpha: 0.8)),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: ScholarlyTheme.cardShadow,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
+          hoverColor: color.withValues(alpha: 0.03),
+          splashColor: color.withValues(alpha: 0.1),
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: bgColor,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, size: 28, color: color),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  title,
+                  style: GoogleFonts.outfit(
+                    color: ScholarlyTheme.textPrimary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  description,
+                  style: GoogleFonts.inter(
+                    color: ScholarlyTheme.textMuted,
+                    fontSize: 12,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Text(
+                      'Enter Portal',
+                      style: GoogleFonts.inter(
+                        color: color,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(Icons.arrow_forward_rounded, size: 14, color: color),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStudentAuditorTab(ClassroomState state) {
+    return Container(
+      margin: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: ScholarlyTheme.panelBase,
+        border: Border.all(color: ScholarlyTheme.panelStroke),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+            decoration: BoxDecoration(
+              border: Border(bottom: BorderSide(color: ScholarlyTheme.panelStroke.withValues(alpha: 0.15))),
+            ),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: TabBar(
+                controller: _studentAuditorTabController,
+                isScrollable: true,
+                tabAlignment: TabAlignment.start,
+                indicator: BoxDecoration(
+                  color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                indicatorSize: TabBarIndicatorSize.tab,
+                dividerColor: Colors.transparent,
+                labelColor: const Color(0xFF10B981),
+                unselectedLabelColor: ScholarlyTheme.textMuted,
+                labelStyle: GoogleFonts.outfit(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 11,
+                ),
+                unselectedLabelStyle: GoogleFonts.outfit(
+                  fontWeight: FontWeight.w500,
+                  fontSize: 11,
+                ),
+                onTap: (idx) {
+                  ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                },
+                tabs: const [
+                  Tab(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.person_outline_rounded, size: 16),
+                        SizedBox(width: 6),
+                        Text('Teacher Profile'),
+                      ],
+                    ),
+                  ),
+                  Tab(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.tune_rounded, size: 16),
+                        SizedBox(width: 6),
+                        Text('Connection'),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Expanded(
+            child: TabBarView(
+              controller: _studentAuditorTabController,
+              children: [
+                _buildTeacherProfileSubTab(),
+                _buildStudentManageSubTab(state),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStudentClassTab() {
+    final user = ref.watch(authStateChangesProvider).value;
+    final chessState = ref.watch(chessProvider);
+    final username = chessState.userName;
+    final avatarPath = chessState.userAvatarPath;
+
+    final seed = user?.email ?? user?.uid ?? 'anonymous';
+    final hash = _deterministicHash(seed);
+    final studentId = 'STD-${(hash % 90000) + 10000}';
+    final accountId = 'ACC-${(hash % 900000) + 100000}';
+    const validFrom = '2026-06-22';
+    const validTo = '2027-06-22';
+
+    return Container(
+      margin: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: ScholarlyTheme.panelBase,
+        border: Border.all(color: ScholarlyTheme.panelStroke),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          // Student Profile Card
+          Container(
+            margin: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: ScholarlyTheme.panelBase,
+              border: Border.all(color: ScholarlyTheme.panelStroke),
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: ScholarlyTheme.cardShadow,
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: const Color(0xFF10B981).withValues(alpha: 0.8),
+                      width: 2.0,
+                    ),
+                  ),
+                  child: ClipOval(
+                    child: avatarPath.startsWith('assets/')
+                        ? Image.asset(avatarPath, fit: BoxFit.cover)
+                        : Image.file(
+                            File(avatarPath),
+                            fit: BoxFit.cover,
+                          ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        username,
+                        style: GoogleFonts.outfit(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: ScholarlyTheme.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              'STUDENT',
+                              style: GoogleFonts.inter(
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF10B981),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'ID: $studentId',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              color: ScholarlyTheme.textMuted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          // Quick stats or details
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12.0),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: ScholarlyTheme.panelStroke.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Column(
+                children: [
+                  _buildProfileDetailRow('Account ID', accountId),
+                  _buildProfileDetailRow('Rating (Elo)', '1500 ELO'),
+                  _buildProfileDetailRow('Valid From', validFrom),
+                  _buildProfileDetailRow('Valid To', validTo),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
+            decoration: BoxDecoration(
+              border: Border(bottom: BorderSide(color: ScholarlyTheme.panelStroke.withValues(alpha: 0.15))),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: TabBar(
+                    controller: _studentClassTabController,
+                    indicator: BoxDecoration(
+                      color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    indicatorSize: TabBarIndicatorSize.tab,
+                    dividerColor: Colors.transparent,
+                    labelColor: const Color(0xFF10B981),
+                    unselectedLabelColor: ScholarlyTheme.textMuted,
+                    labelStyle: GoogleFonts.outfit(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 11,
+                    ),
+                    unselectedLabelStyle: GoogleFonts.outfit(
+                      fontWeight: FontWeight.w500,
+                      fontSize: 11,
+                    ),
+                    onTap: (idx) {
+                      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                    },
+                    tabs: const [
+                      Tab(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.graphic_eq_rounded, size: 16),
+                              SizedBox(width: 6),
+                              Text('State'),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Tab(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.bolt_rounded, size: 16),
+                              SizedBox(width: 6),
+                              Text('Spar'),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                TextButton.icon(
+                  onPressed: () {
+                    ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                    setState(() {
+                      _loginRole = null;
+                    });
+                  },
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  icon: const Icon(Icons.logout_rounded, size: 16, color: Colors.redAccent),
+                  label: const Text('Logout', style: TextStyle(color: Colors.redAccent, fontSize: 11, fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: TabBarView(
+              controller: _studentClassTabController,
+              children: [
+                _buildStateSubTab(),
+                _buildSparSubTab(),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStudentManageSubTab(ClassroomState state) {
+    if (!state.isJoined) {
+      return _buildStudentSetupPanel(state);
+    }
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'CONNECTION DETAILS',
+            style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 11, color: ScholarlyTheme.textMuted, letterSpacing: 0.5),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: ScholarlyTheme.panelStroke.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Room Name:', style: GoogleFonts.inter(fontSize: 12, color: ScholarlyTheme.textMuted)),
+                    Text(state.classroomId, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary)),
+                  ],
+                ),
+                const Divider(height: 16, color: ScholarlyTheme.panelStroke),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Role:', style: GoogleFonts.inter(fontSize: 12, color: ScholarlyTheme.textMuted)),
+                    Text('Student', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF10B981))),
+                  ],
+                ),
+                const Divider(height: 16, color: ScholarlyTheme.panelStroke),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Status:', style: GoogleFonts.inter(fontSize: 12, color: ScholarlyTheme.textMuted)),
+                    Text('Connected', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.green)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent.withValues(alpha: 0.15),
+              foregroundColor: Colors.redAccent,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () async {
+              ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+              final confirm = await _handleBackPress();
+              if (!confirm) {
+                // successfully left
+              }
+            },
+            icon: const Icon(Icons.exit_to_app_rounded, size: 16),
+            label: const Text('Leave Classroom Session', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStudentSetupPanel(ClassroomState state) {
+    final notifier = ref.read(localClassroomProvider.notifier);
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(12.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Join Classroom', style: GoogleFonts.outfit(color: ScholarlyTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 14)),
+              IconButton(
+                icon: Icon(
+                  state.isDiscovering ? Icons.stop_circle_rounded : Icons.search_rounded,
+                  color: state.isDiscovering ? Colors.redAccent : ScholarlyTheme.accentBlue,
+                  size: 20,
+                ),
+                onPressed: () {
+                  ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                  if (state.isDiscovering) {
+                    notifier.stopDiscovery();
+                  } else {
+                    notifier.startDiscovery();
+                  }
+                },
+              ),
+            ],
+          ),
+          if (state.isDiscovering) ...[
+            Row(
+              children: [
+                const SizedBox(width: 10, height: 10, child: CircularProgressIndicator(strokeWidth: 1.5, color: ScholarlyTheme.accentBlue)),
+                const SizedBox(width: 6),
+                Text('Scanning for classrooms...', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 11)),
+              ],
+            ),
+            const SizedBox(height: 6),
+          ],
+
+          if (state.discoveredSessions.isEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              alignment: Alignment.center,
+              child: Text(
+                state.isDiscovering ? 'No active sessions found yet.' : 'Tap search icon to discover classrooms.',
+                style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 11),
+              ),
+            )
+          else
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: state.discoveredSessions.length,
+              itemBuilder: (context, index) {
+                final session = state.discoveredSessions[index];
+                return Container(
+                  margin: const EdgeInsets.symmetric(vertical: 4),
+                  decoration: BoxDecoration(
+                    color: ScholarlyTheme.panelStroke.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: ListTile(
+                    dense: true,
+                    title: Text(session.name, style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 12, color: ScholarlyTheme.textPrimary)),
+                    subtitle: Text(session.mode == ConnectionMode.wifi ? 'WiFi Connection' : 'Nearby Share', style: GoogleFonts.inter(fontSize: 10, color: ScholarlyTheme.textMuted)),
+                    trailing: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: ScholarlyTheme.accentBlue,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                      ),
+                      onPressed: () {
+                        ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                        notifier.joinClassroom(session.id);
+                      },
+                      child: const Text('Join', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                );
+              },
+            ),
+        ],
+      ),
+    );
+  }
 
 }
 
