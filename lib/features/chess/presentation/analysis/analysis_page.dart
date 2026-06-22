@@ -25,9 +25,10 @@ class AnalysisPage extends ConsumerStatefulWidget {
   ConsumerState<AnalysisPage> createState() => _AnalysisPageState();
 }
 
-class _AnalysisPageState extends ConsumerState<AnalysisPage> {
+class _AnalysisPageState extends ConsumerState<AnalysisPage> with TickerProviderStateMixin {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
+  late TabController _tabController;
   int _currentTabIndex = 0;
   bool _isAutoPlaying = false;
   Timer? _autoPlayTimer;
@@ -36,6 +37,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
 
   @override
   void dispose() {
+    _tabController.dispose();
     _horizontalPageController.dispose();
     _autoPlayTimer?.cancel();
     ref.read(backButtonOverridesProvider.notifier).update((map) {
@@ -78,6 +80,12 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
   void initState() {
     super.initState();
     _horizontalPageController = PageController(initialPage: 1);
+    _tabController = TabController(length: 5, vsync: this);
+    _tabController.addListener(() {
+      setState(() {
+        _currentTabIndex = _tabController.index;
+      });
+    });
     Future.microtask(() => ref.read(chessProvider.notifier).loadSavedGames());
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -266,6 +274,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
       case 1:
         activeTabBody = GameLibraryTab(
           onGameLoaded: () {
+            _tabController.animateTo(0);
             setState(() {
               _currentTabIndex = 0;
             });
@@ -275,6 +284,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
       case 2:
         activeTabBody = BoardEditorTab(
           onApply: () {
+            _tabController.animateTo(0);
             setState(() {
               _currentTabIndex = 0;
             });
@@ -296,14 +306,30 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> {
       blob1Color: const Color(0xFFF3E8FF),
       blob2Color: const Color(0xFFDBEAFE),
       blob3Color: const Color(0xFFFEF3C7),
-      bottomNavigationBar: PremiumBottomNavBar(
-        currentIndex: _currentTabIndex,
-        onTap: (index) {
-          ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-          setState(() {
-            _currentTabIndex = index;
-          });
-        },
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: ScholarlyTheme.panelBase,
+          border: Border(top: BorderSide(color: ScholarlyTheme.panelStroke.withValues(alpha: 0.15))),
+        ),
+        child: SafeArea(
+          child: TabBar(
+            controller: _tabController,
+            labelColor: ScholarlyTheme.accentBlue,
+            unselectedLabelColor: ScholarlyTheme.textMuted,
+            indicatorColor: Colors.transparent, // Hide default line indicator for bottom nav style
+            labelPadding: EdgeInsets.zero,
+            onTap: (idx) {
+              ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+            },
+            tabs: const [
+              Tab(icon: Icon(Icons.grid_on_rounded, size: 20), text: 'Board'),
+              Tab(icon: Icon(Icons.folder_copy_rounded, size: 20), text: 'Library'),
+              Tab(icon: Icon(Icons.design_services_rounded, size: 20), text: 'Editor'),
+              Tab(icon: Icon(Icons.analytics_rounded, size: 20), text: 'Report'),
+              Tab(icon: Icon(Icons.sports_esports_rounded, size: 20), text: 'Sparring'),
+            ],
+          ),
+        ),
       ),
       body: SafeArea(
         child: activeTabBody,
@@ -1829,81 +1855,5 @@ class _FlashingEngineButtonState extends State<FlashingEngineButton> with Single
   }
 }
 
-class PremiumBottomNavBar extends StatelessWidget {
-  final int currentIndex;
-  final ValueChanged<int> onTap;
 
-  const PremiumBottomNavBar({
-    super.key,
-    required this.currentIndex,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 72,
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.85),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.6), width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _buildNavItem(0, 'Board', Icons.grid_on_rounded),
-          _buildNavItem(1, 'Library', Icons.library_books_rounded),
-          _buildNavItem(2, 'Editor', Icons.design_services_rounded),
-          _buildNavItem(3, 'Report', Icons.analytics_rounded),
-          _buildNavItem(4, 'Sparring', Icons.sports_esports_rounded),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNavItem(int index, String label, IconData icon) {
-    final isSelected = currentIndex == index;
-    final activeColor = ScholarlyTheme.accentBlue;
-    final inactiveColor = ScholarlyTheme.textMuted.withValues(alpha: 0.7);
-
-    return InkWell(
-      onTap: () => onTap(index),
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? activeColor.withValues(alpha: 0.1) : Colors.transparent,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              color: isSelected ? activeColor : inactiveColor,
-              size: 24,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: GoogleFonts.outfit(
-                fontSize: 10,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                color: isSelected ? activeColor : inactiveColor,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
