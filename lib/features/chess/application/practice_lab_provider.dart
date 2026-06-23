@@ -562,26 +562,22 @@ class PracticeLabNotifier extends Notifier<PracticeLabState> {
 
     state = state.copyWith(isEngineThinking: true);
 
-    _logDebug('Triggering engine analysis: FEN=${state.fen} (depth=22)');
+    _logDebug('Triggering engine analysis: FEN=${state.fen} (fixed depth=22)');
     await _service.analyzePosition(
       state.fen,
       depth: 22,
-      wTime: state.whiteTimeLeft,
-      bTime: state.blackTimeLeft,
-      wInc: state.incrementDuration,
-      bInc: state.incrementDuration,
     );
 
     // Calculate safety fallback duration.
-    // Timed game: 20% of remaining clock time, bounded between 1s and 5s.
-    // Untimed game: 3s.
+    // Timed game: 20% of remaining clock time, bounded between 1s and 10s.
+    // Untimed game: 10s.
     final Duration safetyTimeout;
     if (state.showTimer) {
       final aiTimeLeft = state.isPlayerWhite ? state.blackTimeLeft : state.whiteTimeLeft;
-      final safetyMs = (aiTimeLeft.inMilliseconds * 0.2).clamp(1000.0, 5000.0);
+      final safetyMs = (aiTimeLeft.inMilliseconds * 0.2).clamp(1000.0, 10000.0);
       safetyTimeout = Duration(milliseconds: safetyMs.toInt());
     } else {
-      safetyTimeout = const Duration(seconds: 3);
+      safetyTimeout = const Duration(seconds: 10);
     }
 
     _logDebug('Starting safety fallback timer for sparring bot: ${safetyTimeout.inMilliseconds}ms');
