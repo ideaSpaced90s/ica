@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:chess/chess.dart' as chess_lib;
-import '../data/analysis_stockfish_service.dart';
+import '../data/stockfish_service.dart';
 import '../data/chess_engine_service.dart';
 import '../data/uci_parser.dart';
 import '../services/chess_sound_service.dart';
@@ -148,7 +148,7 @@ class PracticeLabNotifier extends Notifier<PracticeLabState> {
 
   @override
   PracticeLabState build() {
-    _service = ref.watch(analysisStockfishServiceProvider);
+    _service = ref.watch(practiceStockfishServiceProvider);
     _subscription = _service.outputStream.listen(_handleEngineOutput);
     _logDebug('PracticeLabNotifier initialized, listening to dedicated Practice Lab engine');
 
@@ -559,13 +559,38 @@ class PracticeLabNotifier extends Notifier<PracticeLabState> {
     }
 
     _engineTimer?.cancel();
-    await _service.stopAnalysis();
 
     state = state.copyWith(isEngineThinking: true);
 
-    _logDebug('Sending search commands: FEN=${state.fen} (depth search)');
-    await _service.sendCommand('position fen ${state.fen}');
-    await _service.sendCommand('go depth 22');
+    _logDebug('Triggering engine analysis: FEN=${state.fen} (depth=22)');
+    await _service.analyzePosition(
+      state.fen,
+      depth: 22,
+      wTime: state.whiteTimeLeft,
+      bTime: state.blackTimeLeft,
+      wInc: state.incrementDuration,
+      bInc: state.incrementDuration,
+    );
+
+    // Calculate safety fallback duration.
+    // Timed game: 20% of remaining clock time, bounded between 1s and 5s.
+    // Untimed game: 3s.
+    final Duration safetyTimeout;
+    if (state.showTimer) {
+      final aiTimeLeft = state.isPlayerWhite ? state.blackTimeLeft : state.whiteTimeLeft;
+      final safetyMs = (aiTimeLeft.inMilliseconds * 0.2).clamp(1000.0, 5000.0);
+      safetyTimeout = Duration(milliseconds: safetyMs.toInt());
+    } else {
+      safetyTimeout = const Duration(seconds: 3);
+    }
+
+    _logDebug('Starting safety fallback timer for sparring bot: ${safetyTimeout.inMilliseconds}ms');
+    _engineTimer = Timer(safetyTimeout, () async {
+      if (state.isSessionActive && state.isEngineThinking) {
+        _logDebug('PracticeLabNotifier: Safety timer fired after ${safetyTimeout.inMilliseconds}ms. Forcing bestmove.');
+        await _service.stopAnalysis();
+      }
+    });
   }
 
   void _applyEngineMove(String uci) {

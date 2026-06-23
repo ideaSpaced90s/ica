@@ -22,6 +22,7 @@ class StockfishService implements ChessEngineService {
       StreamController<String>.broadcast();
   StreamSubscription? _stdoutSubscription;
   StreamSubscription? _stderrSubscription;
+  Future<void> _lastCommandFuture = Future.value();
 
   @override
   bool get isReady => _isReady;
@@ -230,23 +231,38 @@ class StockfishService implements ChessEngineService {
     _process?.kill();
     _process = null;
     _isReady = false;
+    _lastCommandFuture = Future.value();
   }
 
   @override
   Future<void> sendCommand(String command) async {
-    if (_process == null) {
-      debugPrint(
-        'StockfishService: Cannot send command "$command", process is NULL.',
-      );
-      return;
-    }
+    final completer = Completer<void>();
+    final prev = _lastCommandFuture;
+    _lastCommandFuture = completer.future;
+
+    final trimmed = command.trim();
+
     try {
-      debugPrint('StockfishService [SEND] -> $command');
-      _process!.stdin.writeln(command.trim());
-      await _process!.stdin.flush();
+      await prev;
+      if (_process == null) {
+        debugPrint(
+          'StockfishService: Cannot send command "$command", process is NULL.',
+        );
+        return;
+      }
+      debugPrint('StockfishService [SEND] -> $trimmed');
+      _process!.stdin.writeln(trimmed);
+      await _process!.stdin.flush().timeout(
+        const Duration(milliseconds: 100),
+        onTimeout: () {
+          debugPrint('StockfishService: stdin flush timed out for "$command"');
+        },
+      );
     } catch (e) {
       debugPrint('StockfishService: Failed to send command "$command": $e');
       _isReady = false;
+    } finally {
+      completer.complete();
     }
   }
 
@@ -311,6 +327,13 @@ class StockfishService implements ChessEngineService {
 
 /// Provider for the StockfishService.
 final stockfishServiceProvider = Provider<StockfishService>((ref) {
+  final service = StockfishService();
+  ref.onDispose(() => service.dispose());
+  return service;
+});
+
+/// Dedicated practice/sparring stockfish service provider.
+final practiceStockfishServiceProvider = Provider<StockfishService>((ref) {
   final service = StockfishService();
   ref.onDispose(() => service.dispose());
   return service;
