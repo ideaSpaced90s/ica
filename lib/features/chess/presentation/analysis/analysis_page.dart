@@ -36,7 +36,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> with TickerProvider
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   late TabController _tabController;
-  int _currentTabIndex = 0;
+  int _currentTabIndex = 2;
   bool _isAutoPlaying = false;
   Timer? _autoPlayTimer;
   
@@ -261,7 +261,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> with TickerProvider
   void initState() {
     super.initState();
     _horizontalPageController = PageController(initialPage: 1);
-    _tabController = TabController(length: 5, vsync: this);
+    _tabController = TabController(length: 5, vsync: this, initialIndex: 2);
     _tabController.addListener(() {
       setState(() {
         _currentTabIndex = _tabController.index;
@@ -450,6 +450,26 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> with TickerProvider
     Widget activeTabBody;
     switch (_currentTabIndex) {
       case 0:
+        activeTabBody = GameLibraryTab(
+          onGameLoaded: () {
+            _tabController.animateTo(2);
+            setState(() {
+              _currentTabIndex = 2;
+            });
+          },
+        );
+        break;
+      case 1:
+        activeTabBody = BoardEditorTab(
+          onApply: () {
+            _tabController.animateTo(2);
+            setState(() {
+              _currentTabIndex = 2;
+            });
+          },
+        );
+        break;
+      case 2:
         activeTabBody = LayoutBuilder(
           builder: (context, constraints) {
             final isLandscape = constraints.maxWidth > constraints.maxHeight;
@@ -460,31 +480,11 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> with TickerProvider
           },
         );
         break;
-      case 1:
-        activeTabBody = GameLibraryTab(
-          onGameLoaded: () {
-            _tabController.animateTo(0);
-            setState(() {
-              _currentTabIndex = 0;
-            });
-          },
-        );
-        break;
-      case 2:
-        activeTabBody = BoardEditorTab(
-          onApply: () {
-            _tabController.animateTo(0);
-            setState(() {
-              _currentTabIndex = 0;
-            });
-          },
-        );
-        break;
       case 3:
-        activeTabBody = const GameReportPanel();
+        activeTabBody = const PracticeModePanel();
         break;
       case 4:
-        activeTabBody = const PracticeModePanel();
+        activeTabBody = const GameReportPanel();
         break;
       default:
         activeTabBody = const SizedBox.shrink();
@@ -511,11 +511,11 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> with TickerProvider
               ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
             },
             tabs: const [
-              Tab(icon: Icon(Icons.grid_on_rounded, size: 20), text: 'Board'),
               Tab(icon: Icon(Icons.folder_copy_rounded, size: 20), text: 'Library'),
               Tab(icon: Icon(Icons.design_services_rounded, size: 20), text: 'Editor'),
-              Tab(icon: Icon(Icons.analytics_rounded, size: 20), text: 'Report'),
+              Tab(icon: Icon(Icons.grid_on_rounded, size: 20), text: 'Board'),
               Tab(icon: Icon(Icons.sports_esports_rounded, size: 20), text: 'Sparring'),
+              Tab(icon: Icon(Icons.analytics_rounded, size: 20), text: 'Report'),
             ],
           ),
         ),
