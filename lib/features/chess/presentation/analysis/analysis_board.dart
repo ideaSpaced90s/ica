@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:ui' as ui;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -9,6 +10,7 @@ import 'package:chess/chess.dart' as chess_lib;
 import '../../application/chess_provider.dart';
 import '../../application/study_lab_provider.dart';
 import '../../application/analysis_engine_controller.dart';
+import '../../application/engine_arrow_controller.dart';
 import '../../services/chess_sound_service.dart';
 
 import '../scholarly_theme.dart';
@@ -22,6 +24,7 @@ class StudyLabChessBoard extends ConsumerStatefulWidget {
   final double boardSize;
   final bool showEvalBar;
   final bool isEditorMode;
+  final bool showEngineArrowToolbar;
   final void Function(String square)? onSquareTap;
 
   const StudyLabChessBoard({
@@ -31,6 +34,7 @@ class StudyLabChessBoard extends ConsumerStatefulWidget {
     required this.boardSize,
     this.showEvalBar = true,
     this.isEditorMode = false,
+    this.showEngineArrowToolbar = true,
     this.onSquareTap,
   });
 
@@ -57,6 +61,12 @@ class _StudyLabChessBoardState extends ConsumerState<StudyLabChessBoard> {
       _selectedSquare = null;
       _legalTargets = const [];
       _playMoveSoundForFenTransition(oldWidget.state.activeFen, widget.state.activeFen);
+      // Reset/restart refutation animation when position changes (deferred post-frame to prevent Riverpod build errors)
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ref.read(engineArrowControllerProvider.notifier).onPositionChanged();
+        }
+      });
     }
   }
 
@@ -348,7 +358,58 @@ class _StudyLabChessBoardState extends ConsumerState<StudyLabChessBoard> {
       allArrows.add(BoardArrow(from: _drawStartSquare!, to: _hoverSquare!, color: _currentColor));
     }
 
-    return Row(
+    // Engine-driven arrow state
+    final arrowState = ref.watch(engineArrowControllerProvider);
+
+    // Build engine arrows from PV lines
+    final List<BoardArrow> engineArrows = [];
+    if (engineState.topLines.isNotEmpty) {
+      final topPv = engineState.topLines.first.moves; // PV from line 1
+
+      // Green arrow: best move (PV[0])
+      if (arrowState.showBestMove && topPv.isNotEmpty) {
+        final uci = topPv[0];
+        if (uci.length >= 4) {
+          engineArrows.add(BoardArrow(
+            from: uci.substring(0, 2),
+            to: uci.substring(2, 4),
+            color: 'engine_green',
+          ));
+        }
+      }
+
+      // Red arrow: threat (PV[1] = opponent's reply)
+      if (arrowState.showThreat && topPv.length >= 2) {
+        final uci = topPv[1];
+        if (uci.length >= 4) {
+          engineArrows.add(BoardArrow(
+            from: uci.substring(0, 2),
+            to: uci.substring(2, 4),
+            color: 'engine_red',
+          ));
+        }
+      }
+
+      // Animated refutation: one arrow at a time cycling through PV[1..4]
+      if (arrowState.showRefutation && topPv.length >= 2) {
+        final pvIdx = arrowState.refutationStep + 1; // PV[1], [2], [3], [4]
+        if (pvIdx < topPv.length) {
+          final uci = topPv[pvIdx];
+          if (uci.length >= 4) {
+            engineArrows.add(BoardArrow(
+              from: uci.substring(0, 2),
+              to: uci.substring(2, 4),
+              color: 'engine_red',
+            ));
+          }
+        }
+      }
+    }
+
+    // Merge: user arrows first, engine arrows on top
+    final List<BoardArrow> allArrowsWithEngine = [...allArrows, ...engineArrows];
+
+    final boardWidget2 = Row(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -629,7 +690,7 @@ class _StudyLabChessBoardState extends ConsumerState<StudyLabChessBoard> {
                     child: CustomPaint(
                       size: Size(actualBoardSize, actualBoardSize),
                       painter: BoardArrowPainter(
-                        arrows: allArrows,
+                        arrows: allArrowsWithEngine,
                         isFlipped: widget.state.isBoardFlipped,
                       ),
                     ),
@@ -673,6 +734,8 @@ class _StudyLabChessBoardState extends ConsumerState<StudyLabChessBoard> {
         ),
       ],
     );
+
+    return boardWidget2;
   }
 }
 
@@ -689,42 +752,90 @@ class BoardArrowPainter extends CustomPainter {
 
     for (final arrow in arrows) {
       final start = _getCenter(arrow.from, size.width);
-      final rawEnd = _getCenter(arrow.to, size.width);
+      final tip = _getCenter(arrow.to, size.width);
 
-      final angle = atan2(rawEnd.dy - start.dy, rawEnd.dx - start.dx);
+      if (start == tip) continue;
 
-      // Shorten the end point slightly so arrowheads end just before the target piece center
-      final end = Offset(
-        rawEnd.dx - 18 * cos(angle),
-        rawEnd.dy - 18 * sin(angle),
+      final angle = atan2(tip.dy - start.dy, tip.dx - start.dx);
+
+      // Scale-invariant sizing relative to squareSize for AAA appearance
+      final strokeWidth = squareSize * 0.14;
+      final arrowSize = squareSize * 0.35;
+      final arrowAngle = pi / 6.5; // sharp 27.7 degree angle
+
+      // Points of the arrowhead
+      final left = tip - Offset(
+        arrowSize * cos(angle - arrowAngle),
+        arrowSize * sin(angle - arrowAngle),
+      );
+      final right = tip - Offset(
+        arrowSize * cos(angle + arrowAngle),
+        arrowSize * sin(angle + arrowAngle),
+      );
+      
+      // Curved chevron back-inset point
+      final backInset = tip - Offset(
+        (arrowSize * 0.65) * cos(angle),
+        (arrowSize * 0.65) * sin(angle),
       );
 
-      final paint = Paint()
-        ..color = _getArrowColor(arrow.color)
+      final arrowColor = _getArrowBaseColor(arrow.color);
+
+      // --- LAYER 1: Ambient Neon Glow (Background Blur) ---
+      final glowPaint = Paint()
+        ..color = arrowColor.withValues(alpha: 0.25)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 4.5
+        ..strokeWidth = strokeWidth * 2.2
+        ..strokeCap = StrokeCap.round
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+      canvas.drawLine(start, backInset, glowPaint);
+
+      final glowPath = Path()
+        ..moveTo(tip.dx, tip.dy)
+        ..lineTo(left.dx, left.dy)
+        ..quadraticBezierTo(backInset.dx, backInset.dy, right.dx, right.dy)
+        ..close();
+
+      final arrowheadGlowPaint = Paint()
+        ..color = arrowColor.withValues(alpha: 0.25)
+        ..style = PaintingStyle.fill
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+      canvas.drawPath(glowPath, arrowheadGlowPaint);
+
+      // --- LAYER 2: High-Contrast Sharp Core (Foreground Gradient) ---
+      // Gradient along the shaft
+      final shaftPaint = Paint()
+        ..shader = ui.Gradient.linear(
+          start,
+          backInset,
+          [
+            arrowColor.withValues(alpha: 0.95),
+            arrowColor.withValues(alpha: 0.70),
+          ],
+        )
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeWidth
         ..strokeCap = StrokeCap.round;
+      canvas.drawLine(start, backInset, shaftPaint);
 
-      canvas.drawLine(start, end, paint);
-
-      // Draw Arrow Head triangle
-      final arrowSize = squareSize * 0.25;
-      final arrowPaint = Paint()
-        ..color = _getArrowColor(arrow.color)
+      // Gradient for the arrowhead
+      final headPaint = Paint()
+        ..shader = ui.Gradient.linear(
+          backInset,
+          tip,
+          [
+            arrowColor.withValues(alpha: 0.75),
+            arrowColor.withValues(alpha: 0.95),
+          ],
+        )
         ..style = PaintingStyle.fill;
 
-      final path = Path();
-      path.moveTo(end.dx, end.dy);
-      path.lineTo(
-        end.dx - arrowSize * cos(angle - pi / 6),
-        end.dy - arrowSize * sin(angle - pi / 6),
-      );
-      path.lineTo(
-        end.dx - arrowSize * cos(angle + pi / 6),
-        end.dy - arrowSize * sin(angle + pi / 6),
-      );
-      path.close();
-      canvas.drawPath(path, arrowPaint);
+      final headPath = Path()
+        ..moveTo(tip.dx, tip.dy)
+        ..lineTo(left.dx, left.dy)
+        ..quadraticBezierTo(backInset.dx, backInset.dy, right.dx, right.dy)
+        ..close();
+      canvas.drawPath(headPath, headPaint);
     }
   }
 
@@ -745,14 +856,16 @@ class BoardArrowPainter extends CustomPainter {
     );
   }
 
-  Color _getArrowColor(String name) {
+  Color _getArrowBaseColor(String name) {
     switch (name) {
-      case 'red': return Colors.red.withValues(alpha: 0.7);
-      case 'blue': return Colors.blue.withValues(alpha: 0.7);
-      case 'yellow': return Colors.yellow.withValues(alpha: 0.7);
+      case 'red': return const Color(0xFFF44336);
+      case 'blue': return const Color(0xFF2196F3);
+      case 'yellow': return const Color(0xFFFFEB3B);
+      case 'engine_green': return const Color(0xFF00E676);
+      case 'engine_red': return const Color(0xFFFF1744);
       case 'green':
       default:
-        return Colors.green.withValues(alpha: 0.7);
+        return const Color(0xFF4CAF50);
     }
   }
 

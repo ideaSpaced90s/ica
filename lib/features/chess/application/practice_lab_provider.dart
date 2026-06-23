@@ -1,8 +1,8 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:chess/chess.dart' as chess_lib;
 import '../data/analysis_stockfish_service.dart';
+import '../data/chess_engine_service.dart';
 import '../data/uci_parser.dart';
 import '../services/chess_sound_service.dart';
 import 'chess_provider.dart';
@@ -10,12 +10,8 @@ import 'study_lab_provider.dart';
 import 'analysis_engine_controller.dart';
 
 void _logDebug(String msg) {
-  try {
-    final logFile = File('C:/Users/ideas/.gemini/antigravity/practice_lab_debug.log');
-    logFile.writeAsStringSync('${DateTime.now().toIso8601String()} $msg\n', mode: FileMode.append, flush: true);
-  } catch (e) {
-    // Ignore log write errors
-  }
+  // ignore: avoid_print
+  print('PracticeLabProvider: $msg');
 }
 
 class PracticeLabState {
@@ -144,19 +140,21 @@ class PracticeLabState {
 }
 
 class PracticeLabNotifier extends Notifier<PracticeLabState> {
-  late final AnalysisStockfishService _service;
+  late final ChessEngineService _service;
   Ref get _ref => ref;
   StreamSubscription? _subscription;
   Timer? _chessClockTimer;
+  Timer? _engineTimer;
 
   @override
   PracticeLabState build() {
     _service = ref.watch(analysisStockfishServiceProvider);
     _subscription = _service.outputStream.listen(_handleEngineOutput);
-    _logDebug('PracticeLabNotifier initialized, listening to service output stream');
+    _logDebug('PracticeLabNotifier initialized, listening to dedicated Practice Lab engine');
 
     ref.onDispose(() {
       _chessClockTimer?.cancel();
+      _engineTimer?.cancel();
       _subscription?.cancel();
       _logDebug('PracticeLabNotifier disposed');
     });
@@ -290,8 +288,8 @@ class PracticeLabNotifier extends Notifier<PracticeLabState> {
     });
   }
 
-  Future<void> startSession(String fen, bool playerIsWhite, int skillLevel) async {
-    _logDebug('startSession FEN=$fen playerIsWhite=$playerIsWhite skillLevel=$skillLevel');
+  Future<void> startSession(String fen, bool playerIsWhite) async {
+    _logDebug('startSession FEN=$fen playerIsWhite=$playerIsWhite');
     
     // Ensure service is ready
     if (!_service.isReady) {
@@ -304,8 +302,8 @@ class PracticeLabNotifier extends Notifier<PracticeLabState> {
       _logDebug('startSession: Service readiness after wait: ${_service.isReady}');
     }
 
-    // 1. Pause analysis engine
-    await _ref.read(analysisEngineControllerProvider.notifier).toggleEngine(false, fen);
+    // 1. Pause the analysis engine to free up CPU resources on mobile/Android devices.
+    await _ref.read(analysisEngineControllerProvider.notifier).toggleEngine(false, '');
 
     // 2. Clear and set new state
     final localChess = chess_lib.Chess.fromFEN(fen);
@@ -344,7 +342,7 @@ class PracticeLabNotifier extends Notifier<PracticeLabState> {
       fen: fen,
       startFen: fen,
       isPlayerWhite: playerIsWhite,
-      botSkillLevel: skillLevel,
+      botSkillLevel: 20,
       moveHistory: const [],
       sanHistory: const [],
       isEngineThinking: false,
@@ -363,9 +361,9 @@ class PracticeLabNotifier extends Notifier<PracticeLabState> {
     );
 
     // 3. Configure stockfish options
-    _logDebug('Sending config options: Skill Level=$skillLevel, MultiPV=1');
+    _logDebug('Sending config options: Skill Level=20, MultiPV=1');
     await _service.sendCommand('stop');
-    await _service.sendCommand('setoption name Skill Level value $skillLevel');
+    await _service.sendCommand('setoption name Skill Level value 20');
     await _service.sendCommand('setoption name MultiPV value 1');
 
     // 4. Start chess clock if enabled
@@ -388,7 +386,24 @@ class PracticeLabNotifier extends Notifier<PracticeLabState> {
       return;
     }
 
-    final localChess = chess_lib.Chess.fromFEN(state.fen);
+    List<String> currentMoveHistory = state.moveHistory;
+    List<String> currentSanHistory = state.sanHistory;
+    String currentFen = state.fen;
+
+    if (state.viewingMoveIndex != null) {
+      final index = state.viewingMoveIndex!;
+      if (index == -1) {
+        currentFen = state.startFen;
+        currentMoveHistory = const [];
+        currentSanHistory = const [];
+      } else {
+        currentFen = getFenAtMove(index);
+        currentMoveHistory = state.moveHistory.sublist(0, index + 1);
+        currentSanHistory = state.sanHistory.sublist(0, index + 1);
+      }
+    }
+
+    final localChess = chess_lib.Chess.fromFEN(currentFen);
     final isWhiteTurn = localChess.turn == chess_lib.Color.WHITE;
     if (isWhiteTurn != state.isPlayerWhite) {
       _logDebug('makePlayerMove ignored: Turn=$isWhiteTurn playerIsWhite=${state.isPlayerWhite}');
@@ -470,8 +485,8 @@ class PracticeLabNotifier extends Notifier<PracticeLabState> {
     }
 
     final newFen = localChess.fen;
-    final newMoves = List<String>.from(state.moveHistory)..add(uci);
-    final newSan = List<String>.from(state.sanHistory)..add(san);
+    final newMoves = List<String>.from(currentMoveHistory)..add(uci);
+    final newSan = List<String>.from(currentSanHistory)..add(san);
 
     final isGameOver = localChess.game_over;
     String? gameResult;
@@ -519,6 +534,7 @@ class PracticeLabNotifier extends Notifier<PracticeLabState> {
       whiteTimeLeft: newWhiteTime,
       blackTimeLeft: newBlackTime,
       isClockRunning: state.showTimer && !isGameOver,
+      clearViewingMoveIndex: state.viewingMoveIndex != null,
     );
 
     if (!isGameOver) {
@@ -540,13 +556,21 @@ class PracticeLabNotifier extends Notifier<PracticeLabState> {
       _logDebug('_triggerEngineMove: Service readiness after wait: ${_service.isReady}');
     }
 
+    _engineTimer?.cancel();
+    // Stop search while isEngineThinking is false so the bestmove from stop command is ignored
+    await _service.sendCommand('stop');
+    await Future.delayed(const Duration(milliseconds: 50));
+
     state = state.copyWith(isEngineThinking: true);
 
-    final movetime = _getMovetimeForSkill(state.botSkillLevel);
-    _logDebug('Sending search commands: FEN=${state.fen} movetime=$movetime');
-    await _service.sendCommand('stop');
+    _logDebug('Sending search commands: FEN=${state.fen} (infinite search)');
     await _service.sendCommand('position fen ${state.fen}');
-    await _service.sendCommand('go movetime $movetime');
+    await _service.sendCommand('go infinite');
+
+    _engineTimer = Timer(const Duration(milliseconds: 1000), () async {
+      _logDebug('Sparring Engine Timer fired. Sending stop.');
+      await _service.sendCommand('stop');
+    });
   }
 
   void _applyEngineMove(String uci) {
@@ -690,13 +714,7 @@ class PracticeLabNotifier extends Notifier<PracticeLabState> {
     );
   }
 
-  int _getMovetimeForSkill(int skillLevel) {
-    if (skillLevel <= 3) return 300;
-    if (skillLevel <= 7) return 600;
-    if (skillLevel <= 12) return 1000;
-    if (skillLevel <= 17) return 1500;
-    return 2000;
-  }
+
 
   void resign() {
     if (!state.isSessionActive || state.isGameOver) return;
@@ -713,12 +731,23 @@ class PracticeLabNotifier extends Notifier<PracticeLabState> {
 
   Future<void> endSession(String analysisCurrentFen) async {
     _chessClockTimer?.cancel();
+    _engineTimer?.cancel();
     state = PracticeLabState();
 
     await _service.sendCommand('stop');
     await _service.sendCommand('setoption name Skill Level value 20');
     await _service.sendCommand('setoption name MultiPV value 3');
     await _ref.read(analysisEngineControllerProvider.notifier).toggleEngine(true, analysisCurrentFen);
+  }
+
+  Future<void> endSessionWithoutRestartingEngine() async {
+    _chessClockTimer?.cancel();
+    _engineTimer?.cancel();
+    state = PracticeLabState();
+
+    await _service.sendCommand('stop');
+    await _service.sendCommand('setoption name Skill Level value 20');
+    await _service.sendCommand('setoption name MultiPV value 3');
   }
 
   void flipBoard() {

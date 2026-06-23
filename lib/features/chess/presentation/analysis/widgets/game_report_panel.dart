@@ -50,6 +50,8 @@ class _GameReportPanelState extends ConsumerState<GameReportPanel> {
 
     final classifications = engineState.classifications;
     final evalHistory = engineState.evalHistory;
+    final whiteAccuracy = engineState.whiteAccuracy;
+    final blackAccuracy = engineState.blackAccuracy;
 
     // Count classifications for White and Black
     var whiteBestCount = 0;
@@ -241,6 +243,9 @@ class _GameReportPanelState extends ConsumerState<GameReportPanel> {
               ),
             )
           else ...[
+            // Accuracy Score Banner
+            _buildAccuracyBanner(whiteAccuracy, blackAccuracy),
+
             // Accuracy Grid Header
             Padding(
               padding: const EdgeInsets.only(bottom: 12.0, top: 4.0),
@@ -412,6 +417,119 @@ class _GameReportPanelState extends ConsumerState<GameReportPanel> {
             ),
             const SizedBox(height: 32),
           ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAccuracyBanner(double? whiteAcc, double? blackAcc) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xFF1A2332),
+            Color(0xFF0F1923),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(child: _buildAccuracySide('WHITE', '\u2659', whiteAcc, Colors.white)),
+          Container(
+            width: 1,
+            height: 60,
+            color: Colors.white.withValues(alpha: 0.1),
+          ),
+          Expanded(child: _buildAccuracySide('BLACK', '\u265F', blackAcc, const Color(0xFF8B97A8))),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAccuracySide(String label, String pieceSym, double? accuracy, Color textColor) {
+    final acc = accuracy ?? 0.0;
+    Color scoreColor;
+    if (acc >= 85) {
+      scoreColor = const Color(0xFF00E676);
+    } else if (acc >= 70) {
+      scoreColor = const Color(0xFF40C4FF);
+    } else if (acc >= 50) {
+      scoreColor = const Color(0xFFFFD740);
+    } else {
+      scoreColor = const Color(0xFFFF5252);
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(pieceSym, style: const TextStyle(fontSize: 14, color: Colors.white70)),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 1.0,
+                  color: Colors.white54,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                accuracy != null ? '${acc.toStringAsFixed(1)}%' : '--',
+                style: GoogleFonts.outfit(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: accuracy != null ? scoreColor : Colors.white24,
+                ),
+              ),
+              const SizedBox(width: 6),
+              if (accuracy != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text(
+                    'accuracy',
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      color: Colors.white38,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: accuracy != null ? (acc / 100).clamp(0.0, 1.0) : 0.0,
+              backgroundColor: Colors.white.withValues(alpha: 0.08),
+              valueColor: AlwaysStoppedAnimation<Color>(
+                accuracy != null ? scoreColor : Colors.white12,
+              ),
+              minHeight: 5,
+            ),
+          ),
         ],
       ),
     );

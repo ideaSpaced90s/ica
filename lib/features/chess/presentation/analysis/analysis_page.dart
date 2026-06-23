@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:chess/chess.dart' as chess_lib;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,12 +11,14 @@ import '../scholarly_theme.dart';
 import '../../application/study_lab_provider.dart';
 import '../../application/chess_provider.dart';
 import '../../application/analysis_engine_controller.dart';
+import '../../application/practice_lab_provider.dart';
 import '../../services/chess_sound_service.dart';
 import 'analysis_board.dart';
 import 'position_setup_page.dart';
 import 'workspace_page.dart';
 import 'widgets/game_report_panel.dart';
 import 'widgets/practice_mode_panel.dart';
+import 'widgets/practice_lab_board.dart';
 import '../mobile_navigation_shell.dart';
 
 enum EnginePlayMode {
@@ -429,6 +432,241 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> with TickerProvider
     );
   }
 
+  Widget _buildSparringBoardWithEval(
+    BuildContext context,
+    PracticeLabState practiceState,
+    double maxWidth,
+  ) {
+    final showEval = practiceState.isSessionActive;
+    const double evalBarWidth = 6.0;
+    const double evalBarPadding = 4.0;
+    final double actualBoardSize = showEval
+        ? (maxWidth - evalBarWidth - evalBarPadding)
+        : maxWidth;
+
+    final isMobile = MediaQuery.of(context).size.width <= 800;
+
+    return Center(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (showEval) ...[
+            EvalBar(
+              evalScore: practiceState.evalScore,
+              isMate: practiceState.isMate,
+              mateIn: practiceState.mateIn,
+              isEngineOn: true,
+              isFlipped: practiceState.isBoardFlipped,
+              height: actualBoardSize,
+              width: evalBarWidth,
+            ),
+            const SizedBox(width: evalBarPadding),
+          ],
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              PracticeLabBoard(
+                boardSize: actualBoardSize,
+              ),
+              if (practiceState.isGameOver && practiceState.gameConclusion != null)
+                Positioned.fill(
+                  child: ClipRRect(
+                    borderRadius: isMobile ? BorderRadius.zero : BorderRadius.circular(16),
+                    child: BackdropFilter(
+                      filter: ui.ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                      child: Container(
+                        color: Colors.black.withValues(alpha: 0.5),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              practiceState.gameConclusion!,
+                              style: GoogleFonts.outfit(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 28,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSparringUnifiedControlPanel(
+    BuildContext context,
+    PracticeLabState practiceState,
+    double boardSize, {
+    bool isPortrait = false,
+  }) {
+    final panelWidth = isPortrait ? boardSize - 24 : boardSize;
+    final practiceNotifier = ref.read(practiceLabProvider.notifier);
+
+    final canStepBack = practiceState.isSessionActive &&
+        practiceState.moveHistory.isNotEmpty &&
+        (practiceState.viewingMoveIndex == null || practiceState.viewingMoveIndex! > -1);
+    
+    final canStepForward = practiceState.isSessionActive &&
+        practiceState.viewingMoveIndex != null;
+
+    final canGoToStart = practiceState.isSessionActive &&
+        practiceState.moveHistory.isNotEmpty &&
+        practiceState.viewingMoveIndex != -1;
+
+    final canGoToEnd = practiceState.isSessionActive &&
+        practiceState.viewingMoveIndex != null;
+
+    return SizedBox(
+      width: panelWidth,
+      child: JuicyGlassCard(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        borderRadius: 12,
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              // Go to Start
+              _CompactBoxButton(
+                tooltip: 'Go to Start',
+                activeColor: const Color(0xFF29B6F6),
+                onTap: canGoToStart
+                    ? () {
+                        practiceNotifier.navigateToMove(-1);
+                        ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
+                      }
+                    : null,
+                child: const Icon(Icons.first_page_rounded),
+              ),
+              const SizedBox(width: 8),
+              // Step Backward
+              _CompactBoxButton(
+                tooltip: 'Step Backward',
+                activeColor: const Color(0xFF29B6F6),
+                onTap: canStepBack
+                    ? () {
+                        practiceNotifier.stepBackward();
+                        ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
+                      }
+                    : null,
+                child: const Icon(Icons.chevron_left_rounded),
+              ),
+              const SizedBox(width: 8),
+              // Step Forward
+              _CompactBoxButton(
+                tooltip: 'Step Forward',
+                activeColor: const Color(0xFF29B6F6),
+                onTap: canStepForward
+                    ? () {
+                        practiceNotifier.stepForward();
+                        ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
+                      }
+                    : null,
+                child: const Icon(Icons.chevron_right_rounded),
+              ),
+              const SizedBox(width: 8),
+              // Go to End (Live Game)
+              _CompactBoxButton(
+                tooltip: 'Go to End',
+                activeColor: const Color(0xFF29B6F6),
+                onTap: canGoToEnd
+                    ? () {
+                        practiceNotifier.navigateToMove(null);
+                        ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
+                      }
+                    : null,
+                child: const Icon(Icons.last_page_rounded),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPortraitSparringLayout(
+    BuildContext context,
+    BoxConstraints constraints,
+  ) {
+    final double boardSize = constraints.maxWidth;
+    final practiceState = ref.watch(practiceLabProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildSparringBoardWithEval(context, practiceState, boardSize),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+          child: _buildSparringUnifiedControlPanel(
+            context,
+            practiceState,
+            boardSize,
+            isPortrait: true,
+          ),
+        ),
+        const Expanded(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(12.0, 4.0, 12.0, 12.0),
+            child: PracticeModePanel(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLandscapeSparringLayout(
+    BuildContext context,
+    BoxConstraints constraints,
+  ) {
+    final double paddingHorizontal = 16.0;
+    final double boardSize = math.min(
+      constraints.maxWidth * 0.55,
+      constraints.maxHeight - 110,
+    );
+    final practiceState = ref.watch(practiceLabProvider);
+
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: paddingHorizontal, vertical: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            flex: 11,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildSparringBoardWithEval(context, practiceState, boardSize),
+                const SizedBox(height: 8),
+                _buildSparringUnifiedControlPanel(
+                  context,
+                  practiceState,
+                  boardSize,
+                ),
+              ],
+            ),
+          ),
+          Container(
+            width: 1.5,
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            color: ScholarlyTheme.panelStroke.withValues(alpha: 0.5),
+          ),
+          const Expanded(
+            flex: 9,
+            child: PracticeModePanel(),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(studyLabProvider);
@@ -481,7 +719,15 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> with TickerProvider
         );
         break;
       case 3:
-        activeTabBody = const PracticeModePanel();
+        activeTabBody = LayoutBuilder(
+          builder: (context, constraints) {
+            final isLandscape = constraints.maxWidth > constraints.maxHeight;
+            if (isLandscape) {
+              return _buildLandscapeSparringLayout(context, constraints);
+            }
+            return _buildPortraitSparringLayout(context, constraints);
+          },
+        );
         break;
       case 4:
         activeTabBody = const GameReportPanel();

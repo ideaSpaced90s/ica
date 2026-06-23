@@ -167,8 +167,7 @@ class _PracticeLabBoardState extends ConsumerState<PracticeLabBoard> {
     final isInteractionAllowed = isPlayerTurn &&
         !state.isEngineThinking &&
         !state.isGameOver &&
-        state.isSessionActive &&
-        state.viewingMoveIndex == null;
+        state.isSessionActive;
     final isFlipped = widget.isFlippedOverride ?? state.isBoardFlipped;
     final isMobile = MediaQuery.of(context).size.width <= 800;
     final borderRadius = isMobile ? BorderRadius.zero : BorderRadius.circular(16);

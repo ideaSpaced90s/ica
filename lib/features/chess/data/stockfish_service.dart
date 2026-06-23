@@ -243,6 +243,7 @@ class StockfishService implements ChessEngineService {
     try {
       debugPrint('StockfishService [SEND] -> $command');
       _process!.stdin.writeln(command.trim());
+      await _process!.stdin.flush();
     } catch (e) {
       debugPrint('StockfishService: Failed to send command "$command": $e');
       _isReady = false;

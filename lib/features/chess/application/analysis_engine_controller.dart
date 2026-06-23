@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:math' show exp;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/analysis_stockfish_service.dart';
 import '../data/uci_parser.dart';
 import 'study_lab_provider.dart';
+import 'practice_lab_provider.dart';
 
 enum MoveClassification {
   brilliant,
@@ -46,6 +48,8 @@ class AnalysisEngineState {
   final int currentDepth;
   final Map<int, MoveClassification> classifications;
   final Map<int, double> evalHistory; // nodeIndex -> double evaluation score
+  final double? whiteAccuracy; // 0-100
+  final double? blackAccuracy; // 0-100
 
   AnalysisEngineState({
     this.isEngineOn = false,
@@ -57,6 +61,8 @@ class AnalysisEngineState {
     this.currentDepth = 0,
     this.classifications = const {},
     this.evalHistory = const {},
+    this.whiteAccuracy,
+    this.blackAccuracy,
   });
 
   AnalysisEngineState copyWith({
@@ -69,6 +75,8 @@ class AnalysisEngineState {
     int? currentDepth,
     Map<int, MoveClassification>? classifications,
     Map<int, double>? evalHistory,
+    Object? whiteAccuracy = _sentinel,
+    Object? blackAccuracy = _sentinel,
   }) {
     return AnalysisEngineState(
       isEngineOn: isEngineOn ?? this.isEngineOn,
@@ -80,9 +88,14 @@ class AnalysisEngineState {
       currentDepth: currentDepth ?? this.currentDepth,
       classifications: classifications ?? this.classifications,
       evalHistory: evalHistory ?? this.evalHistory,
+      whiteAccuracy: whiteAccuracy == _sentinel ? this.whiteAccuracy : whiteAccuracy as double?,
+      blackAccuracy: blackAccuracy == _sentinel ? this.blackAccuracy : blackAccuracy as double?,
     );
   }
 }
+
+// Sentinel object to distinguish "not provided" from explicit null in copyWith
+const Object _sentinel = Object();
 
 
 class AnalysisEngineController extends Notifier<AnalysisEngineState> {
@@ -190,6 +203,11 @@ class AnalysisEngineController extends Notifier<AnalysisEngineState> {
     _throttleTimer = null;
 
     if (on) {
+      final practiceState = ref.read(practiceLabProvider);
+      if (practiceState.isSessionActive) {
+        await ref.read(practiceLabProvider.notifier).endSessionWithoutRestartingEngine();
+      }
+
       state = state.copyWith(
         isEngineOn: true,
         isAnalyzing: true,
@@ -216,6 +234,8 @@ class AnalysisEngineController extends Notifier<AnalysisEngineState> {
         isMate: false,
         mateIn: null,
         currentDepth: 0,
+        whiteAccuracy: null,
+        blackAccuracy: null,
       );
     }
   }
@@ -304,6 +324,8 @@ class AnalysisEngineController extends Notifier<AnalysisEngineState> {
     final mainlineIndices = _getMainlineNodeIndices(nodes);
     final results = <int, MoveClassification>{};
     final history = <int, double>{};
+    final whiteLosses = <double>[];
+    final blackLosses = <double>[];
 
     for (var i = 0; i < mainlineIndices.length; i++) {
       final nodeIdx = mainlineIndices[i];
@@ -311,6 +333,7 @@ class AnalysisEngineController extends Notifier<AnalysisEngineState> {
 
       // FEN before this move
       final fenBefore = node.parentIndex == null ? startFen : nodes[node.parentIndex!].fen;
+      final isWhite = !fenBefore.contains(' b ');
 
       // Evaluate position before
       final beforeEval = await _evaluatePositionAtDepth(fenBefore, depth);
@@ -324,11 +347,25 @@ class AnalysisEngineController extends Notifier<AnalysisEngineState> {
 
       if (playedMove == bestMove) {
         results[nodeIdx] = MoveClassification.best;
+        // Best move = 0 cp loss
+        if (isWhite) {
+          whiteLosses.add(0.0);
+        } else {
+          blackLosses.add(0.0);
+        }
       } else {
         final double scoreBefore = _parseScoreToDouble(beforeEval);
         final double scoreAfterOpponent = _parseScoreToDouble(afterEval);
         final double scorePlayed = -scoreAfterOpponent;
         final double loss = scoreBefore - scorePlayed;
+
+        // Accumulate cp loss for accuracy computation
+        final double cpLoss = (loss * 100).clamp(0.0, double.infinity);
+        if (isWhite) {
+          whiteLosses.add(cpLoss);
+        } else {
+          blackLosses.add(cpLoss);
+        }
 
         if (loss < 0.15) {
           results[nodeIdx] = MoveClassification.best;
@@ -344,16 +381,30 @@ class AnalysisEngineController extends Notifier<AnalysisEngineState> {
       }
     }
 
+    final wAccuracy = _computeAccuracy(whiteLosses);
+    final bAccuracy = _computeAccuracy(blackLosses);
+
     state = state.copyWith(
       isAnalyzing: false,
       classifications: results,
       evalHistory: history,
+      whiteAccuracy: wAccuracy,
+      blackAccuracy: bAccuracy,
     );
 
     if (wasEngineOn) {
       final activeFen = nodes.isEmpty ? startFen : nodes.last.fen;
       await toggleEngine(true, activeFen);
     }
+  }
+
+  /// CAPS-style accuracy formula: 103.1668 * exp(-0.04354 * avgLoss) - 3.1669
+  /// avgLoss is in centipawns; result is clamped to [0, 100].
+  double _computeAccuracy(List<double> cpLosses) {
+    if (cpLosses.isEmpty) return 100.0;
+    final avgLoss = cpLosses.reduce((a, b) => a + b) / cpLosses.length;
+    final accuracy = 103.1668 * exp(-0.04354 * avgLoss) - 3.1669;
+    return accuracy.clamp(0.0, 100.0);
   }
 
   double _parseScoreToWhitePerspective(Map<String, dynamic> eval, String fen) {

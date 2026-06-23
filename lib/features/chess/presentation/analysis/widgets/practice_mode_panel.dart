@@ -1,6 +1,4 @@
-import 'dart:async';
 import 'dart:math' as math;
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -10,8 +8,7 @@ import '../../../application/practice_lab_provider.dart';
 import '../../../application/chess_provider.dart';
 import '../../../services/chess_sound_service.dart';
 import '../../scholarly_theme.dart';
-import '../analysis_board.dart';
-import 'practice_lab_board.dart';
+import '../../widgets/ambient_scaffold.dart';
 import '../../widgets/neural_connectivity_mesh.dart';
 
 class PracticeModePanel extends ConsumerStatefulWidget {
@@ -23,32 +20,6 @@ class PracticeModePanel extends ConsumerStatefulWidget {
 
 class _PracticeModePanelState extends ConsumerState<PracticeModePanel> {
   bool _isPlayerWhite = true;
-  double _difficultyStop = 3.0; // Defaults to Stop 3 (Club Player - Level 12)
-  Timer? _checkmateTimer;
-  bool _showCheckmateOverlay = false;
-  bool _wasGameOver = false;
-
-  @override
-  void dispose() {
-    _checkmateTimer?.cancel();
-    super.dispose();
-  }
-
-  int _getSkillFromStop(double stop) {
-    if (stop == 1) return 3;
-    if (stop == 2) return 7;
-    if (stop == 3) return 12;
-    if (stop == 4) return 17;
-    return 20;
-  }
-
-  String _getSkillNameFromStop(double stop) {
-    if (stop == 1) return 'Beginner (Level 3)';
-    if (stop == 2) return 'Casual (Level 7)';
-    if (stop == 3) return 'Club Player (Level 12)';
-    if (stop == 4) return 'Advanced (Level 17)';
-    return 'Master (Level 20)';
-  }
 
   String _formatDuration(Duration d) {
     final minutes = d.inMinutes.toString().padLeft(2, '0');
@@ -528,11 +499,9 @@ class _PracticeModePanelState extends ConsumerState<PracticeModePanel> {
             ),
           ),
           onPressed: () {
-            final skill = _getSkillFromStop(_difficultyStop);
             ref.read(practiceLabProvider.notifier).startSession(
               studyState.activeFen,
               _isPlayerWhite,
-              skill,
             );
           },
         ),
@@ -570,821 +539,195 @@ class _PracticeModePanelState extends ConsumerState<PracticeModePanel> {
     return chips;
   }
 
-  Widget _buildLandscapePlaySession(
-    PracticeLabState practiceState,
-    StudyLabState studyState,
-    BoxConstraints constraints,
-  ) {
-    final boardSize = math.min(
-      (constraints.maxWidth * 0.55) - 36,
-      constraints.maxHeight - 24,
-    ).clamp(100.0, 520.0);
-
-    final isWhiteToMove = !practiceState.fen.contains(' b ');
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // LEFT COLUMN: Board Area
-          Expanded(
-            flex: 11,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                SizedBox(
-                  width: boardSize + 18,
-                  child: Column(
-                    children: [
-                      // Opponent Header Row
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0),
-                        child: Row(
-                          children: [
-                            ModernThinkingAvatar(
-                              isThinking: practiceState.isEngineThinking,
-                              child: CircleAvatar(
-                                radius: 14,
-                                backgroundColor: ScholarlyTheme.panelBase,
-                                child: const Icon(Icons.smart_toy_outlined, size: 16, color: ScholarlyTheme.accentBlue),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              _getSkillNameFromStop(_difficultyStop),
-                              style: GoogleFonts.inter(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                                color: ScholarlyTheme.textPrimary,
-                              ),
-                            ),
-                            if (practiceState.isEngineThinking) ...[
-                              const SizedBox(width: 12),
-                              const WavingDotsIndicator(),
-                            ],
-                            const Spacer(),
-                            if (practiceState.showTimer)
-                              _buildTimerBadge(
-                                isTimerActive: !practiceState.isGameOver && (isWhiteToMove != practiceState.isPlayerWhite),
-                                timeLeft: practiceState.isPlayerWhite ? practiceState.blackTimeLeft : practiceState.whiteTimeLeft,
-                              ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-
-                      // Board Row (EvalBar + Board)
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          EvalBar(
-                            evalScore: practiceState.evalScore,
-                            isMate: practiceState.isMate,
-                            mateIn: practiceState.mateIn,
-                            isEngineOn: true,
-                            isFlipped: practiceState.isBoardFlipped,
-                            height: boardSize,
-                          ),
-                          const SizedBox(width: 12),
-                          Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              PracticeLabBoard(boardSize: boardSize),
-                              if (practiceState.isGameOver && _showCheckmateOverlay)
-                                Positioned.fill(
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(16),
-                                    child: BackdropFilter(
-                                      filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                                      child: Container(
-                                        color: Colors.black.withValues(alpha: 0.5),
-                                        child: Column(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            Text(
-                                              practiceState.gameConclusion ?? 'Game Over',
-                                              style: GoogleFonts.outfit(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 28,
-                                                color: Colors.white,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-
-                      // Player Header Row
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0),
-                        child: Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 14,
-                              backgroundColor: ScholarlyTheme.panelBase,
-                              child: const Icon(Icons.person_outline, size: 16, color: ScholarlyTheme.textPrimary),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'You',
-                              style: GoogleFonts.inter(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                                color: ScholarlyTheme.textPrimary,
-                              ),
-                            ),
-                            const Spacer(),
-                            if (practiceState.showTimer)
-                              _buildTimerBadge(
-                                isTimerActive: !practiceState.isGameOver && (isWhiteToMove == practiceState.isPlayerWhite),
-                                timeLeft: practiceState.isPlayerWhite ? practiceState.whiteTimeLeft : practiceState.blackTimeLeft,
-                              ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // SEPARATOR
-          Container(
-            width: 1.5,
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            color: ScholarlyTheme.panelStroke.withValues(alpha: 0.5),
-          ),
-
-          // RIGHT COLUMN: Sidebar / Controls
-          Expanded(
-            flex: 9,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 12),
-                // Move List (takes remaining space)
-                Expanded(
-                  child: Center(
-                    child: practiceState.sanHistory.isNotEmpty
-                        ? ListView(
-                            scrollDirection: Axis.vertical,
-                            physics: const BouncingScrollPhysics(),
-                            children: [
-                              Wrap(
-                                spacing: 6.0,
-                                runSpacing: 8.0,
-                                children: _buildMoveChips(practiceState.sanHistory),
-                              ),
-                            ],
-                          )
-                        : Text(
-                            'No moves played yet.',
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              color: ScholarlyTheme.textMuted,
-                            ),
-                          ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Bottom control buttons
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    _CompactActionButton(
-                      tooltip: 'Step Backward',
-                      activeColor: ScholarlyTheme.textPrimary,
-                      onTap: (practiceState.moveHistory.isEmpty || practiceState.viewingMoveIndex == -1)
-                          ? null
-                          : () => ref.read(practiceLabProvider.notifier).stepBackward(),
-                      child: const Icon(Icons.chevron_left_rounded),
-                    ),
-                    const SizedBox(width: 12),
-                    _CompactActionButton(
-                      tooltip: 'Step Forward',
-                      activeColor: ScholarlyTheme.textPrimary,
-                      onTap: practiceState.viewingMoveIndex == null
-                          ? null
-                          : () => ref.read(practiceLabProvider.notifier).stepForward(),
-                      child: const Icon(Icons.chevron_right_rounded),
-                    ),
-                    const SizedBox(width: 12),
-                    if (practiceState.viewingMoveIndex == null)
-                      _CompactActionButton(
-                        tooltip: 'Undo Move',
-                        activeColor: ScholarlyTheme.textPrimary,
-                        onTap: practiceState.moveHistory.length < 2 || practiceState.isEngineThinking
-                            ? null
-                            : () => ref.read(practiceLabProvider.notifier).undo(),
-                        child: const Icon(Icons.undo_rounded),
-                      )
-                    else
-                      _CompactActionButton(
-                        tooltip: 'Live Game',
-                        activeColor: ScholarlyTheme.accentBlue,
-                        onTap: () => ref.read(practiceLabProvider.notifier).navigateToMove(null),
-                        child: const Icon(Icons.play_arrow_rounded),
-                      ),
-                    const SizedBox(width: 12),
-                    _CompactActionButton(
-                      tooltip: 'Stop Sparring',
-                      activeColor: Colors.redAccent,
-                      onTap: () {
-                        final studyState = ref.read(studyLabProvider);
-                        ref.read(practiceLabProvider.notifier).endSession(studyState.activeFen);
-                      },
-                      child: const Icon(Icons.stop_circle_rounded),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLandscapeLobby(
-    StudyLabState studyState,
-    PracticeLabState practiceState,
-    BoxConstraints constraints,
-  ) {
-    final boardSize = math.min(
-      (constraints.maxWidth * 0.55) - 36,
-      constraints.maxHeight - 24,
-    ).clamp(100.0, 520.0);
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // LEFT COLUMN: Board Area
-          Expanded(
-            flex: 11,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Board Row (EvalBar + Board)
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    EvalBar(
-                      evalScore: null,
-                      isMate: false,
-                      mateIn: null,
-                      isEngineOn: true,
-                      isFlipped: !_isPlayerWhite,
-                      height: boardSize,
-                    ),
-                    const SizedBox(width: 12),
-                    PracticeLabBoard(
-                      boardSize: boardSize,
-                      isFlippedOverride: !_isPlayerWhite,
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          // SEPARATOR
-          Container(
-            width: 1.5,
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            color: ScholarlyTheme.panelStroke.withValues(alpha: 0.5),
-          ),
-
-          // RIGHT COLUMN: Configuration Area
-          Expanded(
-            flex: 9,
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Play Side Selector Row
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _buildCompactSideButton(
-                        label: 'WHITE',
-                        isSelected: _isPlayerWhite,
-                        iconColor: Colors.white,
-                        onTap: () => setState(() => _isPlayerWhite = true),
-                      ),
-                      const SizedBox(width: 16),
-                      _buildCompactSideButton(
-                        label: 'BLACK',
-                        isSelected: !_isPlayerWhite,
-                        iconColor: Colors.black,
-                        onTap: () => setState(() => _isPlayerWhite = false),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Difficulty Slider Header Row
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'ENGINE DIFFICULTY',
-                        style: GoogleFonts.inter(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: ScholarlyTheme.textMuted,
-                          letterSpacing: 0.8,
-                        ),
-                      ),
-                      Text(
-                        _getSkillNameFromStop(_difficultyStop).toUpperCase(),
-                        style: GoogleFonts.outfit(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: ScholarlyTheme.accentBlue,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  SliderTheme(
-                    data: SliderThemeData(
-                      activeTrackColor: ScholarlyTheme.accentBlue,
-                      inactiveTrackColor: ScholarlyTheme.panelStroke,
-                      thumbColor: ScholarlyTheme.accentBlue,
-                      overlayColor: ScholarlyTheme.accentBlue.withValues(alpha: 0.2),
-                      valueIndicatorColor: ScholarlyTheme.accentBlue,
-                      showValueIndicator: ShowValueIndicator.onDrag,
-                    ),
-                    child: Slider(
-                      value: _difficultyStop,
-                      min: 1.0,
-                      max: 5.0,
-                      divisions: 4,
-                      label: _getSkillNameFromStop(_difficultyStop),
-                      onChanged: (val) {
-                        setState(() => _difficultyStop = val);
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildTimerSettingsCard(practiceState),
-                  const SizedBox(height: 16),
-
-                  // Play Button
-                  _buildStartSparringButton(studyState),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final studyState = ref.watch(studyLabProvider);
     final practiceState = ref.watch(practiceLabProvider);
 
-    final isGameOver = practiceState.isGameOver;
-    if (isGameOver && !_wasGameOver) {
-      _wasGameOver = true;
-      _checkmateTimer?.cancel();
-      final isTimeout = practiceState.gameConclusion?.contains('time') ?? false;
-      final delay = isTimeout ? const Duration(milliseconds: 500) : const Duration(seconds: 5);
-      _checkmateTimer = Timer(delay, () {
-        if (mounted) {
-          setState(() {
-            _showCheckmateOverlay = true;
-          });
-        }
-      });
-    } else if (!isGameOver && _wasGameOver) {
-      _wasGameOver = false;
-      _checkmateTimer?.cancel();
-      _showCheckmateOverlay = false;
-    }
-
     if (practiceState.isSessionActive) {
-      // PLAY SESSION VIEW
-      return LayoutBuilder(
-        builder: (context, constraints) {
-          final isLandscape = constraints.maxWidth > constraints.maxHeight;
-          if (isLandscape) {
-            return _buildLandscapePlaySession(practiceState, studyState, constraints);
-          }
+      // PLAY SESSION VIEW CONTROLS (WITHOUT BOARD)
+      final isWhiteToMove = !practiceState.fen.contains(' b ');
 
-          final availableHeight = constraints.maxHeight;
-          final availableWidth = constraints.maxWidth;
-
-          // Edge-to-edge calculation
-          const double evalBarWidth = 6.0;
-          const double evalBarPadding = 4.0;
-          final boardSize = availableWidth - evalBarWidth - evalBarPadding;
-
-          // Calculate total height needed. Total fixed is ~220px.
-          final minNeededHeight = boardSize + 220.0;
-          final useSpacers = availableHeight > minNeededHeight;
-
-          final isWhiteToMove = !practiceState.fen.contains(' b ');
-
-          Widget content = Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const SizedBox(height: 8),
-
-              if (useSpacers) const Spacer(),
-
-              // Opponent Header Row
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                child: Row(
-                  children: [
-                    ModernThinkingAvatar(
-                      isThinking: practiceState.isEngineThinking,
-                      child: CircleAvatar(
-                        radius: 14,
-                        backgroundColor: ScholarlyTheme.panelBase,
-                        child: const Icon(Icons.smart_toy_outlined, size: 16, color: ScholarlyTheme.accentBlue),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      _getSkillNameFromStop(_difficultyStop),
-                      style: GoogleFonts.inter(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                        color: ScholarlyTheme.textPrimary,
-                      ),
-                    ),
-                    if (practiceState.isEngineThinking) ...[
-                      const SizedBox(width: 12),
-                      const WavingDotsIndicator(),
-                    ],
-                    const Spacer(),
-                    if (practiceState.showTimer)
-                      _buildTimerBadge(
-                        isTimerActive: !practiceState.isGameOver && (isWhiteToMove != practiceState.isPlayerWhite),
-                        timeLeft: practiceState.isPlayerWhite ? practiceState.blackTimeLeft : practiceState.whiteTimeLeft,
-                      ),
-                  ],
+      return JuicyGlassCard(
+        padding: const EdgeInsets.all(12),
+        borderRadius: 16,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Opponent Header Row
+            Row(
+              children: [
+                ModernThinkingAvatar(
+                  isThinking: practiceState.isEngineThinking,
+                  child: CircleAvatar(
+                    radius: 14,
+                    backgroundColor: ScholarlyTheme.panelBase,
+                    child: const Icon(Icons.smart_toy_outlined, size: 16, color: ScholarlyTheme.accentBlue),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-
-              // Board Row (EvalBar + Board)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  EvalBar(
-                    evalScore: practiceState.evalScore,
-                    isMate: practiceState.isMate,
-                    mateIn: practiceState.mateIn,
-                    isEngineOn: true,
-                    isFlipped: practiceState.isBoardFlipped,
-                    height: boardSize,
-                    width: evalBarWidth,
+                const SizedBox(width: 8),
+                Text(
+                  'Bot',
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: ScholarlyTheme.textPrimary,
                   ),
-                  const SizedBox(width: evalBarPadding),
-                  Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      PracticeLabBoard(boardSize: boardSize),
-                      if (practiceState.isGameOver && _showCheckmateOverlay)
-                        Positioned.fill(
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(0),
-                            child: BackdropFilter(
-                              filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                              child: Container(
-                                color: Colors.black.withValues(alpha: 0.5),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      practiceState.gameConclusion ?? 'Game Over',
-                                      style: GoogleFonts.outfit(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 28,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
+                ),
+                if (practiceState.isEngineThinking) ...[
+                  const SizedBox(width: 12),
+                  const WavingDotsIndicator(),
                 ],
-              ),
-              const SizedBox(height: 12),
-
-              // Player Header Row
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 14,
-                      backgroundColor: ScholarlyTheme.panelBase,
-                      child: const Icon(Icons.person_outline, size: 16, color: ScholarlyTheme.textPrimary),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'You',
-                      style: GoogleFonts.inter(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                        color: ScholarlyTheme.textPrimary,
-                      ),
-                    ),
-                    const Spacer(),
-                    if (practiceState.showTimer)
-                      _buildTimerBadge(
-                        isTimerActive: !practiceState.isGameOver && (isWhiteToMove == practiceState.isPlayerWhite),
-                        timeLeft: practiceState.isPlayerWhite ? practiceState.whiteTimeLeft : practiceState.blackTimeLeft,
-                      ),
-                  ],
+                const Spacer(),
+                if (practiceState.showTimer)
+                  _buildTimerBadge(
+                    isTimerActive: !practiceState.isGameOver && (isWhiteToMove != practiceState.isPlayerWhite),
+                    timeLeft: practiceState.isPlayerWhite ? practiceState.blackTimeLeft : practiceState.whiteTimeLeft,
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            // Player Header Row
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 14,
+                  backgroundColor: ScholarlyTheme.panelBase,
+                  child: const Icon(Icons.person_outline, size: 16, color: ScholarlyTheme.textPrimary),
                 ),
-              ),
-
-              if (useSpacers) const Spacer(),
-              const SizedBox(height: 8),
-
-              // Move List
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                child: SizedBox(
-                  height: 36,
-                  child: practiceState.sanHistory.isNotEmpty
-                      ? ListView(
-                          scrollDirection: Axis.horizontal,
-                          physics: const BouncingScrollPhysics(),
-                          children: _buildMoveChips(practiceState.sanHistory),
-                        )
-                      : const SizedBox.shrink(),
+                const SizedBox(width: 8),
+                Text(
+                  'You',
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: ScholarlyTheme.textPrimary,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-
-              // Bottom control buttons
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    _CompactActionButton(
-                      tooltip: 'Step Backward',
-                      activeColor: ScholarlyTheme.textPrimary,
-                      onTap: (practiceState.moveHistory.isEmpty || practiceState.viewingMoveIndex == -1)
-                          ? null
-                          : () => ref.read(practiceLabProvider.notifier).stepBackward(),
-                      child: const Icon(Icons.chevron_left_rounded),
-                    ),
-                    const SizedBox(width: 12),
-                    _CompactActionButton(
-                      tooltip: 'Step Forward',
-                      activeColor: ScholarlyTheme.textPrimary,
-                      onTap: practiceState.viewingMoveIndex == null
-                          ? null
-                          : () => ref.read(practiceLabProvider.notifier).stepForward(),
-                      child: const Icon(Icons.chevron_right_rounded),
-                    ),
-                    const SizedBox(width: 12),
-                    if (practiceState.viewingMoveIndex == null)
-                      _CompactActionButton(
-                        tooltip: 'Undo Move',
-                        activeColor: ScholarlyTheme.textPrimary,
-                        onTap: practiceState.moveHistory.length < 2 || practiceState.isEngineThinking
-                            ? null
-                            : () => ref.read(practiceLabProvider.notifier).undo(),
-                        child: const Icon(Icons.undo_rounded),
+                const Spacer(),
+                if (practiceState.showTimer)
+                  _buildTimerBadge(
+                    isTimerActive: !practiceState.isGameOver && (isWhiteToMove == practiceState.isPlayerWhite),
+                    timeLeft: practiceState.isPlayerWhite ? practiceState.whiteTimeLeft : practiceState.blackTimeLeft,
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            // Move List
+            Expanded(
+              child: Center(
+                child: practiceState.sanHistory.isNotEmpty
+                    ? ListView(
+                        scrollDirection: Axis.vertical,
+                        physics: const BouncingScrollPhysics(),
+                        children: [
+                          Wrap(
+                            spacing: 6.0,
+                            runSpacing: 8.0,
+                            children: _buildMoveChips(practiceState.sanHistory),
+                          ),
+                        ],
                       )
-                    else
-                      _CompactActionButton(
-                        tooltip: 'Live Game',
-                        activeColor: ScholarlyTheme.accentBlue,
-                        onTap: () => ref.read(practiceLabProvider.notifier).navigateToMove(null),
-                        child: const Icon(Icons.play_arrow_rounded),
+                    : Text(
+                        'No moves played yet.',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: ScholarlyTheme.textMuted,
+                        ),
                       ),
-                    const SizedBox(width: 12),
-                    _CompactActionButton(
-                      tooltip: 'Stop Sparring',
-                      activeColor: Colors.redAccent,
-                      onTap: () {
-                        final studyState = ref.read(studyLabProvider);
-                        ref.read(practiceLabProvider.notifier).endSession(studyState.activeFen);
-                      },
-                      child: const Icon(Icons.stop_circle_rounded),
-                    ),
-                  ],
-                ),
               ),
-
-              if (useSpacers) const Spacer(),
-            ],
-          );
-
-          if (useSpacers) {
-            return content;
-          } else {
-            return SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: content,
-            );
-          }
-        },
+            ),
+            const SizedBox(height: 12),
+            // Bottom controls
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _CompactActionButton(
+                  tooltip: 'Step Backward',
+                  activeColor: ScholarlyTheme.textPrimary,
+                  onTap: (practiceState.moveHistory.isEmpty || practiceState.viewingMoveIndex == -1)
+                      ? null
+                      : () => ref.read(practiceLabProvider.notifier).stepBackward(),
+                  child: const Icon(Icons.chevron_left_rounded),
+                ),
+                const SizedBox(width: 12),
+                _CompactActionButton(
+                  tooltip: 'Step Forward',
+                  activeColor: ScholarlyTheme.textPrimary,
+                  onTap: practiceState.viewingMoveIndex == null
+                      ? null
+                      : () => ref.read(practiceLabProvider.notifier).stepForward(),
+                  child: const Icon(Icons.chevron_right_rounded),
+                ),
+                const SizedBox(width: 12),
+                if (practiceState.viewingMoveIndex == null)
+                  _CompactActionButton(
+                    tooltip: 'Undo Move',
+                    activeColor: ScholarlyTheme.textPrimary,
+                    onTap: practiceState.moveHistory.length < 2 || practiceState.isEngineThinking
+                        ? null
+                        : () => ref.read(practiceLabProvider.notifier).undo(),
+                    child: const Icon(Icons.undo_rounded),
+                  )
+                else
+                  _CompactActionButton(
+                    tooltip: 'Live Game',
+                    activeColor: ScholarlyTheme.accentBlue,
+                    onTap: () => ref.read(practiceLabProvider.notifier).navigateToMove(null),
+                    child: const Icon(Icons.play_arrow_rounded),
+                  ),
+                const SizedBox(width: 12),
+                _CompactActionButton(
+                  tooltip: 'Stop Sparring',
+                  activeColor: Colors.redAccent,
+                  onTap: () {
+                    final studyState = ref.read(studyLabProvider);
+                    ref.read(practiceLabProvider.notifier).endSession(studyState.activeFen);
+                  },
+                  child: const Icon(Icons.stop_circle_rounded),
+                ),
+              ],
+            ),
+          ],
+        ),
       );
     } else {
-      // LOBBY VIEW
-      return LayoutBuilder(
-        builder: (context, constraints) {
-          final isLandscape = constraints.maxWidth > constraints.maxHeight;
-          if (isLandscape) {
-            return _buildLandscapeLobby(studyState, practiceState, constraints);
-          }
-
-          final availableHeight = constraints.maxHeight;
-          final availableWidth = constraints.maxWidth;
-          const double evalBarWidth = 6.0;
-          const double evalBarPadding = 4.0;
-          final boardSize = availableWidth - evalBarWidth - evalBarPadding;
-
-          // Calculate total height needed dynamically based on time controls card size.
-          final double timerCardHeight = practiceState.showTimer ? 260.0 : 60.0;
-          final minNeededHeight = boardSize + 320.0 + timerCardHeight;
-          final useSpacers = availableHeight > minNeededHeight;
-
-          Widget content = Column(
+      // LOBBY VIEW CONTROLS (WITHOUT BOARD)
+      return JuicyGlassCard(
+        padding: const EdgeInsets.all(12),
+        borderRadius: 16,
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const SizedBox(height: 8),
-
-              if (useSpacers) const Spacer(),
-
-              // Opponent Header Row
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 14,
-                      backgroundColor: ScholarlyTheme.panelBase,
-                      child: const Icon(Icons.sports_esports_outlined, size: 16, color: ScholarlyTheme.accentBlue),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Sparring Lobby',
-                      style: GoogleFonts.inter(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                        color: ScholarlyTheme.textPrimary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // Board Row (Board with eval bar in lobby to avoid layout shift)
+              // Play Side Selector Row
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  EvalBar(
-                    evalScore: null,
-                    isMate: false,
-                    mateIn: null,
-                    isEngineOn: true,
-                    isFlipped: !_isPlayerWhite,
-                    height: boardSize,
-                    width: evalBarWidth,
+                  _buildCompactSideButton(
+                    label: 'WHITE',
+                    isSelected: _isPlayerWhite,
+                    iconColor: Colors.white,
+                    onTap: () => setState(() => _isPlayerWhite = true),
                   ),
-                  const SizedBox(width: evalBarPadding),
-                  PracticeLabBoard(
-                    boardSize: boardSize,
-                    isFlippedOverride: !_isPlayerWhite,
+                  const SizedBox(width: 16),
+                  _buildCompactSideButton(
+                    label: 'BLACK',
+                    isSelected: !_isPlayerWhite,
+                    iconColor: Colors.black,
+                    onTap: () => setState(() => _isPlayerWhite = false),
                   ),
                 ],
-              ),
-              const SizedBox(height: 16),
-
-              // Play Side Selector Row
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    _buildCompactSideButton(
-                      label: 'WHITE',
-                      isSelected: _isPlayerWhite,
-                      iconColor: Colors.white,
-                      onTap: () => setState(() => _isPlayerWhite = true),
-                    ),
-                    const SizedBox(width: 16),
-                    _buildCompactSideButton(
-                      label: 'BLACK',
-                      isSelected: !_isPlayerWhite,
-                      iconColor: Colors.black,
-                      onTap: () => setState(() => _isPlayerWhite = false),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Difficulty Slider Header Row
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'ENGINE DIFFICULTY',
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: ScholarlyTheme.textMuted,
-                        letterSpacing: 0.8,
-                      ),
-                    ),
-                    Text(
-                      _getSkillNameFromStop(_difficultyStop).toUpperCase(),
-                      style: GoogleFonts.outfit(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: ScholarlyTheme.accentBlue,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 4),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                child: SliderTheme(
-                  data: SliderThemeData(
-                    activeTrackColor: ScholarlyTheme.accentBlue,
-                    inactiveTrackColor: ScholarlyTheme.panelStroke,
-                    thumbColor: ScholarlyTheme.accentBlue,
-                    overlayColor: ScholarlyTheme.accentBlue.withValues(alpha: 0.2),
-                    valueIndicatorColor: ScholarlyTheme.accentBlue,
-                    showValueIndicator: ShowValueIndicator.onDrag,
-                  ),
-                  child: Slider(
-                    value: _difficultyStop,
-                    min: 1.0,
-                    max: 5.0,
-                    divisions: 4,
-                    label: _getSkillNameFromStop(_difficultyStop),
-                    onChanged: (val) {
-                      setState(() => _difficultyStop = val);
-                    },
-                  ),
-                ),
               ),
               const SizedBox(height: 16),
               _buildTimerSettingsCard(practiceState),
               const SizedBox(height: 16),
-
               // Play Button
               _buildStartSparringButton(studyState),
-
-              if (useSpacers) const Spacer(),
             ],
-          );
-
-          if (useSpacers) {
-            return content;
-          } else {
-            return SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: content,
-            );
-          }
-        },
+          ),
+        ),
       );
     }
   }
