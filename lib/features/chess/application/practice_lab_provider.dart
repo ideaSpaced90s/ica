@@ -415,6 +415,8 @@ class PracticeLabNotifier extends Notifier<PracticeLabState> {
     final san = localChess.move_to_san(matchingMove);
     final uci = '$from$to$promotion';
     final isCapture = matchingMove.captured != null;
+    final isCastling = (matchingMove.flags & 32) != 0 || (matchingMove.flags & 64) != 0;
+    final isPromotion = matchingMove.promotion != null;
 
     final success = localChess.move({
       'from': from,
@@ -427,11 +429,45 @@ class PracticeLabNotifier extends Notifier<PracticeLabState> {
       return;
     }
 
-    // Play SFX
-    _ref.read(chessSoundServiceProvider).playSfx(
-      isCapture ? SoundEffect.capture : SoundEffect.move
-    );
-    _ref.read(chessHapticsServiceProvider).selection();
+    final isCheck = localChess.in_check;
+    final isCheckmate = localChess.in_checkmate;
+
+    // Play SFX and Haptics
+    final soundService = _ref.read(chessSoundServiceProvider);
+    final hapticsService = _ref.read(chessHapticsServiceProvider);
+    final isHapticsEnabled = _ref.read(chessProvider).isHapticsEnabled;
+
+    if (isCheckmate) {
+      soundService.playSfx(SoundEffect.gameover);
+      if (isHapticsEnabled) {
+        hapticsService.mateBurst();
+      }
+    } else if (isCheck) {
+      soundService.playSfx(SoundEffect.check);
+      if (isHapticsEnabled) {
+        hapticsService.checkPulse();
+      }
+    } else if (isPromotion) {
+      soundService.playSfx(SoundEffect.promote);
+      if (isHapticsEnabled) {
+        hapticsService.softTap();
+      }
+    } else if (isCapture) {
+      soundService.playSfx(SoundEffect.capture);
+      if (isHapticsEnabled) {
+        hapticsService.heavyRook();
+      }
+    } else if (isCastling) {
+      soundService.playSfx(SoundEffect.castle);
+      if (isHapticsEnabled) {
+        hapticsService.softTap();
+      }
+    } else {
+      soundService.playSfx(SoundEffect.move);
+      if (isHapticsEnabled) {
+        hapticsService.softTap();
+      }
+    }
 
     final newFen = localChess.fen;
     final newMoves = List<String>.from(state.moveHistory)..add(uci);
@@ -545,6 +581,8 @@ class PracticeLabNotifier extends Notifier<PracticeLabState> {
 
     final san = localChess.move_to_san(matchingMove);
     final isCapture = matchingMove.captured != null;
+    final isCastling = (matchingMove.flags & 32) != 0 || (matchingMove.flags & 64) != 0;
+    final isPromotion = matchingMove.promotion != null;
 
     final success = localChess.move({
       'from': from,
@@ -558,10 +596,45 @@ class PracticeLabNotifier extends Notifier<PracticeLabState> {
       return;
     }
 
-    // Play SFX
-    _ref.read(chessSoundServiceProvider).playSfx(
-      isCapture ? SoundEffect.capture : SoundEffect.move
-    );
+    final isCheck = localChess.in_check;
+    final isCheckmate = localChess.in_checkmate;
+
+    // Play SFX and Haptics
+    final soundService = _ref.read(chessSoundServiceProvider);
+    final hapticsService = _ref.read(chessHapticsServiceProvider);
+    final isHapticsEnabled = _ref.read(chessProvider).isHapticsEnabled;
+
+    if (isCheckmate) {
+      soundService.playSfx(SoundEffect.gameover);
+      if (isHapticsEnabled) {
+        hapticsService.mateBurst();
+      }
+    } else if (isCheck) {
+      soundService.playSfx(SoundEffect.check);
+      if (isHapticsEnabled) {
+        hapticsService.checkPulse();
+      }
+    } else if (isPromotion) {
+      soundService.playSfx(SoundEffect.promote);
+      if (isHapticsEnabled) {
+        hapticsService.softTap();
+      }
+    } else if (isCapture) {
+      soundService.playSfx(SoundEffect.capture);
+      if (isHapticsEnabled) {
+        hapticsService.heavyRook();
+      }
+    } else if (isCastling) {
+      soundService.playSfx(SoundEffect.castle);
+      if (isHapticsEnabled) {
+        hapticsService.softTap();
+      }
+    } else {
+      soundService.playSfx(SoundEffect.move);
+      if (isHapticsEnabled) {
+        hapticsService.softTap();
+      }
+    }
 
     final newFen = localChess.fen;
     final newMoves = List<String>.from(state.moveHistory)..add(uci);

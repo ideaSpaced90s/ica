@@ -48,6 +48,7 @@ class _StudyLabChessBoardState extends ConsumerState<StudyLabChessBoard> {
   String? _drawStartSquare;
   String? _hoverSquare;
   String _currentColor = 'green';
+  bool _userJustMoved = false;
 
   @override
   void didUpdateWidget(StudyLabChessBoard oldWidget) {
@@ -191,6 +192,9 @@ class _StudyLabChessBoardState extends ConsumerState<StudyLabChessBoard> {
       final piece = chess.get(squareName);
       if (piece != null) {
         ref.read(chessSoundServiceProvider).playSfx(SoundEffect.pieceSelect);
+        if (ref.read(chessProvider).isHapticsEnabled) {
+          ref.read(chessHapticsServiceProvider).selection();
+        }
         setState(() {
           _selectedSquare = squareName;
           _legalTargets = chess.generate_moves({'square': squareName})
@@ -215,8 +219,8 @@ class _StudyLabChessBoardState extends ConsumerState<StudyLabChessBoard> {
         _pendingPromoTo = to;
       });
     } else {
+      _userJustMoved = true;
       _executeMoveOrPromo(from, to, '', chess);
-      ref.read(chessHapticsServiceProvider).selection();
       _clearSelection();
     }
   }
@@ -236,6 +240,7 @@ class _StudyLabChessBoardState extends ConsumerState<StudyLabChessBoard> {
       bool isCastling = false;
       bool isPromotion = false;
       bool isCheck = false;
+      bool isCheckmate = false;
 
       for (final m in moves) {
         prevChess.move(m);
@@ -245,6 +250,7 @@ class _StudyLabChessBoardState extends ConsumerState<StudyLabChessBoard> {
           isCastling = (m.flags & 32) != 0 || (m.flags & 64) != 0;
           isPromotion = m.promotion != null;
           isCheck = prevChess.in_check;
+          isCheckmate = prevChess.in_checkmate;
           prevChess.undo();
           break;
         }
@@ -252,17 +258,40 @@ class _StudyLabChessBoardState extends ConsumerState<StudyLabChessBoard> {
       }
 
       final soundService = ref.read(chessSoundServiceProvider);
+      final hapticsService = ref.read(chessHapticsServiceProvider);
+      final isHapticsEnabled = ref.read(chessProvider).isHapticsEnabled;
+
       if (isGameMove) {
-        if (isCheck) {
+        if (isCheckmate) {
+          soundService.playSfx(SoundEffect.gameover);
+          if (_userJustMoved && isHapticsEnabled) {
+            hapticsService.mateBurst();
+          }
+        } else if (isCheck) {
           soundService.playSfx(SoundEffect.check);
+          if (_userJustMoved && isHapticsEnabled) {
+            hapticsService.checkPulse();
+          }
         } else if (isPromotion) {
           soundService.playSfx(SoundEffect.promote);
+          if (_userJustMoved && isHapticsEnabled) {
+            hapticsService.softTap();
+          }
         } else if (isCapture) {
           soundService.playSfx(SoundEffect.capture);
+          if (_userJustMoved && isHapticsEnabled) {
+            hapticsService.heavyRook();
+          }
         } else if (isCastling) {
           soundService.playSfx(SoundEffect.castle);
+          if (_userJustMoved && isHapticsEnabled) {
+            hapticsService.softTap();
+          }
         } else {
           soundService.playSfx(SoundEffect.move);
+          if (_userJustMoved && isHapticsEnabled) {
+            hapticsService.softTap();
+          }
         }
       } else {
         soundService.playSfx(SoundEffect.uiNavigate);
@@ -270,6 +299,11 @@ class _StudyLabChessBoardState extends ConsumerState<StudyLabChessBoard> {
     } catch (e) {
       debugPrint("Error parsing chess FEN transition for sound: $e");
       ref.read(chessSoundServiceProvider).playSfx(SoundEffect.move);
+      if (_userJustMoved && ref.read(chessProvider).isHapticsEnabled) {
+        ref.read(chessHapticsServiceProvider).softTap();
+      }
+    } finally {
+      _userJustMoved = false;
     }
   }
 
@@ -492,6 +526,10 @@ class _StudyLabChessBoardState extends ConsumerState<StudyLabChessBoard> {
                                     child: Draggable<String>(
                                       data: squareName,
                                       onDragStarted: () {
+                                        ref.read(chessSoundServiceProvider).playSfx(SoundEffect.pieceSelect);
+                                        if (ref.read(chessProvider).isHapticsEnabled) {
+                                          ref.read(chessHapticsServiceProvider).selection();
+                                        }
                                         setState(() {
                                           _selectedSquare = squareName;
                                           _legalTargets = chess
@@ -605,6 +643,7 @@ class _StudyLabChessBoardState extends ConsumerState<StudyLabChessBoard> {
                         ? chess.get(_pendingPromoFrom!)?.color == chess_lib.Color.WHITE
                         : true,
                     onCompleteOverride: (piece) {
+                      _userJustMoved = true;
                       _executeMoveOrPromo(
                         _pendingPromoFrom!,
                         _pendingPromoTo!,

@@ -108,6 +108,9 @@ class _PracticeLabBoardState extends ConsumerState<PracticeLabBoard> {
       final playerColor = state.isPlayerWhite ? chess_lib.Color.WHITE : chess_lib.Color.BLACK;
       if (piece != null && piece.color == playerColor) {
         ref.read(chessSoundServiceProvider).playSfx(SoundEffect.pieceSelect);
+        if (ref.read(chessProvider).isHapticsEnabled) {
+          ref.read(chessHapticsServiceProvider).selection();
+        }
         setState(() {
           _selectedSquare = squareName;
           _legalTargets = chess.generate_moves({'square': squareName})
@@ -261,6 +264,10 @@ class _PracticeLabBoardState extends ConsumerState<PracticeLabBoard> {
                                   ? Draggable<String>(
                                       data: squareName,
                                       onDragStarted: () {
+                                        ref.read(chessSoundServiceProvider).playSfx(SoundEffect.pieceSelect);
+                                        if (ref.read(chessProvider).isHapticsEnabled) {
+                                          ref.read(chessHapticsServiceProvider).selection();
+                                        }
                                         setState(() {
                                           _selectedSquare = squareName;
                                           _legalTargets = chess

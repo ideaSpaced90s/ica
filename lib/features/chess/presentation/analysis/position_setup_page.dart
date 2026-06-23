@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:chess/chess.dart' as chess_lib;
+import '../../application/chess_provider.dart';
 import '../../application/study_lab_provider.dart';
+import '../../services/chess_sound_service.dart';
 import '../scholarly_theme.dart';
 import 'themes/analysis_classic_theme.dart';
 
@@ -43,11 +45,13 @@ class _BoardEditorTabState extends ConsumerState<BoardEditorTab> {
   }
 
   void _resetToDefaultPosition() {
+    ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
     final chess = chess_lib.Chess();
     _loadFenToBoardPieces(chess.fen);
   }
 
   void _clearBoard() {
+    ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
     setState(() {
       _boardPieces.clear();
       _wkCastling = false;
@@ -148,12 +152,26 @@ class _BoardEditorTabState extends ConsumerState<BoardEditorTab> {
     setState(() {
       final existing = _boardPieces[sq];
       if (_selectedPaletteItem == 'trash') {
-        _boardPieces.remove(sq);
+        if (existing != null) {
+          _boardPieces.remove(sq);
+          ref.read(chessSoundServiceProvider).playSfx(SoundEffect.illegal);
+          if (ref.read(chessProvider).isHapticsEnabled) {
+            ref.read(chessHapticsServiceProvider).errorFeedback();
+          }
+        }
       } else {
         if (existing == _selectedPaletteItem) {
           _boardPieces.remove(sq); // Tap again to remove
+          ref.read(chessSoundServiceProvider).playSfx(SoundEffect.illegal);
+          if (ref.read(chessProvider).isHapticsEnabled) {
+            ref.read(chessHapticsServiceProvider).errorFeedback();
+          }
         } else {
           _boardPieces[sq] = _selectedPaletteItem;
+          ref.read(chessSoundServiceProvider).playSfx(SoundEffect.pieceSelect);
+          if (ref.read(chessProvider).isHapticsEnabled) {
+            ref.read(chessHapticsServiceProvider).selection();
+          }
         }
       }
     });
@@ -165,17 +183,23 @@ class _BoardEditorTabState extends ConsumerState<BoardEditorTab> {
     final isValid = validation['valid'] as bool;
 
     if (!isValid) {
-      final errorMsg = validation['error'] as String;
+      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.illegal);
+      if (ref.read(chessProvider).isHapticsEnabled) {
+        ref.read(chessHapticsServiceProvider).errorFeedback();
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Invalid Position: $errorMsg'),
+          content: Text(
+            'Invalid Board State: ${validation['error']}',
+            style: const TextStyle(color: Colors.white),
+          ),
           backgroundColor: Colors.redAccent,
         ),
       );
       return;
     }
 
-    // Success - Show cautionary confirmation dialog before loading setup
+    ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -197,7 +221,10 @@ class _BoardEditorTabState extends ConsumerState<BoardEditorTab> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+              Navigator.pop(context);
+            },
             child: Text(
               'Cancel',
               style: GoogleFonts.inter(color: ScholarlyTheme.textMuted),
@@ -205,6 +232,7 @@ class _BoardEditorTabState extends ConsumerState<BoardEditorTab> {
           ),
           FilledButton(
             onPressed: () {
+              ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
               Navigator.pop(context);
               ref.read(studyLabProvider.notifier).loadPositionSetup(fen);
               widget.onApply();
@@ -256,12 +284,15 @@ class _BoardEditorTabState extends ConsumerState<BoardEditorTab> {
             spacing: 8,
             runSpacing: 8,
             children: [
-              ...pieces.map((p) {
+               ...pieces.map((p) {
                 final isSelected = _selectedPaletteItem == p;
                 final isWhite = p.startsWith('w');
                 final type = p.substring(1);
                 return GestureDetector(
-                  onTap: () => setState(() => _selectedPaletteItem = p),
+                  onTap: () {
+                    ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                    setState(() => _selectedPaletteItem = p);
+                  },
                   child: Container(
                     width: 48,
                     height: 48,
@@ -281,7 +312,10 @@ class _BoardEditorTabState extends ConsumerState<BoardEditorTab> {
 
               // Trash Eraser button
               GestureDetector(
-                onTap: () => setState(() => _selectedPaletteItem = 'trash'),
+                onTap: () {
+                  ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                  setState(() => _selectedPaletteItem = 'trash');
+                },
                 child: Container(
                   width: 48,
                   height: 48,
@@ -424,14 +458,20 @@ class _BoardEditorTabState extends ConsumerState<BoardEditorTab> {
                     label: const Text('White'),
                     selected: _isWhiteToMove,
                     selectedColor: ScholarlyTheme.accentBlue.withValues(alpha: 0.2),
-                    onSelected: (val) => setState(() => _isWhiteToMove = true),
+                    onSelected: (val) {
+                      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                      setState(() => _isWhiteToMove = true);
+                    },
                   ),
                   const SizedBox(width: 8),
                   ChoiceChip(
                     label: const Text('Black'),
                     selected: !_isWhiteToMove,
                     selectedColor: ScholarlyTheme.accentBlue.withValues(alpha: 0.2),
-                    onSelected: (val) => setState(() => _isWhiteToMove = false),
+                    onSelected: (val) {
+                      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                      setState(() => _isWhiteToMove = false);
+                    },
                   ),
                 ],
               ),
@@ -452,7 +492,10 @@ class _BoardEditorTabState extends ConsumerState<BoardEditorTab> {
                 children: [
                   Checkbox(
                     value: _wkCastling,
-                    onChanged: (val) => setState(() => _wkCastling = val ?? false),
+                    onChanged: (val) {
+                      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiToggle);
+                      setState(() => _wkCastling = val ?? false);
+                    },
                   ),
                   Text('White Kingside (O-O)', style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 12)),
                 ],
@@ -461,7 +504,10 @@ class _BoardEditorTabState extends ConsumerState<BoardEditorTab> {
                 children: [
                   Checkbox(
                     value: _wqCastling,
-                    onChanged: (val) => setState(() => _wqCastling = val ?? false),
+                    onChanged: (val) {
+                      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiToggle);
+                      setState(() => _wqCastling = val ?? false);
+                    },
                   ),
                   Text('White Queenside (O-O-O)', style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 12)),
                 ],
@@ -470,7 +516,10 @@ class _BoardEditorTabState extends ConsumerState<BoardEditorTab> {
                 children: [
                   Checkbox(
                     value: _bkCastling,
-                    onChanged: (val) => setState(() => _bkCastling = val ?? false),
+                    onChanged: (val) {
+                      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiToggle);
+                      setState(() => _bkCastling = val ?? false);
+                    },
                   ),
                   Text('Black Kingside (o-o)', style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 12)),
                 ],
@@ -479,7 +528,10 @@ class _BoardEditorTabState extends ConsumerState<BoardEditorTab> {
                 children: [
                   Checkbox(
                     value: _bqCastling,
-                    onChanged: (val) => setState(() => _bqCastling = val ?? false),
+                    onChanged: (val) {
+                      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiToggle);
+                      setState(() => _bqCastling = val ?? false);
+                    },
                   ),
                   Text('Black Queenside (o-o-o)', style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 12)),
                 ],
