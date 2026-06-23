@@ -14,6 +14,7 @@ import '../../services/chess_sound_service.dart';
 import '../scholarly_theme.dart';
 import 'themes/analysis_classic_theme.dart';
 import '../shared/widgets/promotion_overlay.dart';
+import 'widgets/move_annotation_badge.dart';
 
 class StudyLabChessBoard extends ConsumerStatefulWidget {
   final StudyLabState state;
@@ -563,6 +564,12 @@ class _StudyLabChessBoardState extends ConsumerState<StudyLabChessBoard> {
                                   ),
 
                                 _buildCoordinatesForSquare(row, col, isLight, widget.state.isBoardFlipped),
+                                if (isLastEnd && activeNode != null && activeNode.annotation != MoveAnnotation.none)
+                                  Positioned(
+                                    top: 2,
+                                    right: 2,
+                                    child: MoveAnnotationBadge(annotation: activeNode.annotation),
+                                  ),
                               ],
                             );
 

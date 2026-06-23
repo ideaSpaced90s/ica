@@ -1668,7 +1668,6 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> with TickerProvider
     }
 
     final isCurrent = state.currentNodeIndex == mainNode.index;
-    final String glyph = _getNAGSymbol(mainNode.annotation);
 
     chips.add(
       GestureDetector(
@@ -1690,13 +1689,22 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> with TickerProvider
               width: 1.5,
             ),
           ),
-          child: Text(
-            '${mainNode.san}$glyph',
-            style: GoogleFonts.inter(
-              color: isCurrent ? Colors.white : ScholarlyTheme.textPrimary,
-              fontWeight: isCurrent ? FontWeight.bold : FontWeight.w600,
-              fontSize: 11,
-            ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (mainNode.annotation != MoveAnnotation.none) ...[
+                _buildMoveListAnnotationPrefix(mainNode.annotation, isCurrent),
+                const SizedBox(width: 4),
+              ],
+              Text(
+                mainNode.san,
+                style: GoogleFonts.inter(
+                  color: isCurrent ? Colors.white : ScholarlyTheme.textPrimary,
+                  fontWeight: isCurrent ? FontWeight.bold : FontWeight.w600,
+                  fontSize: 11,
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -1707,7 +1715,6 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> with TickerProvider
       chips.add(Text(' (', style: GoogleFonts.inter(color: ScholarlyTheme.textSubtle, fontSize: 11)));
 
       final isSideCurrent = state.currentNodeIndex == sideNode.index;
-      final String sideGlyph = _getNAGSymbol(sideNode.annotation);
 
       chips.add(
         GestureDetector(
@@ -1729,13 +1736,22 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> with TickerProvider
                 width: 1.5,
               ),
             ),
-            child: Text(
-              '${sideNode.san}$sideGlyph',
-              style: GoogleFonts.inter(
-                color: isSideCurrent ? Colors.white : ScholarlyTheme.textPrimary,
-                fontWeight: isSideCurrent ? FontWeight.bold : FontWeight.w600,
-                fontSize: 11,
-              ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (sideNode.annotation != MoveAnnotation.none) ...[
+                  _buildMoveListAnnotationPrefix(sideNode.annotation, isSideCurrent),
+                  const SizedBox(width: 4),
+                ],
+                Text(
+                  sideNode.san,
+                  style: GoogleFonts.inter(
+                    color: isSideCurrent ? Colors.white : ScholarlyTheme.textPrimary,
+                    fontWeight: isSideCurrent ? FontWeight.bold : FontWeight.w600,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -1748,16 +1764,28 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> with TickerProvider
     _buildMoveTreeChips(state, notifier, mainNode.index, chips, depth);
   }
 
-  String _getNAGSymbol(MoveAnnotation a) {
-    switch (a) {
-      case MoveAnnotation.brilliant: return '!!';
-      case MoveAnnotation.good: return '!';
-      case MoveAnnotation.interesting: return '!?';
-      case MoveAnnotation.dubious: return '?!';
-      case MoveAnnotation.mistake: return '?';
-      case MoveAnnotation.blunder: return '??';
-      default: return '';
-    }
+  Widget _buildMoveListAnnotationPrefix(MoveAnnotation a, bool isCurrentNode) {
+    final color = a.color;
+    final glyph = a.glyph;
+
+    return Container(
+      width: 14,
+      height: 14,
+      decoration: BoxDecoration(
+        color: isCurrentNode ? Colors.white : color,
+        shape: BoxShape.circle,
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        glyph,
+        style: GoogleFonts.outfit(
+          fontSize: glyph.length > 1 ? 6.5 : 8.5,
+          fontWeight: FontWeight.w900,
+          color: isCurrentNode ? color : Colors.white,
+          height: 1.0,
+        ),
+      ),
+    );
   }
 
   int _getMoveNumberFromFen(String fen) {

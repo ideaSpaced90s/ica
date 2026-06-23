@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:io' show File;
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:chess/chess.dart' as chess_lib;
 import 'package:intl/intl.dart';
@@ -16,6 +16,39 @@ enum MoveAnnotation {
   mistake,     // ?  ($2)
   blunder,     // ?? ($4)
   none,
+}
+
+extension MoveAnnotationExt on MoveAnnotation {
+  String get glyph {
+    switch (this) {
+      case MoveAnnotation.brilliant: return '!!';
+      case MoveAnnotation.good: return '!';
+      case MoveAnnotation.interesting: return '!?';
+      case MoveAnnotation.dubious: return '?!';
+      case MoveAnnotation.mistake: return '?';
+      case MoveAnnotation.blunder: return '??';
+      case MoveAnnotation.none: return '';
+    }
+  }
+
+  Color get color {
+    switch (this) {
+      case MoveAnnotation.brilliant:
+        return const Color(0xFF00BCD4);
+      case MoveAnnotation.good:
+        return const Color(0xFF00C853);
+      case MoveAnnotation.interesting:
+        return const Color(0xFF9C27B0);
+      case MoveAnnotation.dubious:
+        return const Color(0xFFFF6F00);
+      case MoveAnnotation.mistake:
+        return const Color(0xFFE53935);
+      case MoveAnnotation.blunder:
+        return const Color(0xFFD50000);
+      case MoveAnnotation.none:
+        return Colors.grey;
+    }
+  }
 }
 
 class BoardArrow {
