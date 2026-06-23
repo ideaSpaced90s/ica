@@ -19,6 +19,7 @@ import 'workspace_page.dart';
 import 'widgets/game_report_panel.dart';
 import 'widgets/practice_mode_panel.dart';
 import 'widgets/practice_lab_board.dart';
+import 'widgets/sparring_active_view.dart';
 import '../mobile_navigation_shell.dart';
 
 enum EnginePlayMode {
@@ -701,6 +702,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> with TickerProvider
   Widget build(BuildContext context) {
     final state = ref.watch(studyLabProvider);
     final notifier = ref.read(studyLabProvider.notifier);
+    final practiceState = ref.watch(practiceLabProvider);
 
     // Listen to FEN changes to restart the engine
     ref.listen<String>(studyLabProvider.select((s) => s.activeFen), (previous, next) {
@@ -751,6 +753,11 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> with TickerProvider
       case 3:
         activeTabBody = LayoutBuilder(
           builder: (context, constraints) {
+            if (practiceState.isSessionActive) {
+              // ── ACTIVE GAME: dedicated sparring board + headers + move list ──
+              return SparringActiveView(constraints: constraints);
+            }
+            // ── LOBBY: side-selector + settings + start button + preview board ──
             final isLandscape = constraints.maxWidth > constraints.maxHeight;
             if (isLandscape) {
               return _buildLandscapeSparringLayout(context, constraints);

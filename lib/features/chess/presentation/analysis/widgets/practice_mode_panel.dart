@@ -557,12 +557,26 @@ class _PracticeModePanelState extends ConsumerState<PracticeModePanel> {
             // Single Header Row (Bot vs You)
             Row(
               children: [
+                // ── LEFT SIDE: BOT ──
                 ModernThinkingAvatar(
                   isThinking: practiceState.isEngineThinking,
                   child: CircleAvatar(
                     radius: 14,
                     backgroundColor: ScholarlyTheme.panelBase,
                     child: const Icon(Icons.smart_toy_outlined, size: 16, color: ScholarlyTheme.accentBlue),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: !practiceState.isPlayerWhite ? Colors.white : Colors.black,
+                    border: Border.all(
+                      color: !practiceState.isPlayerWhite ? Colors.grey.shade400 : Colors.transparent,
+                      width: 1,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 6),
@@ -574,29 +588,40 @@ class _PracticeModePanelState extends ConsumerState<PracticeModePanel> {
                     color: ScholarlyTheme.textPrimary,
                   ),
                 ),
+                const SizedBox(width: 8),
+                SizedBox(
+                  width: 36,
+                  height: 12,
+                  child: practiceState.isEngineThinking
+                      ? const Center(child: WavingDotsIndicator())
+                      : const SizedBox.shrink(),
+                ),
                 if (practiceState.showTimer) ...[
-                  const SizedBox(width: 6),
+                  const SizedBox(width: 4),
                   _buildTimerBadge(
                     isTimerActive: !practiceState.isGameOver && (isWhiteToMove != practiceState.isPlayerWhite),
                     timeLeft: practiceState.isPlayerWhite ? practiceState.blackTimeLeft : practiceState.whiteTimeLeft,
                   ),
                 ],
-                const SizedBox(width: 10),
-                Text(
-                  'vs',
-                  style: GoogleFonts.inter(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 11,
-                    color: ScholarlyTheme.textMuted,
+
+                const Spacer(),
+
+                // ── RIGHT SIDE: YOU ──
+                if (practiceState.showTimer) ...[
+                  _buildTimerBadge(
+                    isTimerActive: !practiceState.isGameOver && (isWhiteToMove == practiceState.isPlayerWhite),
+                    timeLeft: practiceState.isPlayerWhite ? practiceState.whiteTimeLeft : practiceState.blackTimeLeft,
                   ),
+                  const SizedBox(width: 4),
+                ],
+                SizedBox(
+                  width: 36,
+                  height: 12,
+                  child: ((isWhiteToMove == practiceState.isPlayerWhite) && !practiceState.isEngineThinking && !practiceState.isGameOver && practiceState.isSessionActive)
+                      ? const Center(child: WavingDotsIndicator())
+                      : const SizedBox.shrink(),
                 ),
-                const SizedBox(width: 10),
-                CircleAvatar(
-                  radius: 14,
-                  backgroundColor: ScholarlyTheme.panelBase,
-                  child: const Icon(Icons.person_outline, size: 16, color: ScholarlyTheme.textPrimary),
-                ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 8),
                 Text(
                   'You',
                   style: GoogleFonts.inter(
@@ -605,17 +630,25 @@ class _PracticeModePanelState extends ConsumerState<PracticeModePanel> {
                     color: ScholarlyTheme.textPrimary,
                   ),
                 ),
-                if (practiceState.showTimer) ...[
-                  const SizedBox(width: 6),
-                  _buildTimerBadge(
-                    isTimerActive: !practiceState.isGameOver && (isWhiteToMove == practiceState.isPlayerWhite),
-                    timeLeft: practiceState.isPlayerWhite ? practiceState.whiteTimeLeft : practiceState.blackTimeLeft,
+                const SizedBox(width: 6),
+                Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: practiceState.isPlayerWhite ? Colors.white : Colors.black,
+                    border: Border.all(
+                      color: practiceState.isPlayerWhite ? Colors.grey.shade400 : Colors.transparent,
+                      width: 1,
+                    ),
                   ),
-                ],
-                if (practiceState.isEngineThinking) ...[
-                  const SizedBox(width: 10),
-                  const WavingDotsIndicator(),
-                ],
+                ),
+                const SizedBox(width: 8),
+                CircleAvatar(
+                  radius: 14,
+                  backgroundColor: ScholarlyTheme.panelBase,
+                  child: const Icon(Icons.person_outline, size: 16, color: ScholarlyTheme.textPrimary),
+                ),
               ],
             ),
             const SizedBox(height: 12),

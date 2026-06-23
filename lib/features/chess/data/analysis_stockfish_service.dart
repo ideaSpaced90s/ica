@@ -15,6 +15,7 @@ class AnalysisStockfishService implements ChessEngineService {
   bool _isReady = false;
   bool _isDisposed = false;
   bool _isError = false;
+  bool _isSearching = false;
   Completer<void> _readyCompleter = Completer<void>();
   Process? _process;
   final StreamController<String> _outputController =
@@ -162,6 +163,9 @@ class AnalysisStockfishService implements ChessEngineService {
               if (trimmed.isNotEmpty) {
                 _outputController.add(trimmed);
 
+                if (trimmed.startsWith('bestmove')) {
+                  _isSearching = false;
+                }
                 if (trimmed == 'uciok') {
                   sendCommand('isready');
                 }
@@ -231,6 +235,7 @@ class AnalysisStockfishService implements ChessEngineService {
     _process?.kill();
     _process = null;
     _isReady = false;
+    _isSearching = false;
     _lastCommandFuture = Future.value();
   }
 
@@ -240,14 +245,24 @@ class AnalysisStockfishService implements ChessEngineService {
     final prev = _lastCommandFuture;
     _lastCommandFuture = completer.future;
 
+    final trimmed = command.trim();
+    if (trimmed.startsWith('go')) {
+      _isSearching = true;
+    }
+
     try {
       await prev;
       if (_process == null) {
         debugPrint('AnalysisStockfishService: Cannot send command "$command", process is NULL.');
         return;
       }
-      _process!.stdin.writeln(command.trim());
-      await _process!.stdin.flush();
+      _process!.stdin.writeln(trimmed);
+      await _process!.stdin.flush().timeout(
+        const Duration(milliseconds: 100),
+        onTimeout: () {
+          debugPrint('AnalysisStockfishService: stdin flush timed out for "$command"');
+        },
+      );
     } catch (e) {
       debugPrint('AnalysisStockfishService: Failed to send command "$command": $e');
       _isReady = false;
@@ -290,7 +305,26 @@ class AnalysisStockfishService implements ChessEngineService {
   @override
   Future<void> stopAnalysis() async {
     if (!_isReady) return;
+    if (!_isSearching) {
+      return;
+    }
+    final completer = Completer<void>();
+    StreamSubscription? sub;
+    sub = outputStream.listen((line) {
+      if (line.startsWith('bestmove')) {
+        sub?.cancel();
+        if (!completer.isCompleted) {
+          completer.complete();
+        }
+      }
+    });
     await sendCommand('stop');
+    await completer.future.timeout(
+      const Duration(milliseconds: 500),
+      onTimeout: () {
+        sub?.cancel();
+      },
+    );
   }
 
   @override

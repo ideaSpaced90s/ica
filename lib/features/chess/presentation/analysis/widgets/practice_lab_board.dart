@@ -25,9 +25,38 @@ class PracticeLabBoard extends ConsumerStatefulWidget {
   ConsumerState<PracticeLabBoard> createState() => _PracticeLabBoardState();
 }
 
-class _PracticeLabBoardState extends ConsumerState<PracticeLabBoard> {
+class _PracticeLabBoardState extends ConsumerState<PracticeLabBoard>
+    with SingleTickerProviderStateMixin {
   String? _selectedSquare;
   List<String> _legalTargets = const [];
+
+  late final AnimationController _promoAnimController;
+  late final Animation<double> _promoScaleAnim;
+  late final Animation<double> _promoFadeAnim;
+  bool _wasPromoPending = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _promoAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 280),
+    );
+    _promoScaleAnim = CurvedAnimation(
+      parent: _promoAnimController,
+      curve: Curves.easeOutBack,
+    );
+    _promoFadeAnim = CurvedAnimation(
+      parent: _promoAnimController,
+      curve: Curves.easeOut,
+    );
+  }
+
+  @override
+  void dispose() {
+    _promoAnimController.dispose();
+    super.dispose();
+  }
 
   @override
   void didUpdateWidget(PracticeLabBoard oldWidget) {
@@ -130,6 +159,8 @@ class _PracticeLabBoardState extends ConsumerState<PracticeLabBoard> {
     final isPromo = isPawn && ((isWhite && to.endsWith('8')) || (!isWhite && to.endsWith('1')));
 
     if (isPromo) {
+      // Clear selection first so no stale highlight shows behind the promo overlay.
+      _clearSelection();
       ref.read(practiceLabProvider.notifier).setPendingPromo(from, to);
     } else {
       ref.read(practiceLabProvider.notifier).makePlayerMove(from, to);
@@ -164,10 +195,14 @@ class _PracticeLabBoardState extends ConsumerState<PracticeLabBoard> {
     }
 
     final isPlayerTurn = (chess.turn == chess_lib.Color.WHITE) == state.isPlayerWhite;
+    // Block interaction when the user is reviewing past moves (viewingMoveIndex != null)
+    // so that historical board positions cannot be accidentally interacted with.
     final isInteractionAllowed = isPlayerTurn &&
         !state.isEngineThinking &&
         !state.isGameOver &&
-        state.isSessionActive;
+        state.isSessionActive &&
+        state.viewingMoveIndex == null;
+    final playerColor = state.isPlayerWhite ? chess_lib.Color.WHITE : chess_lib.Color.BLACK;
     final isFlipped = widget.isFlippedOverride ?? state.isBoardFlipped;
     final isMobile = MediaQuery.of(context).size.width <= 800;
     final borderRadius = isMobile ? BorderRadius.zero : BorderRadius.circular(16);
@@ -259,7 +294,7 @@ class _PracticeLabBoardState extends ConsumerState<PracticeLabBoard> {
                           // Piece renderer
                           if (pieceCode != null)
                             Center(
-                              child: isInteractionAllowed
+                              child: (isInteractionAllowed && piece?.color == playerColor)
                                   ? Draggable<String>(
                                       data: squareName,
                                       onDragStarted: () {
@@ -384,7 +419,38 @@ class _PracticeLabBoardState extends ConsumerState<PracticeLabBoard> {
                 ),
               ),
               Center(
-                child: ClipRRect(
+                child: AnimatedBuilder(
+                  animation: _promoAnimController,
+                  builder: (context, child) {
+                    // Trigger the entrance animation whenever the promo panel
+                    // transitions from hidden → visible.
+                    final isPending = state.pendingPromoFrom != null;
+                    if (isPending && !_wasPromoPending) {
+                      _wasPromoPending = true;
+                      // Reset and play the animation from zero so it always
+                      // triggers even if it was interrupted previously.
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted) {
+                          _promoAnimController.forward(from: 0);
+                        }
+                      });
+                    } else if (!isPending && _wasPromoPending) {
+                      // Panel dismissed — reset flag and controller so next
+                      // promotion shows the animation cleanly.
+                      _wasPromoPending = false;
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted) _promoAnimController.reset();
+                      });
+                    }
+                    return FadeTransition(
+                      opacity: _promoFadeAnim,
+                      child: ScaleTransition(
+                        scale: _promoScaleAnim,
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: ClipRRect(
                   borderRadius: borderRadius,
                   child: BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
@@ -459,6 +525,7 @@ class _PracticeLabBoardState extends ConsumerState<PracticeLabBoard> {
                         ],
                       ),
                     ),
+                  ),
                   ),
                 ),
               ),

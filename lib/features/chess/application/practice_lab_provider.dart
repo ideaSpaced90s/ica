@@ -345,7 +345,9 @@ class PracticeLabNotifier extends Notifier<PracticeLabState> {
       botSkillLevel: 20,
       moveHistory: const [],
       sanHistory: const [],
-      isEngineThinking: false,
+      // Set isEngineThinking=true immediately if engine goes first, so the board is
+      // never rendered as interactive during the async setup awaits below.
+      isEngineThinking: isEngineTurn && !isGameOver,
       isGameOver: isGameOver,
       gameResult: gameResult,
       gameConclusion: gameConclusion,
@@ -362,7 +364,7 @@ class PracticeLabNotifier extends Notifier<PracticeLabState> {
 
     // 3. Configure stockfish options
     _logDebug('Sending config options: Skill Level=20, MultiPV=1');
-    await _service.sendCommand('stop');
+    await _service.stopAnalysis();
     await _service.sendCommand('setoption name Skill Level value 20');
     await _service.sendCommand('setoption name MultiPV value 1');
 
@@ -557,20 +559,13 @@ class PracticeLabNotifier extends Notifier<PracticeLabState> {
     }
 
     _engineTimer?.cancel();
-    // Stop search while isEngineThinking is false so the bestmove from stop command is ignored
-    await _service.sendCommand('stop');
-    await Future.delayed(const Duration(milliseconds: 50));
+    await _service.stopAnalysis();
 
     state = state.copyWith(isEngineThinking: true);
 
-    _logDebug('Sending search commands: FEN=${state.fen} (infinite search)');
+    _logDebug('Sending search commands: FEN=${state.fen} (depth search)');
     await _service.sendCommand('position fen ${state.fen}');
-    await _service.sendCommand('go infinite');
-
-    _engineTimer = Timer(const Duration(milliseconds: 1000), () async {
-      _logDebug('Sparring Engine Timer fired. Sending stop.');
-      await _service.sendCommand('stop');
-    });
+    await _service.sendCommand('go depth 22');
   }
 
   void _applyEngineMove(String uci) {
@@ -734,7 +729,7 @@ class PracticeLabNotifier extends Notifier<PracticeLabState> {
     _engineTimer?.cancel();
     state = PracticeLabState();
 
-    await _service.sendCommand('stop');
+    await _service.stopAnalysis();
     await _service.sendCommand('setoption name Skill Level value 20');
     await _service.sendCommand('setoption name MultiPV value 3');
     await _ref.read(analysisEngineControllerProvider.notifier).toggleEngine(true, analysisCurrentFen);
@@ -745,7 +740,7 @@ class PracticeLabNotifier extends Notifier<PracticeLabState> {
     _engineTimer?.cancel();
     state = PracticeLabState();
 
-    await _service.sendCommand('stop');
+    await _service.stopAnalysis();
     await _service.sendCommand('setoption name Skill Level value 20');
     await _service.sendCommand('setoption name MultiPV value 3');
   }
@@ -805,7 +800,9 @@ class PracticeLabNotifier extends Notifier<PracticeLabState> {
   }
 
   String getFenAtMove(int index) {
-    if (index < 0 || index >= state.moveHistory.length) return state.fen;
+    // index == -1 means the start position (before any moves were made in this session).
+    if (index < 0) return state.startFen;
+    if (index >= state.moveHistory.length) return state.fen;
     final tempChess = chess_lib.Chess.fromFEN(state.startFen);
     for (var i = 0; i <= index; i++) {
       final uci = state.moveHistory[i];
