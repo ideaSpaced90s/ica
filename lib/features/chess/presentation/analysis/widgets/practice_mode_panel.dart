@@ -66,38 +66,49 @@ class _PracticeModePanelState extends ConsumerState<PracticeModePanel> {
     required VoidCallback onTap,
   }) {
     return SizedBox(
-      width: 42,
-      height: 24,
+      width: 38,
+      height: 20,
       child: GestureDetector(
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           decoration: BoxDecoration(
+            gradient: isActive 
+                ? const LinearGradient(
+                    colors: [
+                      Color(0xFF0D6EFD),
+                      Color(0xFF3B82F6),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  )
+                : null,
             color: isActive 
-                ? ScholarlyTheme.accentBlue.withValues(alpha: 0.15) 
-                : ScholarlyTheme.panelStroke.withValues(alpha: 0.05),
-            borderRadius: BorderRadius.circular(6),
+                ? null
+                : ScholarlyTheme.panelStroke.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(8),
             border: Border.all(
               color: isActive 
-                  ? ScholarlyTheme.accentBlue.withValues(alpha: 0.6) 
-                  : ScholarlyTheme.panelStroke.withValues(alpha: 0.15),
-              width: isActive ? 1.5 : 1.0,
+                  ? const Color(0xFF0D6EFD).withValues(alpha: 0.8) 
+                  : ScholarlyTheme.panelStroke.withValues(alpha: 0.2),
+              width: 0.75,
             ),
             boxShadow: isActive ? [
               BoxShadow(
-                color: ScholarlyTheme.accentBlue.withValues(alpha: 0.25),
-                blurRadius: 6,
-                spreadRadius: 1,
+                color: const Color(0xFF0D6EFD).withValues(alpha: 0.2),
+                blurRadius: 4,
+                offset: const Offset(0, 1),
               )
             ] : null,
           ),
           child: Center(
             child: Text(
               label,
-              style: GoogleFonts.outfit(
-                color: isActive ? ScholarlyTheme.accentBlue : ScholarlyTheme.textMuted,
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
+              style: GoogleFonts.inter(
+                color: isActive ? Colors.white : ScholarlyTheme.textMuted,
+                fontSize: 8.5,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.5,
               ),
             ),
           ),
@@ -137,23 +148,33 @@ class _PracticeModePanelState extends ConsumerState<PracticeModePanel> {
         },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(horizontal: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
           decoration: BoxDecoration(
+            gradient: isActive 
+                ? const LinearGradient(
+                    colors: [
+                      Color(0xFF0D6EFD),
+                      Color(0xFF3B82F6),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  )
+                : null,
             color: isActive 
-                ? ScholarlyTheme.accentBlue.withValues(alpha: 0.15) 
-                : ScholarlyTheme.panelStroke.withValues(alpha: 0.05),
-            borderRadius: BorderRadius.circular(12),
+                ? null 
+                : ScholarlyTheme.panelStroke.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(8),
             border: Border.all(
               color: isActive 
-                  ? ScholarlyTheme.accentBlue.withValues(alpha: 0.6) 
+                  ? const Color(0xFF0D6EFD).withValues(alpha: 0.8) 
                   : ScholarlyTheme.panelStroke.withValues(alpha: 0.15),
-              width: isActive ? 1.5 : 1.0,
+              width: 0.75,
             ),
             boxShadow: isActive ? [
               BoxShadow(
-                color: ScholarlyTheme.accentBlue.withValues(alpha: 0.25),
-                blurRadius: 6,
-                spreadRadius: 1,
+                color: const Color(0xFF0D6EFD).withValues(alpha: 0.15),
+                blurRadius: 4,
+                offset: const Offset(0, 1),
               )
             ] : null,
           ),
@@ -162,10 +183,10 @@ class _PracticeModePanelState extends ConsumerState<PracticeModePanel> {
               isCustom && isActive 
                   ? '${practiceState.baseTimeDuration.inMinutes}m${practiceState.incrementDuration.inSeconds > 0 ? "+${practiceState.incrementDuration.inSeconds}" : ""}'
                   : label,
-              style: GoogleFonts.outfit(
-                color: isActive ? ScholarlyTheme.accentBlue : ScholarlyTheme.textPrimary,
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
+              style: GoogleFonts.inter(
+                color: isActive ? Colors.white : ScholarlyTheme.textPrimary,
+                fontSize: 9,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
@@ -273,7 +294,7 @@ class _PracticeModePanelState extends ConsumerState<PracticeModePanel> {
             ),
             const SizedBox(height: 6),
             SizedBox(
-              height: 26,
+              height: 22,
               child: ListView(
                 scrollDirection: Axis.horizontal,
                 physics: const BouncingScrollPhysics(),
@@ -397,41 +418,64 @@ class _PracticeModePanelState extends ConsumerState<PracticeModePanel> {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        width: 110,
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+        width: 95,
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
         decoration: BoxDecoration(
+          gradient: isSelected
+              ? const LinearGradient(
+                  colors: [
+                    Color(0xFF0D6EFD),
+                    Color(0xFF3B82F6),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
           color: isSelected
-              ? ScholarlyTheme.accentBlue.withValues(alpha: 0.12)
-              : ScholarlyTheme.panelBase,
-          borderRadius: BorderRadius.circular(16),
+              ? null
+              : ScholarlyTheme.panelStroke.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: isSelected ? ScholarlyTheme.accentBlue : ScholarlyTheme.panelStroke,
-            width: 1.5,
+            color: isSelected 
+                ? const Color(0xFF0D6EFD).withValues(alpha: 0.8) 
+                : ScholarlyTheme.panelStroke.withValues(alpha: 0.15),
+            width: 1.0,
           ),
+          boxShadow: isSelected ? [
+            BoxShadow(
+              color: const Color(0xFF0D6EFD).withValues(alpha: 0.2),
+              blurRadius: 4,
+              offset: const Offset(0, 1),
+            )
+          ] : null,
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.circle,
-              color: iconColor,
-              size: 14,
-              shadows: iconColor == Colors.white
-                  ? [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.3),
-                        blurRadius: 2,
-                      )
-                    ]
-                  : null,
+            Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: isSelected 
+                      ? Colors.white.withValues(alpha: 0.6) 
+                      : (iconColor == Colors.white ? Colors.grey.shade400 : Colors.transparent),
+                  width: 1.0,
+                ),
+              ),
+              child: Icon(
+                Icons.circle,
+                color: iconColor,
+                size: 10,
+              ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
             Text(
               label,
               style: GoogleFonts.inter(
-                fontWeight: FontWeight.bold,
-                fontSize: 11,
-                color: isSelected ? ScholarlyTheme.accentBlue : ScholarlyTheme.textMuted,
+                fontWeight: FontWeight.w700,
+                fontSize: 9.5,
+                color: isSelected ? Colors.white : ScholarlyTheme.textMuted,
+                letterSpacing: 0.5,
               ),
             ),
           ],
@@ -443,20 +487,23 @@ class _PracticeModePanelState extends ConsumerState<PracticeModePanel> {
   Widget _buildStartSparringButton(StudyLabState studyState) {
     return Center(
       child: Container(
-        width: 180,
+        width: 150,
+        height: 32,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(10),
           gradient: const LinearGradient(
             colors: [
-              ScholarlyTheme.accentBlue,
-              Color(0xFF3B82F6),
+              Color(0xFF0D6EFD), // accentBlue
+              Color(0xFF1E40AF), // Deep royal blue
             ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
           boxShadow: [
             BoxShadow(
-              color: ScholarlyTheme.accentBlue.withValues(alpha: 0.25),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
+              color: const Color(0xFF0D6EFD).withValues(alpha: 0.25),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
             ),
           ],
         ),
@@ -467,14 +514,18 @@ class _PracticeModePanelState extends ConsumerState<PracticeModePanel> {
             elevation: 0,
             shadowColor: Colors.transparent,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(10),
             ),
-            padding: const EdgeInsets.symmetric(vertical: 8),
+            padding: EdgeInsets.zero,
           ),
-          icon: const Icon(Icons.play_arrow_rounded, size: 16),
+          icon: const Icon(Icons.play_arrow_rounded, size: 14),
           label: Text(
             'START SPARRING',
-            style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 11, letterSpacing: 0.5),
+            style: GoogleFonts.inter(
+              fontWeight: FontWeight.w700, 
+              fontSize: 9.5, 
+              letterSpacing: 0.8,
+            ),
           ),
           onPressed: () {
             final skill = _getSkillFromStop(_difficultyStop);
@@ -947,8 +998,8 @@ class _PracticeModePanelState extends ConsumerState<PracticeModePanel> {
           const double evalBarPadding = 4.0;
           final boardSize = availableWidth - evalBarWidth - evalBarPadding;
 
-          // Calculate total height needed. Total fixed is ~250px.
-          final minNeededHeight = boardSize + 250;
+          // Calculate total height needed. Total fixed is ~220px.
+          final minNeededHeight = boardSize + 220.0;
           final useSpacers = availableHeight > minNeededHeight;
 
           final isWhiteToMove = !practiceState.fen.contains(' b ');
@@ -1179,8 +1230,9 @@ class _PracticeModePanelState extends ConsumerState<PracticeModePanel> {
           const double evalBarPadding = 4.0;
           final boardSize = availableWidth - evalBarWidth - evalBarPadding;
 
-          // Calculate total height needed. Total fixed is ~280px.
-          final minNeededHeight = boardSize + 280;
+          // Calculate total height needed dynamically based on time controls card size.
+          final double timerCardHeight = practiceState.showTimer ? 260.0 : 60.0;
+          final minNeededHeight = boardSize + 320.0 + timerCardHeight;
           final useSpacers = availableHeight > minNeededHeight;
 
           Widget content = Column(
@@ -1495,31 +1547,49 @@ class _CompactActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool isEnabled = onTap != null;
-    final Color color = isEnabled ? activeColor : ScholarlyTheme.textMuted.withValues(alpha: 0.35);
-    final Color borderColor = isEnabled ? ScholarlyTheme.panelStroke.withValues(alpha: 0.5) : ScholarlyTheme.panelStroke.withValues(alpha: 0.2);
+    final Color color = isEnabled ? activeColor : ScholarlyTheme.textMuted.withValues(alpha: 0.3);
+    final Color borderColor = isEnabled 
+        ? ScholarlyTheme.panelStroke.withValues(alpha: 0.3) 
+        : ScholarlyTheme.panelStroke.withValues(alpha: 0.15);
 
     return Tooltip(
       message: tooltip,
       child: Material(
-        color: isEnabled ? Colors.black.withValues(alpha: 0.03) : Colors.transparent,
-        borderRadius: BorderRadius.circular(8),
+        color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(8),
-          child: Container(
-            width: 40,
-            height: 40,
+          borderRadius: BorderRadius.circular(10),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            width: 32,
+            height: 32,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
+              color: isEnabled 
+                  ? (activeColor == ScholarlyTheme.accentBlue 
+                      ? ScholarlyTheme.accentBlue.withValues(alpha: 0.08)
+                      : ScholarlyTheme.panelStroke.withValues(alpha: 0.08))
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(10),
               border: Border.all(
-                color: borderColor,
-                width: 1.0,
+                color: isEnabled 
+                    ? (activeColor == ScholarlyTheme.accentBlue 
+                        ? ScholarlyTheme.accentBlue.withValues(alpha: 0.3)
+                        : borderColor)
+                    : borderColor,
+                width: 0.75,
               ),
+              boxShadow: isEnabled ? [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.02),
+                  blurRadius: 2,
+                  offset: const Offset(0, 1),
+                )
+              ] : null,
             ),
             child: Center(
               child: IconTheme(
                 data: IconThemeData(
-                  size: 20,
+                  size: 16,
                   color: color,
                 ),
                 child: child,
