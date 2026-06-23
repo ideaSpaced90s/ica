@@ -524,6 +524,11 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> with TickerProvider
     final canGoToEnd = practiceState.isSessionActive &&
         practiceState.viewingMoveIndex != null;
 
+    final canUndo = practiceState.isSessionActive &&
+        practiceState.moveHistory.length >= 2 &&
+        !practiceState.isEngineThinking &&
+        practiceState.viewingMoveIndex == null;
+
     return SizedBox(
       width: panelWidth,
       child: JuicyGlassCard(
@@ -584,6 +589,31 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> with TickerProvider
                       }
                     : null,
                 child: const Icon(Icons.last_page_rounded),
+              ),
+              const SizedBox(width: 8),
+              // Undo Move (Back Button)
+              _CompactBoxButton(
+                tooltip: 'Undo Move',
+                activeColor: const Color(0xFF29B6F6),
+                onTap: canUndo
+                    ? () {
+                        practiceNotifier.undo();
+                      }
+                    : null,
+                child: const Icon(Icons.undo_rounded),
+              ),
+              const SizedBox(width: 8),
+              // Stop Sparring
+              _CompactBoxButton(
+                tooltip: 'Stop Sparring',
+                activeColor: Colors.redAccent,
+                onTap: practiceState.isSessionActive
+                    ? () {
+                        final studyState = ref.read(studyLabProvider);
+                        practiceNotifier.endSession(studyState.activeFen);
+                      }
+                    : null,
+                child: const Icon(Icons.stop_circle_rounded),
               ),
             ],
           ),

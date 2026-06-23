@@ -554,7 +554,7 @@ class _PracticeModePanelState extends ConsumerState<PracticeModePanel> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Opponent Header Row
+            // Single Header Row (Bot vs You)
             Row(
               children: [
                 ModernThinkingAvatar(
@@ -565,51 +565,57 @@ class _PracticeModePanelState extends ConsumerState<PracticeModePanel> {
                     child: const Icon(Icons.smart_toy_outlined, size: 16, color: ScholarlyTheme.accentBlue),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
                 Text(
                   'Bot',
                   style: GoogleFonts.inter(
                     fontWeight: FontWeight.bold,
-                    fontSize: 13,
+                    fontSize: 12,
                     color: ScholarlyTheme.textPrimary,
                   ),
                 ),
-                if (practiceState.isEngineThinking) ...[
-                  const SizedBox(width: 12),
-                  const WavingDotsIndicator(),
-                ],
-                const Spacer(),
-                if (practiceState.showTimer)
+                if (practiceState.showTimer) ...[
+                  const SizedBox(width: 6),
                   _buildTimerBadge(
                     isTimerActive: !practiceState.isGameOver && (isWhiteToMove != practiceState.isPlayerWhite),
                     timeLeft: practiceState.isPlayerWhite ? practiceState.blackTimeLeft : practiceState.whiteTimeLeft,
                   ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            // Player Header Row
-            Row(
-              children: [
+                ],
+                const SizedBox(width: 10),
+                Text(
+                  'vs',
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 11,
+                    color: ScholarlyTheme.textMuted,
+                  ),
+                ),
+                const SizedBox(width: 10),
                 CircleAvatar(
                   radius: 14,
                   backgroundColor: ScholarlyTheme.panelBase,
                   child: const Icon(Icons.person_outline, size: 16, color: ScholarlyTheme.textPrimary),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
                 Text(
                   'You',
                   style: GoogleFonts.inter(
                     fontWeight: FontWeight.bold,
-                    fontSize: 13,
+                    fontSize: 12,
                     color: ScholarlyTheme.textPrimary,
                   ),
                 ),
-                const Spacer(),
-                if (practiceState.showTimer)
+                if (practiceState.showTimer) ...[
+                  const SizedBox(width: 6),
                   _buildTimerBadge(
                     isTimerActive: !practiceState.isGameOver && (isWhiteToMove == practiceState.isPlayerWhite),
                     timeLeft: practiceState.isPlayerWhite ? practiceState.whiteTimeLeft : practiceState.blackTimeLeft,
                   ),
+                ],
+                if (practiceState.isEngineThinking) ...[
+                  const SizedBox(width: 10),
+                  const WavingDotsIndicator(),
+                ],
               ],
             ),
             const SizedBox(height: 12),
@@ -636,57 +642,6 @@ class _PracticeModePanelState extends ConsumerState<PracticeModePanel> {
                         ),
                       ),
               ),
-            ),
-            const SizedBox(height: 12),
-            // Bottom controls
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _CompactActionButton(
-                  tooltip: 'Step Backward',
-                  activeColor: ScholarlyTheme.textPrimary,
-                  onTap: (practiceState.moveHistory.isEmpty || practiceState.viewingMoveIndex == -1)
-                      ? null
-                      : () => ref.read(practiceLabProvider.notifier).stepBackward(),
-                  child: const Icon(Icons.chevron_left_rounded),
-                ),
-                const SizedBox(width: 12),
-                _CompactActionButton(
-                  tooltip: 'Step Forward',
-                  activeColor: ScholarlyTheme.textPrimary,
-                  onTap: practiceState.viewingMoveIndex == null
-                      ? null
-                      : () => ref.read(practiceLabProvider.notifier).stepForward(),
-                  child: const Icon(Icons.chevron_right_rounded),
-                ),
-                const SizedBox(width: 12),
-                if (practiceState.viewingMoveIndex == null)
-                  _CompactActionButton(
-                    tooltip: 'Undo Move',
-                    activeColor: ScholarlyTheme.textPrimary,
-                    onTap: practiceState.moveHistory.length < 2 || practiceState.isEngineThinking
-                        ? null
-                        : () => ref.read(practiceLabProvider.notifier).undo(),
-                    child: const Icon(Icons.undo_rounded),
-                  )
-                else
-                  _CompactActionButton(
-                    tooltip: 'Live Game',
-                    activeColor: ScholarlyTheme.accentBlue,
-                    onTap: () => ref.read(practiceLabProvider.notifier).navigateToMove(null),
-                    child: const Icon(Icons.play_arrow_rounded),
-                  ),
-                const SizedBox(width: 12),
-                _CompactActionButton(
-                  tooltip: 'Stop Sparring',
-                  activeColor: Colors.redAccent,
-                  onTap: () {
-                    final studyState = ref.read(studyLabProvider);
-                    ref.read(practiceLabProvider.notifier).endSession(studyState.activeFen);
-                  },
-                  child: const Icon(Icons.stop_circle_rounded),
-                ),
-              ],
             ),
           ],
         ),
@@ -874,73 +829,3 @@ class _WavingDotsIndicatorState extends State<WavingDotsIndicator>
   }
 }
 
-class _CompactActionButton extends StatelessWidget {
-  final Widget child;
-  final String tooltip;
-  final VoidCallback? onTap;
-  final Color activeColor;
-
-  const _CompactActionButton({
-    required this.child,
-    required this.tooltip,
-    this.onTap,
-    required this.activeColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final bool isEnabled = onTap != null;
-    final Color color = isEnabled ? activeColor : ScholarlyTheme.textMuted.withValues(alpha: 0.3);
-    final Color borderColor = isEnabled 
-        ? ScholarlyTheme.panelStroke.withValues(alpha: 0.3) 
-        : ScholarlyTheme.panelStroke.withValues(alpha: 0.15);
-
-    return Tooltip(
-      message: tooltip,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(10),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: isEnabled 
-                  ? (activeColor == ScholarlyTheme.accentBlue 
-                      ? ScholarlyTheme.accentBlue.withValues(alpha: 0.08)
-                      : ScholarlyTheme.panelStroke.withValues(alpha: 0.08))
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: isEnabled 
-                    ? (activeColor == ScholarlyTheme.accentBlue 
-                        ? ScholarlyTheme.accentBlue.withValues(alpha: 0.3)
-                        : borderColor)
-                    : borderColor,
-                width: 0.75,
-              ),
-              boxShadow: isEnabled ? [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.02),
-                  blurRadius: 2,
-                  offset: const Offset(0, 1),
-                )
-              ] : null,
-            ),
-            child: Center(
-              child: IconTheme(
-                data: IconThemeData(
-                  size: 16,
-                  color: color,
-                ),
-                child: child,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}

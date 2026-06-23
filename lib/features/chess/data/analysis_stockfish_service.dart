@@ -21,6 +21,7 @@ class AnalysisStockfishService implements ChessEngineService {
       StreamController<String>.broadcast();
   StreamSubscription? _stdoutSubscription;
   StreamSubscription? _stderrSubscription;
+  Future<void> _lastCommandFuture = Future.value();
 
   @override
   bool get isReady => _isReady;
@@ -230,20 +231,28 @@ class AnalysisStockfishService implements ChessEngineService {
     _process?.kill();
     _process = null;
     _isReady = false;
+    _lastCommandFuture = Future.value();
   }
 
   @override
   Future<void> sendCommand(String command) async {
-    if (_process == null) {
-      debugPrint('AnalysisStockfishService: Cannot send command "$command", process is NULL.');
-      return;
-    }
+    final completer = Completer<void>();
+    final prev = _lastCommandFuture;
+    _lastCommandFuture = completer.future;
+
     try {
+      await prev;
+      if (_process == null) {
+        debugPrint('AnalysisStockfishService: Cannot send command "$command", process is NULL.');
+        return;
+      }
       _process!.stdin.writeln(command.trim());
       await _process!.stdin.flush();
     } catch (e) {
       debugPrint('AnalysisStockfishService: Failed to send command "$command": $e');
       _isReady = false;
+    } finally {
+      completer.complete();
     }
   }
 
