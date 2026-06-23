@@ -1,5 +1,5 @@
 import 'dart:math';
-import 'dart:ui';
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -10,7 +10,7 @@ import '../../application/chess_provider.dart';
 import '../../application/study_lab_provider.dart';
 import '../../application/analysis_engine_controller.dart';
 import '../../services/chess_sound_service.dart';
-import '../../services/local_classroom_service.dart';
+
 import '../scholarly_theme.dart';
 import 'themes/analysis_classic_theme.dart';
 import '../shared/widgets/promotion_overlay.dart';
@@ -221,41 +221,7 @@ class _StudyLabChessBoardState extends ConsumerState<StudyLabChessBoard> {
   }
 
   void _executeMoveOrPromo(String from, String to, String promotion, chess_lib.Chess chess) {
-    final classroomState = ref.read(localClassroomProvider);
-    final spectatedStudent = ref.read(activeSpectatedStudentProvider);
-    final takeoverMode = ref.read(takeoverModeProvider);
-
-    if (classroomState.isJoined) {
-      if (classroomState.isTeacher) {
-        if (spectatedStudent != null) {
-          if (takeoverMode) {
-            widget.notifier.makeMove(from, to, promotion);
-            final tempChess = chess_lib.Chess.fromFEN(chess.fen);
-            tempChess.move({
-              'from': from,
-              'to': to,
-              if (promotion.isNotEmpty) 'promotion': promotion,
-            });
-            ref.read(localClassroomProvider.notifier).updateStudentBoardFenByTeacher(spectatedStudent, tempChess.fen);
-          }
-        } else {
-          widget.notifier.makeMove(from, to, promotion);
-        }
-      } else {
-        if (!classroomState.boardsLocked && !classroomState.syncToTeacher) {
-          widget.notifier.makeMove(from, to, promotion);
-          final tempChess = chess_lib.Chess.fromFEN(chess.fen);
-          tempChess.move({
-            'from': from,
-            'to': to,
-            if (promotion.isNotEmpty) 'promotion': promotion,
-          });
-          ref.read(localClassroomProvider.notifier).updateStudentBoardFen(tempChess.fen);
-        }
-      }
-    } else {
-      widget.notifier.makeMove(from, to, promotion);
-    }
+    widget.notifier.makeMove(from, to, promotion);
   }
 
   void _playMoveSoundForFenTransition(String prevFen, String nextFen) {
@@ -310,14 +276,7 @@ class _StudyLabChessBoardState extends ConsumerState<StudyLabChessBoard> {
   Widget build(BuildContext context) {
     const theme = AnalysisClassicTheme();
 
-    final classroomState = ref.watch(localClassroomProvider);
-    final spectatedStudent = ref.watch(activeSpectatedStudentProvider);
-    final takeoverMode = ref.watch(takeoverModeProvider);
-
-    final bool isInteractionDisabled = classroomState.isJoined && (
-      (classroomState.isTeacher && spectatedStudent != null && !takeoverMode) ||
-      (!classroomState.isTeacher && (classroomState.boardsLocked || classroomState.syncToTeacher))
-    );
+    const bool isInteractionDisabled = false;
 
     final chess = chess_lib.Chess.fromFEN(widget.state.activeFen);
 
@@ -660,142 +619,7 @@ class _StudyLabChessBoardState extends ConsumerState<StudyLabChessBoard> {
                     },
                   ),
 
-                // 4. Locked Overlay for Students
-                if (classroomState.isJoined && !classroomState.isTeacher && classroomState.boardsLocked)
-                  Positioned.fill(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                        child: Container(
-                          color: Colors.black.withValues(alpha: 0.4),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(
-                                Icons.lock_rounded,
-                                color: Colors.white,
-                                size: 48,
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                'EYES ON THE TEACHER',
-                                style: GoogleFonts.outfit(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 2.0,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                'Your board is locked by the teacher.',
-                                style: GoogleFonts.inter(
-                                  color: Colors.white.withValues(alpha: 0.7),
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
 
-                // 5. Mirroring Badge for Students
-                if (classroomState.isJoined && !classroomState.isTeacher && classroomState.syncToTeacher && !classroomState.boardsLocked)
-                  Positioned(
-                    top: 12,
-                    right: 12,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.65),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.5), width: 1.5),
-                        boxShadow: [
-                          BoxShadow(
-                            color: ScholarlyTheme.accentBlue.withValues(alpha: 0.25),
-                            blurRadius: 8,
-                            spreadRadius: 1,
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 6,
-                            height: 6,
-                            decoration: const BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: ScholarlyTheme.accentBlue,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'Mirroring Teacher',
-                            style: GoogleFonts.outfit(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                // 6. Spectating/Takeover Badge for Teacher
-                if (classroomState.isJoined && classroomState.isTeacher && spectatedStudent != null)
-                  Positioned(
-                    top: 12,
-                    left: 12,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.75),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: takeoverMode ? Colors.green : Colors.amber,
-                          width: 1.5,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: (takeoverMode ? Colors.green : Colors.amber).withValues(alpha: 0.25),
-                            blurRadius: 8,
-                            spreadRadius: 1,
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 6,
-                            height: 6,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: takeoverMode ? Colors.green : Colors.amber,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            takeoverMode
-                                ? 'Takeover Mode: ${classroomState.students[spectatedStudent]?.displayName ?? "Student"}'
-                                : 'Spectating: ${classroomState.students[spectatedStudent]?.displayName ?? "Student"} (Read-Only)',
-                            style: GoogleFonts.outfit(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),

@@ -140,6 +140,59 @@ class NotificationService {
     }
   }
 
+  /// Schedule alert 5 minutes before batch start
+  Future<void> scheduleBatchStartAlert(String batchId, String batchName, String startTimeStr) async {
+    try {
+      final parts = startTimeStr.split(':');
+      if (parts.length != 2) return;
+      final hour = int.parse(parts[0]);
+      final minute = int.parse(parts[1]);
+
+      tz.TZDateTime batchStart = _nextInstanceOfTime(hour, minute);
+      tz.TZDateTime alertTime = batchStart.subtract(const Duration(minutes: 5));
+
+      final now = tz.TZDateTime.now(tz.local);
+      if (alertTime.isBefore(now)) {
+        alertTime = alertTime.add(const Duration(days: 1));
+      }
+
+      const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+        'batch_alerts',
+        'Batch Start Alerts',
+        channelDescription: 'Alerts reminding you 5 minutes before a class starts',
+        importance: Importance.high,
+        priority: Priority.high,
+      );
+
+      final int alertId = batchId.hashCode;
+
+      await _androidNotifications.zonedSchedule(
+        alertId,
+        'Batch Starting Soon ⏰',
+        'Batch "$batchName" is starting in 5 minutes.',
+        alertTime,
+        const NotificationDetails(android: androidDetails),
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+        matchDateTimeComponents: DateTimeComponents.time,
+      );
+      debugPrint('Scheduled alert for batch $batchName ($batchId) at $alertTime');
+    } catch (e) {
+      debugPrint('Failed to schedule batch start alert: $e');
+    }
+  }
+
+  /// Cancel batch start alert
+  Future<void> cancelBatchAlert(String batchId) async {
+    try {
+      final int alertId = batchId.hashCode;
+      await _androidNotifications.cancel(alertId);
+      debugPrint('Cancelled alert for batch $batchId');
+    } catch (e) {
+      debugPrint('Failed to cancel batch alert: $e');
+    }
+  }
+
   /// Helper to calculate the next occurrence of a time in local timezone
   tz.TZDateTime _nextInstanceOfTime(int hour, int minute) {
     final tz.TZDateTime now = tz.TZDateTime.now(tz.local);

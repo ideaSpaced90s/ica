@@ -17,6 +17,9 @@ import '../scholarly_theme.dart';
 import '../../application/study_lab_provider.dart';
 import '../../application/chess_provider.dart';
 import '../../services/chess_sound_service.dart';
+import '../../application/historical_cinema_provider.dart';
+import '../../domain/models/historical_game.dart';
+
 
 
 class GameLibraryTab extends ConsumerStatefulWidget {
@@ -516,12 +519,14 @@ class _GameLibraryTabState extends ConsumerState<GameLibraryTab> {
         Widget activeBody;
         if (_librarySubTabIndex == 0) {
           activeBody = _buildAllGamesList(filteredItems, notifier);
-        } else {
+        } else if (_librarySubTabIndex == 1) {
           if (_selectedFolderName == null) {
             activeBody = _buildFoldersListView();
           } else {
             activeBody = _buildFolderDetailsView(_selectedFolderName!, filteredItems, notifier);
           }
+        } else {
+          activeBody = _buildLegendsListView(notifier);
         }
 
         return Column(
@@ -577,7 +582,9 @@ class _GameLibraryTabState extends ConsumerState<GameLibraryTab> {
           });
         },
         decoration: InputDecoration(
-          hintText: 'Search games by name, players, moves...',
+          hintText: _librarySubTabIndex == 2
+              ? 'Search legends...'
+              : 'Search games by name, players, moves...',
           hintStyle: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 13),
           prefixIcon: const Icon(Icons.search_rounded, color: ScholarlyTheme.textMuted, size: 18),
           prefixIconConstraints: const BoxConstraints(minWidth: 30, minHeight: 30),
@@ -605,6 +612,8 @@ class _GameLibraryTabState extends ConsumerState<GameLibraryTab> {
         _buildSubTabButton(0, 'All Games', Icons.grid_view_rounded),
         const SizedBox(width: 8),
         _buildSubTabButton(1, 'Folders', Icons.folder_copy_rounded),
+        const SizedBox(width: 8),
+        _buildSubTabButton(2, 'Legends', Icons.star_rounded),
       ],
     );
   }
@@ -674,6 +683,141 @@ class _GameLibraryTabState extends ConsumerState<GameLibraryTab> {
           onEditStudy: _promptEditStudyHeaders,
           ref: ref,
           onGameLoaded: widget.onGameLoaded,
+        );
+      },
+    );
+  }
+
+  Widget _buildLegendsListView(StudyLabNotifier notifier) {
+    final cinemaState = ref.watch(historicalCinemaProvider);
+    final Map<String, List<HistoricalGame>> grouped = {};
+    for (final game in cinemaState.games) {
+      final title = "${game.white} vs ${game.black}";
+      final details = "${game.event} (${game.year}) | ${game.educationalTheme}";
+      
+      final query = _searchQuery.toLowerCase();
+      if (query.isEmpty || 
+          title.toLowerCase().contains(query) || 
+          details.toLowerCase().contains(query) || 
+          game.category.toLowerCase().contains(query)) {
+        grouped.putIfAbsent(game.category, () => []).add(game);
+      }
+    }
+
+    if (grouped.isEmpty) {
+      return Center(
+        child: Text(
+          'No legend games found.',
+          style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 12, fontStyle: FontStyle.italic),
+        ),
+      );
+    }
+
+    // Sort categories in the proper order as defined in the source
+    final sortedCategories = grouped.keys.toList()
+      ..sort((a, b) {
+        const categoryOrder = [
+          'cat_tactical',
+          'cat_positional',
+          'cat_dynamic',
+          'cat_endgame',
+          'cat_sacrifice',
+          'cat_hypermodern',
+          'cat_closed_systems',
+          'cat_sicilian_clashes',
+          'cat_initiative',
+          'cat_pawn_dynamics',
+          'cat_bishop_pair',
+          'cat_defensive_saves',
+        ];
+        int idxA = categoryOrder.indexWhere((key) => a.toLowerCase().contains(key));
+        int idxB = categoryOrder.indexWhere((key) => b.toLowerCase().contains(key));
+        if (idxA == -1) idxA = 999;
+        if (idxB == -1) idxB = 999;
+        return idxA.compareTo(idxB);
+      });
+
+    return ListView.builder(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      itemCount: sortedCategories.length,
+      itemBuilder: (context, index) {
+        final categoryName = sortedCategories[index];
+        final gamesInCategory = grouped[categoryName]!;
+        final metadata = _getCategoryMetadata(categoryName);
+        
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: JuicyGlassCard(
+            padding: EdgeInsets.zero,
+            borderRadius: 12,
+            borderColor: ScholarlyTheme.panelStroke.withValues(alpha: 0.3),
+            child: Theme(
+              data: Theme.of(context).copyWith(
+                dividerColor: Colors.transparent,
+              ),
+              child: ExpansionTile(
+                shape: const Border(),
+                collapsedShape: const Border(),
+                leading: Icon(metadata.icon, color: metadata.color, size: 20),
+                title: Text(
+                  metadata.title,
+                  style: GoogleFonts.outfit(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                    color: metadata.color,
+                  ),
+                ),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      metadata.subtitle,
+                      style: GoogleFonts.inter(fontSize: 9, color: ScholarlyTheme.textMuted),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${gamesInCategory.length} game${gamesInCategory.length > 1 ? "s" : ""}',
+                      style: GoogleFonts.inter(fontSize: 8, color: ScholarlyTheme.textMuted, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+                children: gamesInCategory.map((game) {
+                  final title = "${game.white} vs ${game.black}";
+                  final details = "${game.event} (${game.year}) | ${game.educationalTheme}";
+                  return ListTile(
+                    dense: true,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                    title: Text(
+                      title,
+                      style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 11, color: ScholarlyTheme.textPrimary),
+                    ),
+                    subtitle: Text(
+                      details,
+                      style: GoogleFonts.inter(fontSize: 9, color: ScholarlyTheme.textMuted),
+                    ),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.play_arrow_rounded, color: ScholarlyTheme.accentBlue, size: 18),
+                      onPressed: () {
+                        ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                        notifier.importPgn(game.pgn);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Loaded: $title', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+                              backgroundColor: Colors.green,
+                              duration: const Duration(seconds: 1),
+                            ),
+                          );
+                          widget.onGameLoaded();
+                        }
+                      },
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
         );
       },
     );
@@ -1540,3 +1684,113 @@ class GameLibraryFolder {
     );
   }
 }
+
+class _CategoryMetadata {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color color;
+
+  const _CategoryMetadata({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.color,
+  });
+}
+
+_CategoryMetadata _getCategoryMetadata(String category) {
+  final catLower = category.toLowerCase();
+  if (catLower.contains("cat_tactical") || catLower.contains("horizons") || catLower.contains("horisons")) {
+    return const _CategoryMetadata(
+      title: "Open Horizons & Gambits",
+      subtitle: "Attacking lines, piece sacrifices, and tactical calculations",
+      icon: Icons.grid_on_rounded,
+      color: Color(0xFF059669),
+    );
+  } else if (catLower.contains("cat_positional") || catLower.contains("fortress")) {
+    return const _CategoryMetadata(
+      title: "The Iron Fortress",
+      subtitle: "Prophylaxis, pawn structures, and positional suffocation",
+      icon: Icons.security_rounded,
+      color: ScholarlyTheme.accentBlue,
+    );
+  } else if (catLower.contains("cat_dynamic") || catLower.contains("counterstrike")) {
+    return const _CategoryMetadata(
+      title: "The Counterstrike Collection",
+      subtitle: "Sharp defense turning into instant attack and dynamics",
+      icon: Icons.bolt_rounded,
+      color: Color(0xFF7C3AED),
+    );
+  } else if (catLower.contains("cat_endgame") || catLower.contains("endgame")) {
+    return const _CategoryMetadata(
+      title: "The Endgame Squeeze",
+      subtitle: "Technical conversions, king activity, and promotion races",
+      icon: Icons.workspace_premium_rounded,
+      color: ScholarlyTheme.realGold,
+    );
+  } else if (catLower.contains("cat_sacrifice") || catLower.contains("sacrifice")) {
+    return const _CategoryMetadata(
+      title: "The Art of the Sacrifice",
+      subtitle: "Direct piece sacrifices, king hunts, and mating combinations",
+      icon: Icons.local_fire_department_rounded,
+      color: Color(0xFFE11D48),
+    );
+  } else if (catLower.contains("cat_hypermodern") || catLower.contains("hypermodern")) {
+    return const _CategoryMetadata(
+      title: "Hypermodern Masterpieces",
+      subtitle: "Flank control, fianchetto setups, and indirect center pressure",
+      icon: Icons.radar_rounded,
+      color: Color(0xFF0D9488),
+    );
+  } else if (catLower.contains("cat_closed_systems") || catLower.contains("closed")) {
+    return const _CategoryMetadata(
+      title: "Queen's Gambit & Closed Stratagems",
+      subtitle: "Pawn structures, minority attacks, and tension in closed files",
+      icon: Icons.lock_rounded,
+      color: Color(0xFF4F46E5),
+    );
+  } else if (catLower.contains("cat_sicilian") || catLower.contains("sicilian")) {
+    return const _CategoryMetadata(
+      title: "Razor-Sharp Sicilians",
+      subtitle: "Asymmetrical tactical battles and opposite-side castling storms",
+      icon: Icons.offline_bolt_rounded,
+      color: Color(0xFFEA580C),
+    );
+  } else if (catLower.contains("cat_initiative") || catLower.contains("initiative")) {
+    return const _CategoryMetadata(
+      title: "Mastering the Initiative",
+      subtitle: "Energetic play, continuous threats, and restricting the defender",
+      icon: Icons.trending_up_rounded,
+      color: Color(0xFF2563EB),
+    );
+  } else if (catLower.contains("cat_pawn") || catLower.contains("pawn")) {
+    return const _CategoryMetadata(
+      title: "Pawn Structure Dynamics",
+      subtitle: "Carlsbad pawn chains, isolated pawns, and passed pawn advances",
+      icon: Icons.grain_rounded,
+      color: Color(0xFF65A30D),
+    );
+  } else if (catLower.contains("cat_bishop") || catLower.contains("bishop")) {
+    return const _CategoryMetadata(
+      title: "The Power of the Bishop Pair",
+      subtitle: "Long-range domination, knight restriction, and diagonal control",
+      icon: Icons.layers_rounded,
+      color: Color(0xFF7C3AED),
+    );
+  } else if (catLower.contains("cat_defensive") || catLower.contains("escape")) {
+    return const _CategoryMetadata(
+      title: "The Art of the Escape",
+      subtitle: "Miraculous swindles, constructing fortresses, and saving the game",
+      icon: Icons.shield_rounded,
+      color: Color(0xFF475569),
+    );
+  }
+  return const _CategoryMetadata(
+    title: "Other Legend Games",
+    subtitle: "Historical masterpieces",
+    icon: Icons.movie_filter_rounded,
+    color: ScholarlyTheme.accentBlue,
+  );
+}
+

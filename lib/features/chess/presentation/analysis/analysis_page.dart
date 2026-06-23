@@ -18,6 +18,13 @@ import 'widgets/game_report_panel.dart';
 import 'widgets/practice_mode_panel.dart';
 import '../mobile_navigation_shell.dart';
 
+enum EnginePlayMode {
+  manual,
+  autoWhite,
+  autoBlack,
+  engineVsEngine,
+}
+
 class AnalysisPage extends ConsumerStatefulWidget {
   const AnalysisPage({super.key});
 
@@ -32,6 +39,14 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> with TickerProvider
   int _currentTabIndex = 0;
   bool _isAutoPlaying = false;
   Timer? _autoPlayTimer;
+  
+  // Engine Autoplay state
+  EnginePlayMode _enginePlayMode = EnginePlayMode.manual;
+  Timer? _autoEngineMoveTimer;
+  bool _isEngineThinking = false;
+  bool _waitingForImmediateMove = false;
+  bool _isAutoMode = false;
+
   late final PageController _horizontalPageController;
   int _activeHorizontalPage = 1; // Default to Move Notation (page 1)
 
@@ -40,6 +55,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> with TickerProvider
     _tabController.dispose();
     _horizontalPageController.dispose();
     _autoPlayTimer?.cancel();
+    _autoEngineMoveTimer?.cancel();
     ref.read(backButtonOverridesProvider.notifier).update((map) {
       final newMap = Map<int, Future<bool> Function()>.from(map);
       newMap.remove(5);
@@ -74,6 +90,171 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> with TickerProvider
   void _stopAutoPlay() {
     _autoPlayTimer?.cancel();
     if (mounted) setState(() => _isAutoPlaying = false);
+  }
+
+  void _setEnginePlayMode(EnginePlayMode mode, StudyLabState studyState, AnalysisEngineController engineNotifier, {required bool isAuto}) {
+    ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+    setState(() {
+      if (_enginePlayMode == mode && _isAutoMode == isAuto) {
+        _enginePlayMode = EnginePlayMode.manual;
+        _isAutoMode = false;
+      } else {
+        _enginePlayMode = mode;
+        _isAutoMode = isAuto;
+        
+        final isWhiteToMove = !studyState.activeFen.contains(' b ');
+        if ((mode == EnginePlayMode.autoWhite && isWhiteToMove) ||
+            (mode == EnginePlayMode.autoBlack && !isWhiteToMove)) {
+          _waitingForImmediateMove = true;
+        }
+
+        // Ensure engine is on
+        final engineState = ref.read(analysisEngineControllerProvider);
+        if (!engineState.isEngineOn) {
+          engineNotifier.toggleEngine(true, studyState.activeFen);
+        }
+      }
+    });
+    _checkAutoEngineMove();
+  }
+
+  void _makeEngineMove(StudyLabNotifier studyNotifier, {bool immediate = false}) {
+    if (_isEngineThinking) return;
+
+    final engineState = ref.read(analysisEngineControllerProvider);
+    if (engineState.isEngineOn && engineState.topLines.isNotEmpty) {
+      final firstLine = engineState.topLines.first;
+      if (firstLine.moves.isNotEmpty) {
+        final uci = firstLine.moves.first;
+        if (uci.length >= 4) {
+          final from = uci.substring(0, 2);
+          final to = uci.substring(2, 4);
+          final promotion = uci.length > 4 ? uci.substring(4, 5) : "";
+
+          if (immediate) {
+            studyNotifier.makeMove(from, to, promotion);
+          } else {
+            setState(() {
+              _isEngineThinking = true;
+            });
+
+            Timer(const Duration(milliseconds: 600), () {
+              if (!mounted) return;
+              studyNotifier.makeMove(from, to, promotion);
+              setState(() {
+                _isEngineThinking = false;
+              });
+            });
+          }
+        }
+      }
+    }
+  }
+
+  void _checkAutoEngineMove({bool isEngineUpdate = false}) {
+    if (isEngineUpdate && _autoEngineMoveTimer?.isActive == true) {
+      return;
+    }
+
+    final engineState = ref.read(analysisEngineControllerProvider);
+    if (!engineState.isEngineOn) return;
+    if (_enginePlayMode == EnginePlayMode.manual) return;
+
+    final studyState = ref.read(studyLabProvider);
+    final isWhiteToMove = !studyState.activeFen.contains(' b ');
+
+    bool shouldPlay = false;
+    if (_enginePlayMode == EnginePlayMode.autoWhite && isWhiteToMove) {
+      shouldPlay = _isAutoMode || _waitingForImmediateMove;
+    } else if (_enginePlayMode == EnginePlayMode.autoBlack && !isWhiteToMove) {
+      shouldPlay = _isAutoMode || _waitingForImmediateMove;
+    }
+
+    if (shouldPlay) {
+      if (engineState.topLines.isEmpty) {
+        return; // Wait for engine lines
+      }
+
+      final bool isImmediate = _waitingForImmediateMove;
+      _waitingForImmediateMove = false; // Reset the flag
+
+      // If this was a single tap play (not auto), reset mode back to manual immediately
+      if (!_isAutoMode) {
+        setState(() {
+          _enginePlayMode = EnginePlayMode.manual;
+        });
+      }
+
+      if (!isEngineUpdate || isImmediate) {
+        _autoEngineMoveTimer?.cancel();
+      }
+
+      final delay = isImmediate ? const Duration(milliseconds: 50) : const Duration(milliseconds: 1200);
+      _autoEngineMoveTimer = Timer(delay, () {
+        if (!mounted) return;
+        final latestEngineState = ref.read(analysisEngineControllerProvider);
+        if (latestEngineState.isEngineOn && latestEngineState.topLines.isNotEmpty) {
+          _makeEngineMove(ref.read(studyLabProvider.notifier), immediate: isImmediate);
+        }
+      });
+    } else {
+      _waitingForImmediateMove = false;
+      _autoEngineMoveTimer?.cancel();
+    }
+  }
+
+  Widget _buildGlowButton({
+    required String label,
+    required bool isActive,
+    Color? activeColor,
+    required VoidCallback onTap,
+    VoidCallback? onLongPress,
+    required String tooltip,
+  }) {
+    final Color buttonColor = activeColor ?? ScholarlyTheme.accentBlue;
+    return Expanded(
+      child: Tooltip(
+        message: tooltip,
+        child: GestureDetector(
+          onTap: onTap,
+          onLongPress: onLongPress,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            height: 28,
+            decoration: BoxDecoration(
+              color: isActive 
+                  ? buttonColor.withValues(alpha: 0.15) 
+                  : ScholarlyTheme.panelStroke.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(
+                color: isActive 
+                    ? buttonColor.withValues(alpha: 0.6) 
+                    : ScholarlyTheme.panelStroke.withValues(alpha: 0.15),
+                width: isActive ? 1.5 : 1.0,
+              ),
+              boxShadow: isActive ? [
+                BoxShadow(
+                  color: buttonColor.withValues(alpha: 0.25),
+                  blurRadius: 6,
+                  spreadRadius: 1,
+                )
+              ] : null,
+            ),
+            child: Center(
+              child: Text(
+                label,
+                style: GoogleFonts.outfit(
+                  color: isActive ? buttonColor : ScholarlyTheme.textMuted,
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -256,6 +437,14 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> with TickerProvider
     // Listen to FEN changes to restart the engine
     ref.listen<String>(studyLabProvider.select((s) => s.activeFen), (previous, next) {
       ref.read(analysisEngineControllerProvider.notifier).setFen(next);
+      _checkAutoEngineMove();
+    });
+
+    // Listen to engine updates for autoplay scheduler
+    ref.listen(analysisEngineControllerProvider, (previous, next) {
+      if (next.isEngineOn) {
+        _checkAutoEngineMove(isEngineUpdate: true);
+      }
     });
 
     Widget activeTabBody;
@@ -519,6 +708,9 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> with TickerProvider
     final engineState = ref.watch(analysisEngineControllerProvider);
     if (!engineState.isEngineOn) return const SizedBox.shrink();
 
+    final studyState = ref.watch(studyLabProvider);
+    final engineNotifier = ref.read(analysisEngineControllerProvider.notifier);
+
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -548,6 +740,35 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> with TickerProvider
           ],
         ),
         const SizedBox(height: 6),
+        Row(
+          children: [
+            _buildGlowButton(
+              label: 'White',
+              isActive: _enginePlayMode == EnginePlayMode.autoWhite && engineState.isEngineOn,
+              activeColor: _isAutoMode ? Colors.green : ScholarlyTheme.accentBlue,
+              onTap: () => _setEnginePlayMode(EnginePlayMode.autoWhite, studyState, engineNotifier, isAuto: false),
+              onLongPress: () => _setEnginePlayMode(EnginePlayMode.autoWhite, studyState, engineNotifier, isAuto: true),
+              tooltip: 'White plays (Tap to play one move, Long-press for auto-play)',
+            ),
+            const SizedBox(width: 5),
+            _buildGlowButton(
+              label: 'Black',
+              isActive: _enginePlayMode == EnginePlayMode.autoBlack && engineState.isEngineOn,
+              activeColor: _isAutoMode ? Colors.green : ScholarlyTheme.accentBlue,
+              onTap: () => _setEnginePlayMode(EnginePlayMode.autoBlack, studyState, engineNotifier, isAuto: false),
+              onLongPress: () => _setEnginePlayMode(EnginePlayMode.autoBlack, studyState, engineNotifier, isAuto: true),
+              tooltip: 'Black plays (Tap to play one move, Long-press for auto-play)',
+            ),
+            const SizedBox(width: 5),
+            _buildGlowButton(
+              label: 'Self',
+              isActive: _enginePlayMode == EnginePlayMode.manual && engineState.isEngineOn,
+              onTap: () => _setEnginePlayMode(EnginePlayMode.manual, studyState, engineNotifier, isAuto: false),
+              tooltip: 'Manual analysis mode (turn engine auto-play off)',
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
         Expanded(
           child: SingleChildScrollView(
             physics: const BouncingScrollPhysics(),

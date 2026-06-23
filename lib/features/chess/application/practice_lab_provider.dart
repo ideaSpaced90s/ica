@@ -38,6 +38,15 @@ class PracticeLabState {
   final int? startNodeIndex;
   final int? viewingMoveIndex;
 
+  // Timer additions
+  final bool showTimer;
+  final bool isClockRunning;
+  final Duration whiteTimeLeft;
+  final Duration blackTimeLeft;
+  final Duration baseTimeDuration;
+  final Duration incrementDuration;
+  final String? gameConclusion;
+
   PracticeLabState({
     this.isSessionActive = false,
     this.fen = '',
@@ -57,6 +66,15 @@ class PracticeLabState {
     this.pendingPromoTo,
     this.startNodeIndex,
     this.viewingMoveIndex,
+
+    // Timer additions defaults
+    this.showTimer = false,
+    this.isClockRunning = false,
+    this.whiteTimeLeft = const Duration(minutes: 10),
+    this.blackTimeLeft = const Duration(minutes: 10),
+    this.baseTimeDuration = const Duration(minutes: 10),
+    this.incrementDuration = const Duration(seconds: 0),
+    this.gameConclusion,
   });
 
   PracticeLabState copyWith({
@@ -83,6 +101,16 @@ class PracticeLabState {
     // Using the same pattern as clearViewingMoveIndex because passing null
     // via a nullable String? parameter cannot be distinguished from "not provided".
     bool clearPendingPromo = false,
+
+    // Timer copyWith addition
+    bool? showTimer,
+    bool? isClockRunning,
+    Duration? whiteTimeLeft,
+    Duration? blackTimeLeft,
+    Duration? baseTimeDuration,
+    Duration? incrementDuration,
+    String? gameConclusion,
+    bool clearGameConclusion = false,
   }) {
     return PracticeLabState(
       isSessionActive: isSessionActive ?? this.isSessionActive,
@@ -103,6 +131,14 @@ class PracticeLabState {
       pendingPromoTo: clearPendingPromo ? null : (pendingPromoTo ?? this.pendingPromoTo),
       startNodeIndex: startNodeIndex ?? this.startNodeIndex,
       viewingMoveIndex: clearViewingMoveIndex ? null : (viewingMoveIndex ?? this.viewingMoveIndex),
+
+      showTimer: showTimer ?? this.showTimer,
+      isClockRunning: isClockRunning ?? this.isClockRunning,
+      whiteTimeLeft: whiteTimeLeft ?? this.whiteTimeLeft,
+      blackTimeLeft: blackTimeLeft ?? this.blackTimeLeft,
+      baseTimeDuration: baseTimeDuration ?? this.baseTimeDuration,
+      incrementDuration: incrementDuration ?? this.incrementDuration,
+      gameConclusion: clearGameConclusion ? null : (gameConclusion ?? this.gameConclusion),
     );
   }
 }
@@ -111,6 +147,7 @@ class PracticeLabNotifier extends Notifier<PracticeLabState> {
   late final AnalysisStockfishService _service;
   Ref get _ref => ref;
   StreamSubscription? _subscription;
+  Timer? _chessClockTimer;
 
   @override
   PracticeLabState build() {
@@ -119,6 +156,7 @@ class PracticeLabNotifier extends Notifier<PracticeLabState> {
     _logDebug('PracticeLabNotifier initialized, listening to service output stream');
 
     ref.onDispose(() {
+      _chessClockTimer?.cancel();
       _subscription?.cancel();
       _logDebug('PracticeLabNotifier disposed');
     });
@@ -157,6 +195,101 @@ class PracticeLabNotifier extends Notifier<PracticeLabState> {
     }
   }
 
+  void toggleTimer(bool value) {
+    _chessClockTimer?.cancel();
+    state = state.copyWith(
+      showTimer: value,
+      isClockRunning: false,
+      whiteTimeLeft: state.baseTimeDuration,
+      blackTimeLeft: state.baseTimeDuration,
+    );
+  }
+
+  void setTimerPreset(Duration base, Duration inc) {
+    _chessClockTimer?.cancel();
+    state = state.copyWith(
+      showTimer: true,
+      isClockRunning: false,
+      baseTimeDuration: base,
+      incrementDuration: inc,
+      whiteTimeLeft: base,
+      blackTimeLeft: base,
+    );
+  }
+
+  void setCustomBaseTime(Duration base) {
+    _chessClockTimer?.cancel();
+    state = state.copyWith(
+      showTimer: true,
+      isClockRunning: false,
+      baseTimeDuration: base,
+      whiteTimeLeft: base,
+      blackTimeLeft: base,
+    );
+  }
+
+  void setCustomIncrement(Duration inc) {
+    _chessClockTimer?.cancel();
+    state = state.copyWith(
+      showTimer: true,
+      isClockRunning: false,
+      incrementDuration: inc,
+      whiteTimeLeft: state.baseTimeDuration,
+      blackTimeLeft: state.baseTimeDuration,
+    );
+  }
+
+  void _startChessClock() {
+    _chessClockTimer?.cancel();
+    if (!state.isSessionActive || !state.showTimer || state.isGameOver) return;
+
+    DateTime lastTick = DateTime.now();
+    _chessClockTimer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
+      if (!state.isSessionActive || state.isGameOver) {
+        timer.cancel();
+        return;
+      }
+
+      final now = DateTime.now();
+      final elapsed = now.difference(lastTick);
+      lastTick = now;
+
+      final isWhiteToMove = !state.fen.contains(' b ');
+
+      if (isWhiteToMove) {
+        final newTime = state.whiteTimeLeft - elapsed;
+        if (newTime <= Duration.zero) {
+          _chessClockTimer?.cancel();
+          final conclusion = state.isPlayerWhite ? 'You lost on time' : 'You won on time';
+          state = state.copyWith(
+            whiteTimeLeft: Duration.zero,
+            isGameOver: true,
+            gameResult: '0-1',
+            gameConclusion: conclusion,
+            isClockRunning: false,
+          );
+        } else {
+          state = state.copyWith(whiteTimeLeft: newTime);
+        }
+      } else {
+        final newTime = state.blackTimeLeft - elapsed;
+        if (newTime <= Duration.zero) {
+          _chessClockTimer?.cancel();
+          final conclusion = state.isPlayerWhite ? 'You won on time' : 'You lost on time';
+          state = state.copyWith(
+            blackTimeLeft: Duration.zero,
+            isGameOver: true,
+            gameResult: '1-0',
+            gameConclusion: conclusion,
+            isClockRunning: false,
+          );
+        } else {
+          state = state.copyWith(blackTimeLeft: newTime);
+        }
+      }
+    });
+  }
+
   Future<void> startSession(String fen, bool playerIsWhite, int skillLevel) async {
     _logDebug('startSession FEN=$fen playerIsWhite=$playerIsWhite skillLevel=$skillLevel');
     
@@ -181,13 +314,29 @@ class PracticeLabNotifier extends Notifier<PracticeLabState> {
     final isGameOver = localChess.game_over;
 
     String? gameResult;
+    String? gameConclusion;
     if (isGameOver) {
       if (localChess.in_checkmate) {
         gameResult = isWhiteTurn ? '0-1' : '1-0';
+        gameConclusion = 'Checkmate';
+      } else if (localChess.in_threefold_repetition) {
+        gameResult = '½-½';
+        gameConclusion = 'Draw (Repetition)';
+      } else if (localChess.insufficient_material) {
+        gameResult = '½-½';
+        gameConclusion = 'Draw (Insufficient Material)';
+      } else if (localChess.in_stalemate) {
+        gameResult = '½-½';
+        gameConclusion = 'Stalemate';
       } else {
         gameResult = '½-½';
+        gameConclusion = 'Draw';
       }
     }
+
+    final currentShowTimer = state.showTimer;
+    final currentBaseTime = state.baseTimeDuration;
+    final currentIncrement = state.incrementDuration;
 
     final studyState = _ref.read(studyLabProvider);
     state = PracticeLabState(
@@ -201,8 +350,16 @@ class PracticeLabNotifier extends Notifier<PracticeLabState> {
       isEngineThinking: false,
       isGameOver: isGameOver,
       gameResult: gameResult,
+      gameConclusion: gameConclusion,
       isBoardFlipped: !playerIsWhite,
       startNodeIndex: studyState.currentNodeIndex,
+
+      showTimer: currentShowTimer,
+      baseTimeDuration: currentBaseTime,
+      incrementDuration: currentIncrement,
+      whiteTimeLeft: currentBaseTime,
+      blackTimeLeft: currentBaseTime,
+      isClockRunning: currentShowTimer && !isGameOver,
     );
 
     // 3. Configure stockfish options
@@ -211,7 +368,13 @@ class PracticeLabNotifier extends Notifier<PracticeLabState> {
     await _service.sendCommand('setoption name Skill Level value $skillLevel');
     await _service.sendCommand('setoption name MultiPV value 1');
 
-    // 4. Trigger engine move if it is the engine's turn and the game is not already over
+    // 4. Start chess clock if enabled
+    _chessClockTimer?.cancel();
+    if (currentShowTimer && !isGameOver) {
+      _startChessClock();
+    }
+
+    // 5. Trigger engine move if it is the engine's turn and the game is not already over
     if (isEngineTurn && !isGameOver) {
       _logDebug('It is Engine\'s turn to move. Triggering initial engine move.');
       await _triggerEngineMove();
@@ -276,11 +439,35 @@ class PracticeLabNotifier extends Notifier<PracticeLabState> {
 
     final isGameOver = localChess.game_over;
     String? gameResult;
+    String? gameConclusion;
     if (isGameOver) {
       if (localChess.in_checkmate) {
         gameResult = state.isPlayerWhite ? '1-0' : '0-1';
+        gameConclusion = 'Checkmate';
+      } else if (localChess.in_threefold_repetition) {
+        gameResult = '½-½';
+        gameConclusion = 'Draw (Repetition)';
+      } else if (localChess.insufficient_material) {
+        gameResult = '½-½';
+        gameConclusion = 'Draw (Insufficient Material)';
+      } else if (localChess.in_stalemate) {
+        gameResult = '½-½';
+        gameConclusion = 'Stalemate';
       } else {
         gameResult = '½-½';
+        gameConclusion = 'Draw';
+      }
+      _chessClockTimer?.cancel();
+    }
+
+    // Add increment if clock is active
+    Duration newWhiteTime = state.whiteTimeLeft;
+    Duration newBlackTime = state.blackTimeLeft;
+    if (state.showTimer && !isGameOver) {
+      if (state.isPlayerWhite) {
+        newWhiteTime += state.incrementDuration;
+      } else {
+        newBlackTime += state.incrementDuration;
       }
     }
 
@@ -292,6 +479,10 @@ class PracticeLabNotifier extends Notifier<PracticeLabState> {
       sanHistory: newSan,
       isGameOver: isGameOver,
       gameResult: gameResult,
+      gameConclusion: gameConclusion,
+      whiteTimeLeft: newWhiteTime,
+      blackTimeLeft: newBlackTime,
+      isClockRunning: state.showTimer && !isGameOver,
     );
 
     if (!isGameOver) {
@@ -378,11 +569,35 @@ class PracticeLabNotifier extends Notifier<PracticeLabState> {
 
     final isGameOver = localChess.game_over;
     String? gameResult;
+    String? gameConclusion;
     if (isGameOver) {
       if (localChess.in_checkmate) {
         gameResult = state.isPlayerWhite ? '0-1' : '1-0';
+        gameConclusion = 'Checkmate';
+      } else if (localChess.in_threefold_repetition) {
+        gameResult = '½-½';
+        gameConclusion = 'Draw (Repetition)';
+      } else if (localChess.insufficient_material) {
+        gameResult = '½-½';
+        gameConclusion = 'Draw (Insufficient Material)';
+      } else if (localChess.in_stalemate) {
+        gameResult = '½-½';
+        gameConclusion = 'Stalemate';
       } else {
         gameResult = '½-½';
+        gameConclusion = 'Draw';
+      }
+      _chessClockTimer?.cancel();
+    }
+
+    // Add increment if clock is active
+    Duration newWhiteTime = state.whiteTimeLeft;
+    Duration newBlackTime = state.blackTimeLeft;
+    if (state.showTimer && !isGameOver) {
+      if (!state.isPlayerWhite) {
+        newWhiteTime += state.incrementDuration;
+      } else {
+        newBlackTime += state.incrementDuration;
       }
     }
 
@@ -395,6 +610,10 @@ class PracticeLabNotifier extends Notifier<PracticeLabState> {
       isEngineThinking: false,
       isGameOver: isGameOver,
       gameResult: gameResult,
+      gameConclusion: gameConclusion,
+      whiteTimeLeft: newWhiteTime,
+      blackTimeLeft: newBlackTime,
+      isClockRunning: state.showTimer && !isGameOver,
     );
   }
 
@@ -409,14 +628,18 @@ class PracticeLabNotifier extends Notifier<PracticeLabState> {
   void resign() {
     if (!state.isSessionActive || state.isGameOver) return;
 
+    _chessClockTimer?.cancel();
     final gameResult = state.isPlayerWhite ? '0-1' : '1-0';
     state = state.copyWith(
       isGameOver: true,
       gameResult: gameResult,
+      gameConclusion: 'Resigned',
+      isClockRunning: false,
     );
   }
 
   Future<void> endSession(String analysisCurrentFen) async {
+    _chessClockTimer?.cancel();
     state = PracticeLabState();
 
     await _service.sendCommand('stop');
@@ -466,9 +689,15 @@ class PracticeLabNotifier extends Notifier<PracticeLabState> {
       sanHistory: newSan,
       isGameOver: false,
       gameResult: null,
+      clearGameConclusion: true,
       isEngineThinking: false,
       clearViewingMoveIndex: true,
+      isClockRunning: state.showTimer,
     );
+
+    if (state.showTimer) {
+      _startChessClock();
+    }
 
     _ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
   }

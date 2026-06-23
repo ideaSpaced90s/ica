@@ -67,6 +67,7 @@ dependencies:
   firebase_app_check: ^0.4.5
   google_sign_in: ^7.2.0
   firebase_storage: ^13.4.3
+
   lottie: ^3.3.3
   animations: ^2.2.0
   flutter_animate: ^4.5.0
