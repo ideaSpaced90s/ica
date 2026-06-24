@@ -285,24 +285,24 @@ class _GMChanakyaIntroOverlayState extends ConsumerState<GMChanakyaIntroOverlay>
     final words = text.split(' ');
     for (int i = 0; i < words.length; i++) {
       final word = words[i];
-      final cleanWord = word.replaceAll(RegExp(r'[.,!?:;🕉️\(\)]'), '').toLowerCase();
+      final cleanWord = word.replaceAll(RegExp(r"[.,!?:;🕉️\(\)'’\x22]"), '').toLowerCase();
 
       Color? highlightColor;
       FontWeight fontWeight = FontWeight.normal;
 
-      if (['apprentice', 'strategist', 'strategists', 'warrior', 'tactician'].contains(cleanWord)) {
+      if (['apprentice', 'strategist', 'strategists', 'warrior', 'tactician', 'mentor', 'guide', 'critic', 'chanakya', 'avatar', 'avatars'].contains(cleanWord)) {
         highlightColor = const Color(0xFFD97706); // Warm Amber
         fontWeight = FontWeight.bold;
-      } else if (['chamber', 'crucible', 'arena', 'battleground', 'puzzles', 'sanctuary', 'prescription'].contains(cleanWord)) {
+      } else if (['chamber', 'crucible', 'arena', 'battleground', 'puzzles', 'sanctuary', 'prescription', 'academy', 'assignment', 'desk', 'session', 'sessions', 'lessons', 'lesson', 'program', 'scenarios', 'profile', 'rated', 'games', 'game', 'clock'].contains(cleanWord)) {
         highlightColor = const Color(0xFF2563EB); // Royal Blue
         fontWeight = FontWeight.bold;
-      } else if (['intuition', 'calculation', 'calculate', 'theory', 'theories', 'sight'].contains(cleanWord)) {
+      } else if (['intuition', 'calculation', 'calculate', 'theory', 'theories', 'sight', 'ideas', 'patterns', 'decisions', 'analyze', 'calibration', 'baseline', 'report', 'tuning', 'tune'].contains(cleanWord)) {
         highlightColor = const Color(0xFF7C3AED); // Purple
         fontWeight = FontWeight.bold;
-      } else if (['defeat', 'crucible', 'fire', 'stakes', 'pressure', 'blunders', 'hesitation', 'blindness'].contains(cleanWord)) {
+      } else if (['defeat', 'crucible', 'fire', 'stakes', 'pressure', 'blunders', 'hesitation', 'blindness', 'scotoma', 'difficulty', 'blind', 'spots', 'spot', 'limit', 'required', 'trials'].contains(cleanWord)) {
         highlightColor = const Color(0xFFDC2626); // Crimson Red
         fontWeight = FontWeight.bold;
-      } else if (['victory', 'mastery', 'understanding', 'instincts', 'resilience', 'conditioning', 'discipline'].contains(cleanWord)) {
+      } else if (['victory', 'mastery', 'understanding', 'instincts', 'resilience', 'conditioning', 'discipline', 'welcome', 'practice', 'learn', 'construct', 'tailored', 'personalized', 'strength', 'sharpen', 'reduce', 'strengthen', 'solve', 'freely'].contains(cleanWord)) {
         highlightColor = const Color(0xFF059669); // Emerald Green
         fontWeight = FontWeight.bold;
       }

@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../application/assignment_provider.dart';
 import '../../domain/models/assignment_state.dart';
 import '../../application/battleground_provider.dart';
+import '../../application/arena_provider.dart';
 import '../../application/study_lab_provider.dart';
 import '../widgets/animated_check_widget.dart';
 import '../mobile_navigation_shell.dart';
@@ -728,12 +729,30 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
           );
           return;
         }
-        ref.read(battlegroundProvider.notifier).launchAssignmentMatch(
-          avatarId: task.targetId,
-          baseTime: const Duration(minutes: 10),
-          increment: Duration.zero,
-        );
-        ref.read(mobileNavIndexProvider.notifier).state = 2; // Battleground tab
+        if (task.targetId == "calibration" || task.targetId == "recalibration") {
+          ref.read(battlegroundProvider.notifier).launchAssignmentMatch(
+            avatarId: "avatar_0",
+            baseTime: const Duration(minutes: 10),
+            increment: Duration.zero,
+          );
+          ref.read(mobileNavIndexProvider.notifier).state = 2; // Battleground tab
+        } else {
+          ref.read(arenaProvider.notifier).selectUpperAvatar(task.targetId);
+          
+          Duration baseTime = const Duration(minutes: 10);
+          Duration increment = Duration.zero;
+          final descLower = task.description.toLowerCase();
+          if (descLower.contains("blitz")) {
+            baseTime = const Duration(minutes: 3);
+          } else if (descLower.contains("bullet")) {
+            baseTime = const Duration(minutes: 1);
+          } else if (descLower.contains("rapid")) {
+            baseTime = const Duration(minutes: 15);
+          }
+          
+          ref.read(arenaProvider.notifier).setTimeControl(baseTime, increment);
+          ref.read(mobileNavIndexProvider.notifier).state = 1; // Arena tab
+        }
         break;
       case DailyTaskType.puzzle:
         final storeState = ref.read(storeProvider);

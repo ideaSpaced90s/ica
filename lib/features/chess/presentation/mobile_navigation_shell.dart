@@ -19,6 +19,7 @@ import 'analysis/analysis_page.dart';
 import 'history_page.dart';
 import 'assignment/assignment_page.dart';
 import '../application/assignment_provider.dart';
+import '../domain/models/assignment_state.dart';
 import 'tutorial_page.dart';
 import 'about_us_page.dart';
 import 'settings_page.dart';
@@ -40,11 +41,18 @@ import '../application/navigation_provider.dart';
 export '../application/navigation_provider.dart';
 
 
-class MobileNavigationShell extends ConsumerWidget {
+class MobileNavigationShell extends ConsumerStatefulWidget {
   const MobileNavigationShell({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MobileNavigationShell> createState() => _MobileNavigationShellState();
+}
+
+class _MobileNavigationShellState extends ConsumerState<MobileNavigationShell> {
+  DailyTask? _completedTaskBanner;
+
+  @override
+  Widget build(BuildContext context) {
     final currentIndex = ref.watch(mobileNavIndexProvider);
     final bgState = ref.watch(battlegroundProvider);
     final isBgMatchActive = currentIndex == 2 && bgState.activeRatedMatchId != null;
@@ -52,6 +60,18 @@ class MobileNavigationShell extends ConsumerWidget {
     final academyState = ref.watch(chessProvider);
     final isAcademyMatchActive = currentIndex == 3 && academyState.recentMoves.isNotEmpty && !academyState.game.gameOver;
     final isDrawerDisabled = isBgMatchActive || isAcademyMatchActive;
+
+    // Listen to assignment provider for task completion
+    ref.listen<AssignmentState>(assignmentProvider, (previous, next) {
+      if (next.newlyCompletedTaskIndex >= 0 &&
+          (previous == null || previous.newlyCompletedTaskIndex != next.newlyCompletedTaskIndex)) {
+        if (currentIndex != 11) { // If not on Assignment Page
+          setState(() {
+            _completedTaskBanner = next.dailyTasks[next.newlyCompletedTaskIndex];
+          });
+        }
+      }
+    });
 
     // Mute background music when in Battleground (2)
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -185,7 +205,7 @@ class MobileNavigationShell extends ConsumerWidget {
                 } else if (currentIndex == 5) {
                   final studyState = ref.read(studyLabProvider);
                   if (studyState.isDirty && studyState.nodes.isNotEmpty) {
-                    _showUnsavedChangesOnMenuClick(ref, context);
+                    _showUnsavedChangesOnMenuClick(context);
                   } else {
                     Scaffold.of(context).openDrawer();
                   }
@@ -234,6 +254,21 @@ class MobileNavigationShell extends ConsumerWidget {
           const IgnorePointer(
             child: PageTransitionOverlay(),
           ),
+          if (_completedTaskBanner != null)
+            Positioned(
+              bottom: 20,
+              left: 16,
+              right: 16,
+              child: JuicyCompletionBanner(
+                task: _completedTaskBanner!,
+                onDismiss: () {
+                  setState(() {
+                    _completedTaskBanner = null;
+                  });
+                  ref.read(assignmentProvider.notifier).clearCompletionAnimation();
+                },
+              ),
+            ),
         ],
       ),
     );
@@ -282,11 +317,9 @@ class MobileNavigationShell extends ConsumerWidget {
   }
 
   Future<void> _showUnsavedChangesOnMenuClick(
-    WidgetRef ref,
     BuildContext context,
   ) async {
     final notifier = ref.read(studyLabProvider.notifier);
-    final state = ref.read(studyLabProvider);
 
     await showDialog<void>(
       context: context,
@@ -322,174 +355,46 @@ class MobileNavigationShell extends ConsumerWidget {
             ],
           ),
           content: Text(
-            'Your study has unsaved changes. Would you like to save before opening the menu?',
+            'Your research has unsaved changes. Would you like to save before you leave?',
             style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 13, height: 1.5),
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text('Stay', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted)),
-            ),
-            TextButton(
-              onPressed: () {
-                notifier.clearDirty();
-                Navigator.pop(ctx);
-                Scaffold.of(context).openDrawer();
-              },
-              child: Text(
-                'Discard',
-                style: GoogleFonts.inter(color: Colors.redAccent, fontWeight: FontWeight.w600),
-              ),
-            ),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.save_rounded, size: 15, color: Colors.white),
-              label: Text('Save', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF00E676),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              onPressed: () async {
-                Navigator.pop(ctx);
-                if (state.libraryIndex != null) {
-                  final success = await notifier.saveExistingStudyInLibrary(state.libraryIndex!);
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          success ? 'Study saved successfully!' : 'Save failed.',
-                          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
-                        ),
-                        backgroundColor: success ? const Color(0xFF00E676) : Colors.redAccent,
-                      ),
-                    );
-                    if (success) {
-                      Scaffold.of(context).openDrawer();
-                    }
-                  }
-                } else {
-                  _showSaveDialogOnMenuClick(ref, context, state, notifier);
-                }
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _showSaveDialogOnMenuClick(
-    WidgetRef ref,
-    BuildContext context,
-    StudyLabState state,
-    StudyLabNotifier notifier,
-  ) {
-    final defaultName = (state.metadata.event.isNotEmpty &&
-            state.metadata.event != 'Study Lab Analysis')
-        ? state.metadata.event
-        : '';
-    final controller = TextEditingController(text: defaultName);
-
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) {
-        return AlertDialog(
-          backgroundColor: ScholarlyTheme.panelBase,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-            side: const BorderSide(color: ScholarlyTheme.panelStroke, width: 1.5),
-          ),
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF00E676).withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.save_rounded, color: Color(0xFF00E676), size: 20),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'Save to Game Library',
-                style: GoogleFonts.outfit(
-                  fontWeight: FontWeight.bold,
-                  color: ScholarlyTheme.textPrimary,
-                  fontSize: 17,
-                ),
-              ),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Give your progress a title to save it in the game library.',
-                style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 12),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: controller,
-                autofocus: true,
-                style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary),
-                decoration: InputDecoration(
-                  hintText: 'e.g. Ruy Lopez Study, Endgame Practice...',
-                  hintStyle: GoogleFonts.inter(color: ScholarlyTheme.textMuted),
-                  filled: true,
-                  fillColor: ScholarlyTheme.panelBase,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: ScholarlyTheme.panelStroke),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFF00E676), width: 1.5),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text('Cancel', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted)),
-            ),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.save_rounded, size: 16, color: Colors.white),
-              label: Text('Save', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF00E676),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              onPressed: () async {
-                final name = controller.text.trim();
-                if (name.isEmpty) return;
-                Navigator.pop(ctx);
-                final success = await notifier.saveCurrentGameToLibrary(name);
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        success ? 'Study "$name" saved!' : 'Save failed.',
-                        style: GoogleFonts.inter(fontWeight: FontWeight.bold),
-                      ),
-                      backgroundColor: success ? const Color(0xFF00E676) : Colors.redAccent,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text(
+                    'Stay',
+                    style: GoogleFonts.inter(
+                      color: const Color(0xFF059669),
+                      fontWeight: FontWeight.bold,
                     ),
-                  );
-                  if (success) {
+                  ),
+                ),
+                const SizedBox(width: 8),
+                TextButton(
+                  onPressed: () {
+                    notifier.clearDirty();
+                    Navigator.pop(ctx);
                     Scaffold.of(context).openDrawer();
-                  }
-                }
-              },
+                  },
+                  child: Text(
+                    'Discard',
+                    style: GoogleFonts.inter(
+                      color: Colors.redAccent,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         );
       },
     );
   }
+
 }
 
 class _MobileSidebarDrawer extends ConsumerWidget {
@@ -845,7 +750,6 @@ class _MobileSidebarDrawer extends ConsumerWidget {
     int destinationIndex,
   ) async {
     final notifier = ref.read(studyLabProvider.notifier);
-    final state = ref.read(studyLabProvider);
 
     await showDialog<void>(
       context: context,
@@ -881,179 +785,48 @@ class _MobileSidebarDrawer extends ConsumerWidget {
             ],
           ),
           content: Text(
-            'Your analysis study has unsaved changes. Save before leaving, or discard your work?',
+            'Your research has unsaved changes. Would you like to save before you leave?',
             style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 13, height: 1.5),
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text('Stay', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted)),
-            ),
-            TextButton(
-              onPressed: () {
-                notifier.clearDirty();
-                Navigator.pop(ctx);
-                // Perform the navigation
-                ref.read(mobileNavIndexProvider.notifier).state = destinationIndex;
-                Navigator.of(context).pop(); // Close drawer
-              },
-              child: Text(
-                'Discard',
-                style: GoogleFonts.inter(color: Colors.redAccent, fontWeight: FontWeight.w600),
-              ),
-            ),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.save_rounded, size: 15, color: Colors.white),
-              label: Text('Save', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF00E676),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              onPressed: () async {
-                Navigator.pop(ctx); // close unsaved dialog
-                if (state.libraryIndex != null) {
-                  final success = await notifier.saveExistingStudyInLibrary(state.libraryIndex!);
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          success ? 'Study saved successfully!' : 'Save failed.',
-                          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
-                        ),
-                        backgroundColor: success ? const Color(0xFF00E676) : Colors.redAccent,
-                      ),
-                    );
-                    if (success) {
-                      ref.read(mobileNavIndexProvider.notifier).state = destinationIndex;
-                      Navigator.of(context).pop(); // Close drawer
-                    }
-                  }
-                } else {
-                  _showSaveNameDialog(ref, context, state, notifier, destinationIndex);
-                }
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _showSaveNameDialog(
-    WidgetRef ref,
-    BuildContext context,
-    StudyLabState state,
-    StudyLabNotifier notifier,
-    int destinationIndex,
-  ) {
-    final defaultName = (state.metadata.event.isNotEmpty &&
-            state.metadata.event != 'Study Lab Analysis')
-        ? state.metadata.event
-        : '';
-    final controller = TextEditingController(text: defaultName);
-
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) {
-        return AlertDialog(
-          backgroundColor: ScholarlyTheme.panelBase,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-            side: const BorderSide(color: ScholarlyTheme.panelStroke, width: 1.5),
-          ),
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF00E676).withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.save_rounded, color: Color(0xFF00E676), size: 20),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'Save to Game Library',
-                style: GoogleFonts.outfit(
-                  fontWeight: FontWeight.bold,
-                  color: ScholarlyTheme.textPrimary,
-                  fontSize: 17,
-                ),
-              ),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Give your progress a title to save it in the game library.',
-                style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 12),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: controller,
-                autofocus: true,
-                style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary),
-                decoration: InputDecoration(
-                  hintText: 'e.g. Ruy Lopez Study, Endgame Practice...',
-                  hintStyle: GoogleFonts.inter(color: ScholarlyTheme.textMuted),
-                  filled: true,
-                  fillColor: ScholarlyTheme.panelBase,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: ScholarlyTheme.panelStroke),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFF00E676), width: 1.5),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text('Cancel', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted)),
-            ),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.save_rounded, size: 16, color: Colors.white),
-              label: Text('Save', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF00E676),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              onPressed: () async {
-                final name = controller.text.trim();
-                if (name.isEmpty) return;
-                Navigator.pop(ctx);
-                final success = await notifier.saveCurrentGameToLibrary(name);
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        success ? 'Study "$name" saved!' : 'Save failed.',
-                        style: GoogleFonts.inter(fontWeight: FontWeight.bold),
-                      ),
-                      backgroundColor: success ? const Color(0xFF00E676) : Colors.redAccent,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text(
+                    'Stay',
+                    style: GoogleFonts.inter(
+                      color: const Color(0xFF059669),
+                      fontWeight: FontWeight.bold,
                     ),
-                  );
-                  if (success) {
+                  ),
+                ),
+                const SizedBox(width: 8),
+                TextButton(
+                  onPressed: () {
+                    notifier.clearDirty();
+                    Navigator.pop(ctx);
+                    // Perform the navigation
                     ref.read(mobileNavIndexProvider.notifier).state = destinationIndex;
-                    Navigator.of(context).pop(); // close drawer
-                  }
-                }
-              },
+                    Navigator.of(context).pop(); // Close drawer
+                  },
+                  child: Text(
+                    'Discard',
+                    style: GoogleFonts.inter(
+                      color: Colors.redAccent,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         );
       },
     );
   }
+
 }
 
 class _DrawerTile extends StatelessWidget {

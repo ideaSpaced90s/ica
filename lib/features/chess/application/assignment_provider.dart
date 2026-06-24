@@ -7,6 +7,7 @@ import '../domain/models/assignment_state.dart';
 import '../domain/performance_ledger_entry.dart';
 import '../data/assignment_repository.dart';
 import 'battleground_provider.dart';
+import 'arena_provider.dart';
 import 'puzzles_provider.dart';
 import 'tutorial_provider.dart';
 import 'historical_cinema_provider.dart';
@@ -45,11 +46,23 @@ class AssignmentNotifier extends Notifier<AssignmentState> {
       await Future.delayed(const Duration(milliseconds: 20));
     }
 
-    // Sync calibration progress from battleground on startup if uncalibrated
-    if (!state.isCalibrated) {
-      final bgState = ref.read(battlegroundProvider);
+    final bgState = ref.read(battlegroundProvider);
+    if (state.isCalibrated != bgState.isCalibrated) {
+      if (bgState.isCalibrated) {
+        _unlockCalibration(bgState.consolidatedRating);
+      } else {
+        state = state.copyWith(
+          isCalibrated: false,
+          calibrationGamesPlayed: bgState.totalRatedGamesCount,
+        );
+        await generateActiveTasks(bgState.consolidatedRating, isNewDay: true);
+      }
+      await _saveState();
+    } else if (!state.isCalibrated) {
+      // Sync calibration progress from battleground on startup if uncalibrated
       if (bgState.totalRatedGamesCount > state.calibrationGamesPlayed) {
         state = state.copyWith(calibrationGamesPlayed: bgState.totalRatedGamesCount);
+        await _saveState();
       }
     }
 
@@ -188,6 +201,45 @@ class AssignmentNotifier extends Notifier<AssignmentState> {
             final task = state.dailyTasks[arenaTaskIndex];
             final wasRated = previous?.activeRatedMatchId != null || next.activeRatedMatchId != null;
             if (wasRated && next.activeOpponent?.id == task.targetId && !task.isCompleted) {
+              final newProgress = task.currentValue + 1;
+              final isTaskCompleted = newProgress >= task.targetValue;
+
+              final updated = List<DailyTask>.from(state.dailyTasks);
+              updated[arenaTaskIndex] = task.copyWith(
+                currentValue: newProgress,
+                isCompleted: isTaskCompleted,
+              );
+
+              state = state.copyWith(
+                dailyTasks: updated,
+                newlyCompletedTaskIndex: isTaskCompleted ? arenaTaskIndex : -1,
+              );
+              _saveState();
+
+              // Check if all daily tasks are completed (excluding tutorial weekly task)
+              _checkAllDailyCompleted();
+            }
+          }
+        }
+      }
+    });
+
+    // Listen to arena provider for daily task completion
+    ref.listen(arenaProvider, (previous, next) {
+      if (state.isCalibrated) {
+        final arenaTaskIndex = state.dailyTasks.indexWhere(
+          (t) => t.taskType == DailyTaskType.arena,
+        );
+        if (arenaTaskIndex != -1) {
+          final task = state.dailyTasks[arenaTaskIndex];
+          
+          // Check if game just ended in Arena
+          final previousEnded = previous != null && previous.isGameOver;
+          final currentEnded = next.isGameOver;
+
+          if (currentEnded && !previousEnded) {
+            // Check if played against the correct avatar
+            if (next.engineLevel == task.targetId && !task.isCompleted) {
               final newProgress = task.currentValue + 1;
               final isTaskCompleted = newProgress >= task.targetValue;
 

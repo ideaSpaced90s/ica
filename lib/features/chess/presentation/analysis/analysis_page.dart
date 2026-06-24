@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:chess/chess.dart' as chess_lib;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../widgets/ambient_scaffold.dart';
 import '../scholarly_theme.dart';
@@ -946,6 +947,9 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> with TickerProvider
 
                   // Page 1: Move Notation
                   _buildNotationPane(context, state, notifier, isScrollable: true, hasCard: false),
+
+                  // Page 2: Move Commentary
+                  _buildCommentaryPane(context, state, notifier),
                 ],
               ),
             ),
@@ -963,6 +967,8 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> with TickerProvider
                   _buildCompactSelectorIcon(0, Icons.bolt, 'Engine Analysis'),
                   const SizedBox(height: 10),
                   _buildCompactSelectorIcon(1, Icons.list_alt_rounded, 'Move Notation'),
+                  const SizedBox(height: 10),
+                  _buildCompactSelectorIcon(2, Icons.comment_outlined, 'Move Commentary'),
                 ],
               ),
             ),
@@ -1459,7 +1465,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> with TickerProvider
             side: const BorderSide(color: ScholarlyTheme.panelStroke, width: 1.5),
           ),
           title: Text(
-            'Edit Move Comment',
+            'Comment',
             style: GoogleFonts.outfit(
               fontWeight: FontWeight.bold,
               color: ScholarlyTheme.textPrimary,
@@ -1468,10 +1474,12 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> with TickerProvider
           content: TextField(
             controller: controller,
             maxLines: 4,
+            maxLength: 90,
             style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary),
             decoration: InputDecoration(
-              hintText: 'Enter your thoughts or positional analysis...',
+              hintText: 'char. limit 90',
               hintStyle: GoogleFonts.inter(color: ScholarlyTheme.textMuted),
+              counterStyle: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 10),
               filled: true,
               fillColor: ScholarlyTheme.panelBase,
               border: OutlineInputBorder(
@@ -1485,28 +1493,58 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> with TickerProvider
             ),
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(
-                'Cancel',
-                style: GoogleFonts.inter(color: ScholarlyTheme.textMuted),
-              ),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: ScholarlyTheme.accentBlue,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  style: TextButton.styleFrom(
+                    minimumSize: Size.zero,
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  onPressed: () {
+                    notifier.updateCommentAt(node.index, '');
+                    Navigator.pop(context);
+                  },
+                  child: Text(
+                    'Remove',
+                    style: GoogleFonts.inter(color: Colors.redAccent, fontWeight: FontWeight.bold),
+                  ),
                 ),
-              ),
-              onPressed: () {
-                notifier.updateCommentAt(node.index, controller.text);
-                Navigator.pop(context);
-              },
-              child: Text(
-                'Save',
-                style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold),
-              ),
+                const SizedBox(width: 6),
+                TextButton(
+                  style: TextButton.styleFrom(
+                    minimumSize: Size.zero,
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(
+                    'Cancel',
+                    style: GoogleFonts.inter(color: ScholarlyTheme.textMuted),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: ScholarlyTheme.accentBlue,
+                    minimumSize: Size.zero,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                  ),
+                  onPressed: () {
+                    notifier.updateCommentAt(node.index, controller.text);
+                    Navigator.pop(context);
+                  },
+                  child: Text(
+                    'Save',
+                    style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
             ),
           ],
         );
@@ -1656,7 +1694,6 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> with TickerProvider
   /// (either by saving or discarding), false if they want to stay.
   Future<bool> _showUnsavedChangesDialog(BuildContext context) async {
     final notifier = ref.read(studyLabProvider.notifier);
-    final state = ref.read(studyLabProvider);
     bool shouldLeave = false;
 
     await showDialog<void>(
@@ -1693,55 +1730,42 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> with TickerProvider
             ],
           ),
           content: Text(
-            'Your study has unsaved changes. Would you like to save before leaving?',
+            'Your research has unsaved changes. Would you like to save before you leave?',
             style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary, fontSize: 13, height: 1.5),
           ),
           actions: [
-            TextButton(
-              onPressed: () {
-                shouldLeave = false;
-                Navigator.pop(ctx);
-              },
-              child: Text('Cancel', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted)),
-            ),
-            TextButton(
-              onPressed: () {
-                notifier.clearDirty();
-                shouldLeave = true;
-                Navigator.pop(ctx);
-              },
-              child: Text(
-                'Discard',
-                style: GoogleFonts.inter(color: Colors.redAccent, fontWeight: FontWeight.w600),
-              ),
-            ),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.save_rounded, size: 15, color: Colors.white),
-              label: Text('Save & Leave', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF00E676),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              onPressed: () async {
-                Navigator.pop(ctx);
-                if (state.libraryIndex != null) {
-                  final success = await notifier.saveExistingStudyInLibrary(state.libraryIndex!);
-                  if (success) {
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () {
+                    shouldLeave = false;
+                    Navigator.pop(ctx);
+                  },
+                  child: Text(
+                    'Stay',
+                    style: GoogleFonts.inter(
+                      color: const Color(0xFF059669),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                TextButton(
+                  onPressed: () {
+                    notifier.clearDirty();
                     shouldLeave = true;
-                    if (context.mounted) {
-                      Navigator.of(context).popUntil((route) => route.isFirst);
-                    }
-                  }
-                } else {
-                  _showSaveAndLeaveDialog(context, notifier, state, onSaved: () {
-                    shouldLeave = true;
-                    if (context.mounted) {
-                      Navigator.of(context).popUntil((route) => route.isFirst);
-                    }
-                  });
-                }
-              },
+                    Navigator.pop(ctx);
+                  },
+                  child: Text(
+                    'Discard',
+                    style: GoogleFonts.inter(
+                      color: Colors.redAccent,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         );
@@ -1751,117 +1775,6 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> with TickerProvider
     return shouldLeave;
   }
 
-  void _showSaveAndLeaveDialog(
-    BuildContext context,
-    StudyLabNotifier notifier,
-    StudyLabState state, {
-    required VoidCallback onSaved,
-  }) {
-    final defaultName = (state.metadata.event.isNotEmpty &&
-            state.metadata.event != 'Study Lab Analysis')
-        ? state.metadata.event
-        : '';
-    final controller = TextEditingController(text: defaultName);
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) {
-        return AlertDialog(
-          backgroundColor: ScholarlyTheme.panelBase,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-            side: const BorderSide(color: ScholarlyTheme.panelStroke, width: 1.5),
-          ),
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF00E676).withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.save_rounded, color: Color(0xFF00E676), size: 20),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'Save to Game Library',
-                style: GoogleFonts.outfit(
-                  fontWeight: FontWeight.bold,
-                  color: ScholarlyTheme.textPrimary,
-                  fontSize: 17,
-                ),
-              ),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Give your progress a title to save it in the game library.',
-                style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 12),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: controller,
-                autofocus: true,
-                style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary),
-                decoration: InputDecoration(
-                  hintText: 'e.g. Ruy Lopez Study, Endgame Practice...',
-                  hintStyle: GoogleFonts.inter(color: ScholarlyTheme.textMuted),
-                  filled: true,
-                  fillColor: ScholarlyTheme.panelBase,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: ScholarlyTheme.panelStroke),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFF00E676), width: 1.5),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(ctx);
-              },
-              child: Text('Cancel', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted)),
-            ),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.save_rounded, size: 16, color: Colors.white),
-              label: Text('Save', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF00E676),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              onPressed: () async {
-                final name = controller.text.trim();
-                if (name.isEmpty) return;
-                Navigator.pop(ctx);
-                final success = await notifier.saveCurrentGameToLibrary(name);
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        success ? 'Study "$name" saved!' : 'Save failed. Please try again.',
-                        style: GoogleFonts.inter(fontWeight: FontWeight.bold),
-                      ),
-                      backgroundColor: success ? const Color(0xFF00E676) : Colors.redAccent,
-                    ),
-                  );
-                }
-                if (success) onSaved();
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
 
   // Workspace pages refactored to workspace_page.dart
 
@@ -1950,6 +1863,228 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> with TickerProvider
       padding: const EdgeInsets.all(12),
       borderRadius: 16,
       child: content,
+    );
+  }
+
+  List<StudyLabMoveNode> _getActiveMovePath(StudyLabState state) {
+    final List<StudyLabMoveNode> path = [];
+    final Set<int> visited = {};
+    int? currentIdx = state.currentNodeIndex;
+    
+    while (currentIdx != null && currentIdx >= 0 && currentIdx < state.nodes.length) {
+      if (visited.contains(currentIdx)) {
+        break; // Prevent infinite loops
+      }
+      visited.add(currentIdx);
+      final node = state.nodes[currentIdx];
+      path.add(node);
+      currentIdx = node.parentIndex;
+    }
+    
+    return path.reversed.toList();
+  }
+
+  Widget _buildCommentaryPane(
+    BuildContext context,
+    StudyLabState state,
+    StudyLabNotifier notifier,
+  ) {
+    final movePath = _getActiveMovePath(state);
+
+    if (movePath.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        alignment: Alignment.center,
+        child: Text(
+          'No moves played yet. Play some moves on the board!',
+          textAlign: TextAlign.center,
+          style: GoogleFonts.inter(
+            fontSize: 11,
+            color: ScholarlyTheme.textMuted,
+          ),
+        ),
+      );
+    }
+
+    final themes = [
+      (
+        bg: const Color(0xFFE3F2FD),
+        border: const Color(0xFF90CAF9),
+        text: const Color(0xFF0D47A1)
+      ), // Light Blue
+      (
+        bg: const Color(0xFFE8F5E9),
+        border: const Color(0xFFA5D6A7),
+        text: const Color(0xFF1B5E20)
+      ), // Light Green
+      (
+        bg: const Color(0xFFFFF8E1),
+        border: const Color(0xFFFFE082),
+        text: const Color(0xFFE65100)
+      ), // Light Amber
+      (
+        bg: const Color(0xFFF3E5F5),
+        border: const Color(0xFFE1BEE7),
+        text: const Color(0xFF4A148C)
+      ), // Light Purple
+      (
+        bg: const Color(0xFFE0F2F1),
+        border: const Color(0xFF80CBC4),
+        text: const Color(0xFF004D40)
+      ), // Light Teal
+      (
+        bg: const Color(0xFFFBE9E7),
+        border: const Color(0xFFFFCCBC),
+        text: const Color(0xFFBF360C)
+      ), // Light Orange
+    ];
+
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Wrap(
+          spacing: 8.0,
+          runSpacing: 10.0,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: List.generate(movePath.length, (index) {
+            final node = movePath[index];
+            final parentNode = node.parentIndex != null && node.parentIndex! >= 0 && node.parentIndex! < state.nodes.length
+                ? state.nodes[node.parentIndex!]
+                : null;
+            
+            final parentFen = parentNode?.fen ?? state.startFen;
+            final chess = chess_lib.Chess.fromFEN(parentFen);
+            final fromSquare = node.uci.length >= 2 ? node.uci.substring(0, 2) : 'a1';
+            final piece = chess.get(fromSquare);
+            
+            final pieceType = piece?.type ?? chess_lib.PieceType.PAWN;
+            final pieceColor = piece?.color ?? (index % 2 == 0 ? chess_lib.Color.WHITE : chess_lib.Color.BLACK);
+            
+            final colorPrefix = pieceColor == chess_lib.Color.WHITE ? 'w' : 'b';
+            String typeLetter = 'P';
+            switch (pieceType) {
+              case chess_lib.PieceType.PAWN:
+                typeLetter = 'P';
+                break;
+              case chess_lib.PieceType.KNIGHT:
+                typeLetter = 'N';
+                break;
+              case chess_lib.PieceType.BISHOP:
+                typeLetter = 'B';
+                break;
+              case chess_lib.PieceType.ROOK:
+                typeLetter = 'R';
+                break;
+              case chess_lib.PieceType.QUEEN:
+                typeLetter = 'Q';
+                break;
+              case chess_lib.PieceType.KING:
+                typeLetter = 'K';
+                break;
+            }
+            final assetPath = 'assets/pieces/classic_svg/$colorPrefix$typeLetter.svg';
+
+            String moveLabel = node.san;
+            if (pieceType == chess_lib.PieceType.PAWN) {
+              moveLabel = node.uci;
+            } else {
+              if (moveLabel.startsWith(RegExp('[KQRBN]'))) {
+                moveLabel = moveLabel.substring(1);
+              }
+            }
+
+            final moveNum = _getMoveNumberFromFen(node.fen);
+            final isWhitePlayer = !node.fen.contains(' b ');
+            final playerPrefix = isWhitePlayer ? '$moveNum.' : '${moveNum - 1}...';
+
+            final colorTheme = themes[index % themes.length];
+            final isCurrent = state.currentNodeIndex == node.index;
+
+            return InkWell(
+              onTap: () {
+                notifier.selectNode(node.index);
+                ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+              },
+              borderRadius: BorderRadius.circular(8),
+              child: Wrap(
+                spacing: 6.0,
+                runSpacing: 6.0,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: isCurrent 
+                          ? colorTheme.bg.withValues(alpha: 0.8) 
+                          : colorTheme.bg.withValues(alpha: 0.35),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: isCurrent 
+                            ? colorTheme.border 
+                            : colorTheme.border.withValues(alpha: 0.4),
+                        width: isCurrent ? 2.0 : 1.0,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          playerPrefix,
+                          style: GoogleFonts.jetBrainsMono(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: colorTheme.text.withValues(alpha: 0.8),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        SvgPicture.asset(
+                          assetPath,
+                          width: 14,
+                          height: 14,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          moveLabel,
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: colorTheme.text,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (node.comment.isNotEmpty)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: isCurrent 
+                            ? colorTheme.bg.withValues(alpha: 0.8) 
+                            : colorTheme.bg.withValues(alpha: 0.35),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: isCurrent 
+                              ? colorTheme.border 
+                              : colorTheme.border.withValues(alpha: 0.4),
+                          width: isCurrent ? 2.0 : 1.0,
+                        ),
+                      ),
+                      child: Text(
+                        node.comment,
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: colorTheme.text,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            );
+          }),
+        ),
+      ),
     );
   }
 
@@ -2170,23 +2305,66 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> with TickerProvider
       builder: (context) {
         return AlertDialog(
           backgroundColor: ScholarlyTheme.panelBase,
-          title: Text('Edit comment for ${node.san}', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+          title: Text('Comment', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary)),
           content: TextField(
             controller: controller,
             maxLines: 3,
-            decoration: const InputDecoration(
-              hintText: 'Type comment...',
-              border: OutlineInputBorder(),
+            maxLength: 90,
+            style: GoogleFonts.inter(color: ScholarlyTheme.textPrimary),
+            decoration: InputDecoration(
+              hintText: 'char. limit 90',
+              hintStyle: GoogleFonts.inter(color: ScholarlyTheme.textMuted),
+              counterStyle: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 10),
+              border: const OutlineInputBorder(),
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-            ElevatedButton(
-              onPressed: () {
-                notifier.updateCommentAt(node.index, controller.text);
-                Navigator.pop(context);
-              },
-              child: const Text('Save'),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  style: TextButton.styleFrom(
+                    minimumSize: Size.zero,
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  onPressed: () {
+                    notifier.updateCommentAt(node.index, '');
+                    Navigator.pop(context);
+                  },
+                  child: const Text(
+                    'Remove',
+                    style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                TextButton(
+                  style: TextButton.styleFrom(
+                    minimumSize: Size.zero,
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                const SizedBox(width: 6),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: ScholarlyTheme.accentBlue,
+                    minimumSize: Size.zero,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                  ),
+                  onPressed: () {
+                    notifier.updateCommentAt(node.index, controller.text);
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Save', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                ),
+              ],
             ),
           ],
         );
