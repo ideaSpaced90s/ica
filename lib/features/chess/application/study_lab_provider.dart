@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' show Random;
 import 'dart:io' show File;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -793,10 +794,27 @@ class StudyLabNotifier extends Notifier<StudyLabState> {
       activeNodeIndex = newNodeIndex;
     }
 
-    if (chanakyaCommentary != null) {
+    final chanakyaComm = chanakyaCommentary ?? entry.commentaryHistory;
+    if (chanakyaComm.isNotEmpty) {
+      final rng = Random();
+
+      final blunderFormations = [
+        "Alarming! [Move] is a blunder, disrupting your positional harmony.",
+        "Unwise! [Move] drops the evaluation. Seek a more resilient path.",
+        "Calculational lapse. [Move] exposes a tactical vulnerability.",
+        "A severe step. [Move] compromises your structure and coordination.",
+      ];
+
+      final goodFormations = [
+        "GM Chanakya approves of [Move]. Elegant and positionally sound.",
+        "A masterful decision. [Move] increases your piece activity.",
+        "Highly principled. [Move] maintains structural harmony.",
+        "Excellent! [Move] secures vital central control and coordination.",
+      ];
+
       for (var i = 0; i < currentNodes.length; i++) {
         final nodeFen = _normalizeFenForComparison(currentNodes[i].fen);
-        final matchingEntries = chanakyaCommentary
+        final matchingEntries = chanakyaComm
             .where((e) => !e.isUser && e.associatedFen != null && _normalizeFenForComparison(e.associatedFen!) == nodeFen)
             .toList();
         if (matchingEntries.isNotEmpty) {
@@ -804,6 +822,24 @@ class StudyLabNotifier extends Notifier<StudyLabState> {
           final ann = _detectAnnotation(combinedText);
           if (ann != MoveAnnotation.none) {
             currentNodes[i] = currentNodes[i].copyWith(annotation: ann);
+          }
+
+          String? chanakyaComment;
+          final moveStr = currentNodes[i].san;
+
+          if (ann == MoveAnnotation.blunder || ann == MoveAnnotation.mistake || combinedText.contains('blunder') || combinedText.contains('mistake')) {
+            final template = blunderFormations[rng.nextInt(blunderFormations.length)];
+            chanakyaComment = template.replaceAll('[Move]', moveStr);
+          } else if (ann == MoveAnnotation.brilliant || combinedText.contains('brilliant') || combinedText.contains('excellent') || combinedText.contains('good') || combinedText.contains('strong')) {
+            final template = goodFormations[rng.nextInt(goodFormations.length)];
+            chanakyaComment = template.replaceAll('[Move]', moveStr);
+          }
+
+          if (chanakyaComment != null) {
+            if (chanakyaComment.length > 90) {
+              chanakyaComment = "${chanakyaComment.substring(0, 87)}...";
+            }
+            currentNodes[i] = currentNodes[i].copyWith(comment: chanakyaComment);
           }
         }
       }

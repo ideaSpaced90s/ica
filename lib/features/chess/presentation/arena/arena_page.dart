@@ -42,7 +42,6 @@ const List<_ArenaTabDef> _kArenaTabs = [
   _ArenaTabDef('Board', Icons.grid_on_rounded),
   _ArenaTabDef('Themes', Icons.palette_rounded),
   _ArenaTabDef('Persona', Icons.people_alt_rounded),
-  _ArenaTabDef('Engine Tuner', Icons.tune_rounded),
   _ArenaTabDef('Settings', Icons.settings_rounded),
 ];
 
@@ -320,10 +319,6 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
               ),
             ] else if (_selectedArenaTab == 3) ...[
               Positioned.fill(
-                child: _buildEngineTunerTab(),
-              ),
-            ] else if (_selectedArenaTab == 4) ...[
-              Positioned.fill(
                 child: _buildSettingsTab(),
               ),
             ],
@@ -434,38 +429,7 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
     );
   }
 
-  Widget _buildEngineTunerTab() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.tune_rounded,
-            size: 48,
-            color: ScholarlyTheme.textMuted.withValues(alpha: 0.5),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'ENGINE TUNER',
-            style: GoogleFonts.outfit(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 2,
-              color: ScholarlyTheme.textMuted,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Customize engine parameters & settings',
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              color: ScholarlyTheme.textMuted.withValues(alpha: 0.7),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   Widget _buildSettingsTab() {
     return const ArenaSettingsPage(

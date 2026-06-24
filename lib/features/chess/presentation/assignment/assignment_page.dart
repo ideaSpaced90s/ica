@@ -40,7 +40,7 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
   }
 
   @override
@@ -100,7 +100,6 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
                       labelStyle: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold),
                       tabs: const [
                         Tab(text: "DESK", icon: Icon(Icons.assignment_rounded, size: 20)),
-                        Tab(text: "REVIEW", icon: Icon(Icons.rate_review_rounded, size: 20)),
                         Tab(text: "BLUEPRINT", icon: Icon(Icons.architecture_rounded, size: 20)),
                       ],
                     ),
@@ -114,7 +113,6 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
                     physics: const BouncingScrollPhysics(),
                     children: [
                       _buildDeskTab(context, state, bgState, isMobile),
-                      _buildReviewTab(context, state, isMobile),
                       _buildBlueprintTab(context, state, bgState, isMobile),
                     ],
                   ),
@@ -146,6 +144,10 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
   // TAB 1: APPRENTICE DESK (DAILY CHECKLIST)
   // ────────────────────────────────────────────────────────────────────────────
   Widget _buildDeskTab(BuildContext context, AssignmentState state, BattlegroundState bgState, bool isMobile) {
+    final tutorialTaskIndex = state.dailyTasks.indexWhere((t) => t.taskType == DailyTaskType.tutorial);
+    final tutorialTask = tutorialTaskIndex != -1 ? state.dailyTasks[tutorialTaskIndex] : null;
+    final dailyTasks = state.dailyTasks.where((t) => t.taskType != DailyTaskType.tutorial).toList();
+
     if (isMobile) {
       return SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
@@ -168,27 +170,14 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
               _buildCalendarStrip(state),
               const SizedBox(height: 20),
             ],
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  "TODAY'S TRAINING",
-                  style: GoogleFonts.outfit(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: ScholarlyTheme.textPrimary,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-                if (state.isCalibrated)
-                  TextButton.icon(
-                    icon: const Icon(Icons.refresh_rounded, size: 16),
-                    label: Text("Reset", style: GoogleFonts.inter(fontSize: 11)),
-                    onPressed: () {
-                      ref.read(assignmentProvider.notifier).forceResetDaily();
-                    },
-                  ),
-              ],
+            Text(
+              "DAILY TRAINING GOAL",
+              style: GoogleFonts.outfit(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: ScholarlyTheme.textPrimary,
+                letterSpacing: 0.5,
+              ),
             ),
             const SizedBox(height: 12),
             if (!state.isCalibrated)
@@ -197,11 +186,12 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
               ListView.separated(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                itemCount: state.dailyTasks.length,
+                itemCount: dailyTasks.length,
                 separatorBuilder: (context, index) => const SizedBox(height: 12),
                 itemBuilder: (context, index) {
-                  final task = state.dailyTasks[index];
-                  return _buildTaskCard(context, task, index, state);
+                  final task = dailyTasks[index];
+                  final origIndex = state.dailyTasks.indexOf(task);
+                  return _buildTaskCard(context, task, origIndex, state);
                 },
               ),
               const SizedBox(height: 24),
@@ -216,6 +206,10 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
               ),
               const SizedBox(height: 12),
               _buildWeeklyGoalCard(context, state),
+              if (tutorialTask != null) ...[
+                const SizedBox(height: 12),
+                _buildTaskCard(context, tutorialTask, tutorialTaskIndex, state),
+              ],
             ],
           ],
         ),
@@ -244,27 +238,14 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
                   _buildRevisionWarningCard(state),
                   const SizedBox(height: 20),
                 ],
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      "TODAY'S TRAINING",
-                      style: GoogleFonts.outfit(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: ScholarlyTheme.textPrimary,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    if (state.isCalibrated)
-                      TextButton.icon(
-                        icon: const Icon(Icons.refresh_rounded, size: 16),
-                        label: Text("Reset", style: GoogleFonts.inter(fontSize: 11)),
-                        onPressed: () {
-                          ref.read(assignmentProvider.notifier).forceResetDaily();
-                        },
-                      ),
-                  ],
+                Text(
+                  "DAILY TRAINING GOAL",
+                  style: GoogleFonts.outfit(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: ScholarlyTheme.textPrimary,
+                    letterSpacing: 0.5,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 if (!state.isCalibrated)
@@ -273,11 +254,12 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
                   ListView.separated(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    itemCount: state.dailyTasks.length,
+                    itemCount: dailyTasks.length,
                     separatorBuilder: (context, index) => const SizedBox(height: 12),
                     itemBuilder: (context, index) {
-                      final task = state.dailyTasks[index];
-                      return _buildTaskCard(context, task, index, state);
+                      final task = dailyTasks[index];
+                      final origIndex = state.dailyTasks.indexOf(task);
+                      return _buildTaskCard(context, task, origIndex, state);
                     },
                   ),
                   const SizedBox(height: 28),
@@ -292,6 +274,10 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
                   ),
                   const SizedBox(height: 12),
                   _buildWeeklyGoalCard(context, state),
+                  if (tutorialTask != null) ...[
+                    const SizedBox(height: 12),
+                    _buildTaskCard(context, tutorialTask, tutorialTaskIndex, state),
+                  ],
                 ],
               ],
             ),
@@ -606,7 +592,8 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
                   if (!task.isCompleted &&
                       (task.taskType == DailyTaskType.puzzle ||
                           task.taskType == DailyTaskType.arena ||
-                          task.taskType == DailyTaskType.historicalArchive))
+                          task.taskType == DailyTaskType.historicalArchive ||
+                          task.taskType == DailyTaskType.analysis))
                     Padding(
                       padding: const EdgeInsets.only(top: 6.0),
                       child: Row(
@@ -823,7 +810,7 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
         text = "Go to Academy → Historical Cinema — watch until the final move";
         break;
       case DailyTaskType.analysis:
-        text = "Find a lost rated game, favorite it to add to Game Library in Analysis, and make at least 10 moves/variations to study the loss.";
+        text = "Study a rated lost game in Analysis: annotate, comment, and spar with it.";
         break;
     }
 
@@ -1069,150 +1056,7 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
   // ────────────────────────────────────────────────────────────────────────────
   // TAB 3: WEEKLY REVIEW (COACH SUBMISSIONS)
   // ────────────────────────────────────────────────────────────────────────────
-  Widget _buildReviewTab(BuildContext context, AssignmentState state, bool isMobile) {
-    if (!state.isCalibrated) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.query_stats_rounded, color: ScholarlyTheme.textMuted, size: 48),
-              const SizedBox(height: 16),
-              const Text(
-                "Weekly review unlocks after strength calibration is completed.",
-                textAlign: TextAlign.center,
-                style: TextStyle(color: ScholarlyTheme.textMuted),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
 
-    return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header Card
-          JuicyGlassCard(
-            padding: const EdgeInsets.all(16),
-            borderRadius: 20,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.rate_review_rounded, color: ScholarlyTheme.accentBlue, size: 28),
-                    const SizedBox(width: 12),
-                    Text(
-                      "WEEKLY MASTER REVIEW",
-                      style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  "Attend the Chess Academy, study the syllabus, and finish one game with GM Chanakya (win, loss, or draw). Once the game is completed, GM Chanakya's structural diagnostic report will automatically generate and be displayed below.",
-                  style: GoogleFonts.inter(fontSize: 12, height: 1.4, color: ScholarlyTheme.textMuted),
-                ),
-                const SizedBox(height: 16),
-                if (!state.weeklyReviewSubmitted)
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: ScholarlyTheme.accentBlue,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      icon: const Icon(Icons.school_rounded),
-                      label: Text("Go to Academy Mode", style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-                      onPressed: () {
-                        ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                        ref.read(mobileNavIndexProvider.notifier).state = 3; // Redirect to Academy page
-                      },
-                    ),
-                  )
-                else
-                  Row(
-                    children: [
-                      const Icon(Icons.check_circle_rounded, color: Colors.green, size: 20),
-                      const SizedBox(width: 8),
-                      Text(
-                        "Game Completed & Reviewed This Week",
-                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.green),
-                      ),
-                    ],
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // Generated Report Display
-          if (state.weeklyReport != null) ...[
-            Text(
-              "CHANAKYA'S ASSESSMENT REPORT",
-              style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w900, color: ScholarlyTheme.textMuted, letterSpacing: 0.5),
-            ),
-            const SizedBox(height: 8),
-            JuicyGlassCard(
-              padding: const EdgeInsets.all(16),
-              borderRadius: 16,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SelectableText(
-                    state.weeklyReport!,
-                    style: GoogleFonts.inter(fontSize: 13, height: 1.6, color: ScholarlyTheme.textPrimary),
-                  ),
-                  if (state.submittedGameId != null) ...[
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton.icon(
-                        style: FilledButton.styleFrom(
-                          backgroundColor: ScholarlyTheme.accentBlue.withValues(alpha: 0.2),
-                          foregroundColor: ScholarlyTheme.accentBlue,
-                          side: const BorderSide(color: ScholarlyTheme.accentBlue, width: 1.5),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
-                        icon: const Icon(Icons.analytics_rounded),
-                        label: Text("Review Game in Analysis", style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-                        onPressed: () {
-                          ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                          final chessState = ref.read(chessProvider);
-                          final game = chessState.savedGames.where(
-                            (g) => g.id == state.submittedGameId,
-                          ).firstOrNull;
-                          if (game != null) {
-                            ref.read(studyLabProvider.notifier).loadGameEntry(
-                              game,
-                              chanakyaCommentary: game.commentaryHistory,
-                            );
-                            ref.read(mobileNavIndexProvider.notifier).state = 5; // Analysis tab
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text("Could not find the game in your library!"),
-                                backgroundColor: Colors.redAccent,
-                              ),
-                            );
-                          }
-                        },
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
 
   // ────────────────────────────────────────────────────────────────────────────
   // TAB 4: BLUEPRINT (TARGET & PATH)
@@ -1269,27 +1113,62 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  "Submit an annotated game from your Library for GM Chanakya's Weekly Master Review.",
+                  state.weeklyReviewSubmitted
+                      ? "You have completed your Academy game against GM Chanakya. Review it below to study his tactical commentary."
+                      : "Go to the Academy and complete a game against GM Chanakya. Once completed, return to the Assignment Desk to review the game.",
                   style: GoogleFonts.inter(fontSize: 11, color: ScholarlyTheme.textMuted),
                 ),
                 if (!state.weeklyReviewSubmitted)
                   Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: ScholarlyTheme.panelStroke.withValues(alpha: 0.3),
-                        borderRadius: BorderRadius.circular(6),
+                    padding: const EdgeInsets.only(top: 12.0),
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: ScholarlyTheme.accentBlue,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       ),
-                      child: Text(
-                        "Go to Review tab to submit your annotated game",
-                        style: GoogleFonts.inter(
-                          fontSize: 9.5,
-                          fontWeight: FontWeight.w600,
-                          fontStyle: FontStyle.italic,
-                          color: ScholarlyTheme.textMuted,
-                        ),
+                      icon: const Icon(Icons.school_rounded, size: 16),
+                      label: Text("GO TO ACADEMY", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 11)),
+                      onPressed: () {
+                        ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                        ref.read(mobileNavIndexProvider.notifier).state = 3; // Academy Page
+                      },
+                    ),
+                  )
+                else
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12.0),
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.teal,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       ),
+                      icon: const Icon(Icons.analytics_rounded, size: 16),
+                      label: Text("REVIEW GAME", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 11)),
+                      onPressed: () {
+                        ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                        final chessState = ref.read(chessProvider);
+                        final game = chessState.savedGames.where(
+                          (g) => g.id == state.submittedGameId,
+                        ).firstOrNull;
+                        if (game != null) {
+                          ref.read(studyLabProvider.notifier).loadGameEntry(
+                            game,
+                            chanakyaCommentary: game.commentaryHistory,
+                          );
+                          ref.read(mobileNavIndexProvider.notifier).state = 5; // Analysis Page
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Could not find the game in your library!"),
+                              backgroundColor: Colors.redAccent,
+                            ),
+                          );
+                        }
+                      },
                     ),
                   ),
               ],

@@ -22,10 +22,15 @@ import 'package:kingslayer_chess/src/rust/api/assignment.dart'
 import 'package:kingslayer_chess/src/rust/api/cognitive.dart' as rust_cognitive;
 import 'lifetime_xp_provider.dart';
 import 'study_lab_provider.dart';
+import 'navigation_provider.dart';
 
 class AssignmentNotifier extends Notifier<AssignmentState> {
   late final AssignmentRepository _repository;
   bool _listenersSetup = false;
+
+  Timer? _analysisActiveTimer;
+  DateTime? _analysisMinuteStartTime;
+  int _analysisActionsInCurrentMinute = 0;
 
   @override
   AssignmentState build() {
@@ -72,6 +77,11 @@ class AssignmentNotifier extends Notifier<AssignmentState> {
     // Set up listeners for other providers to auto-complete tasks
     _setupListeners();
 
+    // Check if already in Analysis mode on load
+    if (ref.read(mobileNavIndexProvider) == 5) {
+      _startAnalysisActiveTimer();
+    }
+
     // Check if already calibrated on load (e.g. if provider loads after battleground has loaded)
     scheduleMicrotask(() {
       _checkInitialCalibration();
@@ -97,6 +107,14 @@ class AssignmentNotifier extends Notifier<AssignmentState> {
     // Guard against duplicate subscriptions on re-init (e.g. after reloadFromDisk)
     if (_listenersSetup) return;
     _listenersSetup = true;
+
+    ref.listen<int>(mobileNavIndexProvider, (previous, next) {
+      if (next == 5) {
+        _startAnalysisActiveTimer();
+      } else {
+        _stopAnalysisActiveTimer();
+      }
+    });
 
     // Listen to store provider for premium status changes
     ref.listen(storeProvider, (previous, next) {
@@ -397,38 +415,9 @@ class AssignmentNotifier extends Notifier<AssignmentState> {
 
     // Listen to study lab provider
     ref.listen(studyLabProvider, (previous, next) {
-      if (state.isCalibrated) {
-        final analysisTaskIndex = state.dailyTasks.indexWhere(
-          (t) => t.taskType == DailyTaskType.analysis,
-        );
-        if (analysisTaskIndex != -1) {
-          final task = state.dailyTasks[analysisTaskIndex];
-          if (!task.isCompleted) {
-            final prevNodes = previous?.nodes.length ?? 0;
-            if (next.nodes.length > prevNodes) {
-              final nodeDiff = next.nodes.length - prevNodes;
-              final newProgress = (task.currentValue + nodeDiff).clamp(0, task.targetValue);
-              final isTaskCompleted = newProgress >= task.targetValue;
-              
-              final updated = List<DailyTask>.from(state.dailyTasks);
-              updated[analysisTaskIndex] = task.copyWith(
-                currentValue: newProgress,
-                isCompleted: isTaskCompleted,
-              );
-              
-              state = state.copyWith(
-                dailyTasks: updated,
-                newlyCompletedTaskIndex: isTaskCompleted ? analysisTaskIndex : -1,
-              );
-              _saveState();
-
-              // Award +15 Lifetime XP
-              ref.read(lifetimeXpProvider.notifier).addXp(15 * nodeDiff, "Saved Game Analysis");
-
-              _checkAllDailyCompleted();
-            }
-          }
-        }
+      if (state.isCalibrated && ref.read(mobileNavIndexProvider) == 5) {
+        _analysisActionsInCurrentMinute++;
+        _analysisMinuteStartTime ??= DateTime.now();
       }
     });
   }
@@ -698,7 +687,7 @@ class AssignmentNotifier extends Notifier<AssignmentState> {
     // 4. Saved Game Analysis Task
     final analysisTask = DailyTask(
       title: "Saved Game Analysis",
-      description: "Find a lost rated game and favorite it so it appears in your Game Library on the Analysis page. From there, open that game and make at least 10 moves/variations to study how the game is analyzed and why it was lost.",
+      description: "Study a rated lost game in Analysis: open it from your Game Library, annotate, comment, and spar with it.",
       taskType: DailyTaskType.analysis,
       targetId: "analysis",
       targetValue: 10,
@@ -714,10 +703,9 @@ class AssignmentNotifier extends Notifier<AssignmentState> {
         final existingIndex = state.dailyTasks.indexWhere((t) => t.taskType == newTask.taskType);
         if (existingIndex != -1) {
           final existing = state.dailyTasks[existingIndex];
-          final isCompleted = existing.isCompleted || existing.currentValue >= newTask.targetValue;
           return newTask.copyWith(
             currentValue: existing.currentValue,
-            isCompleted: isCompleted,
+            isCompleted: existing.isCompleted,
           );
         }
       }
@@ -740,7 +728,7 @@ class AssignmentNotifier extends Notifier<AssignmentState> {
       final chapterId = _selectWeeklyChapter(state.currentIslandIndex, completedTutorials);
       final chapterTitle = _getChapterTitle(chapterId);
       final weeklyTutorial = DailyTask(
-        title: "Weekly Academy Syllabus",
+        title: "Tutorial Assignments",
         description: "Complete Chapter $chapterId: '$chapterTitle' to master this week's syllabus.",
         taskType: DailyTaskType.tutorial,
         targetId: chapterId.toString(),
@@ -1311,6 +1299,64 @@ class AssignmentNotifier extends Notifier<AssignmentState> {
   Future<void> _saveState() async {
     await _repository.saveAssignment(state);
     ref.read(cloudSyncProvider.notifier).backup(silent: true);
+  }
+
+  void _startAnalysisActiveTimer() {
+    _analysisActiveTimer?.cancel();
+    _analysisMinuteStartTime = DateTime.now();
+    _analysisActionsInCurrentMinute = 0;
+
+    _analysisActiveTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
+      if (ref.read(mobileNavIndexProvider) != 5) {
+        _stopAnalysisActiveTimer();
+        return;
+      }
+
+      if (_analysisMinuteStartTime != null) {
+        final diff = DateTime.now().difference(_analysisMinuteStartTime!);
+        if (diff.inSeconds >= 60) {
+          if (_analysisActionsInCurrentMinute >= 1) {
+            _incrementAnalysisTaskProgress();
+          }
+          _analysisMinuteStartTime = DateTime.now();
+          _analysisActionsInCurrentMinute = 0;
+        }
+      }
+    });
+  }
+
+  void _stopAnalysisActiveTimer() {
+    _analysisActiveTimer?.cancel();
+    _analysisActiveTimer = null;
+    _analysisMinuteStartTime = null;
+    _analysisActionsInCurrentMinute = 0;
+  }
+
+  void _incrementAnalysisTaskProgress() {
+    final idx = state.dailyTasks.indexWhere((t) => t.taskType == DailyTaskType.analysis);
+    if (idx != -1) {
+      final task = state.dailyTasks[idx];
+      if (!task.isCompleted) {
+        final newProgress = (task.currentValue + 1).clamp(0, task.targetValue);
+        final isCompleted = newProgress >= task.targetValue;
+
+        final updated = List<DailyTask>.from(state.dailyTasks);
+        updated[idx] = task.copyWith(
+          currentValue: newProgress,
+          isCompleted: isCompleted,
+        );
+
+        state = state.copyWith(
+          dailyTasks: updated,
+          newlyCompletedTaskIndex: isCompleted ? idx : -1,
+        );
+        _saveState();
+
+        ref.read(lifetimeXpProvider.notifier).addXp(15, "Active Game Analysis Minute");
+
+        _checkAllDailyCompleted();
+      }
+    }
   }
 }
 
