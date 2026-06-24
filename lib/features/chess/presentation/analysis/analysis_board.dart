@@ -898,17 +898,14 @@ class EvalBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!isEngineOn) {
-      return const SizedBox.shrink();
-    }
-
-    final score = evalScore ?? 0.0;
+    // If not engine on, show neutral 50% split (0.0 evaluation score)
+    final double score = isEngineOn ? (evalScore ?? 0.0) : 0.0;
     final capped = score.clamp(-10.0, 10.0);
 
     // Default perspective: Black top, White bottom
     // If flipped: White top, Black bottom
     double whiteRatio = 0.5 + (capped / 20.0);
-    if (isMate && mateIn != null) {
+    if (isEngineOn && isMate && mateIn != null) {
       whiteRatio = mateIn! > 0 ? 0.95 : 0.05;
     }
 

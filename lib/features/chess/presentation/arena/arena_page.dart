@@ -15,7 +15,6 @@ import '../widgets/captured_pieces_inline.dart';
 import '../../domain/models/ai_avatar.dart';
 import '../widgets/opponent_avatar_indicator.dart';
 import '../widgets/arena_time_display.dart';
-import '../widgets/arena_turn_indicator.dart';
 import '../widgets/evaluation_bar.dart';
 import '../widgets/user_avatar_indicator.dart';
 import '../widgets/ambient_flow_backdrop.dart';
@@ -178,9 +177,6 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
     return Scaffold(
         key: _scaffoldKey,
         backgroundColor: ScholarlyTheme.backgroundStart,
-        bottomNavigationBar: isLandscape
-            ? null
-            : _buildActionRow(context, ref, state, isDocked: true),
         body: Stack(
           children: [
             const AmbientFlowBackdrop(),
@@ -314,31 +310,61 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 12),
-              // Opponent Avatar Indicator (Top Left) with Inline Captured Pieces
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        ActiveAvatarWrapper(
-                          isActive: !isTurn,
-                          child: OpponentAvatarIndicator(
-                            avatar: AiAvatar.getAvatar(state.engineLevel),
-                            onTap: null, // Read-only from unrated arena
+              // Top Player (Opponent) Row - stabilized height
+              SizedBox(
+                height: 60,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ArenaTimeDisplay(
+                            isWhite: !state.isPlayerWhite,
+                            isActive: !isTurn,
+                            timeLeft: !state.isPlayerWhite ? state.whiteTimeLeft : state.blackTimeLeft,
+                            baseTimeDuration: state.baseTimeDuration,
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        CapturedPiecesInline(
+                          const SizedBox(width: 8),
+                          EvaluationBar(fillFraction: _getEvalFraction(state, false)),
+                        ],
+                      ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _buildThinkingFlashButton(context: context, ref: ref, state: state),
+                          ActiveAvatarWrapper(
+                            isActive: !isTurn,
+                            child: OpponentAvatarIndicator(
+                              avatar: AiAvatar.getAvatar(state.engineLevel),
+                              onTap: null, // Read-only from unrated arena
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              // Top Captured Pieces stacked below top player row - stabilized height
+              SizedBox(
+                height: 34,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 2),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Flexible(
+                        child: CapturedPiecesInline(
                           pieces: topPieces,
                           opponentPieces: bottomPieces,
                         ),
-                      ],
-                    ),
-                    _buildThinkingFlashButton(context: context, ref: ref, state: state),
-                  ],
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                  ),
                 ),
               ),
               // BoardStage centered
@@ -350,25 +376,36 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                   ],
                 ),
               ),
-              // User Avatar Indicator (Bottom Right) with Inline Captured Pieces
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _buildBottomThinkingIndicator(context: context, ref: ref, state: state),
-                    Expanded(
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
+              // Bottom Captured Pieces stacked above bottom player row - stabilized height
+              SizedBox(
+                height: 34,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 2),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: [
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: CapturedPiecesInline(
+                          pieces: bottomPieces,
+                          opponentPieces: topPieces,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              // Bottom Player (User/Down Engine) Row - stabilized height
+              SizedBox(
+                height: 60,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Flexible(
-                            child: CapturedPiecesInline(
-                              pieces: bottomPieces,
-                              opponentPieces: topPieces,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
                           ActiveAvatarWrapper(
                             isActive: isTurn,
                             child: state.isEngineVsEngine
@@ -378,10 +415,24 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                                   )
                                 : const UserAvatarIndicator(),
                           ),
+                          _buildBottomThinkingIndicator(context: context, ref: ref, state: state),
                         ],
                       ),
-                    ),
-                  ],
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          EvaluationBar(fillFraction: _getEvalFraction(state, true)),
+                          const SizedBox(width: 8),
+                          ArenaTimeDisplay(
+                            isWhite: state.isPlayerWhite,
+                            isActive: isTurn,
+                            timeLeft: state.isPlayerWhite ? state.whiteTimeLeft : state.blackTimeLeft,
+                            baseTimeDuration: state.baseTimeDuration,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -403,62 +454,6 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Top Row: Stats & Clocks wrapped in glass
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.35),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.5),
-                          width: 1.5,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              ArenaTurnIndicator(isActive: isTurn, isWhite: state.isPlayerWhite),
-                              const SizedBox(width: 8),
-                              EvaluationBar(fillFraction: _getEvalFraction(state, true)),
-                            ],
-                          ),
-                          const Spacer(),
-                          ArenaTimeDisplay(
-                            isWhite: state.isPlayerWhite,
-                            isActive: isTurn,
-                            timeLeft: state.isPlayerWhite ? state.whiteTimeLeft : state.blackTimeLeft,
-                            baseTimeDuration: state.baseTimeDuration,
-                          ),
-                          const SizedBox(width: 12),
-                          ArenaTimeDisplay(
-                            isWhite: !state.isPlayerWhite,
-                            isActive: !isTurn,
-                            timeLeft: !state.isPlayerWhite ? state.whiteTimeLeft : state.blackTimeLeft,
-                            baseTimeDuration: state.baseTimeDuration,
-                          ),
-                          const Spacer(),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              EvaluationBar(fillFraction: _getEvalFraction(state, false)),
-                              const SizedBox(width: 8),
-                              ArenaTurnIndicator(isActive: !isTurn, isWhite: !state.isPlayerWhite),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-
                 Expanded(
                   child: TabbedGamePanel(
                     recentMoves: state.recentMoves,
@@ -489,91 +484,37 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
     final isFlipped = state.isBoardFlipped;
     final topPieces = isFlipped ? state.game.capturedByWhite : state.game.capturedByBlack;
     final bottomPieces = isFlipped ? state.game.capturedByBlack : state.game.capturedByWhite;
+    final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const SizedBox(height: 16),
-        // Top Row: Stats & Clocks wrapped in glass
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.35),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.5),
-                    width: 1.5,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.03),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: SizedBox(
-                    width: MediaQuery.of(context).size.width - 60,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            ArenaTurnIndicator(isActive: isTurn, isWhite: state.isPlayerWhite),
-                            const SizedBox(width: 8),
-                            EvaluationBar(fillFraction: _getEvalFraction(state, true)),
-                          ],
-                        ),
-                        const Spacer(),
-                        ArenaTimeDisplay(
-                          isWhite: state.isPlayerWhite,
-                          isActive: isTurn,
-                          timeLeft: state.isPlayerWhite ? state.whiteTimeLeft : state.blackTimeLeft,
-                          baseTimeDuration: state.baseTimeDuration,
-                        ),
-                        const SizedBox(width: 12),
-                        ArenaTimeDisplay(
-                          isWhite: !state.isPlayerWhite,
-                          isActive: !isTurn,
-                          timeLeft: !state.isPlayerWhite ? state.whiteTimeLeft : state.blackTimeLeft,
-                          baseTimeDuration: state.baseTimeDuration,
-                        ),
-                        const Spacer(),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            EvaluationBar(fillFraction: _getEvalFraction(state, false)),
-                            const SizedBox(width: 8),
-                            ArenaTurnIndicator(isActive: !isTurn, isWhite: !state.isPlayerWhite),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-        // Opponent with active wrapper
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Row(
+        // Top Player (Opponent) Row - stabilized height
+        SizedBox(
+          height: 60,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    ArenaTimeDisplay(
+                      isWhite: !state.isPlayerWhite,
+                      isActive: !isTurn,
+                      timeLeft: !state.isPlayerWhite ? state.whiteTimeLeft : state.blackTimeLeft,
+                      baseTimeDuration: state.baseTimeDuration,
+                    ),
+                    const SizedBox(width: 8),
+                    EvaluationBar(fillFraction: _getEvalFraction(state, false)),
+                  ],
+                ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildThinkingFlashButton(context: context, ref: ref, state: state),
                     ActiveAvatarWrapper(
                       isActive: !isTurn,
                       child: OpponentAvatarIndicator(
@@ -581,18 +522,29 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                         onTap: null, // Read-only from unrated arena
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Flexible(
-                      child: CapturedPiecesInline(
-                        pieces: topPieces,
-                        opponentPieces: bottomPieces,
-                      ),
-                    ),
                   ],
                 ),
-              ),
-              _buildThinkingFlashButton(context: context, ref: ref, state: state),
-            ],
+              ],
+            ),
+          ),
+        ),
+        // Top Captured Pieces stacked below top player row - stabilized height
+        SizedBox(
+          height: 34,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Flexible(
+                  child: CapturedPiecesInline(
+                    pieces: topPieces,
+                    opponentPieces: bottomPieces,
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
+            ),
           ),
         ),
         // Board
@@ -607,40 +559,72 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
             ),
           ),
         ),
-        // User with active wrapper
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildBottomThinkingIndicator(context: context, ref: ref, state: state),
-              Expanded(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
+        // Bottom Captured Pieces stacked above bottom player row - stabilized height
+        SizedBox(
+          height: 34,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                const SizedBox(width: 8),
+                Flexible(
+                  child: CapturedPiecesInline(
+                    pieces: bottomPieces,
+                    opponentPieces: topPieces,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        // Bottom Player (User/Down Engine) Row - stabilized height
+        SizedBox(
+          height: 60,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Flexible(
-                      child: CapturedPiecesInline(
-                        pieces: bottomPieces,
-                        opponentPieces: topPieces,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
                     ActiveAvatarWrapper(
                       isActive: isTurn,
                       child: state.isEngineVsEngine
                           ? OpponentAvatarIndicator(
                               avatar: AiAvatar.getAvatar(state.bottomAvatarId),
                               onTap: null, // Read-only from unrated arena
-                            )
+                          )
                           : const UserAvatarIndicator(),
+                    ),
+                    _buildBottomThinkingIndicator(context: context, ref: ref, state: state),
+                  ],
+                ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    EvaluationBar(fillFraction: _getEvalFraction(state, true)),
+                    const SizedBox(width: 8),
+                    ArenaTimeDisplay(
+                      isWhite: state.isPlayerWhite,
+                      isActive: isTurn,
+                      timeLeft: state.isPlayerWhite ? state.whiteTimeLeft : state.blackTimeLeft,
+                      baseTimeDuration: state.baseTimeDuration,
                     ),
                   ],
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
+        if (!isKeyboardOpen) ...[
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: _buildActionRow(context, ref, state, isDocked: false),
+          ),
+        ],
       ],
     );
   }
@@ -701,6 +685,24 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
   }
 
   List<Widget> _buildActionButtons(BuildContext context, WidgetRef ref, ArenaState state, {required bool isDocked}) {
+    final chessState = ref.watch(chessProvider);
+    final savedGame = chessState.savedGames.where((e) => e.id == state.loadedGameId).firstOrNull;
+    bool isDirty = false;
+    if (state.recentMoves.isNotEmpty) {
+      if (state.loadedGameId == null || savedGame == null) {
+        isDirty = true;
+      } else if (savedGame.recentMoves.length != state.recentMoves.length) {
+        isDirty = true;
+      } else {
+        for (int i = 0; i < state.recentMoves.length; i++) {
+          if (savedGame.recentMoves[i] != state.recentMoves[i]) {
+            isDirty = true;
+            break;
+          }
+        }
+      }
+    }
+
     return [
       ActionIconButton(
         icon: Icons.add_box_rounded, // UNRATED uses +
@@ -799,10 +801,28 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
         onTap: () => ref.read(arenaProvider.notifier).activateTemporaryQuickPlay(),
       ),
       const SizedBox(width: 8),
-      ActionIconButton(
-        icon: Icons.save_rounded,
-        isFlat: isDocked,
-        onTap: () => _handleSaveGame(context, ref),
+      Stack(
+        clipBehavior: Clip.none,
+        children: [
+          ActionIconButton(
+            icon: Icons.save_rounded,
+            isFlat: isDocked,
+            onTap: () => _handleSaveGame(context, ref),
+          ),
+          if (isDirty)
+            Positioned(
+              top: -2,
+              right: -2,
+              child: Container(
+                width: 8,
+                height: 8,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFFF6B35),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+        ],
       ),
       const SizedBox(width: 8),
       ActionIconButton(
@@ -1534,11 +1554,11 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
     final isThinking = state.isEngineThinking && isAiTurn;
 
     if (!isThinking) {
-      return const SizedBox(width: 48, height: 48);
+      return const SizedBox.shrink();
     }
 
     return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 14),
+      padding: EdgeInsets.only(right: 8),
       child: Tooltip(
         message: 'Engine is thinking...',
         child: ThinkingDotsAnimation(),
@@ -1555,11 +1575,11 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
     final isThinking = state.isEngineThinking && isBottomAiTurn;
 
     if (!isThinking) {
-      return const SizedBox(width: 48, height: 48);
+      return const SizedBox.shrink();
     }
 
     return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 14),
+      padding: EdgeInsets.only(left: 8),
       child: Tooltip(
         message: 'Engine is thinking...',
         child: ThinkingDotsAnimation(),

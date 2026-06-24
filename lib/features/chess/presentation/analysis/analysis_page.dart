@@ -406,7 +406,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> with TickerProvider
 
         // VCR controls & action buttons
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+          padding: const EdgeInsets.only(left: 12.0, right: 12.0, top: 8.0, bottom: 2.0),
           child: _buildUnifiedControlPanel(
             context,
             state,
@@ -419,7 +419,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> with TickerProvider
         // Horizontal page views for engine and moves, taking up the remaining height
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(12.0, 4.0, 12.0, 12.0),
+            padding: const EdgeInsets.fromLTRB(12.0, 2.0, 12.0, 12.0),
             child: _buildHorizontalPanels(
               context,
               state,
@@ -635,7 +635,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> with TickerProvider
       children: [
         _buildSparringBoardWithEval(context, practiceState, boardSize),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+          padding: const EdgeInsets.only(left: 12.0, right: 12.0, top: 8.0, bottom: 2.0),
           child: _buildSparringUnifiedControlPanel(
             context,
             practiceState,
@@ -645,7 +645,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> with TickerProvider
         ),
         const Expanded(
           child: Padding(
-            padding: EdgeInsets.fromLTRB(12.0, 4.0, 12.0, 12.0),
+            padding: EdgeInsets.fromLTRB(12.0, 2.0, 12.0, 12.0),
             child: PracticeModePanel(),
           ),
         ),
@@ -815,11 +815,34 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> with TickerProvider
     StudyLabNotifier notifier,
     double maxWidth,
   ) {
+    final engineState = ref.watch(analysisEngineControllerProvider);
+    final bestLine = engineState.topLines.firstOrNull;
+
+    const double evalBarWidth = 6.0;
+    const double evalBarPadding = 4.0;
+    final double actualBoardSize = maxWidth - evalBarWidth - evalBarPadding;
+
     return Center(
-      child: StudyLabChessBoard(
-        state: state,
-        notifier: notifier,
-        boardSize: maxWidth,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          EvalBar(
+            evalScore: bestLine?.eval,
+            isMate: bestLine?.isMate ?? false,
+            mateIn: bestLine?.mateIn,
+            isEngineOn: engineState.isEngineOn,
+            isFlipped: state.isBoardFlipped,
+            height: actualBoardSize,
+            width: evalBarWidth,
+          ),
+          const SizedBox(width: evalBarPadding),
+          StudyLabChessBoard(
+            state: state,
+            notifier: notifier,
+            boardSize: actualBoardSize,
+          ),
+        ],
       ),
     );
   }
@@ -2219,27 +2242,110 @@ class _CompactBoxButtonState extends State<_CompactBoxButton>
   Widget build(BuildContext context) {
     final bool isEnabled = widget.onTap != null;
 
-    // Colorful icon/text when enabled, faded when disabled
-    final Color color = isEnabled
-        ? widget.activeColor
-        : ScholarlyTheme.textMuted.withValues(alpha: 0.35);
-
-    // Box background color
-    final Color bgColor = widget.isActive
-        ? widget.activeColor.withValues(alpha: 0.2)
-        : isEnabled
-            ? Colors.black.withValues(alpha: 0.03) // Very subtle default box background
-            : Colors.transparent;
+    final baseColor = widget.activeColor;
+    final hsl = HSLColor.fromColor(baseColor);
+    final darker = hsl.withLightness((hsl.lightness - 0.12).clamp(0.0, 1.0)).toColor();
 
     // Box border color
-    final Color borderColor = widget.isActive
-        ? widget.activeColor
-        : isEnabled
-            ? ScholarlyTheme.panelStroke.withValues(alpha: 0.5)
-            : ScholarlyTheme.panelStroke.withValues(alpha: 0.2);
+    final Color borderClr = isEnabled
+        ? baseColor.withValues(alpha: widget.isActive ? 0.6 : 0.35)
+        : ScholarlyTheme.panelStroke.withValues(alpha: 0.15);
+
+    // Dynamic child text/icon color
+    final Color childColor = isEnabled
+        ? Colors.black
+        : ScholarlyTheme.textMuted.withValues(alpha: 0.35);
+
+    final content = Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        gradient: isEnabled
+            ? LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  baseColor.withValues(alpha: widget.isActive ? 0.40 : 0.25),
+                  darker.withValues(alpha: widget.isActive ? 0.30 : 0.15),
+                ],
+              )
+            : LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.white.withValues(alpha: 0.08),
+                  Colors.white.withValues(alpha: 0.03),
+                ],
+              ),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: borderClr,
+          width: widget.isActive ? 1.5 : 1.0,
+        ),
+        boxShadow: [
+          if (isEnabled)
+            BoxShadow(
+              color: baseColor.withValues(alpha: widget.isActive ? 0.25 : 0.12),
+              blurRadius: widget.isActive ? 10 : 5,
+              spreadRadius: widget.isActive ? 1.5 : 0.5,
+              offset: const Offset(0, 2),
+            ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Stack(
+          children: [
+            if (isEnabled)
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Colors.white.withValues(alpha: 0.25),
+                        Colors.white.withValues(alpha: 0.08),
+                        Colors.transparent,
+                        Colors.transparent,
+                      ],
+                      stops: const [0.0, 0.25, 0.55, 1.0],
+                    ),
+                  ),
+                ),
+              ),
+            Center(
+              child: IconTheme(
+                data: IconThemeData(
+                  size: 22,
+                  color: childColor,
+                ),
+                child: DefaultTextStyle(
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: childColor,
+                  ),
+                  child: widget.child,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
 
     return Tooltip(
       message: widget.tooltip,
+      decoration: BoxDecoration(
+        color: ScholarlyTheme.backgroundDark.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      textStyle: GoogleFonts.inter(
+        color: Colors.white,
+        fontSize: 11,
+        fontWeight: FontWeight.w500,
+      ),
       child: GestureDetector(
         onTapDown: isEnabled ? (_) => _controller.forward() : null,
         onTapUp: isEnabled ? (_) => _controller.reverse() : null,
@@ -2247,43 +2353,7 @@ class _CompactBoxButtonState extends State<_CompactBoxButton>
         onTap: widget.onTap,
         child: ScaleTransition(
           scale: _scaleAnimation,
-          child: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: bgColor,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: borderColor,
-                width: widget.isActive ? 1.5 : 1.0,
-              ),
-              boxShadow: widget.isActive
-                  ? [
-                      BoxShadow(
-                        color: widget.activeColor.withValues(alpha: 0.2),
-                        blurRadius: 4,
-                        spreadRadius: 0.5,
-                      )
-                    ]
-                  : [],
-            ),
-            child: Center(
-              child: IconTheme(
-                data: IconThemeData(
-                  size: 22,
-                  color: color,
-                ),
-                child: DefaultTextStyle(
-                  style: GoogleFonts.inter(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                    color: color,
-                  ),
-                  child: widget.child,
-                ),
-              ),
-            ),
-          ),
+          child: content,
         ),
       ),
     );
@@ -2351,34 +2421,99 @@ class _FlashingEngineButtonState extends State<FlashingEngineButton> with Single
 
   @override
   Widget build(BuildContext context) {
+    final baseColor = const Color(0xFFFFC107);
+    final hsl = HSLColor.fromColor(baseColor);
+    final darker = hsl.withLightness((hsl.lightness - 0.12).clamp(0.0, 1.0)).toColor();
+    final borderColor = hsl.withLightness((hsl.lightness + 0.10).clamp(0.0, 1.0)).toColor();
+
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
         final double opacity = widget.isEngineOn ? _opacityAnimation.value : 1.0;
         final double scale = widget.isEngineOn ? _scaleAnimation.value : 1.0;
-        final Color color = widget.isEngineOn ? const Color(0xFFFFD740) : ScholarlyTheme.textMuted.withValues(alpha: 0.5);
 
-        return Transform.scale(
-          scale: scale,
-          child: Opacity(
-            opacity: opacity,
-            child: IconButton(
-              icon: Icon(
-                Icons.bolt_rounded,
-                color: color,
-                size: widget.size,
-                shadows: widget.isEngineOn
-                    ? [
-                        BoxShadow(
-                          color: const Color(0xFFFFD740).withValues(alpha: 0.5),
-                          blurRadius: 8 * _opacityAnimation.value,
-                          spreadRadius: 2,
-                        ),
-                      ]
-                    : null,
+        final bgGradient = LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            baseColor.withValues(alpha: opacity),
+            darker.withValues(alpha: opacity),
+          ],
+        );
+
+        final borderClr = borderColor.withValues(alpha: 0.6 * opacity);
+        final shadowClr = baseColor.withValues(alpha: (widget.isEngineOn ? 0.5 : 0.25) * opacity);
+        final double blurRadius = widget.isEngineOn ? (10.0 * opacity) : 5.0;
+        final double spreadRadius = widget.isEngineOn ? (1.5 * opacity) : 0.5;
+
+        final buttonContainer = Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            gradient: bgGradient,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: borderClr,
+              width: widget.isEngineOn ? 1.5 : 1.0,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: shadowClr,
+                blurRadius: blurRadius,
+                spreadRadius: spreadRadius,
+                offset: const Offset(0, 2),
               ),
-              onPressed: widget.onTap,
-              tooltip: widget.isEngineOn ? 'Turn Engine Off' : 'Turn Engine On',
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Colors.white.withValues(alpha: 0.25 * opacity),
+                          Colors.white.withValues(alpha: 0.08 * opacity),
+                          Colors.transparent,
+                          Colors.transparent,
+                        ],
+                        stops: const [0.0, 0.25, 0.55, 1.0],
+                      ),
+                    ),
+                  ),
+                ),
+                const Center(
+                  child: Icon(
+                    Icons.bolt_rounded,
+                    size: 22,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+
+        return Tooltip(
+          message: widget.isEngineOn ? 'Turn Engine Off' : 'Turn Engine On',
+          decoration: BoxDecoration(
+            color: ScholarlyTheme.backgroundDark.withValues(alpha: 0.9),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          textStyle: GoogleFonts.inter(
+            color: Colors.white,
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+          ),
+          child: GestureDetector(
+            onTap: widget.onTap,
+            child: Transform.scale(
+              scale: scale,
+              child: buttonContainer,
             ),
           ),
         );

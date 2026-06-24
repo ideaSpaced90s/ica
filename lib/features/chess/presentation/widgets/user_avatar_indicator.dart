@@ -44,7 +44,7 @@ class _UserAvatarIndicatorState extends State<UserAvatarIndicator> {
             curve: Curves.easeInOutCubic,
             padding: EdgeInsets.symmetric(
               horizontal: _isExpanded ? 12 : 6,
-              vertical: _isExpanded ? 8 : 6,
+              vertical: 4,
             ),
             decoration: ScholarlyTheme.modernDecoration().copyWith(
               borderRadius: BorderRadius.circular(24),

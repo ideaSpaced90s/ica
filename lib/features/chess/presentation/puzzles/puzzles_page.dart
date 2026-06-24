@@ -970,39 +970,131 @@ class _CompactActionIcon extends StatefulWidget {
 class _CompactActionIconState extends State<_CompactActionIcon> {
   bool _isPressed = false;
 
+  List<Color> _getGradientColors() {
+    final icon = widget.icon;
+    if (icon == Icons.lightbulb_rounded || icon == Icons.lightbulb_outline_rounded) {
+      return const [Color(0xFFEAB308), Color(0xFFCA8A04)];
+    } else if (icon == Icons.replay_rounded) {
+      return const [Color(0xFF8B5CF6), Color(0xFF6D28D9)];
+    } else if (icon == Icons.skip_next_rounded) {
+      return const [Color(0xFF0EA5E9), Color(0xFF0284C7)];
+    }
+    return const [Color(0xFF0D6EFD), Color(0xFF0A58CA)];
+  }
+
+  Color _getGlowColor() {
+    final icon = widget.icon;
+    if (icon == Icons.lightbulb_rounded || icon == Icons.lightbulb_outline_rounded) {
+      return const Color(0xFFFDE047);
+    } else if (icon == Icons.replay_rounded) {
+      return const Color(0xFFA78BFA);
+    } else if (icon == Icons.skip_next_rounded) {
+      return const Color(0xFF38BDF8);
+    }
+    return const Color(0xFF3B82F6);
+  }
+
+  Color _getBorderColor() {
+    final icon = widget.icon;
+    if (icon == Icons.lightbulb_rounded || icon == Icons.lightbulb_outline_rounded) {
+      return const Color(0xFFFEF08A);
+    } else if (icon == Icons.replay_rounded) {
+      return const Color(0xFFC084FC);
+    } else if (icon == Icons.skip_next_rounded) {
+      return const Color(0xFF7DD3FC);
+    }
+    return const Color(0xFF60A5FA);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final gradientColors = _getGradientColors();
+    final glowColor = _getGlowColor();
+    final borderColor = _getBorderColor();
+
     final content = AnimatedContainer(
-      duration: const Duration(milliseconds: 100),
+      duration: const Duration(milliseconds: 150),
       width: 44,
       height: 44,
       decoration: BoxDecoration(
-        color: (widget.isActive || _isPressed)
-            ? (widget.activeColor?.withValues(alpha: 0.2) ?? ScholarlyTheme.accentBlue.withValues(alpha: 0.15))
-            : Colors.white.withValues(alpha: 0.3),
+        gradient: widget.isEnabled
+            ? LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: gradientColors,
+              )
+            : const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFFE2E8F0), Color(0xFFCBD5E1)],
+              ),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: (widget.isActive || _isPressed)
-              ? (widget.activeIconColor ?? ScholarlyTheme.accentBlue).withValues(alpha: 0.4)
-              : Colors.white.withValues(alpha: 0.6),
+          color: widget.isEnabled
+              ? borderColor.withValues(alpha: 0.6)
+              : const Color(0xFFE2E8F0),
           width: 1.5,
         ),
+        boxShadow: [
+          if (widget.isEnabled)
+            BoxShadow(
+              color: glowColor.withValues(alpha: widget.isActive ? 0.5 : (_isPressed ? 0.4 : 0.25)),
+              blurRadius: widget.isActive ? 12.0 : (_isPressed ? 14.0 : 8.0),
+              spreadRadius: _isPressed ? 2.5 : 1.0,
+              offset: const Offset(0, 3),
+            ),
+        ],
       ),
-      child: Center(
-        child: Icon(
-          widget.icon,
-          size: 22,
-          color: widget.isEnabled
-              ? (widget.isActive
-                    ? (widget.activeIconColor ?? ScholarlyTheme.accentBlue)
-                    : ScholarlyTheme.textPrimary)
-              : ScholarlyTheme.textSubtle,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Stack(
+          children: [
+            if (widget.isEnabled)
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Colors.white.withValues(alpha: 0.28),
+                        Colors.white.withValues(alpha: 0.08),
+                        Colors.transparent,
+                        Colors.transparent,
+                      ],
+                      stops: const [0.0, 0.25, 0.55, 1.0],
+                    ),
+                  ),
+                ),
+              ),
+            Center(
+              child: Icon(
+                widget.icon,
+                size: 22,
+                color: widget.isEnabled
+                    ? Colors.white
+                    : const Color(0xFF94A3B8),
+              ),
+            ),
+          ],
         ),
       ),
     );
 
     final wrappedContent = widget.tooltip != null
-        ? Tooltip(message: widget.tooltip!, child: content)
+        ? Tooltip(
+            message: widget.tooltip!,
+            decoration: BoxDecoration(
+              color: ScholarlyTheme.backgroundDark.withValues(alpha: 0.9),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            textStyle: GoogleFonts.inter(
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+            ),
+            child: content,
+          )
         : content;
 
     return GestureDetector(
@@ -1010,7 +1102,12 @@ class _CompactActionIconState extends State<_CompactActionIcon> {
       onTapUp: widget.isEnabled ? (_) => setState(() => _isPressed = false) : null,
       onTapCancel: () => setState(() => _isPressed = false),
       onTap: widget.isEnabled ? widget.onTap : null,
-      child: wrappedContent,
+      child: AnimatedScale(
+        scale: _isPressed ? 0.88 : 1.0,
+        duration: const Duration(milliseconds: 100),
+        curve: _isPressed ? Curves.easeOutCubic : Curves.elasticOut,
+        child: wrappedContent,
+      ),
     );
   }
 }
