@@ -15,7 +15,8 @@ import 'chessboard_themes_page.dart';
 import 'arena_random_persona_page.dart';
 
 class ArenaSettingsPage extends ConsumerStatefulWidget {
-  const ArenaSettingsPage({super.key});
+  final bool embedMode;
+  const ArenaSettingsPage({super.key, this.embedMode = false});
 
   @override
   ConsumerState<ArenaSettingsPage> createState() => _ArenaSettingsPageState();
@@ -29,58 +30,55 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
     final state = ref.watch(chessProvider);
     final notifier = ref.read(chessProvider.notifier);
 
-    return AmbientScaffold(
-      scaffoldKey: _scaffoldKey,
-      blob1Color: const Color(0xFFE2E8F0),
-      blob2Color: const Color(0xFFDBEAFE),
-      blob3Color: const Color(0xFFD1FAE5),
-      body: Stack(
-        children: [
-          CustomScrollView(
-            physics: const BouncingScrollPhysics(),
-            slivers: [
-              // Extra top padding since app bar is gone
-              SliverToBoxAdapter(
-                child: SizedBox(
-                  height: MediaQuery.of(context).padding.top + 32,
-                ),
-              ),
+    final Widget mainContent = SafeArea(
+      top: widget.embedMode,
+      bottom: false,
+      child: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          // Extra top padding since app bar is gone
+          SliverToBoxAdapter(
+            child: SizedBox(
+              height: widget.embedMode ? 24 : MediaQuery.of(context).padding.top + 32,
+            ),
+          ),
 
-              // Title with back button
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  child: Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(
-                          Icons.arrow_back_rounded,
-                          color: ScholarlyTheme.textPrimary,
-                        ),
-                        onPressed: () {
-                          ref
-                              .read(chessSoundServiceProvider)
-                              .playSfx(SoundEffect.uiNavigate);
-                          Navigator.of(context).pop();
-                        },
+          // Title with back button
+          if (!widget.embedMode)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(
+                        Icons.arrow_back_rounded,
+                        color: ScholarlyTheme.textPrimary,
                       ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'SETTINGS',
-                        style: GoogleFonts.outfit(
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 2,
-                          color: ScholarlyTheme.textPrimary,
-                        ),
+                      onPressed: () {
+                        ref
+                            .read(chessSoundServiceProvider)
+                            .playSfx(SoundEffect.uiNavigate);
+                        Navigator.of(context).pop();
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'SETTINGS',
+                      style: GoogleFonts.outfit(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 2,
+                        color: ScholarlyTheme.textPrimary,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
+            ),
 
               // Settings Sections
               SliverList(
@@ -122,22 +120,23 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
                   _SettingsCategory(
                     title: 'VISUALS',
                     children: [
-                      _SettingsTile(
-                        label: 'Chessboard Themes',
-                        description:
-                            'Current: ${ThemeRegistry.getTheme(state.boardThemeId).name}',
-                        icon: Icons.palette_rounded,
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const ChessboardThemesPage(),
-                            ),
-                          );
-                        },
-                        trailing: _ThemeMiniPreview(
-                          theme: ThemeRegistry.getTheme(state.boardThemeId),
+                      if (!widget.embedMode)
+                        _SettingsTile(
+                          label: 'Chessboard Themes',
+                          description:
+                              'Current: ${ThemeRegistry.getTheme(state.boardThemeId).name}',
+                          icon: Icons.palette_rounded,
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const ChessboardThemesPage(),
+                              ),
+                            );
+                          },
+                          trailing: _ThemeMiniPreview(
+                            theme: ThemeRegistry.getTheme(state.boardThemeId),
+                          ),
                         ),
-                      ),
                       _SettingsSwitchTile(
                         label: 'Animations State',
                         icon: state.isAnimationsEnabled
@@ -189,12 +188,13 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
                           color: ScholarlyTheme.accentBlue,
                         ),
                       ),
-                      _buildPremiumPersonaManagementCard(
-                        context,
-                        ref,
-                        state,
-                        notifier,
-                      ),
+                      if (!widget.embedMode)
+                        _buildPremiumPersonaManagementCard(
+                          context,
+                          ref,
+                          state,
+                          notifier,
+                        ),
                       _SettingsSwitchTile(
                         label: 'Quick play',
                         description: state.quickPlay
@@ -213,8 +213,18 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
               ),
             ],
           ),
-        ],
-      ),
+      );
+
+    if (widget.embedMode) {
+      return mainContent;
+    }
+
+    return AmbientScaffold(
+      scaffoldKey: _scaffoldKey,
+      blob1Color: const Color(0xFFE2E8F0),
+      blob2Color: const Color(0xFFDBEAFE),
+      blob3Color: const Color(0xFFD1FAE5),
+      body: mainContent,
     );
   }
 
@@ -635,7 +645,7 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
                           style: GoogleFonts.jetBrainsMono(
                             fontSize: 9,
                             fontWeight: FontWeight.bold,
-                            color: avatar.color,
+                            color: avatar.textSafeColor,
                           ),
                         ),
                       ),

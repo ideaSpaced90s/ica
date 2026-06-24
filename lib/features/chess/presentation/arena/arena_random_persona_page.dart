@@ -11,7 +11,13 @@ import '../../services/chess_sound_service.dart';
 import '../widgets/ambient_scaffold.dart';
 
 class ArenaRandomPersonaPage extends ConsumerStatefulWidget {
-  const ArenaRandomPersonaPage({super.key});
+  final bool embedMode;
+  final VoidCallback? onMatchCommitted;
+  const ArenaRandomPersonaPage({
+    super.key,
+    this.embedMode = false,
+    this.onMatchCommitted,
+  });
 
   @override
   ConsumerState<ArenaRandomPersonaPage> createState() =>
@@ -19,22 +25,19 @@ class ArenaRandomPersonaPage extends ConsumerStatefulWidget {
 }
 
 class _ArenaRandomPersonaPageState extends ConsumerState<ArenaRandomPersonaPage>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   bool _isShuffling = false;
-  AiAvatar? _upAvatar;
-  AiAvatar? _downAvatar;
+  // Temporary avatars shown only during the shuffle animation
+  AiAvatar? _shuffleUpAvatar;
+  AiAvatar? _shuffleDownAvatar;
   Timer? _shuffleTimer;
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
+  late AnimationController _diceRotationController;
 
   @override
   void initState() {
     super.initState();
-    // Start with current selected personas
-    final chessState = ref.read(chessProvider);
-    _upAvatar = AiAvatar.getAvatar(chessState.engineLevel);
-    _downAvatar = AiAvatar.getAvatar(chessState.bottomAvatarId);
-
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 300),
@@ -42,23 +45,34 @@ class _ArenaRandomPersonaPageState extends ConsumerState<ArenaRandomPersonaPage>
     _scaleAnimation = Tween<double>(begin: 1.0, end: 0.9).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
     );
+    _diceRotationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
   }
 
   @override
   void dispose() {
     _shuffleTimer?.cancel();
     _animationController.dispose();
+    _diceRotationController.dispose();
     super.dispose();
   }
 
   void _triggerShuffle() {
     if (_isShuffling) return;
 
+    // Seed shuffle from current provider state
+    final chessState = ref.read(chessProvider);
+    _shuffleUpAvatar = AiAvatar.getAvatar(chessState.engineLevel);
+    _shuffleDownAvatar = AiAvatar.getAvatar(chessState.bottomAvatarId);
+
     ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
     setState(() {
       _isShuffling = true;
     });
     _animationController.forward();
+    _diceRotationController.repeat();
 
     int ticks = 0;
     const maxTicks = 18;
@@ -74,6 +88,8 @@ class _ArenaRandomPersonaPageState extends ConsumerState<ArenaRandomPersonaPage>
         timer.cancel();
         _shuffleTimer = null;
         _animationController.reverse();
+        _diceRotationController.stop();
+        _diceRotationController.reset();
         setState(() {
           _isShuffling = false;
         });
@@ -88,8 +104,8 @@ class _ArenaRandomPersonaPageState extends ConsumerState<ArenaRandomPersonaPage>
           while (randDownIdx == randUpIdx) {
             randDownIdx = math.Random().nextInt(list.length);
           }
-          _upAvatar = list[randUpIdx];
-          _downAvatar = list[randDownIdx];
+          _shuffleUpAvatar = list[randUpIdx];
+          _shuffleDownAvatar = list[randDownIdx];
         });
         ticks++;
       }
@@ -97,24 +113,41 @@ class _ArenaRandomPersonaPageState extends ConsumerState<ArenaRandomPersonaPage>
   }
 
   Future<void> _commitMatchSelection() async {
-    if (_upAvatar == null || _downAvatar == null) return;
+    if (_shuffleUpAvatar == null || _shuffleDownAvatar == null) return;
     final notifier = ref.read(chessProvider.notifier);
-    await notifier.setEngineLevel(_upAvatar!.id);
-    await notifier.setBottomAvatarId(_downAvatar!.id);
+    await notifier.setEngineLevel(_shuffleUpAvatar!.id);
+    await notifier.setBottomAvatarId(_shuffleDownAvatar!.id);
+    // Clear temp shuffle avatars — provider is now the source of truth
+    if (mounted) {
+      setState(() {
+        _shuffleUpAvatar = null;
+        _shuffleDownAvatar = null;
+      });
+    }
     if (!mounted) return;
-    Navigator.of(context).pop();
+    if (widget.onMatchCommitted != null) {
+      widget.onMatchCommitted!();
+    } else {
+      Navigator.of(context).pop();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return AmbientScaffold(
-      blob1Color: const Color(0xFFFAE8FF), // Light Pink/Purple
-      blob2Color: const Color(0xFFEFF6FF), // Light Blue
-      blob3Color: const Color(0xFFECFDF5), // Light Green
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Header
+    // Always watch the provider so Explorer changes reflect here immediately
+    final chessState = ref.watch(chessProvider);
+    final displayUpAvatar = _isShuffling
+        ? _shuffleUpAvatar ?? AiAvatar.getAvatar(chessState.engineLevel)
+        : AiAvatar.getAvatar(chessState.engineLevel);
+    final displayDownAvatar = _isShuffling
+        ? _shuffleDownAvatar ?? AiAvatar.getAvatar(chessState.bottomAvatarId)
+        : AiAvatar.getAvatar(chessState.bottomAvatarId);
+
+    final mainContent = SafeArea(
+      child: Column(
+        children: [
+          // Header
+          if (!widget.embedMode)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
@@ -145,91 +178,87 @@ class _ArenaRandomPersonaPageState extends ConsumerState<ArenaRandomPersonaPage>
               ),
             ),
 
-            Expanded(
-              child: Center(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
-                  child: ScaleTransition(
-                    scale: _scaleAnimation,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // UP ENGINE CARD
-                        if (_upAvatar != null)
-                          _buildMatchmakingCard(
-                            role: 'UP ENGINE (WHITE)',
-                            avatar: _upAvatar!,
-                          ),
+          Expanded(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                child: ScaleTransition(
+                  scale: _scaleAnimation,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      // UP ENGINE CARD
+                      _buildMatchmakingCard(
+                        role: 'UP ENGINE (WHITE)',
+                        avatar: displayUpAvatar,
+                      ),
 
-                        const SizedBox(height: 16),
+                      const SizedBox(height: 12),
 
-                        // VS divider
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: ScholarlyTheme.panelStroke.withValues(
-                              alpha: 0.45,
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            'VS',
-                            style: GoogleFonts.jetBrainsMono(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: ScholarlyTheme.textMuted,
-                            ),
-                          ),
-                        ),
+                      // Glowing dice button replaces VS
+                      _buildGlowingDiceButton(),
 
-                        const SizedBox(height: 16),
+                      const SizedBox(height: 12),
 
-                        // DOWN ENGINE CARD
-                        if (_downAvatar != null)
-                          _buildMatchmakingCard(
-                            role: 'DOWN ENGINE (BLACK)',
-                            avatar: _downAvatar!,
-                          ),
-
-                        const SizedBox(height: 40),
-
-                        // Roll Button
-                        SizedBox(
-                          width: 220,
-                          height: 56,
-                          child: ElevatedButton.icon(
-                            onPressed: _isShuffling ? null : _triggerShuffle,
-                            icon: const Icon(Icons.casino_rounded, size: 24),
-                            label: Text(
-                              _isShuffling ? 'SHUFFLING...' : 'ROLL MATCH',
-                              style: GoogleFonts.outfit(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 1.0,
-                              ),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: ScholarlyTheme.accentGold,
-                              foregroundColor: Colors.black,
-                              disabledBackgroundColor: ScholarlyTheme.accentGold
-                                  .withValues(alpha: 0.3),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(28),
-                              ),
-                              elevation: 4,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                      // DOWN ENGINE CARD
+                      _buildMatchmakingCard(
+                        role: 'DOWN ENGINE (BLACK)',
+                        avatar: displayDownAvatar,
+                      ),
+                    ],
                   ),
                 ),
               ),
             ),
+          ),
+        ],
+      ),
+    );
+
+    if (widget.embedMode) {
+      return mainContent;
+    }
+
+    return AmbientScaffold(
+      blob1Color: const Color(0xFFFAE8FF), // Light Pink/Purple
+      blob2Color: const Color(0xFFEFF6FF), // Light Blue
+      blob3Color: const Color(0xFFECFDF5), // Light Green
+      body: mainContent,
+    );
+  }
+
+  Widget _buildGlowingDiceButton() {
+    final blueColor = const Color(0xFF2563EB); // Static blue hue
+    return GestureDetector(
+      onTap: _isShuffling ? null : _triggerShuffle,
+      child: Container(
+        width: 58,
+        height: 58,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.white.withValues(alpha: 0.85),
+          boxShadow: [
+            BoxShadow(
+              color: blueColor.withValues(alpha: 0.25),
+              blurRadius: 12,
+              spreadRadius: 2,
+            ),
           ],
+          border: Border.all(
+            color: blueColor,
+            width: 2.0,
+          ),
+        ),
+        child: Center(
+          child: RotationTransition(
+            turns: _diceRotationController,
+            child: Icon(
+              Icons.casino_rounded,
+              size: 28,
+              color: blueColor,
+            ),
+          ),
         ),
       ),
     );
@@ -241,39 +270,41 @@ class _ArenaRandomPersonaPageState extends ConsumerState<ArenaRandomPersonaPage>
   }) {
     return Container(
       width: double.infinity,
-      constraints: const BoxConstraints(maxWidth: 340),
-      padding: const EdgeInsets.all(20),
+      constraints: const BoxConstraints(maxWidth: 300),
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.65),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: avatar.color.withValues(alpha: 0.25),
           width: 2.0,
         ),
         boxShadow: [
           BoxShadow(
-            color: avatar.color.withValues(alpha: 0.05),
-            blurRadius: 15,
+            color: avatar.color.withValues(alpha: 0.06),
+            blurRadius: 12,
             offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             role,
+            textAlign: TextAlign.center,
             style: GoogleFonts.outfit(
-              fontSize: 10,
+              fontSize: 8,
               fontWeight: FontWeight.w900,
               color: ScholarlyTheme.textMuted,
-              letterSpacing: 1.0,
+              letterSpacing: 0.8,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
           Container(
-            width: 72,
-            height: 72,
-            padding: const EdgeInsets.all(10),
+            width: 56,
+            height: 56,
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: avatar.color.withValues(alpha: 0.1),
               shape: BoxShape.circle,
@@ -284,38 +315,41 @@ class _ArenaRandomPersonaPageState extends ConsumerState<ArenaRandomPersonaPage>
             ),
             child: buildAvatarImage(avatar.imagePath, fit: BoxFit.contain),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
           Text(
             avatar.name,
+            textAlign: TextAlign.center,
             style: GoogleFonts.outfit(
-              fontSize: 20,
+              fontSize: 14,
               fontWeight: FontWeight.bold,
               color: ScholarlyTheme.textPrimary,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 3),
           Text(
             avatar.title,
             textAlign: TextAlign.center,
             style: GoogleFonts.inter(
-              fontSize: 12,
+              fontSize: 10,
               color: ScholarlyTheme.textMuted,
               fontWeight: FontWeight.w600,
             ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
               color: avatar.color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(6),
             ),
             child: Text(
               '${avatar.fideRatingRange} ELO',
               style: GoogleFonts.jetBrainsMono(
-                fontSize: 11,
+                fontSize: 9,
                 fontWeight: FontWeight.bold,
-                color: avatar.color,
+                color: avatar.textSafeColor,
               ),
             ),
           ),

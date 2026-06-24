@@ -11,7 +11,13 @@ import '../shared/themes/chess_theme.dart';
 import '../widgets/ambient_scaffold.dart';
 
 class ChessboardThemesPage extends ConsumerWidget {
-  const ChessboardThemesPage({super.key});
+  final bool embedMode;
+  final VoidCallback? onThemeSelected;
+  const ChessboardThemesPage({
+    super.key,
+    this.embedMode = false,
+    this.onThemeSelected,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -37,45 +43,50 @@ class ChessboardThemesPage extends ConsumerWidget {
       storeNotifier.isBoardThemePurchased(t.id)
     ).toList();
 
-    return AmbientScaffold(
-      blob1Color: const Color(0xFFFAE8FF),
-      blob2Color: const Color(0xFFE0E7FF),
-      blob3Color: const Color(0xFFD1FAE5),
-      body: CustomScrollView(
+    final mainContent = SafeArea(
+      top: embedMode,
+      bottom: false,
+      child: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
           // Safe area top padding
-          SliverToBoxAdapter(
-            child: SizedBox(height: MediaQuery.of(context).padding.top + 24),
-          ),
+          if (!embedMode)
+            SliverToBoxAdapter(
+              child: SizedBox(height: MediaQuery.of(context).padding.top + 24),
+            )
+          else
+            const SliverToBoxAdapter(
+              child: SizedBox(height: 16),
+            ),
 
           // Premium Header with Back Button
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back_rounded, color: ScholarlyTheme.textPrimary),
-                    onPressed: () {
-                      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
-                      Navigator.of(context).pop();
-                    },
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'BOARD THEMES',
-                    style: GoogleFonts.outfit(
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 2,
-                      color: ScholarlyTheme.textPrimary,
+          if (!embedMode)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back_rounded, color: ScholarlyTheme.textPrimary),
+                      onPressed: () {
+                        ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
+                        Navigator.of(context).pop();
+                      },
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 8),
+                    Text(
+                      'BOARD THEMES',
+                      style: GoogleFonts.outfit(
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 2,
+                        color: ScholarlyTheme.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
 
           // Group A
           ..._buildGroupSlivers(
@@ -85,6 +96,7 @@ class ChessboardThemesPage extends ConsumerWidget {
             selectedThemeId: state.boardThemeId,
             notifier: notifier,
             showDivider: false,
+            onThemeSelected: onThemeSelected,
           ),
 
           // Group B
@@ -95,6 +107,7 @@ class ChessboardThemesPage extends ConsumerWidget {
             selectedThemeId: state.boardThemeId,
             notifier: notifier,
             showDivider: true,
+            onThemeSelected: onThemeSelected,
           ),
 
           // Group D
@@ -105,6 +118,7 @@ class ChessboardThemesPage extends ConsumerWidget {
             selectedThemeId: state.boardThemeId,
             notifier: notifier,
             showDivider: true,
+            onThemeSelected: onThemeSelected,
           ),
 
           // Group C
@@ -115,6 +129,7 @@ class ChessboardThemesPage extends ConsumerWidget {
             selectedThemeId: state.boardThemeId,
             notifier: notifier,
             showDivider: true,
+            onThemeSelected: onThemeSelected,
           ),
 
           // Bottom spacing
@@ -123,6 +138,17 @@ class ChessboardThemesPage extends ConsumerWidget {
           ),
         ],
       ),
+    );
+
+    if (embedMode) {
+      return mainContent;
+    }
+
+    return AmbientScaffold(
+      blob1Color: const Color(0xFFFAE8FF),
+      blob2Color: const Color(0xFFE0E7FF),
+      blob3Color: const Color(0xFFD1FAE5),
+      body: mainContent,
     );
   }
 
@@ -133,6 +159,7 @@ class ChessboardThemesPage extends ConsumerWidget {
     required String selectedThemeId,
     required dynamic notifier,
     required bool showDivider,
+    required VoidCallback? onThemeSelected,
   }) {
     if (themes.isEmpty) return const [];
 
@@ -163,7 +190,7 @@ class ChessboardThemesPage extends ConsumerWidget {
               final theme = themes[index];
               final isSelected = theme.id == selectedThemeId;
 
-              return _buildThemeCard(context, ref, theme, isSelected, notifier);
+              return _buildThemeCard(context, ref, theme, isSelected, notifier, onThemeSelected);
             },
             childCount: themes.length,
           ),
@@ -178,6 +205,7 @@ class ChessboardThemesPage extends ConsumerWidget {
     ChessTheme theme,
     bool isSelected,
     dynamic notifier,
+    VoidCallback? onThemeSelected,
   ) {
     final isOwned = ref.watch(storeProvider.notifier).isBoardThemePurchased(theme.id);
 
@@ -187,13 +215,21 @@ class ChessboardThemesPage extends ConsumerWidget {
         
         if (isOwned) {
           notifier.setBoardTheme(theme.id);
-          Navigator.of(context).popUntil((route) => route.isFirst);
+          if (onThemeSelected != null) {
+            onThemeSelected();
+          } else {
+            Navigator.of(context).popUntil((route) => route.isFirst);
+          }
         } else {
           // Switch to Store tab, set store tab index to 1 (Themes Tab), and set highlight theme
           ref.read(mobileNavIndexProvider.notifier).state = 10;
           ref.read(storeTabProvider.notifier).state = 1;
           ref.read(storeHighlightThemeIdProvider.notifier).state = theme.id;
-          Navigator.of(context).popUntil((route) => route.isFirst);
+          if (onThemeSelected != null) {
+            onThemeSelected();
+          } else {
+            Navigator.of(context).popUntil((route) => route.isFirst);
+          }
         }
       },
       child: Container(

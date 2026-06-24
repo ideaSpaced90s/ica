@@ -23,6 +23,9 @@ import '../widgets/premium_nudge_overlay.dart';
 import '../dashboard_page.dart';
 import '../mobile_navigation_shell.dart';
 import 'arena_settings_page.dart';
+import 'chessboard_themes_page.dart';
+import 'arena_personas_selection_page.dart';
+import 'arena_random_persona_page.dart';
 import '../../application/onboarding_provider.dart';
 import '../../application/tutorial_provider.dart';
 import '../widgets/gm_chanakya_intro_overlay.dart';
@@ -58,6 +61,7 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
   bool _showGameOverOverlayDelayed = false;
   bool _showNewGameConfirmOverlay = false;
   int _selectedArenaTab = 0;
+  int _selectedPersonaSubTab = 0;
   Timer? _gameOverDelayTimer;
 
   @override
@@ -306,14 +310,167 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                     }
                   },
                 ),
-            ] else ...[
-              const Positioned.fill(
-                child: SizedBox.shrink(),
+            ] else if (_selectedArenaTab == 1) ...[
+              Positioned.fill(
+                child: _buildThemesTab(),
+              ),
+            ] else if (_selectedArenaTab == 2) ...[
+              Positioned.fill(
+                child: _buildPersonaTab(context),
+              ),
+            ] else if (_selectedArenaTab == 3) ...[
+              Positioned.fill(
+                child: _buildEngineTunerTab(),
+              ),
+            ] else if (_selectedArenaTab == 4) ...[
+              Positioned.fill(
+                child: _buildSettingsTab(),
               ),
             ],
           ],
         ),
       );
+  }
+
+  Widget _buildThemesTab() {
+    return ChessboardThemesPage(
+      embedMode: true,
+      onThemeSelected: () {
+        setState(() {
+          _selectedArenaTab = 0;
+        });
+      },
+    );
+  }
+
+  Widget _buildPersonaTab(BuildContext context) {
+    return Column(
+      children: [
+        SafeArea(
+          bottom: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.65),
+                  width: 1.5,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _buildSubTabButton(
+                      label: 'Explore',
+                      isSelected: _selectedPersonaSubTab == 0,
+                      onTap: () {
+                        ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                        setState(() => _selectedPersonaSubTab = 0);
+                      },
+                    ),
+                  ),
+                  Expanded(
+                    child: _buildSubTabButton(
+                      label: 'Shuffle',
+                      isSelected: _selectedPersonaSubTab == 1,
+                      onTap: () {
+                        ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                        setState(() => _selectedPersonaSubTab = 1);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        Expanded(
+          child: IndexedStack(
+            index: _selectedPersonaSubTab,
+            children: [
+              ArenaPersonasSelectionPage(embedMode: true),
+              ArenaRandomPersonaPage(
+                embedMode: true,
+                onMatchCommitted: () {
+                  // Stay on shuffle page — selection is already committed to provider
+                },
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSubTabButton({
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeInOut,
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? ScholarlyTheme.accentBlue : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: GoogleFonts.outfit(
+              color: isSelected ? Colors.white : ScholarlyTheme.textPrimary,
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEngineTunerTab() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.tune_rounded,
+            size: 48,
+            color: ScholarlyTheme.textMuted.withValues(alpha: 0.5),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'ENGINE TUNER',
+            style: GoogleFonts.outfit(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 2,
+              color: ScholarlyTheme.textMuted,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Customize engine parameters & settings',
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              color: ScholarlyTheme.textMuted.withValues(alpha: 0.7),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSettingsTab() {
+    return const ArenaSettingsPage(
+      embedMode: true,
+    );
   }
 
   Widget _buildBottomNavigationBar(BuildContext context) {
@@ -943,18 +1100,6 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
         activeColor: ScholarlyTheme.accentYellowSoft,
         activeIconColor: ScholarlyTheme.accentYellow,
         onTap: () => ref.read(arenaProvider.notifier).requestHint(),
-      ),
-      const SizedBox(width: 8),
-      ActionIconButton(
-        icon: Icons.settings_rounded,
-        isFlat: isDocked,
-        onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => const ArenaSettingsPage(),
-            ),
-          );
-        },
       ),
     ];
   }

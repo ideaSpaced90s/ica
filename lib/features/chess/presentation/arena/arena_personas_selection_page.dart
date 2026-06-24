@@ -11,7 +11,8 @@ import '../scholarly_theme.dart';
 import '../widgets/ambient_scaffold.dart';
 
 class ArenaPersonasSelectionPage extends ConsumerStatefulWidget {
-  const ArenaPersonasSelectionPage({super.key});
+  final bool embedMode;
+  const ArenaPersonasSelectionPage({super.key, this.embedMode = false});
 
   @override
   ConsumerState<ArenaPersonasSelectionPage> createState() => _ArenaPersonasSelectionPageState();
@@ -173,66 +174,84 @@ class _ArenaPersonasSelectionPageState extends ConsumerState<ArenaPersonasSelect
 
     final bool isWide = MediaQuery.of(context).size.width > 720;
 
+    final mainContent = Stack(
+      children: [
+        SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Header with Back Button (PERSONAS aligned to right)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: widget.embedMode
+                    ? Center(
+                        child: Text(
+                          'PERSONAS',
+                          style: GoogleFonts.outfit(
+                            fontSize: 26,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 2,
+                            color: ScholarlyTheme.textPrimary,
+                          ),
+                        ),
+                      )
+                    : Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.arrow_back_rounded, color: ScholarlyTheme.textPrimary),
+                            onPressed: () {
+                              ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
+                              Navigator.of(context).pop();
+                            },
+                          ),
+                          const Spacer(),
+                          Text(
+                            'PERSONAS',
+                            style: GoogleFonts.outfit(
+                              fontSize: 26,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 2,
+                              color: ScholarlyTheme.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+              ),
+
+              const SizedBox(height: 12),
+
+              // Responsive Layout Select
+              if (isWide)
+                _buildWideLayout(
+                  context: context,
+                  currentAvatar: currentAvatar,
+                  isUpSelected: isUpSelected,
+                  isDownSelected: isDownSelected,
+                  notifier: notifier,
+                )
+              else
+                _buildNarrowLayout(
+                  context: context,
+                  currentAvatar: currentAvatar,
+                  isUpSelected: isUpSelected,
+                  isDownSelected: isDownSelected,
+                  notifier: notifier,
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+
+    if (widget.embedMode) {
+      return mainContent;
+    }
+
     return AmbientScaffold(
       blob1Color: currentAvatar.color.withValues(alpha: 0.15),
       blob2Color: const Color(0xFFF3E8FF),
       blob3Color: const Color(0xFFEFF6FF),
-      body: Stack(
-        children: [
-          SafeArea(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Header with Back Button (PERSONAS aligned to right)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back_rounded, color: ScholarlyTheme.textPrimary),
-                        onPressed: () {
-                          ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
-                          Navigator.of(context).pop();
-                        },
-                      ),
-                      const Spacer(),
-                      Text(
-                        'PERSONAS',
-                        style: GoogleFonts.outfit(
-                          fontSize: 26,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 2,
-                          color: ScholarlyTheme.textPrimary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 12),
-
-                // Responsive Layout Select
-                if (isWide)
-                  _buildWideLayout(
-                    context: context,
-                    currentAvatar: currentAvatar,
-                    isUpSelected: isUpSelected,
-                    isDownSelected: isDownSelected,
-                    notifier: notifier,
-                  )
-                else
-                  _buildNarrowLayout(
-                    context: context,
-                    currentAvatar: currentAvatar,
-                    isUpSelected: isUpSelected,
-                    isDownSelected: isDownSelected,
-                    notifier: notifier,
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
+      body: mainContent,
     );
   }
 
@@ -305,7 +324,7 @@ class _ArenaPersonasSelectionPageState extends ConsumerState<ArenaPersonasSelect
                         fontSize: 16,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 2.0,
-                        color: currentAvatar.color,
+                        color: currentAvatar.textSafeColor,
                       ),
                     ),
                   ),
@@ -391,7 +410,7 @@ class _ArenaPersonasSelectionPageState extends ConsumerState<ArenaPersonasSelect
                     fontSize: 14,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 2.0,
-                    color: currentAvatar.color,
+                    color: currentAvatar.textSafeColor,
                   ),
                 ),
               ),
@@ -1016,7 +1035,7 @@ class _ArenaPersonasSelectionPageState extends ConsumerState<ArenaPersonasSelect
                             fontSize: 11,
                             fontWeight: FontWeight.w900,
                             letterSpacing: 1.0,
-                            color: avatar.color,
+                            color: avatar.textSafeColor,
                           ),
                         ),
                         const SizedBox(height: 12),
@@ -1084,7 +1103,7 @@ class _ArenaPersonasSelectionPageState extends ConsumerState<ArenaPersonasSelect
                             fontSize: 11,
                             fontWeight: FontWeight.w900,
                             letterSpacing: 1.0,
-                            color: avatar.color,
+                            color: avatar.textSafeColor,
                           ),
                         ),
                         const SizedBox(height: 8),

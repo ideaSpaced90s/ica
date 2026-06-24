@@ -44,6 +44,14 @@ class AiAvatar {
     required this.imagePath,
   });
 
+  Color get textSafeColor {
+    final hsl = HSLColor.fromColor(color);
+    if (hsl.lightness > 0.45) {
+      return hsl.withLightness(0.40).toColor();
+    }
+    return color;
+  }
+
   int get rating {
     final cleanRange = fideRatingRange.replaceAll('+', '').split('-');
     if (cleanRange.isNotEmpty) {
