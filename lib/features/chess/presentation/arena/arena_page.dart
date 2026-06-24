@@ -29,6 +29,20 @@ import '../widgets/gm_chanakya_intro_overlay.dart';
 import '../widgets/gm_chanakya_new_game_overlay.dart';
 import '../widgets/neural_connectivity_mesh.dart';
 
+class _ArenaTabDef {
+  final String label;
+  final IconData icon;
+  const _ArenaTabDef(this.label, this.icon);
+}
+
+const List<_ArenaTabDef> _kArenaTabs = [
+  _ArenaTabDef('Board', Icons.grid_on_rounded),
+  _ArenaTabDef('Themes', Icons.palette_rounded),
+  _ArenaTabDef('Persona', Icons.people_alt_rounded),
+  _ArenaTabDef('Engine Tuner', Icons.tune_rounded),
+  _ArenaTabDef('Settings', Icons.settings_rounded),
+];
+
 class ArenaPage extends ConsumerStatefulWidget {
   const ArenaPage({super.key});
 
@@ -43,6 +57,7 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
   bool _hasTriggeredConfetti = false;
   bool _showGameOverOverlayDelayed = false;
   bool _showNewGameConfirmOverlay = false;
+  int _selectedArenaTab = 0;
   Timer? _gameOverDelayTimer;
 
   @override
@@ -177,121 +192,214 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
     return Scaffold(
         key: _scaffoldKey,
         backgroundColor: ScholarlyTheme.backgroundStart,
+        bottomNavigationBar: _buildBottomNavigationBar(context),
         body: Stack(
           children: [
             const AmbientFlowBackdrop(),
-            Positioned.fill(
-              child: isLandscape
-                  ? _buildLandscapeLayout(context, ref, state)
-                  : _buildPortraitLayout(context, ref, state),
-            ),
-            if (_showGameOverOverlayDelayed && !state.isGameOverDismissed)
-              state.isTimeOut && !state.isGameOver
-                  ? _buildTimeOutOverlay(context, ref, state)
-                  : _buildGameOverOverlay(context, ref, state),
-            if (_showNewGameConfirmOverlay)
-              GMChanakyaNewGameOverlay(
-                onConfirm: () async {
-                  if (ref.read(arenaProvider).recentMoves.isNotEmpty) {
-                    await ref.read(arenaProvider.notifier).saveCurrentGame();
-                  }
-                  ref.read(storeProvider.notifier).recordArenaGame();
-                  ref.read(arenaProvider.notifier).reset();
-                  setState(() {
-                    _showNewGameConfirmOverlay = false;
-                  });
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).clearSnackBars();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('New Match Started'),
-                        duration: Duration(milliseconds: 1500),
-                        backgroundColor: ScholarlyTheme.accentBlue,
-                      ),
-                    );
-                  }
-                },
-                onCancel: () {
-                  setState(() {
-                    _showNewGameConfirmOverlay = false;
-                  });
-                },
+            if (_selectedArenaTab == 0) ...[
+              Positioned.fill(
+                child: isLandscape
+                    ? _buildLandscapeLayout(context, ref, state)
+                    : _buildPortraitLayout(context, ref, state),
               ),
-            
-            // Confetti Layer
-            Align(
-              alignment: Alignment.topCenter,
-              child: ConfettiWidget(
-                confettiController: _confettiController,
-                blastDirectionality: BlastDirectionality.explosive,
-                shouldLoop: false,
-                numberOfParticles: ref.watch(chessProvider.select(
-                  (s) => (s.animationSettings['arcadeMode'] ?? false) ? 40 : 20,
-                )),
-                colors: const [
-                  ScholarlyTheme.accentGold,
-                  ScholarlyTheme.accentBlue,
-                  Colors.white,
-                  Colors.yellow,
-                  Color(0xFF60A5FA), // arcade blue
-                  Color(0xFF7C3AED), // violet
-                ],
-                createParticlePath: (size) {
-                  final path = Path();
-                  path.addRect(Rect.fromLTWH(0, 0, size.width, size.height / 2));
-                  return path;
-                },
-              ),
-            ),
-            // Arcade Mode: second bottom-blast confetti
-            if (ref.watch(chessProvider.select(
-              (s) => s.animationSettings['arcadeMode'] ?? false,
-            )))
+              if (_showGameOverOverlayDelayed && !state.isGameOverDismissed)
+                state.isTimeOut && !state.isGameOver
+                    ? _buildTimeOutOverlay(context, ref, state)
+                    : _buildGameOverOverlay(context, ref, state),
+              if (_showNewGameConfirmOverlay)
+                GMChanakyaNewGameOverlay(
+                  onConfirm: () async {
+                    if (ref.read(arenaProvider).recentMoves.isNotEmpty) {
+                      await ref.read(arenaProvider.notifier).saveCurrentGame();
+                    }
+                    ref.read(storeProvider.notifier).recordArenaGame();
+                    ref.read(arenaProvider.notifier).reset();
+                    setState(() {
+                      _showNewGameConfirmOverlay = false;
+                    });
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).clearSnackBars();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('New Match Started'),
+                          duration: Duration(milliseconds: 1500),
+                          backgroundColor: ScholarlyTheme.accentBlue,
+                        ),
+                      );
+                    }
+                  },
+                  onCancel: () {
+                    setState(() {
+                      _showNewGameConfirmOverlay = false;
+                    });
+                  },
+                ),
+              
+              // Confetti Layer
               Align(
-                alignment: Alignment.bottomCenter,
+                alignment: Alignment.topCenter,
                 child: ConfettiWidget(
-                  confettiController: _confettiBottomController,
+                  confettiController: _confettiController,
                   blastDirectionality: BlastDirectionality.explosive,
-                  blastDirection: -3.14 / 2, // upward
                   shouldLoop: false,
-                  numberOfParticles: 30,
-                  gravity: 0.05,
+                  numberOfParticles: ref.watch(chessProvider.select(
+                    (s) => (s.animationSettings['arcadeMode'] ?? false) ? 40 : 20,
+                  )),
                   colors: const [
-                    Color(0xFF3B82F6),
-                    Color(0xFF60A5FA),
-                    Color(0xFFBAE6FD),
-                    Colors.white,
-                    Color(0xFF7C3AED),
                     ScholarlyTheme.accentGold,
+                    ScholarlyTheme.accentBlue,
+                    Colors.white,
+                    Colors.yellow,
+                    Color(0xFF60A5FA), // arcade blue
+                    Color(0xFF7C3AED), // violet
                   ],
                   createParticlePath: (size) {
                     final path = Path();
-                    path.addOval(
-                      Rect.fromCircle(
-                        center: Offset(size.width / 2, size.height / 2),
-                        radius: size.width / 2,
-                      ),
-                    );
+                    path.addRect(Rect.fromLTWH(0, 0, size.width, size.height / 2));
                     return path;
                   },
                 ),
               ),
-            if (showIntro)
-              GMChanakyaIntroOverlay(
-                pageTitle: 'ARENA',
-                text: 'Welcome to the Arena. Practice freely here: test ideas, face AI avatars, adjust difficulty, and learn without rating pressure.',
-                onDismiss: () {
-                  ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                  ref.read(showArenaIntroProvider.notifier).state = false;
-                  final repo = ref.read(tutorialProgressRepositoryProvider);
-                  if (repo.shouldPersistIntroSeen()) {
-                    repo.setArenaIntroSeen(true);
-                  }
-                },
+              // Arcade Mode: second bottom-blast confetti
+              if (ref.watch(chessProvider.select(
+                (s) => s.animationSettings['arcadeMode'] ?? false,
+              )))
+                Align(
+                  alignment: Alignment.bottomCenter,
+                  child: ConfettiWidget(
+                    confettiController: _confettiBottomController,
+                    blastDirectionality: BlastDirectionality.explosive,
+                    blastDirection: -3.14 / 2, // upward
+                    shouldLoop: false,
+                    numberOfParticles: 30,
+                    gravity: 0.05,
+                    colors: const [
+                      Color(0xFF3B82F6),
+                      Color(0xFF60A5FA),
+                      Color(0xFFBAE6FD),
+                      Colors.white,
+                      Color(0xFF7C3AED),
+                      ScholarlyTheme.accentGold,
+                    ],
+                    createParticlePath: (size) {
+                      final path = Path();
+                      path.addOval(
+                        Rect.fromCircle(
+                          center: Offset(size.width / 2, size.height / 2),
+                          radius: size.width / 2,
+                        ),
+                      );
+                      return path;
+                    },
+                  ),
+                ),
+              if (showIntro)
+                GMChanakyaIntroOverlay(
+                  pageTitle: 'ARENA',
+                  text: 'Welcome to the Arena. Practice freely here: test ideas, face AI avatars, adjust difficulty, and learn without rating pressure.',
+                  onDismiss: () {
+                    ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                    ref.read(showArenaIntroProvider.notifier).state = false;
+                    final repo = ref.read(tutorialProgressRepositoryProvider);
+                    if (repo.shouldPersistIntroSeen()) {
+                      repo.setArenaIntroSeen(true);
+                    }
+                  },
+                ),
+            ] else ...[
+              const Positioned.fill(
+                child: SizedBox.shrink(),
               ),
+            ],
           ],
         ),
       );
+  }
+
+  Widget _buildBottomNavigationBar(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.85),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 20,
+            offset: const Offset(0, -4),
+          ),
+        ],
+        border: Border(
+          top: BorderSide(
+            color: Colors.white.withValues(alpha: 0.3),
+            width: 1.5,
+          ),
+        ),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: List.generate(_kArenaTabs.length, (i) {
+              final tab = _kArenaTabs[i];
+              final isSelected = _selectedArenaTab == i;
+              return Expanded(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {
+                    ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                    setState(() => _selectedArenaTab = i);
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 220),
+                    curve: Curves.easeInOut,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? ScholarlyTheme.accentBlue.withValues(alpha: 0.12)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          tab.icon,
+                          color: isSelected
+                              ? ScholarlyTheme.accentBlue
+                              : ScholarlyTheme.textMuted,
+                          size: 20,
+                        ),
+                        const SizedBox(height: 4),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            tab.label,
+                            style: GoogleFonts.outfit(
+                              color: isSelected
+                                  ? ScholarlyTheme.accentBlue
+                                  : ScholarlyTheme.textMuted,
+                              fontSize: 9,
+                              fontWeight: isSelected
+                                  ? FontWeight.bold
+                                  : FontWeight.w500,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildLandscapeLayout(BuildContext context, WidgetRef ref, ArenaState state) {
@@ -489,12 +597,12 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SizedBox(height: 16),
+        const SizedBox(height: 8),
         // Top Player (Opponent) Row - stabilized height
         SizedBox(
-          height: 60,
+          height: 52,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -528,11 +636,12 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
             ),
           ),
         ),
+        const SizedBox(height: 10),
         // Top Captured Pieces stacked below top player row - stabilized height
         SizedBox(
-          height: 34,
+          height: 26,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 1),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -561,9 +670,9 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
         ),
         // Bottom Captured Pieces stacked above bottom player row - stabilized height
         SizedBox(
-          height: 34,
+          height: 26,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 1),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
@@ -578,11 +687,12 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
             ),
           ),
         ),
+        const SizedBox(height: 10),
         // Bottom Player (User/Down Engine) Row - stabilized height
         SizedBox(
-          height: 60,
+          height: 52,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -619,9 +729,9 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
           ),
         ),
         if (!isKeyboardOpen) ...[
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
             child: _buildActionRow(context, ref, state, isDocked: false),
           ),
         ],

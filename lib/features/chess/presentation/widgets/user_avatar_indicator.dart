@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,6 +18,34 @@ class UserAvatarIndicator extends StatefulWidget {
 
 class _UserAvatarIndicatorState extends State<UserAvatarIndicator> {
   bool _isExpanded = false;
+  Timer? _collapseTimer;
+
+  @override
+  void dispose() {
+    _collapseTimer?.cancel();
+    super.dispose();
+  }
+
+  void _handleTap() {
+    if (!_isExpanded) {
+      setState(() {
+        _isExpanded = true;
+      });
+      _collapseTimer?.cancel();
+      _collapseTimer = Timer(const Duration(seconds: 4), () {
+        if (mounted) {
+          setState(() {
+            _isExpanded = false;
+          });
+        }
+      });
+    } else {
+      _collapseTimer?.cancel();
+      setState(() {
+        _isExpanded = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,17 +57,13 @@ class _UserAvatarIndicatorState extends State<UserAvatarIndicator> {
 
         final primaryColor = ScholarlyTheme.accentBlue;
 
-        int consolidatedRating = 1200;
-        int totalWinningStreak = 0;
-        if (widget.isRated) {
-          final bgState = ref.watch(battlegroundProvider);
-          consolidatedRating = bgState.consolidatedRating;
-          totalWinningStreak = bgState.totalWinningStreak;
-        }
+        final bgState = ref.watch(battlegroundProvider);
+        final consolidatedRating = bgState.consolidatedRating;
+        final totalWinningStreak = bgState.totalWinningStreak;
 
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTap: () => setState(() => _isExpanded = !_isExpanded),
+          onTap: _handleTap,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOutCubic,
@@ -117,7 +142,7 @@ class _UserAvatarIndicatorState extends State<UserAvatarIndicator> {
                                           fontSize: 13,
                                         ),
                                       ),
-                                      if (widget.isRated && totalWinningStreak > 0) ...[
+                                      if (totalWinningStreak > 0) ...[
                                         const SizedBox(width: 4),
                                         const Icon(
                                           Icons.local_fire_department_rounded,
@@ -135,17 +160,16 @@ class _UserAvatarIndicatorState extends State<UserAvatarIndicator> {
                                       ],
                                     ],
                                   ),
-                                  if (widget.isRated)
-                                    Text(
-                                      'ELO $consolidatedRating',
-                                      softWrap: false,
-                                      overflow: TextOverflow.visible,
-                                      style: GoogleFonts.jetBrainsMono(
-                                        color: ScholarlyTheme.accentBlue,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w600,
-                                      ),
+                                  Text(
+                                    'ELO $consolidatedRating',
+                                    softWrap: false,
+                                    overflow: TextOverflow.visible,
+                                    style: GoogleFonts.jetBrainsMono(
+                                      color: ScholarlyTheme.accentBlue,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
                                     ),
+                                  ),
                                 ],
                               ),
                               const SizedBox(width: 4),

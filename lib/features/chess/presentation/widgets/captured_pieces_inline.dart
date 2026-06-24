@@ -71,8 +71,8 @@ class CapturedPiecesInline extends ConsumerWidget {
             final isWhite = piece.color == chess_lib.Color.WHITE;
 
             return SizedBox(
-              width: 24,
-              height: 24,
+              width: 22,
+              height: 22,
               child: theme.buildPiece(context, type, isWhite, false, 0.0),
             );
           }),
