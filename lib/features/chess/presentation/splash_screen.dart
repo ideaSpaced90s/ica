@@ -235,11 +235,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       // app shell. This happens on Android only, on the very first launch
       // (before the user has ever been prompted).
       final repo = ref.read(tutorialProgressRepositoryProvider);
-      final progress = await repo.loadProgress();
       final chessState = ref.read(chessProvider);
       final isGuest = user == null || user.isAnonymous;
-      final hasCompletedChapter8 = progress.completedChapters.contains(8);
-      final needsNotifPrompt = (isGuest ? !hasCompletedChapter8 : !repo.hasPromptedNotification()) &&
+      final needsNotifPrompt = (isGuest ? true : !repo.hasPromptedNotification()) &&
           !chessState.isNotificationsEnabled;
 
       if (needsNotifPrompt) {

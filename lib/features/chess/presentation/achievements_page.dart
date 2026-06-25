@@ -1,10 +1,15 @@
 import 'dart:io';
 
+import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'dart:ui' as ui;
+
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../application/assignment_provider.dart';
 import '../application/battleground_provider.dart';
@@ -20,7 +25,7 @@ import 'widgets/ambient_scaffold.dart';
 class AchievementsPage extends ConsumerWidget {
   const AchievementsPage({super.key});
 
-  static const _shareUrl = 'https://ideaspaceapps.store/chessacademy.html';
+  static const _shareUrl = 'https://play.google.com/store/apps/details?id=com.dsamok.ideaspacechess';
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -824,32 +829,71 @@ class _VictoryCard extends StatelessWidget {
   }
 }
 
-class _AchievementDetailPage extends StatelessWidget {
+class _AchievementDetailPage extends StatefulWidget {
   const _AchievementDetailPage({required this.achievement});
 
   final _VictoryAchievement achievement;
 
   @override
+  State<_AchievementDetailPage> createState() => _AchievementDetailPageState();
+}
+
+class _AchievementDetailPageState extends State<_AchievementDetailPage> {
+  final _cardKey = GlobalKey();
+  bool _sharing = false;
+  late ConfettiController _confettiTop;
+  late ConfettiController _confettiBottom;
+
+  _VictoryAchievement get achievement => widget.achievement;
+
+  @override
+  void initState() {
+    super.initState();
+    _confettiTop = ConfettiController(duration: const Duration(seconds: 4));
+    _confettiBottom = ConfettiController(duration: const Duration(seconds: 4));
+    // Brief confetti burst when the victory card opens
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _confettiTop.play();
+        _confettiBottom.play();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _confettiTop.dispose();
+    _confettiBottom.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final entry = achievement.entry;
     final date = DateFormat('MMMM d, yyyy').format(entry.timestamp);
+    final botColor = achievement.opponent.color;
+    final botColorDim = botColor.withValues(alpha: 0.18);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: const Color(0xFF080C14),
       body: SafeArea(
         child: Stack(
           children: [
-            Positioned.fill(
-              child: DecoratedBox(
+            // Ambient radial glow from opponent color
+            Positioned(
+              top: -80,
+              left: -60,
+              right: -60,
+              child: Container(
+                height: 340,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
+                  gradient: RadialGradient(
                     colors: [
-                      achievement.opponent.color.withValues(alpha: 0.20),
-                      Colors.white,
-                      const Color(0xFFFFF7D6),
+                      botColor.withValues(alpha: 0.28),
+                      botColorDim,
+                      Colors.transparent,
                     ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+                    radius: 0.85,
                   ),
                 ),
               ),
@@ -859,236 +903,576 @@ class _AchievementDetailPage extends StatelessWidget {
               slivers: [
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(18, 58, 18, 24),
+                    padding: const EdgeInsets.fromLTRB(16, 58, 16, 32),
                     child: Center(
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 720),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.92),
-                            borderRadius: BorderRadius.circular(28),
-                            border: Border.all(
-                              color: achievement.opponent.color.withValues(
-                                alpha: 0.55,
+                        child: RepaintBoundary(
+                          key: _cardKey,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF0F1623),
+                              borderRadius: BorderRadius.circular(28),
+                              border: Border.all(
+                                color: botColor.withValues(alpha: 0.55),
+                                width: 1.5,
                               ),
-                              width: 2,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: achievement.opponent.color.withValues(
-                                  alpha: 0.18,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: botColor.withValues(alpha: 0.30),
+                                  blurRadius: 40,
+                                  spreadRadius: -4,
+                                  offset: const Offset(0, 16),
                                 ),
-                                blurRadius: 28,
-                                offset: const Offset(0, 12),
-                              ),
-                            ],
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(26),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                AspectRatio(
-                                  aspectRatio: 1.7,
-                                  child: Stack(
-                                    fit: StackFit.expand,
-                                    children: [
-                                      buildAvatarImage(
-                                        achievement.opponent.imagePath,
-                                        fit: BoxFit.cover,
-                                      ),
-                                      DecoratedBox(
-                                        decoration: BoxDecoration(
-                                          gradient: LinearGradient(
-                                            colors: [
-                                              Colors.black.withValues(alpha: 0.1),
-                                              Colors.black.withValues(alpha: 0.78),
-                                            ],
-                                            begin: Alignment.topCenter,
-                                            end: Alignment.bottomCenter,
+                                BoxShadow(
+                                  color: botColor.withValues(alpha: 0.12),
+                                  blurRadius: 80,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(27),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  // ── HERO IMAGE ─────────────────────────────
+                                  AspectRatio(
+                                    aspectRatio: 1.65,
+                                    child: Stack(
+                                      fit: StackFit.expand,
+                                      children: [
+                                        buildAvatarImage(
+                                          achievement.opponent.imagePath,
+                                          fit: BoxFit.cover,
+                                        ),
+                                        // Cinematic multi-stop gradient
+                                        DecoratedBox(
+                                          decoration: BoxDecoration(
+                                            gradient: LinearGradient(
+                                              colors: [
+                                                Colors.black.withValues(alpha: 0.05),
+                                                Colors.black.withValues(alpha: 0.15),
+                                                Colors.black.withValues(alpha: 0.72),
+                                                const Color(0xFF0F1623),
+                                              ],
+                                              stops: const [0.0, 0.35, 0.75, 1.0],
+                                              begin: Alignment.topCenter,
+                                              end: Alignment.bottomCenter,
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                      Positioned(
-                                        left: 20,
-                                        right: 20,
-                                        bottom: 18,
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              'BATTLEGROUND VICTORY',
-                                              style: GoogleFonts.outfit(
-                                                color: const Color(0xFFFFD166),
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w900,
-                                                letterSpacing: 1.4,
+                                        // Lateral bot-color vignette
+                                        Positioned.fill(
+                                          child: DecoratedBox(
+                                            decoration: BoxDecoration(
+                                              gradient: LinearGradient(
+                                                colors: [
+                                                  botColor.withValues(alpha: 0.22),
+                                                  Colors.transparent,
+                                                  Colors.transparent,
+                                                  botColor.withValues(alpha: 0.12),
+                                                ],
+                                                begin: Alignment.centerLeft,
+                                                end: Alignment.centerRight,
                                               ),
                                             ),
-                                            Text(
-                                              '${achievement.userName} defeated ${achievement.opponent.name}',
-                                              maxLines: 2,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: GoogleFonts.outfit(
-                                                color: Colors.white,
-                                                fontSize: 28,
-                                                fontWeight: FontWeight.w900,
+                                          ),
+                                        ),
+                                        // Bottom text overlay
+                                        Positioned(
+                                          left: 20,
+                                          right: 20,
+                                          bottom: 18,
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              // Golden badge pill
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                                decoration: BoxDecoration(
+                                                  gradient: const LinearGradient(
+                                                    colors: [Color(0xFFFFD166), Color(0xFFFF9500)],
+                                                  ),
+                                                  borderRadius: BorderRadius.circular(20),
+                                                ),
+                                                child: Text(
+                                                  '⚡  BATTLEGROUND VICTORY',
+                                                  style: GoogleFonts.outfit(
+                                                    color: const Color(0xFF1A0A00),
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.w900,
+                                                    letterSpacing: 1.2,
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(height: 8),
+                                              // Title: player defeated [BOT in bot color]
+                                              RichText(
+                                                maxLines: 2,
+                                                overflow: TextOverflow.ellipsis,
+                                                text: TextSpan(
+                                                  style: GoogleFonts.outfit(
+                                                    fontSize: 30,
+                                                    fontWeight: FontWeight.w900,
+                                                    height: 1.1,
+                                                  ),
+                                                  children: [
+                                                    TextSpan(
+                                                      text: '${achievement.userName} ',
+                                                      style: const TextStyle(color: Colors.white),
+                                                    ),
+                                                    const TextSpan(
+                                                      text: 'defeated ',
+                                                      style: TextStyle(color: Colors.white70),
+                                                    ),
+                                                    TextSpan(
+                                                      text: achievement.opponent.name,
+                                                      style: TextStyle(
+                                                        color: botColor,
+                                                        shadows: [
+                                                          Shadow(
+                                                            color: botColor.withValues(alpha: 0.6),
+                                                            blurRadius: 12,
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        // Play Store badge (top-right)
+                                        Positioned(
+                                          top: 12,
+                                          right: 12,
+                                          child: GestureDetector(
+                                            onTap: () => launchUrl(
+                                              Uri.parse(AchievementsPage._shareUrl),
+                                              mode: LaunchMode.externalApplication,
+                                            ),
+                                            child: Image.asset(
+                                              'assets/splash/googleplaybadge.png',
+                                              height: 36,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  // ── CARD BODY ──────────────────────────────
+                                  Padding(
+                                    padding: const EdgeInsets.fromLTRB(18, 18, 18, 20),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        // User row
+                                        Row(
+                                          children: [
+                                            // Avatar with bot-color ring
+                                            Container(
+                                              padding: const EdgeInsets.all(2.5),
+                                              decoration: BoxDecoration(
+                                                shape: BoxShape.circle,
+                                                gradient: LinearGradient(
+                                                  colors: [
+                                                    botColor,
+                                                    botColor.withValues(alpha: 0.4),
+                                                  ],
+                                                ),
+                                              ),
+                                              child: _UserAvatar(
+                                                path: achievement.userAvatarPath,
+                                                size: 44,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    achievement.userName,
+                                                    maxLines: 1,
+                                                    overflow: TextOverflow.ellipsis,
+                                                    style: GoogleFonts.outfit(
+                                                      color: Colors.white,
+                                                      fontSize: 18,
+                                                      fontWeight: FontWeight.w900,
+                                                    ),
+                                                  ),
+                                                  Text(
+                                                    date,
+                                                    style: GoogleFonts.inter(
+                                                      color: Colors.white54,
+                                                      fontSize: 12,
+                                                      fontWeight: FontWeight.w600,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            // Gold gradient Share button
+                                            Container(
+                                              decoration: BoxDecoration(
+                                                gradient: const LinearGradient(
+                                                  colors: [Color(0xFFFFD166), Color(0xFFFF9500)],
+                                                ),
+                                                borderRadius: BorderRadius.circular(12),
+                                                boxShadow: const [
+                                                  BoxShadow(
+                                                    color: Color(0x55FF9500),
+                                                    blurRadius: 12,
+                                                    offset: Offset(0, 4),
+                                                  ),
+                                                ],
+                                              ),
+                                              child: Material(
+                                                color: Colors.transparent,
+                                                child: InkWell(
+                                                  borderRadius: BorderRadius.circular(12),
+                                                  onTap: _sharing ? null : () => _captureAndShare(),
+                                                  child: Padding(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                                                    child: Row(
+                                                      mainAxisSize: MainAxisSize.min,
+                                                      children: [
+                                                        if (_sharing)
+                                                          const SizedBox(
+                                                            width: 14,
+                                                            height: 14,
+                                                            child: CircularProgressIndicator(
+                                                              strokeWidth: 2,
+                                                              color: Color(0xFF1A0A00),
+                                                            ),
+                                                          )
+                                                        else
+                                                          const Icon(
+                                                            Icons.ios_share_rounded,
+                                                            size: 16,
+                                                            color: Color(0xFF1A0A00),
+                                                          ),
+                                                        const SizedBox(width: 6),
+                                                        Text(
+                                                          'Share',
+                                                          style: GoogleFonts.inter(
+                                                            fontWeight: FontWeight.w900,
+                                                            fontSize: 13,
+                                                            color: const Color(0xFF1A0A00),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ),
                                               ),
                                             ),
                                           ],
                                         ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.all(20),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.stretch,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          _UserAvatar(
-                                            path: achievement.userAvatarPath,
-                                            size: 46,
+                                        const SizedBox(height: 20),
+                                        // ── 2x2 STAT TILE GRID ──────────────
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: _DarkStatTile(
+                                                label: 'POST ELO',
+                                                value: '${entry.ratingSnapshot}',
+                                                icon: Icons.speed_rounded,
+                                                iconColor: const Color(0xFF38BDF8),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 10),
+                                            Expanded(
+                                              child: _DarkStatTile(
+                                                label: 'CARD XP',
+                                                value: '+${achievement.cardXp}',
+                                                icon: Icons.bolt_rounded,
+                                                iconColor: const Color(0xFFFFD166),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 10),
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: _DarkStatTile(
+                                                label: 'FINAL MOVE',
+                                                value: achievement.finalMove,
+                                                icon: Icons.flag_rounded,
+                                                iconColor: const Color(0xFF4ADE80),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 10),
+                                            Expanded(
+                                              child: _DarkStatTile(
+                                                label: 'MOVES',
+                                                value: '${entry.recentMoves.length}',
+                                                icon: Icons.format_list_numbered,
+                                                iconColor: const Color(0xFFA78BFA),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 18),
+                                        // ── DEFEATED BOT SECTION ────────────
+                                        Container(
+                                          padding: const EdgeInsets.all(16),
+                                          decoration: BoxDecoration(
+                                            color: botColor.withValues(alpha: 0.08),
+                                            borderRadius: BorderRadius.circular(16),
+                                            border: Border.all(
+                                              color: botColor.withValues(alpha: 0.28),
+                                              width: 1,
+                                            ),
                                           ),
-                                          const SizedBox(width: 12),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              // Header: ⚔ DEFEATED · SPARKY
+                                              Row(
+                                                children: [
+                                                  Icon(
+                                                    Icons.sports_kabaddi_rounded,
+                                                    size: 14,
+                                                    color: botColor,
+                                                  ),
+                                                  const SizedBox(width: 6),
+                                                  Text(
+                                                    'DEFEATED  ·  ${achievement.opponent.name.toUpperCase()}',
+                                                    style: GoogleFonts.outfit(
+                                                      color: botColor,
+                                                      fontSize: 12,
+                                                      fontWeight: FontWeight.w900,
+                                                      letterSpacing: 1.1,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 10),
+                                              // Bot title in italic
+                                              Text(
+                                                achievement.opponent.title,
+                                                style: GoogleFonts.inter(
+                                                  color: Colors.white.withValues(alpha: 0.90),
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.w800,
+                                                  fontStyle: FontStyle.italic,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 6),
+                                              // FIDE pill + playing style
+                                              Wrap(
+                                                spacing: 8,
+                                                runSpacing: 6,
+                                                children: [
+                                                  Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                                    decoration: BoxDecoration(
+                                                      color: botColor.withValues(alpha: 0.20),
+                                                      borderRadius: BorderRadius.circular(20),
+                                                      border: Border.all(
+                                                        color: botColor.withValues(alpha: 0.45),
+                                                        width: 1,
+                                                      ),
+                                                    ),
+                                                    child: Text(
+                                                      'FIDE ${achievement.opponent.fideRatingRange}',
+                                                      style: GoogleFonts.jetBrainsMono(
+                                                        color: botColor,
+                                                        fontSize: 10,
+                                                        fontWeight: FontWeight.w900,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 8),
+                                              Text(
+                                                achievement.opponent.playingStyle,
+                                                style: GoogleFonts.inter(
+                                                  color: Colors.white60,
+                                                  fontSize: 12,
+                                                  height: 1.5,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(height: 14),
+                                        // ── EVALUATION REPORT ───────────────
+                                        Container(
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFF13100A),
+                                            borderRadius: BorderRadius.circular(16),
+                                            border: Border.all(
+                                              color: const Color(0xFFFFD166).withValues(alpha: 0.22),
+                                            ),
+                                          ),
+                                          child: IntrinsicHeight(
+                                            child: Row(
+                                              crossAxisAlignment: CrossAxisAlignment.stretch,
                                               children: [
-                                                Text(
-                                                  achievement.userName,
-                                                  maxLines: 1,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                  style: GoogleFonts.outfit(
-                                                    color: ScholarlyTheme
-                                                        .textPrimary,
-                                                    fontSize: 18,
-                                                    fontWeight:
-                                                        FontWeight.w900,
+                                                // Gold left accent bar
+                                                Container(
+                                                  width: 4,
+                                                  decoration: const BoxDecoration(
+                                                    gradient: LinearGradient(
+                                                      colors: [Color(0xFFFFD166), Color(0xFFFF9500)],
+                                                      begin: Alignment.topCenter,
+                                                      end: Alignment.bottomCenter,
+                                                    ),
+                                                    borderRadius: BorderRadius.only(
+                                                      topLeft: Radius.circular(16),
+                                                      bottomLeft: Radius.circular(16),
+                                                    ),
                                                   ),
                                                 ),
-                                                Text(
-                                                  date,
-                                                  style: GoogleFonts.inter(
-                                                    color: ScholarlyTheme
-                                                        .textMuted,
-                                                    fontSize: 12,
-                                                    fontWeight:
-                                                        FontWeight.w600,
+                                                Expanded(
+                                                  child: Padding(
+                                                    padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+                                                    child: Column(
+                                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                                      children: [
+                                                        Row(
+                                                          children: [
+                                                            const Icon(
+                                                              Icons.analytics_outlined,
+                                                              size: 13,
+                                                              color: Color(0xFFFFD166),
+                                                            ),
+                                                            const SizedBox(width: 6),
+                                                            Text(
+                                                              'EVALUATION REPORT',
+                                                              style: GoogleFonts.outfit(
+                                                                color: const Color(0xFFFFD166),
+                                                                fontSize: 11,
+                                                                fontWeight: FontWeight.w900,
+                                                                letterSpacing: 1.0,
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                        const SizedBox(height: 8),
+                                                        Text(
+                                                          achievement.report,
+                                                          style: GoogleFonts.inter(
+                                                            color: Colors.white.withValues(alpha: 0.88),
+                                                            fontSize: 13,
+                                                            height: 1.6,
+                                                            fontWeight: FontWeight.w600,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
                                                   ),
                                                 ),
                                               ],
                                             ),
                                           ),
-                                          FilledButton.icon(
-                                            onPressed: () =>
-                                                _shareAchievement(context),
-                                            icon: const Icon(
-                                              Icons.ios_share_rounded,
-                                              size: 17,
+                                        ),
+                                        const SizedBox(height: 16),
+                                        // ── DARK GLASS MINI BADGES ──────────
+                                        Wrap(
+                                          spacing: 8,
+                                          runSpacing: 8,
+                                          children: [
+                                            _DarkMiniBadge(
+                                              icon: Icons.category_rounded,
+                                              label: entry.ratingCategory.toUpperCase(),
                                             ),
-                                            label: Text(
-                                              'Share',
-                                              style: GoogleFonts.inter(
-                                                fontWeight: FontWeight.w800,
+                                            _DarkMiniBadge(
+                                              icon: Icons.grid_4x4_rounded,
+                                              label: entry.gameMode.toUpperCase(),
+                                            ),
+                                            _DarkMiniBadge(
+                                              icon: Icons.balance_rounded,
+                                              label: 'Dominance ${entry.dominance.toStringAsFixed(1)}',
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 20),
+                                        // ── BRANDING FOOTER ─────────────────
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white.withValues(alpha: 0.04),
+                                            borderRadius: BorderRadius.circular(14),
+                                            border: Border.all(
+                                              color: Colors.white.withValues(alpha: 0.07),
+                                            ),
+                                          ),
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              // App icon + name
+                                              Row(
+                                                children: [
+                                                  ClipRRect(
+                                                    borderRadius: BorderRadius.circular(8),
+                                                    child: Image.asset(
+                                                      'assets/splash/appicon_foreground.png',
+                                                      width: 32,
+                                                      height: 32,
+                                                      fit: BoxFit.cover,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 10),
+                                                  Column(
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    children: [
+                                                      Text(
+                                                        'Chess Academy',
+                                                        style: GoogleFonts.outfit(
+                                                          color: Colors.white,
+                                                          fontSize: 13,
+                                                          fontWeight: FontWeight.w900,
+                                                          letterSpacing: 0.2,
+                                                        ),
+                                                      ),
+                                                      Row(
+                                                        children: [
+                                                          Text(
+                                                            'Powered by ',
+                                                            style: GoogleFonts.inter(
+                                                              color: Colors.white38,
+                                                              fontSize: 9,
+                                                              fontWeight: FontWeight.w600,
+                                                            ),
+                                                          ),
+                                                          Image.asset(
+                                                            'assets/splash/ideaspace.png',
+                                                            height: 11,
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ],
                                               ),
-                                            ),
-                                            style: FilledButton.styleFrom(
-                                              backgroundColor:
-                                                  ScholarlyTheme.accentBlue,
-                                              foregroundColor: Colors.white,
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(12),
+                                              // Google Play badge
+                                              GestureDetector(
+                                                onTap: () => launchUrl(
+                                                  Uri.parse(AchievementsPage._shareUrl),
+                                                  mode: LaunchMode.externalApplication,
+                                                ),
+                                                child: Image.asset(
+                                                  'assets/splash/googleplaybadge.png',
+                                                  height: 30,
+                                                ),
                                               ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 18),
-                                      Wrap(
-                                        spacing: 10,
-                                        runSpacing: 10,
-                                        children: [
-                                          _StatChip(
-                                            label: 'POST ELO',
-                                            value: '${entry.ratingSnapshot}',
-                                            icon: Icons.speed_rounded,
-                                          ),
-                                          _StatChip(
-                                            label: 'CARD XP',
-                                            value: '${achievement.cardXp}',
-                                            icon: Icons.bolt_rounded,
-                                          ),
-                                          _StatChip(
-                                            label: 'FINAL MOVE',
-                                            value: achievement.finalMove,
-                                            icon: Icons.flag_rounded,
-                                          ),
-                                          _StatChip(
-                                            label: 'MOVES',
-                                            value: '${entry.recentMoves.length}',
-                                            icon: Icons.format_list_numbered,
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 20),
-                                      _DetailSection(
-                                        title: 'Defeated Engine',
-                                        child: Text(
-                                          '${achievement.opponent.title} | FIDE ${achievement.opponent.fideRatingRange}\n${achievement.opponent.playingStyle}',
-                                          style: GoogleFonts.inter(
-                                            color: ScholarlyTheme.textPrimary,
-                                            fontSize: 13,
-                                            height: 1.55,
-                                            fontWeight: FontWeight.w600,
+                                            ],
                                           ),
                                         ),
-                                      ),
-                                      const SizedBox(height: 14),
-                                      _DetailSection(
-                                        title: 'Evaluation Report',
-                                        child: Text(
-                                          achievement.report,
-                                          style: GoogleFonts.inter(
-                                            color: ScholarlyTheme.textPrimary,
-                                            fontSize: 13,
-                                            height: 1.55,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 14),
-                                      Wrap(
-                                        spacing: 8,
-                                        runSpacing: 8,
-                                        children: [
-                                          _MiniBadge(
-                                            icon: Icons.category_rounded,
-                                            label:
-                                                entry.ratingCategory.toUpperCase(),
-                                          ),
-                                          _MiniBadge(
-                                            icon: Icons.grid_4x4_rounded,
-                                            label: entry.gameMode.toUpperCase(),
-                                          ),
-                                          _MiniBadge(
-                                            icon: Icons.balance_rounded,
-                                            label:
-                                                'Dominance ${entry.dominance.toStringAsFixed(1)}',
-                                          ),
-                                        ],
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
                         ),
@@ -1098,12 +1482,61 @@ class _AchievementDetailPage extends StatelessWidget {
                 ),
               ],
             ),
+            // ── CONFETTI TOP ──────────────────────────────────────────────
+            Align(
+              alignment: Alignment.topCenter,
+              child: ConfettiWidget(
+                confettiController: _confettiTop,
+                blastDirectionality: BlastDirectionality.explosive,
+                shouldLoop: false,
+                numberOfParticles: 55,
+                gravity: 0.18,
+                colors: [
+                  achievement.opponent.color,
+                  const Color(0xFFFFD166),
+                  Colors.white,
+                  const Color(0xFF38BDF8),
+                  const Color(0xFF4ADE80),
+                  const Color(0xFFA78BFA),
+                ],
+              ),
+            ),
+            // ── CONFETTI BOTTOM ───────────────────────────────────────────
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: ConfettiWidget(
+                confettiController: _confettiBottom,
+                blastDirectionality: BlastDirectionality.explosive,
+                blastDirection: -3.14 / 2,
+                shouldLoop: false,
+                numberOfParticles: 55,
+                gravity: 0.05,
+                colors: [
+                  achievement.opponent.color,
+                  const Color(0xFFFFD166),
+                  Colors.white,
+                  const Color(0xFF38BDF8),
+                  const Color(0xFF4ADE80),
+                  const Color(0xFFA78BFA),
+                ],
+              ),
+            ),
+            // ── CLOSE BUTTON ──────────────────────────────────────────────
             Positioned(
               top: 8,
               left: 8,
-              child: IconButton.filledTonal(
-                onPressed: () => Navigator.of(context).pop(),
-                icon: const Icon(Icons.close_rounded),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.10),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.15),
+                  ),
+                ),
+                child: IconButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.close_rounded, color: Colors.white),
+                ),
               ),
             ),
           ],
@@ -1112,25 +1545,45 @@ class _AchievementDetailPage extends StatelessWidget {
     );
   }
 
-  Future<void> _shareAchievement(BuildContext context) async {
-    final text =
-        '${achievement.userName} defeated ${achievement.opponent.name} in IdeaSpace Chess Academy. Final move: ${achievement.finalMove}. ${AchievementsPage._shareUrl}';
+  Future<void> _captureAndShare() async {
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _sharing = true);
     try {
+      // Wait for the widget to be fully painted before capturing
+      await WidgetsBinding.instance.endOfFrame;
+      final boundary =
+          _cardKey.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+      final image = await boundary.toImage(pixelRatio: 3.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      final pngBytes = byteData!.buffer.asUint8List();
+
+      final tempDir = Directory.systemTemp;
+      final file = await File('${tempDir.path}/victory_card.png')
+          .writeAsBytes(pngBytes);
+
+      final text =
+          '${achievement.userName} defeated ${achievement.opponent.name} '
+          'in IdeaSpace Chess Academy! 🎮\n'
+          '${AchievementsPage._shareUrl}';
+
       await SharePlus.instance.share(
         ShareParams(
           text: text,
-          subject: 'IdeaSpace Chess Academy Achievement',
+          files: [XFile(file.path)],
+          subject: 'IdeaSpace Chess Academy Victory',
         ),
       );
     } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+      if (mounted) {
+        messenger.showSnackBar(
           SnackBar(
-            content: Text('Achievement share failed: $e'),
+            content: Text('Share failed: $e'),
             backgroundColor: Colors.redAccent,
           ),
         );
       }
+    } finally {
+      if (mounted) setState(() => _sharing = false);
     }
   }
 }
@@ -1221,55 +1674,71 @@ class _UserAvatar extends StatelessWidget {
   }
 }
 
-class _StatChip extends StatelessWidget {
-  const _StatChip({
+/// Dark stat tile used in the 2x2 grid inside the premium victory card detail.
+class _DarkStatTile extends StatelessWidget {
+  const _DarkStatTile({
     required this.label,
     required this.value,
     required this.icon,
+    required this.iconColor,
   });
 
   final String label;
   final String value;
   final IconData icon;
+  final Color iconColor;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.66),
+        color: const Color(0xFF1A2236),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.88)),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.07),
+        ),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(icon, size: 16, color: ScholarlyTheme.accentBlue),
-          const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                label,
-                style: GoogleFonts.inter(
-                  color: ScholarlyTheme.textMuted,
-                  fontSize: 8,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0.8,
+          Container(
+            padding: const EdgeInsets.all(7),
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: Icon(icon, size: 16, color: iconColor),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  label,
+                  style: GoogleFonts.inter(
+                    color: Colors.white38,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.8,
+                  ),
                 ),
-              ),
-              Text(
-                value,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.outfit(
-                  color: ScholarlyTheme.textPrimary,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w900,
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.outfit(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                    height: 1.0,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
@@ -1277,6 +1746,46 @@ class _StatChip extends StatelessWidget {
   }
 }
 
+
+
+/// Dark glass chip for the premium victory card detail footer badges.
+class _DarkMiniBadge extends StatelessWidget {
+  const _DarkMiniBadge({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.12),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: Colors.white60),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              color: Colors.white70,
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Light badge variant — used in gallery list cards.
 class _MiniBadge extends StatelessWidget {
   const _MiniBadge({required this.icon, required this.label});
 
@@ -1313,40 +1822,7 @@ class _MiniBadge extends StatelessWidget {
   }
 }
 
-class _DetailSection extends StatelessWidget {
-  const _DetailSection({required this.title, required this.child});
 
-  final String title;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title.toUpperCase(),
-            style: GoogleFonts.outfit(
-              color: ScholarlyTheme.accentBlue,
-              fontSize: 11,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 1,
-            ),
-          ),
-          const SizedBox(height: 8),
-          child,
-        ],
-      ),
-    );
-  }
-}
 
 Color _getRankColor(String rank) {
   switch (rank.toLowerCase()) {
@@ -1403,8 +1879,8 @@ class _FormFactorSeasonCard extends StatelessWidget {
     return JuicyGlassCard(
       padding: const EdgeInsets.all(20),
       borderRadius: 20,
-      backgroundColor: ScholarlyTheme.backgroundDark.withValues(alpha: 0.85),
-      borderColor: rankColor.withValues(alpha: 0.4),
+      backgroundColor: Colors.white,
+      borderColor: rankColor.withValues(alpha: 0.3),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1420,7 +1896,7 @@ class _FormFactorSeasonCard extends StatelessWidget {
                     style: GoogleFonts.outfit(
                       fontSize: 13,
                       fontWeight: FontWeight.w900,
-                      color: Colors.white,
+                      color: ScholarlyTheme.textPrimary,
                       letterSpacing: 0.5,
                     ),
                   ),
@@ -1429,7 +1905,7 @@ class _FormFactorSeasonCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.white12,
+                  color: rankColor.withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -1437,7 +1913,7 @@ class _FormFactorSeasonCard extends StatelessWidget {
                   style: GoogleFonts.jetBrainsMono(
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white70,
+                    color: rankColor,
                   ),
                 ),
               ),
@@ -1460,7 +1936,7 @@ class _FormFactorSeasonCard extends StatelessWidget {
                 style: GoogleFonts.jetBrainsMono(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: ScholarlyTheme.textPrimary,
                 ),
               ),
             ],
@@ -1471,7 +1947,7 @@ class _FormFactorSeasonCard extends StatelessWidget {
             child: LinearProgressIndicator(
               value: lpProgress,
               minHeight: 6,
-              backgroundColor: Colors.white10,
+              backgroundColor: const Color(0xFFE9ECEF),
               color: rankColor,
             ),
           ),
@@ -1483,7 +1959,7 @@ class _FormFactorSeasonCard extends StatelessWidget {
                 '${state.monthlyWins}W • ${state.monthlyDraws}D • ${state.monthlyLosses}L',
                 style: GoogleFonts.jetBrainsMono(
                   fontSize: 12,
-                  color: Colors.white70,
+                  color: ScholarlyTheme.textMuted,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -1491,7 +1967,7 @@ class _FormFactorSeasonCard extends StatelessWidget {
                 'Assignments LP: +${state.monthlyAssignmentsCompleted * 15}',
                 style: GoogleFonts.inter(
                   fontSize: 11,
-                  color: Colors.white54,
+                  color: ScholarlyTheme.textSubtle,
                   fontWeight: FontWeight.w500,
                 ),
               ),

@@ -1,3 +1,4 @@
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -29,7 +30,6 @@ import 'achievements_page.dart';
 
 
 import 'widgets/welcome_guide_page.dart';
-import 'widgets/notification_prompt_page.dart';
 import 'widgets/sidebar_dynamic_bg.dart';
 import 'widgets/hover_scale_effect.dart';
 import '../application/onboarding_provider.dart';
@@ -134,7 +134,6 @@ class _MobileNavigationShellState extends ConsumerState<MobileNavigationShell> {
     }
 
     final showWelcome = ref.watch(showWelcomeDialogProvider);
-    final showNotificationPrompt = ref.watch(showNotificationPromptProvider);
 
     Widget result = Scaffold(
       backgroundColor: ScholarlyTheme.backgroundStart,
@@ -273,14 +272,7 @@ class _MobileNavigationShellState extends ConsumerState<MobileNavigationShell> {
       ),
     );
 
-    if (showNotificationPrompt) {
-      result = Stack(
-        children: [
-          result,
-          const NotificationPromptPage(),
-        ],
-      );
-    } else if (showWelcome) {
+    if (showWelcome) {
       result = Stack(
         children: [
           result,
@@ -644,21 +636,7 @@ class _MobileSidebarDrawer extends ConsumerWidget {
                 ],
               ),
             ),
-            const SizedBox(width: 12),
-            Image.asset(
-              'assets/splash/appicon.png',
-              width: 96,
-              height: 96,
-              errorBuilder: (context, error, stackTrace) => Container(
-                width: 96,
-                height: 96,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: ScholarlyTheme.accentBlue,
-                ),
-                child: const Icon(Icons.circle, color: Colors.white, size: 54),
-              ),
-            ),
+            const _FloatingAppIcon(size: 86),
           ],
         ),
       ),
@@ -1004,4 +982,93 @@ Future<bool?> showExitAppConfirmationDialog(BuildContext context) async {
       ),
     ),
   );
+}
+
+/// Floating app icon with drop-shadow animation — mirrors the splash screen effect.
+class _FloatingAppIcon extends StatefulWidget {
+  const _FloatingAppIcon({required this.size});
+  final double size;
+
+  @override
+  State<_FloatingAppIcon> createState() => _FloatingAppIconState();
+}
+
+class _FloatingAppIconState extends State<_FloatingAppIcon>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _floatController;
+  late Animation<double> _floatAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _floatController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..repeat(reverse: true);
+
+    _floatAnimation = Tween<double>(begin: -6.0, end: 6.0).animate(
+      CurvedAnimation(parent: _floatController, curve: Curves.easeInOutSine),
+    );
+  }
+
+  @override
+  void dispose() {
+    _floatController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = widget.size;
+    return AnimatedBuilder(
+      animation: _floatController,
+      builder: (context, child) {
+        final floatVal = _floatAnimation.value; // -6 to +6
+        // When icon floats UP (floatVal < 0): shadow is smaller & lighter
+        // When icon floats DOWN (floatVal > 0): shadow is wider & darker
+        final shadowWidth = (s * 0.65 - floatVal * 1.8).clamp(s * 0.30, s * 0.75);
+        final shadowOpacity = (0.28 - floatVal / (s * 1.8)).clamp(0.10, 0.38);
+
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Knight floating in its own fixed-height slot
+            SizedBox(
+              width: s,
+              height: s,
+              child: Transform.translate(
+                offset: Offset(0, floatVal),
+                child: Image.asset(
+                  'assets/splash/appicon_foreground.png',
+                  width: s,
+                  height: s,
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
+            // Shadow sits BELOW the knight — no overlap
+            SizedBox(
+              height: 10,
+              child: Center(
+                child: Opacity(
+                  opacity: shadowOpacity,
+                  child: ImageFiltered(
+                    imageFilter: ui.ImageFilter.blur(sigmaX: 7, sigmaY: 3),
+                    child: Container(
+                      width: shadowWidth,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: Colors.black,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
 }

@@ -168,8 +168,8 @@ class NotificationService {
 
       await _androidNotifications.zonedSchedule(
         alertId,
-        'Batch Starting Soon ⏰',
-        'Batch "$batchName" is starting in 5 minutes.',
+        'GM Chanakya is here! 🎓',
+        'GM Chanakya has arrived in class. Wake up and join "$batchName" now!',
         alertTime,
         const NotificationDetails(android: androidDetails),
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,

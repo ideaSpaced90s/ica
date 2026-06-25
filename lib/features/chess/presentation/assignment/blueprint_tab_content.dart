@@ -132,8 +132,8 @@ class _BlueprintTabContentState extends ConsumerState<BlueprintTabContent>
               JuicyGlassCard(
                 padding: const EdgeInsets.all(20),
                 borderRadius: 20,
-                backgroundColor: ScholarlyTheme.backgroundDark.withValues(alpha: 0.85),
-                borderColor: rankColor.withValues(alpha: 0.4),
+                backgroundColor: Colors.white,
+                borderColor: rankColor.withValues(alpha: 0.3),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -149,7 +149,7 @@ class _BlueprintTabContentState extends ConsumerState<BlueprintTabContent>
                               style: GoogleFonts.outfit(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w900,
-                                color: Colors.white,
+                                color: ScholarlyTheme.textPrimary,
                                 letterSpacing: 0.5,
                               ),
                             ),
@@ -158,7 +158,7 @@ class _BlueprintTabContentState extends ConsumerState<BlueprintTabContent>
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: Colors.white12,
+                            color: rankColor.withValues(alpha: 0.10),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
@@ -166,7 +166,7 @@ class _BlueprintTabContentState extends ConsumerState<BlueprintTabContent>
                             style: GoogleFonts.jetBrainsMono(
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
-                              color: Colors.white70,
+                              color: rankColor,
                             ),
                           ),
                         ),
@@ -189,7 +189,7 @@ class _BlueprintTabContentState extends ConsumerState<BlueprintTabContent>
                           style: GoogleFonts.jetBrainsMono(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                            color: ScholarlyTheme.textPrimary,
                           ),
                         ),
                       ],
@@ -200,7 +200,7 @@ class _BlueprintTabContentState extends ConsumerState<BlueprintTabContent>
                       child: LinearProgressIndicator(
                         value: lpProgress,
                         minHeight: 6,
-                        backgroundColor: Colors.white10,
+                        backgroundColor: const Color(0xFFE9ECEF),
                         color: rankColor,
                       ),
                     ),
@@ -212,7 +212,7 @@ class _BlueprintTabContentState extends ConsumerState<BlueprintTabContent>
                           '${state.monthlyWins}W • ${state.monthlyDraws}D • ${state.monthlyLosses}L',
                           style: GoogleFonts.jetBrainsMono(
                             fontSize: 12,
-                            color: Colors.white70,
+                            color: ScholarlyTheme.textMuted,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -220,7 +220,7 @@ class _BlueprintTabContentState extends ConsumerState<BlueprintTabContent>
                           'Assignments LP: +${state.monthlyAssignmentsCompleted * 15}',
                           style: GoogleFonts.inter(
                             fontSize: 11,
-                            color: Colors.white54,
+                            color: ScholarlyTheme.textSubtle,
                             fontWeight: FontWeight.w500,
                           ),
                         ),

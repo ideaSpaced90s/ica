@@ -64,45 +64,15 @@ class _NotificationPromptPageState extends ConsumerState<NotificationPromptPage>
         if (status.isGranted) {
           granted = true;
         } else if (status.isPermanentlyDenied) {
-          debugPrint('--- _handleEnableNotifications: status is permanently denied ---');
+          // Permission was permanently denied — silently dismiss the prompt,
+          // no dialog. The user can enable it later from device settings.
           if (mounted) {
-            final openSettings = await showDialog<bool>(
-              context: context,
-              builder: (context) => AlertDialog(
-                backgroundColor: ScholarlyTheme.panelBase,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                  side: const BorderSide(color: ScholarlyTheme.panelStroke, width: 1),
-                ),
-                title: Text(
-                  'Notifications Needed',
-                  style: GoogleFonts.outfit(
-                    fontWeight: FontWeight.bold,
-                    color: ScholarlyTheme.textPrimary,
-                  ),
-                ),
-                content: Text(
-                  'To receive chess lessons briefings and protection alerts for your training streak, please enable notifications in your device settings.',
-                  style: GoogleFonts.inter(color: ScholarlyTheme.textMuted),
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context, false),
-                    child: Text('CANCEL', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted)),
-                  ),
-                  FilledButton(
-                    onPressed: () => Navigator.pop(context, true),
-                    style: FilledButton.styleFrom(backgroundColor: ScholarlyTheme.accentBlue),
-                    child: Text('OPEN SETTINGS', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-                  ),
-                ],
-              ),
-            );
-            debugPrint('--- _handleEnableNotifications: user choice for settings is $openSettings ---');
-            if (openSettings == true) {
-              await openAppSettings();
-            }
+            await OnboardingService(ref).dismissNotificationPrompt();
+            if (mounted) widget.onDismissed?.call(context);
+          } else {
+            _isProcessing = false;
           }
+          return;
         } else {
           debugPrint('--- _handleEnableNotifications: requesting permission ---');
           final result = await Permission.notification.request();

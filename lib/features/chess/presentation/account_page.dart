@@ -294,7 +294,6 @@ class _AccountPageState extends ConsumerState<AccountPage> {
                           );
                           await repo.setIsGoogleSignedIn(false);
                           await repo.setWelcomeGuideSeen(false);
-                          await repo.setPromptedNotification(false);
                           await repo.setArenaIntroSeen(false);
                           await repo.setBattlegroundIntroSeen(false);
                           await repo.setPuzzlesIntroSeen(false);
@@ -310,8 +309,6 @@ class _AccountPageState extends ConsumerState<AccountPage> {
                           ref.read(showPuzzlesIntroProvider.notifier).state =
                               true;
                           ref.read(showWelcomeDialogProvider.notifier).state =
-                              true;
-                          ref.read(showNotificationPromptProvider.notifier).state =
                               true;
 
                           ref.read(mobileNavIndexProvider.notifier).state = 0;
@@ -474,12 +471,19 @@ class _AccountPageState extends ConsumerState<AccountPage> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFF0F172A).withValues(alpha: 0.8),
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(
-                  color: const Color(0xFFFFD700).withValues(alpha: 0.25),
+                  color: const Color(0xFFFFD700).withValues(alpha: 0.35),
                   width: 1.0,
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: Column(
                 children: activeThemeIds.map((themeId) {
@@ -501,7 +505,7 @@ class _AccountPageState extends ConsumerState<AccountPage> {
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.2),
+                              color: Colors.black.withValues(alpha: 0.12),
                               width: 1,
                             ),
                           ),
@@ -556,7 +560,7 @@ class _AccountPageState extends ConsumerState<AccountPage> {
                                       style: GoogleFonts.outfit(
                                         fontSize: 13,
                                         fontWeight: FontWeight.bold,
-                                        color: Colors.white,
+                                        color: ScholarlyTheme.textPrimary,
                                       ),
                                     ),
                                   ),
@@ -569,10 +573,10 @@ class _AccountPageState extends ConsumerState<AccountPage> {
                                       fontSize: 11,
                                       fontWeight: FontWeight.w600,
                                       color: isDirectlyPurchased
-                                          ? Colors.cyanAccent
+                                          ? ScholarlyTheme.accentBlue
                                           : (remaining == 0
                                               ? Colors.redAccent.shade100
-                                              : const Color(0xFFFFD700).withValues(alpha: 0.8)),
+                                              : const Color(0xFFD97706)),
                                     ),
                                   ),
                                 ],
@@ -584,13 +588,13 @@ class _AccountPageState extends ConsumerState<AccountPage> {
                                 child: LinearProgressIndicator(
                                   value: isDirectlyPurchased ? 1.0 : (1.0 - progress),
                                   minHeight: 6,
-                                  backgroundColor: const Color(0xFF1E293B),
+                                  backgroundColor: const Color(0xFFE9ECEF),
                                   valueColor: AlwaysStoppedAnimation<Color>(
                                     isDirectlyPurchased
-                                        ? Colors.cyanAccent
+                                        ? ScholarlyTheme.accentBlue
                                         : (remaining == 0
                                             ? Colors.redAccent
-                                            : const Color(0xFFFFD700)),
+                                            : const Color(0xFFD97706)),
                                   ),
                                 ),
                               ),
