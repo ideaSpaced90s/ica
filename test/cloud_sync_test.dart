@@ -13,6 +13,9 @@ import 'package:kingslayer_chess/features/chess/application/store_provider.dart'
 import 'package:kingslayer_chess/features/chess/data/saved_game.dart';
 import 'package:kingslayer_chess/features/chess/data/saved_game_repository.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:kingslayer_chess/features/chess/data/tutorial_progress_repository.dart';
+import 'package:kingslayer_chess/features/chess/application/tutorial_provider.dart';
 
 class MockUser extends Fake implements fb_auth.User {
   @override
@@ -103,6 +106,15 @@ class FakeChessState extends Fake implements ChessState {
 
   @override
   String get boardThemeId => 'classic';
+
+  @override
+  bool get isBoardFlipped => false;
+
+  @override
+  bool get isPlayerWhite => true;
+
+  @override
+  String get gameMode => 'classic';
 }
 
 class FakeChessNotifier extends ChessNotifier {
@@ -141,6 +153,7 @@ void main() {
   late MockSavedGameRepository mockSavedGameRepo;
   late MockFirebaseStorage mockFirebaseStorage;
   late FakeChessNotifier fakeChessNotifier;
+  late TutorialProgressRepository tutorialProgressRepo;
 
   setUp(() async {
     tempDir = Directory.systemTemp.createTempSync('ica_sync_test');
@@ -153,6 +166,9 @@ void main() {
         return tempDir.path;
       },
     );
+
+    SharedPreferences.setMockInitialValues({});
+    tutorialProgressRepo = TutorialProgressRepository(await SharedPreferences.getInstance());
 
     mockAuthService = MockAuthService();
     mockSavedGameRepo = MockSavedGameRepository();
@@ -176,6 +192,7 @@ void main() {
         firebaseStorageProvider.overrideWithValue(mockFirebaseStorage),
         chessProvider.overrideWith(() => fakeChessNotifier),
         storeProvider.overrideWith(() => StoreNotifier(loadData: false)),
+        tutorialProgressRepositoryProvider.overrideWithValue(tutorialProgressRepo),
       ],
     );
 

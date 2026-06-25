@@ -141,10 +141,19 @@ class FakeChessState extends Fake implements ChessState {
   final String engineLevel;
   @override
   final String bottomAvatarId;
+  @override
+  final bool isBoardFlipped;
+  @override
+  final bool isPlayerWhite;
+  @override
+  final String gameMode;
 
   FakeChessState({
     this.engineLevel = 'avatar_6',
     this.bottomAvatarId = 'avatar_6',
+    this.isBoardFlipped = false,
+    this.isPlayerWhite = true,
+    this.gameMode = 'classic',
   });
 }
 

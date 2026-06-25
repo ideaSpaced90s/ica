@@ -72,6 +72,7 @@ class AppSettings {
   final String userName;
   final String userAvatarPath;
   final String? activeRatedMatchId;
+  final String? activeRatedMatchOpponentId;
 
   AppSettings({
     this.boardThemeId = 'classic',
@@ -139,6 +140,7 @@ class AppSettings {
     this.userName = 'Apprentice',
     this.userAvatarPath = 'assets/persona/user_profile_0.png',
     this.activeRatedMatchId,
+    this.activeRatedMatchOpponentId,
     this.isNotificationsEnabled = false,
     this.dailyBriefingEnabled = true,
     this.streakProtectionEnabled = true,
@@ -199,6 +201,7 @@ class AppSettings {
     String? userName,
     String? userAvatarPath,
     Object? activeRatedMatchId = const Object(),
+    Object? activeRatedMatchOpponentId = const Object(),
     bool? isNotificationsEnabled,
     bool? dailyBriefingEnabled,
     bool? streakProtectionEnabled,
@@ -262,6 +265,9 @@ class AppSettings {
       activeRatedMatchId: identical(activeRatedMatchId, const Object())
           ? this.activeRatedMatchId
           : activeRatedMatchId as String?,
+      activeRatedMatchOpponentId: identical(activeRatedMatchOpponentId, const Object())
+          ? this.activeRatedMatchOpponentId
+          : activeRatedMatchOpponentId as String?,
       isNotificationsEnabled: isNotificationsEnabled ?? this.isNotificationsEnabled,
       dailyBriefingEnabled: dailyBriefingEnabled ?? this.dailyBriefingEnabled,
       streakProtectionEnabled: streakProtectionEnabled ?? this.streakProtectionEnabled,
@@ -323,6 +329,7 @@ class AppSettings {
     'userName': userName,
     'userAvatarPath': userAvatarPath,
     'activeRatedMatchId': activeRatedMatchId,
+    'activeRatedMatchOpponentId': activeRatedMatchOpponentId,
     'isNotificationsEnabled': isNotificationsEnabled,
     'dailyBriefingEnabled': dailyBriefingEnabled,
     'streakProtectionEnabled': streakProtectionEnabled,
@@ -438,6 +445,7 @@ class AppSettings {
       userName: json['userName'] ?? 'Apprentice',
       userAvatarPath: json['userAvatarPath'] ?? 'assets/persona/user_profile_0.png',
       activeRatedMatchId: json['activeRatedMatchId'] as String?,
+      activeRatedMatchOpponentId: json['activeRatedMatchOpponentId'] as String?,
       isNotificationsEnabled: json['isNotificationsEnabled'] ?? false,
       dailyBriefingEnabled: json['dailyBriefingEnabled'] ?? true,
       streakProtectionEnabled: json['streakProtectionEnabled'] ?? true,

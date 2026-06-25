@@ -88,6 +88,9 @@ void main() {
     final resetProgressTextFinder = find.text('Reset Progress');
     expect(resetProgressTextFinder, findsOneWidget);
 
+    await tester.ensureVisible(resetProgressTextFinder);
+    await tester.pump(const Duration(milliseconds: 500));
+
     // Tap the 'Reset Progress' button
     await tester.tap(resetProgressTextFinder);
     await tester.pump(const Duration(milliseconds: 500));

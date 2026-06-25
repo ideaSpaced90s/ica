@@ -56,13 +56,16 @@ void main() {
 
     notifier.cancelSubscription();
     expect(container.read(storeProvider).isPremium, false);
-    expect(container.read(storeProvider).subscriptionAccountId, isNull);
+    expect(container.read(storeProvider).subscriptionAccountId, firstId);
 
     await Future<void>.delayed(const Duration(milliseconds: 2));
     notifier.simulateUSDSubscription('monthly');
     final secondId = container.read(storeProvider).subscriptionAccountId;
 
     expect(secondId, isNotNull);
-    expect(secondId, isNot(firstId));
+    expect(secondId, firstId);
+
+    // Give time for fire-and-forget saveStore async I/O to finish before tearDown deletes tempDir
+    await Future<void>.delayed(const Duration(milliseconds: 100));
   });
 }

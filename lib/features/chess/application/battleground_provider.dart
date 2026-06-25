@@ -399,6 +399,7 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
   String? _searchFen;
   final List<CandidateMove> _currentCandidates = [];
   bool _waitingForReady = false;
+  final List<double> _dominanceSamples = [];
 
   @override
   BattlegroundState build() {
@@ -469,8 +470,12 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
     // Check for active rated match ID found on boot (unfair exit loss registration)
     if (s.activeRatedMatchId != null) {
       final matchId = s.activeRatedMatchId!;
+      final opponent = s.activeRatedMatchOpponentId != null
+          ? AiAvatar.getAvatar(s.activeRatedMatchOpponentId!)
+          : AiAvatar.getBestMatch(s.consolidatedRating);
+
       debugPrint(
-        'BattlegroundNotifier: Active rated match ID found on boot: $matchId. Registering unfair exit loss.',
+        'BattlegroundNotifier: Active rated match ID found on boot: $matchId with opponent ${opponent.name}. Registering unfair exit loss.',
       );
 
       // Clear the activeRatedMatchId immediately from state and disk first.
@@ -479,7 +484,7 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
       state = state.copyWith(activeRatedMatchId: null);
       await _saveSettings();
 
-      await _updateRating(0.0);
+      await _updateRating(0.0, opponentOverride: opponent);
 
       final entry = SavedGameEntry(
         id: matchId,
@@ -500,7 +505,6 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
       await _savedGameRepository.save(entry);
 
       // Sync boot-up forfeit to performance ledger
-      final opponent = AiAvatar.getBestMatch(state.consolidatedRating);
       final ledgerEntry = PerformanceLedgerEntry(
         id: entry.id,
         timestamp: entry.savedAt,
@@ -519,6 +523,7 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
         whiteTimeLeftMs: 0,
         blackTimeLeftMs: 0,
         reachedEndgame: false,
+        baseTimeMs: state.baseTimeDuration.inMilliseconds,
       );
       await _performanceLedgerRepository.addEntry(ledgerEntry);
 
@@ -1090,6 +1095,13 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
       threatenedSquares: threatened,
     );
 
+    if (updatedUciMoves.length % 2 == 0) {
+      final currentMargin = state.game.calculateMaterialMargin(
+        state.isPlayerWhite ? chess_lib.Color.WHITE : chess_lib.Color.BLACK,
+      );
+      _dominanceSamples.add(currentMargin);
+    }
+
     if (state.game.gameOver) {
       _stopClockTimer();
     }
@@ -1165,7 +1177,7 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
         final humanWon = winnerIsWhite == state.isPlayerWhite;
         actualScore = humanWon ? 1.0 : 0.0;
       }
-      await _updateRating(actualScore);
+      await _updateRating(actualScore, dominanceOverride: _getAverageDominance());
     }
   }
 
@@ -1222,13 +1234,23 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
     }
   }
 
-  Future<void> _updateRating(double actualScore) async {
+  double _getAverageDominance() {
+    if (_dominanceSamples.isEmpty) {
+      return state.game.calculateMaterialMargin(
+        state.isPlayerWhite ? chess_lib.Color.WHITE : chess_lib.Color.BLACK,
+      );
+    }
+    final sum = _dominanceSamples.reduce((a, b) => a + b);
+    return sum / _dominanceSamples.length;
+  }
+
+  Future<void> _updateRating(double actualScore, {AiAvatar? opponentOverride, double? dominanceOverride}) async {
     final category = _getRatingCategory(
       state.baseTimeDuration,
       state.incrementDuration,
     );
     final is960 = state.gameMode == 'chess960';
-    final opponent =
+    final opponent = opponentOverride ??
         state.activeOpponent ?? AiAvatar.getBestMatch(state.consolidatedRating);
 
     int currentSpecificElo = 400;
@@ -1291,7 +1313,7 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
             consolidatedStreakBonus;
     final newConsolidatedElo = math.max(400, newConsolidatedEloRaw);
 
-    final currentMargin = state.game.calculateMaterialMargin(
+    final currentMargin = dominanceOverride ?? state.game.calculateMaterialMargin(
       state.isPlayerWhite ? chess_lib.Color.WHITE : chess_lib.Color.BLACK,
     );
 
@@ -1366,7 +1388,7 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
     _searchFen = null;
     _stopAnalysisAndReset();
 
-    await _updateRating(0.0); // 0.0 = Loss
+    await _updateRating(0.0, dominanceOverride: _getAverageDominance()); // 0.0 = Loss
     await saveCurrentGame(
       customNameOverride: 'Rated Loss (Resigned)',
       resultOverride: 'L',
@@ -1537,6 +1559,7 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
     _engineMoveTimer = null;
     _searchFen = null;
     _stopAnalysisAndReset();
+    _dominanceSamples.clear();
 
     final is960 = state.gameMode == 'chess960';
     final initialGame = is960
@@ -1585,6 +1608,7 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
     _engineMoveTimer = null;
     _searchFen = null;
     _stopAnalysisAndReset();
+    _dominanceSamples.clear();
 
     final is960 = state.gameMode == 'chess960';
     final initialGame = is960
@@ -1650,11 +1674,11 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
     }
   }
 
-  void launchAssignmentMatch({
+  Future<void> launchAssignmentMatch({
     required String avatarId,
     required Duration baseTime,
     required Duration increment,
-  }) {
+  }) async {
     _clockTimer?.cancel();
     _engineMoveTimer?.cancel();
     _engineMoveTimer = null;
@@ -1699,6 +1723,8 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
       activeOpponent: opponent,
       activeRatedMatchId: DateTime.now().millisecondsSinceEpoch.toString(), // Mark active rated match
     );
+
+    await _saveSettings();
 
     _startClockTicker();
 
@@ -1839,7 +1865,7 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
 
     // Apply loss/win to ELO
     final score = humanWon ? 1.0 : 0.0;
-    await _updateRating(score);
+    await _updateRating(score, dominanceOverride: _getAverageDominance());
 
     state = state.copyWith(activeRatedMatchId: null);
     await _saveSettings();
@@ -1881,6 +1907,7 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
       blitzDominance: state.blitzDominance,
       rapidDominance: state.rapidDominance,
       activeRatedMatchId: state.activeRatedMatchId,
+      activeRatedMatchOpponentId: state.activeRatedMatchId != null ? state.activeOpponent?.id : null,
       lastRatedGameTimestampMs: state.lastRatedGameTimestampMs,
       recalibrationGamesRemaining: state.recalibrationGamesRemaining,
       decayIntervalsApplied: state.decayIntervalsApplied,
@@ -1949,6 +1976,7 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
             AiAvatar.getBestMatch(state.consolidatedRating);
         
         bool reachedEndgame = false;
+        String? endgameFen;
         try {
           final tempGame = ChessGame(
             fen: entry.initialFen,
@@ -1956,11 +1984,13 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
           );
           if (FenParser.isEndgame(tempGame.fen)) {
             reachedEndgame = true;
+            endgameFen = tempGame.fen;
           } else {
             for (final move in entry.uciMoves) {
               tempGame.makeMove(move);
               if (FenParser.isEndgame(tempGame.fen)) {
                 reachedEndgame = true;
+                endgameFen = tempGame.fen;
                 break;
               }
             }
@@ -1987,6 +2017,8 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
           whiteTimeLeftMs: entry.whiteTimeLeftMs,
           blackTimeLeftMs: entry.blackTimeLeftMs,
           reachedEndgame: reachedEndgame,
+          baseTimeMs: state.baseTimeDuration.inMilliseconds,
+          endgameFen: endgameFen,
         );
         updatedLedger = await _performanceLedgerRepository.addEntry(
           ledgerEntry,
@@ -2063,11 +2095,7 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
     double speedSum = 0.0;
     int speedCount = 0;
     for (final s in ratedSaves) {
-      final double baseTimeMs = s.ratingCategory == 'bullet'
-          ? 120000.0
-          : s.ratingCategory == 'blitz'
-          ? 300000.0
-          : 600000.0;
+      final double baseTimeMs = s.baseTimeMs > 0 ? s.baseTimeMs.toDouble() : 600000.0;
       final playerTimeLeftMs = s.isPlayerWhite
           ? s.whiteTimeLeftMs
           : s.blackTimeLeftMs;
@@ -2122,7 +2150,7 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
     // 4. Endgame calculations
     EndgamePerformanceStats? endgames;
     final endgameSaves = ratedSaves
-        .where((s) => s.reachedEndgame || FenParser.isEndgame(s.fen))
+        .where((s) => s.reachedEndgame || (s.endgameFen != null && FenParser.isEndgame(s.endgameFen!)) || FenParser.isEndgame(s.fen))
         .toList();
     if (endgameSaves.isNotEmpty) {
       double totalWeightedScore = 0.0;
@@ -2137,7 +2165,7 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
       for (final s in endgameSaves) {
         final score = s.result == 'W' ? 1.0 : (s.result == 'D' ? 0.5 : 0.0);
         final balance = FenParser.calculateMaterialBalance(
-          s.fen,
+          s.endgameFen ?? s.fen,
           s.isPlayerWhite,
         );
 

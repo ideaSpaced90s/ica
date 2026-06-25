@@ -18,6 +18,8 @@ class PerformanceLedgerEntry {
   final int whiteTimeLeftMs;
   final int blackTimeLeftMs;
   final bool reachedEndgame;
+  final int baseTimeMs;
+  final String? endgameFen;
 
   const PerformanceLedgerEntry({
     required this.id,
@@ -37,6 +39,8 @@ class PerformanceLedgerEntry {
     required this.whiteTimeLeftMs,
     required this.blackTimeLeftMs,
     this.reachedEndgame = false,
+    this.baseTimeMs = 600000,
+    this.endgameFen,
   });
 
   Map<String, dynamic> toJson() => {
@@ -57,9 +61,17 @@ class PerformanceLedgerEntry {
     'whiteTimeLeftMs': whiteTimeLeftMs,
     'blackTimeLeftMs': blackTimeLeftMs,
     'reachedEndgame': reachedEndgame,
+    'baseTimeMs': baseTimeMs,
+    'endgameFen': endgameFen,
   };
 
   factory PerformanceLedgerEntry.fromJson(Map<String, dynamic> json) {
+    final ratingCat = json['ratingCategory'] as String? ?? 'rapid';
+    final defaultBaseTime = ratingCat == 'bullet'
+        ? 120000
+        : ratingCat == 'blitz'
+        ? 300000
+        : 600000;
     return PerformanceLedgerEntry(
       id: json['id'] as String,
       timestamp: DateTime.parse(json['timestamp'] as String),
@@ -84,6 +96,8 @@ class PerformanceLedgerEntry {
       whiteTimeLeftMs: json['whiteTimeLeftMs'] as int? ?? 600000,
       blackTimeLeftMs: json['blackTimeLeftMs'] as int? ?? 600000,
       reachedEndgame: json['reachedEndgame'] as bool? ?? false,
+      baseTimeMs: json['baseTimeMs'] as int? ?? defaultBaseTime,
+      endgameFen: json['endgameFen'] as String?,
     );
   }
 }
