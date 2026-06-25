@@ -934,15 +934,6 @@ class AssignmentNotifier extends Notifier<AssignmentState> {
 
   void _updateIslandStepProgress(int islandIndex, int stepIndex, int increment) {
     final currentProgressList = List<int>.from(state.islandStepProgress[islandIndex] ?? [0, 0, 0, 0]);
-    if (stepIndex == 3) {
-      // Step 4 (Academy Pass) unlocks only after steps 1-3 are cleared (reaches target value)
-      final step1Cleared = currentProgressList[0] >= 15;
-      final step2Cleared = currentProgressList[1] >= 3;
-      final step3Cleared = currentProgressList[2] >= 2;
-      if (!step1Cleared || !step2Cleared || !step3Cleared) {
-        return; // Locked!
-      }
-    }
     
     final targets = [15, 3, 2, 2]; // target values for step 1, 2, 3, 4
     final currentVal = currentProgressList[stepIndex];

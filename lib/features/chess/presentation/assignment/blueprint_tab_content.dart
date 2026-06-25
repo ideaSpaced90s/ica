@@ -627,7 +627,7 @@ class _BlueprintTabContentState extends ConsumerState<BlueprintTabContent>
             isCompleted: isStep3Done,
             isLocked: !step3Unlocked,
             onAction: () {
-              ref.read(mobileNavIndexProvider.notifier).state = 3; // Cinema / Academy Syllabus tab (usually Cinema tab)
+              ref.read(mobileNavIndexProvider.notifier).state = 7; // Cinema / Academy Syllabus tab (usually Cinema tab)
             },
             actionLabel: "GO TO CINEMA",
           ),
@@ -642,9 +642,9 @@ class _BlueprintTabContentState extends ConsumerState<BlueprintTabContent>
             isCompleted: isStep4Done,
             isLocked: !step4Unlocked,
             onAction: () {
-              ref.read(mobileNavIndexProvider.notifier).state = 3; // Academy tab
+              ref.read(mobileNavIndexProvider.notifier).state = 7; // Academy tab
             },
-            actionLabel: "OPEN ACADEMY",
+            actionLabel: "GO TO TUTORIAL",
           ),
         ],
       ),

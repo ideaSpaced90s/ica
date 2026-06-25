@@ -107,7 +107,16 @@ class FakeTutorialProgress extends Fake implements TutorialProgress {
 class FakeTutorialState extends Fake implements TutorialState {
   @override
   final TutorialProgress progress;
-  FakeTutorialState({required this.progress});
+  @override
+  final int currentChapterIndex;
+  @override
+  final bool isChapterComplete;
+
+  FakeTutorialState({
+    required this.progress,
+    this.currentChapterIndex = 1,
+    this.isChapterComplete = false,
+  });
 }
 
 class FakeTutorialNotifier extends Notifier<TutorialState> implements TutorialNotifier {
@@ -117,6 +126,10 @@ class FakeTutorialNotifier extends Notifier<TutorialState> implements TutorialNo
   @override
   TutorialState build() {
     return initialState;
+  }
+
+  void updateState(TutorialState newState) {
+    state = newState;
   }
 
   @override
@@ -507,6 +520,52 @@ void main() {
       final state = container.read(assignmentProvider);
       // Should now be calibrated since calibration is no longer premium gated
       expect(state.isCalibrated, isTrue);
+    });
+
+    test('Allows Step 4 (Academy Pass) progress to accumulate even if Steps 1-3 are incomplete', () async {
+      final container = createContainer(isPremium: true);
+      final notifier = container.read(assignmentProvider.notifier);
+      await Future.delayed(const Duration(milliseconds: 20));
+
+      // 1. Manually initialize assignment state to calibrated on Footsoldier (island index 0)
+      notifier.state = notifier.state.copyWith(
+        isCalibrated: true,
+        startElo: 500,
+        goalElo: 650,
+        currentIslandIndex: 0,
+        islandStepProgress: {
+          0: [0, 0, 0, 0], // Steps 1, 2, 3, 4 all at 0
+        },
+      );
+
+      // Generate active tasks to ensure dailyTasks is populated
+      await notifier.generateActiveTasks(500, isNewDay: true);
+
+      // 2. Identify the weekly chapter assigned for index 0 (Footsoldier range is chapters 1-8).
+      final tutIndex = notifier.state.dailyTasks.indexWhere((t) => t.taskType == DailyTaskType.tutorial);
+      expect(tutIndex, isNot(-1));
+      final task = notifier.state.dailyTasks[tutIndex];
+      final targetChapterId = int.tryParse(task.targetId);
+      expect(targetChapterId, isNotNull);
+
+      // 3. Simulate completion of the assigned chapter in tutorial progress, even though steps 1-3 are still at 0.
+      fakeTutorial.updateState(FakeTutorialState(
+        progress: FakeTutorialProgress(completedChapters: {targetChapterId!}),
+        currentChapterIndex: targetChapterId,
+        isChapterComplete: true,
+      ));
+
+      // Wait for listener to process
+      await Future.delayed(const Duration(milliseconds: 20));
+
+      // 4. Assert that the tutorial daily task is marked completed, and island step progress at index 3 is incremented.
+      final stateAfter = container.read(assignmentProvider);
+      final updatedTutTask = stateAfter.dailyTasks[tutIndex];
+      expect(updatedTutTask.isCompleted, isTrue);
+
+      final stepsProgress = stateAfter.islandStepProgress[0];
+      expect(stepsProgress, isNotNull);
+      expect(stepsProgress![3], 1); // Step 4 (index 3) must be incremented to 1
     });
   });
 }

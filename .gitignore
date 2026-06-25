@@ -64,3 +64,4 @@ scratch/
 # Database / temporary binary exports
 games.db
 games_db.b64
+lifetime_xp_settings.json

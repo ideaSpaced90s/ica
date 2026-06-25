@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -1072,43 +1073,124 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: ScholarlyTheme.accentBlueSoft.withValues(alpha: 0.5),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.workspace_premium_rounded, color: ScholarlyTheme.accentBlue, size: 28),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: ScholarlyTheme.accentBlueSoft.withValues(alpha: 0.5),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.workspace_premium_rounded, color: ScholarlyTheme.accentBlue, size: 28),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          'FREE ACCOUNT',
+                          style: GoogleFonts.outfit(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: ScholarlyTheme.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: Colors.green.withValues(alpha: 0.3),
+                              width: 1.0,
+                            ),
+                          ),
+                          child: Text(
+                            'ACTIVE',
+                            style: GoogleFonts.inter(
+                              fontSize: 8,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green.shade800,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'All AI opponents are unlocked & free.',
+                      style: GoogleFonts.inter(fontSize: 11, color: ScholarlyTheme.textMuted),
+                    ),
+                    Text(
+                      'Upgrade to unlock unlimited games, puzzles & coaching.',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: ScholarlyTheme.accentBlue,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'FREE ACCOUNT',
-                  style: GoogleFonts.outfit(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: ScholarlyTheme.textPrimary,
-                  ),
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.03),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: ScholarlyTheme.panelStroke,
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'All AI opponents are unlocked & free.',
-                  style: GoogleFonts.inter(fontSize: 11, color: ScholarlyTheme.textMuted),
-                ),
-                Text(
-                  'Upgrade to unlock unlimited games, puzzles & coaching.',
-                  style: GoogleFonts.inter(
-                    fontSize: 11,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.verified_user_rounded,
                     color: ScholarlyTheme.accentBlue,
-                    fontWeight: FontWeight.w600,
+                    size: 14,
                   ),
-                ),
-              ],
+                  const SizedBox(width: 6),
+                  Text(
+                    'Account ID: ${storeState.subscriptionAccountId}',
+                    style: GoogleFonts.jetBrainsMono(
+                      fontSize: 10,
+                      color: ScholarlyTheme.textPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  GestureDetector(
+                    onTap: () {
+                      Clipboard.setData(ClipboardData(text: storeState.subscriptionAccountId));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Account ID copied to clipboard!'),
+                          duration: Duration(seconds: 1),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    },
+                    child: const Icon(
+                      Icons.copy_rounded,
+                      color: ScholarlyTheme.accentBlue,
+                      size: 13,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],

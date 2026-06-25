@@ -779,8 +779,8 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
             ),
           );
         } else {
-          // Fallback to Academy tab if games not loaded
-          ref.read(mobileNavIndexProvider.notifier).state = 3; 
+          // Fallback to Tutorial tab if games not loaded
+          ref.read(mobileNavIndexProvider.notifier).state = 7; 
         }
         break;
       case DailyTaskType.analysis:
@@ -1114,7 +1114,7 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
                 const SizedBox(height: 4),
                 Text(
                   state.weeklyReviewSubmitted
-                      ? "You have completed your Academy game against GM Chanakya. Review it below to study his tactical commentary."
+                      ? "Task completed"
                       : "Go to the Academy and complete a game against GM Chanakya. Once completed, return to the Assignment Desk to review the game.",
                   style: GoogleFonts.inter(fontSize: 11, color: ScholarlyTheme.textMuted),
                 ),

@@ -99,9 +99,8 @@ class StoreState {
     this.currentPurchaseToken,
   });
 
-  String? get subscriptionAccountId {
-    if (!isPremium || currentCycleStartDate == null) return null;
-    return 'ICA-${currentCycleStartDate!.millisecondsSinceEpoch}';
+  String get subscriptionAccountId {
+    return 'ICA-${joinedFreeDate.millisecondsSinceEpoch}';
   }
 
   StoreState copyWith({
