@@ -93,7 +93,7 @@ class ScotomaCard extends ConsumerWidget {
     if (!hasEnoughEvidence) {
       diagnosticTitle = 'INSUFFICIENT DIAGNOSTIC DATA';
       diagnosticDesc =
-          'Play 5 rated Battleground games to see your raw scotoma radar chart, and complete 10 rated games to fully calibrate your strength and unlock daily training.';
+          'Play 5 Battleground games to see your raw scotoma radar chart, and complete 10 Battleground games to fully calibrate your strength and unlock daily training.';
       diagnosticColor = const Color(0xFFF59E0B);
     } else if (hasDiagnosis) {
       diagnosticColor = const Color(0xFFEF4444); // Crimson

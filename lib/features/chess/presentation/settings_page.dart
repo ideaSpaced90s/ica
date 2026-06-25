@@ -3,10 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../application/chess_provider.dart';
+import '../application/battleground_provider.dart';
+import '../application/tutorial_provider.dart';
+import '../application/assignment_provider.dart';
+import '../application/lifetime_xp_provider.dart';
 import '../services/chess_sound_service.dart';
 import 'scholarly_theme.dart';
 import 'widgets/ambient_scaffold.dart';
 import 'notification_settings_page.dart';
+import 'account_page.dart' show ResetConfirmationDialog;
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -84,6 +89,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     ],
                   ),
 
+                  // DANGER ZONE
+                  _DangerZoneSection(
+                    onResetTap: () => _showResetConfirmationDialog(context, ref),
+                  ),
+
                   const SizedBox(height: 120),
                 ]),
               ),
@@ -94,6 +104,34 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         ],
       ),
     );
+  }
+
+  Future<void> _showResetConfirmationDialog(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => const ResetConfirmationDialog(),
+    );
+
+    if (confirmed == true && context.mounted) {
+      await ref.read(battlegroundProvider.notifier).resetRatedStats();
+      await ref.read(tutorialProvider.notifier).resetAllProgress();
+      await ref.read(assignmentProvider.notifier).resetAssignmentProgress();
+      await ref.read(chessProvider.notifier).clearAllHistory();
+      await ref.read(lifetimeXpProvider.notifier).resetAll();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Everything reset: ratings, XP, LP, match history, saved games, tutorials, and daily assignments.',
+            ),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    }
   }
 
   Widget _buildActionRow(BuildContext context) {
@@ -150,7 +188,75 @@ class _SettingsCategory extends StatelessWidget {
   }
 }
 
+class _DangerZoneSection extends StatelessWidget {
+  final VoidCallback onResetTap;
 
+  const _DangerZoneSection({required this.onResetTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+          child: JuicySectionHeader(
+            title: 'DANGER ZONE',
+            color: Colors.redAccent,
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: JuicyGlassCard(
+            padding: EdgeInsets.zero,
+            borderRadius: 24,
+            backgroundColor: const Color(0xFF1E1E24),
+            borderColor: Colors.redAccent.withValues(alpha: 0.35),
+            child: ListTile(
+              onTap: onResetTap,
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.redAccent.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.redAccent.withValues(alpha: 0.35),
+                    width: 1,
+                  ),
+                ),
+                child: const Icon(
+                  Icons.delete_forever_rounded,
+                  color: Colors.redAccent,
+                  size: 20,
+                ),
+              ),
+              title: Text(
+                'Reset Progress',
+                style: GoogleFonts.inter(
+                  color: Colors.redAccent,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              subtitle: Text(
+                'Wipe ratings, XP, LP, match history & tutorial progress',
+                style: GoogleFonts.inter(
+                  color: Colors.white60,
+                  fontSize: 11,
+                ),
+              ),
+              trailing: const Icon(
+                Icons.chevron_right_rounded,
+                color: Colors.white38,
+                size: 20,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
 
 class _SettingsSwitchTile extends ConsumerWidget {
   final String label;

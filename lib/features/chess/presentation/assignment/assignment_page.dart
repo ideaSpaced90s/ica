@@ -123,7 +123,7 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
           if (_showChanakyaIntro && !state.isCalibrated)
             GMChanakyaIntroOverlay(
               pageTitle: 'ASSIGNMENTS',
-              text: "Welcome to your Assignment Desk, Apprentice. I am GM Chanakya. To construct a tailored activity of daily training scenarios for you, a baseline calibration of 10 rated games is required. Complete your rated games in the Battleground so I can analyze your strength and design your personalized training program.",
+              text: "Welcome to your Assignment Desk, Apprentice. I am GM Chanakya. To construct a tailored activity of daily training scenarios for you, a baseline calibration of 10 Battleground games is required. Complete your games in the Battleground so I can analyze your strength and design your personalized training program.",
               onDismiss: () {
                 ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
                 setState(() {
@@ -481,7 +481,7 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
           ),
           const SizedBox(height: 12),
           Text(
-            "GM Chanakya requires a baseline of 10 rated games to identify your ELO strength, playstyle biases, and cognitive scotomas. Play rated games to unlock tailored assignments.",
+            "GM Chanakya requires a baseline of 10 Battleground games to identify your ELO strength, playstyle biases, and cognitive scotomas. Play Battleground games to unlock tailored assignments.",
             style: GoogleFonts.inter(fontSize: 13, height: 1.5, color: ScholarlyTheme.textMuted),
           ),
           const SizedBox(height: 20),
@@ -648,6 +648,12 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
 
     switch (task.taskType) {
       case DailyTaskType.arena:
+        // Calibration/recalibration tasks are informational only — no button.
+        // The user plays Battleground on their own; assignment passively tracks
+        // progress via the dashboard (Battleground → Dashboard → Assignment).
+        if (task.targetId == "calibration" || task.targetId == "recalibration") {
+          return const SizedBox.shrink();
+        }
         label = "LAUNCH COMBAT";
         icon = Icons.sports_esports_rounded;
         buttonColor = Colors.cyan;
@@ -705,6 +711,10 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
 
     switch (task.taskType) {
       case DailyTaskType.arena:
+        // Calibration/recalibration: no action — informational card only.
+        // Assignment reads progress passively from Battleground via dashboard.
+        if (task.targetId == "calibration" || task.targetId == "recalibration") return;
+
         final storeState = ref.read(storeProvider);
         final storeNotifier = ref.read(storeProvider.notifier);
         if (!storeState.isPremium && !storeNotifier.canPlayRatedGame()) {
@@ -716,30 +726,21 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
           );
           return;
         }
-        if (task.targetId == "calibration" || task.targetId == "recalibration") {
-          ref.read(battlegroundProvider.notifier).launchAssignmentMatch(
-            avatarId: "avatar_0",
-            baseTime: const Duration(minutes: 10),
-            increment: Duration.zero,
-          );
-          ref.read(mobileNavIndexProvider.notifier).state = 2; // Battleground tab
-        } else {
-          ref.read(arenaProvider.notifier).selectUpperAvatar(task.targetId);
-          
-          Duration baseTime = const Duration(minutes: 10);
-          Duration increment = Duration.zero;
-          final descLower = task.description.toLowerCase();
-          if (descLower.contains("blitz")) {
-            baseTime = const Duration(minutes: 3);
-          } else if (descLower.contains("bullet")) {
-            baseTime = const Duration(minutes: 1);
-          } else if (descLower.contains("rapid")) {
-            baseTime = const Duration(minutes: 15);
-          }
-          
-          ref.read(arenaProvider.notifier).setTimeControl(baseTime, increment);
-          ref.read(mobileNavIndexProvider.notifier).state = 1; // Arena tab
+        ref.read(arenaProvider.notifier).selectUpperAvatar(task.targetId);
+
+        Duration baseTime = const Duration(minutes: 10);
+        Duration increment = Duration.zero;
+        final descLower = task.description.toLowerCase();
+        if (descLower.contains("blitz")) {
+          baseTime = const Duration(minutes: 3);
+        } else if (descLower.contains("bullet")) {
+          baseTime = const Duration(minutes: 1);
+        } else if (descLower.contains("rapid")) {
+          baseTime = const Duration(minutes: 15);
         }
+
+        ref.read(arenaProvider.notifier).setTimeControl(baseTime, increment);
+        ref.read(mobileNavIndexProvider.notifier).state = 1; // Arena tab
         break;
       case DailyTaskType.puzzle:
         final storeState = ref.read(storeProvider);

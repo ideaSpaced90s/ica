@@ -534,14 +534,14 @@ class AssignmentNotifier extends Notifier<AssignmentState> {
       state = state.copyWith(
         calibrationGamesPlayed: bgState.totalRatedGamesCount,
         wisdomMessage: isRecalibrating
-            ? "Your skills have decayed due to inactivity. Complete 5 rated matches to recalibrate your dashboard."
-            : "Apprentice, complete 10 rated games to calibrate your strength. Only then can I structure your daily training.",
+            ? "Your skills have decayed due to inactivity. Complete 5 Battleground games to recalibrate your dashboard."
+            : "Apprentice, complete 10 Battleground games to calibrate your strength. Only then can I structure your daily training.",
         dailyTasks: [
           DailyTask(
             title: isRecalibrating ? "Recalibrate Strength" : "Calibrate Strength",
             description: isRecalibrating
-                ? "Complete 5 rated games in Battleground to recalibrate ELO and scotomas."
-                : "Complete 10 rated games in Battleground to calibrate ELO and scotomas.",
+                ? "Complete 5 Battleground games to recalibrate ELO and scotomas."
+                : "Complete 10 Battleground games to calibrate ELO and scotomas.",
             taskType: DailyTaskType.arena,
             targetId: isRecalibrating ? "recalibration" : "calibration",
             targetValue: targetGames,

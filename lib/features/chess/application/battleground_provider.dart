@@ -484,7 +484,7 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
       state = state.copyWith(activeRatedMatchId: null);
       await _saveSettings();
 
-      await _updateRating(0.0, opponentOverride: opponent);
+      await _updateRating(0.0, opponentOverride: opponent, skipGameCountUpdate: true);
 
       final entry = SavedGameEntry(
         id: matchId,
@@ -1244,7 +1244,12 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
     return sum / _dominanceSamples.length;
   }
 
-  Future<void> _updateRating(double actualScore, {AiAvatar? opponentOverride, double? dominanceOverride}) async {
+  Future<void> _updateRating(
+    double actualScore, {
+    AiAvatar? opponentOverride,
+    double? dominanceOverride,
+    bool skipGameCountUpdate = false,
+  }) async {
     final category = _getRatingCategory(
       state.baseTimeDuration,
       state.incrementDuration,
@@ -1321,21 +1326,23 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
     double newBlitzDom = state.blitzDominance;
     double newRapidDom = state.rapidDominance;
 
-    if (category == 'bullet') {
-      final count = state.bulletGamesClassic + state.bulletGames960;
-      newBulletDom =
-          ((state.bulletDominance * count) + currentMargin) / (count + 1);
-    } else if (category == 'blitz') {
-      final count = state.blitzGamesClassic + state.blitzGames960;
-      newBlitzDom =
-          ((state.blitzDominance * count) + currentMargin) / (count + 1);
-    } else {
-      final count = state.rapidGamesClassic + state.rapidGames960;
-      newRapidDom =
-          ((state.rapidDominance * count) + currentMargin) / (count + 1);
+    if (!skipGameCountUpdate) {
+      if (category == 'bullet') {
+        final count = state.bulletGamesClassic + state.bulletGames960;
+        newBulletDom =
+            ((state.bulletDominance * count) + currentMargin) / (count + 1);
+      } else if (category == 'blitz') {
+        final count = state.blitzGamesClassic + state.blitzGames960;
+        newBlitzDom =
+            ((state.blitzDominance * count) + currentMargin) / (count + 1);
+      } else {
+        final count = state.rapidGamesClassic + state.rapidGames960;
+        newRapidDom =
+            ((state.rapidDominance * count) + currentMargin) / (count + 1);
+      }
     }
 
-    final newTotalCount = state.totalRatedGamesCount + 1;
+    final newTotalCount = skipGameCountUpdate ? state.totalRatedGamesCount : state.totalRatedGamesCount + 1;
 
     state = state.copyWith(
       consolidatedRating: newConsolidatedElo,
@@ -1343,35 +1350,37 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
       totalWinningStreak: newConsolidatedStreak,
       lastRatedGameTimestampMs: DateTime.now().millisecondsSinceEpoch,
       decayIntervalsApplied: 0,
-      recalibrationGamesRemaining: math.max(0, state.recalibrationGamesRemaining - 1),
+      recalibrationGamesRemaining: skipGameCountUpdate
+          ? state.recalibrationGamesRemaining
+          : math.max(0, state.recalibrationGamesRemaining - 1),
       bulletElo: category == 'bullet' ? newSpecificElo : state.bulletElo,
       bulletStreak: category == 'bullet'
           ? newSpecificStreak
           : state.bulletStreak,
-      bulletGamesClassic: (category == 'bullet' && !is960)
+      bulletGamesClassic: (category == 'bullet' && !is960 && !skipGameCountUpdate)
           ? state.bulletGamesClassic + 1
           : state.bulletGamesClassic,
-      bulletGames960: (category == 'bullet' && is960)
+      bulletGames960: (category == 'bullet' && is960 && !skipGameCountUpdate)
           ? state.bulletGames960 + 1
           : state.bulletGames960,
       bulletDominance: newBulletDom,
 
       blitzElo: category == 'blitz' ? newSpecificElo : state.blitzElo,
       blitzStreak: category == 'blitz' ? newSpecificStreak : state.blitzStreak,
-      blitzGamesClassic: (category == 'blitz' && !is960)
+      blitzGamesClassic: (category == 'blitz' && !is960 && !skipGameCountUpdate)
           ? state.blitzGamesClassic + 1
           : state.blitzGamesClassic,
-      blitzGames960: (category == 'blitz' && is960)
+      blitzGames960: (category == 'blitz' && is960 && !skipGameCountUpdate)
           ? state.blitzGames960 + 1
           : state.blitzGames960,
       blitzDominance: newBlitzDom,
 
       rapidElo: category == 'rapid' ? newSpecificElo : state.rapidElo,
       rapidStreak: category == 'rapid' ? newSpecificStreak : state.rapidStreak,
-      rapidGamesClassic: (category == 'rapid' && !is960)
+      rapidGamesClassic: (category == 'rapid' && !is960 && !skipGameCountUpdate)
           ? state.rapidGamesClassic + 1
           : state.rapidGamesClassic,
-      rapidGames960: (category == 'rapid' && is960)
+      rapidGames960: (category == 'rapid' && is960 && !skipGameCountUpdate)
           ? state.rapidGames960 + 1
           : state.rapidGames960,
       rapidDominance: newRapidDom,
@@ -1454,7 +1463,7 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
       _searchFen = null;
       _stopAnalysisAndReset();
 
-      await _updateRating(0.5); // 0.5 = Draw
+      await _updateRating(0.5, dominanceOverride: _getAverageDominance()); // 0.5 = Draw
       await saveCurrentGame(
         customNameOverride: 'Draw by Agreement',
         resultOverride: 'D',
@@ -1674,70 +1683,7 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
     }
   }
 
-  Future<void> launchAssignmentMatch({
-    required String avatarId,
-    required Duration baseTime,
-    required Duration increment,
-  }) async {
-    _clockTimer?.cancel();
-    _engineMoveTimer?.cancel();
-    _engineMoveTimer = null;
-    _stopClockTimer();
 
-    final opponent = AiAvatar.getAvatar(avatarId);
-    
-    // Play as random side for the daily assignment
-    final forcedPlayerWhite = math.Random().nextBool();
-    final initialGame = ChessGame(isChess960: false);
-    final aiMovesFirst = !forcedPlayerWhite;
-
-    state = state.copyWith(
-      game: initialGame,
-      lastMove: null,
-      recentMoves: const [],
-      uciMoves: const [],
-      analysis: const {},
-      previousEvaluation: 0.0,
-      currentEvaluation: 0.0,
-      isEngineThinking: aiMovesFirst && state.servicesStarted && state.engineReady,
-      isPlayerWhite: forcedPlayerWhite,
-      isBoardFlipped: !forcedPlayerWhite,
-      whiteTimeLeft: baseTime,
-      blackTimeLeft: baseTime,
-      baseTimeDuration: baseTime,
-      incrementDuration: increment,
-      clockStarted: true,
-      activeClockSide: _clockWhite,
-      threatenedSquares: const [],
-      moveAnimation: null,
-      isPaused: false,
-      viewingMoveIndex: null,
-      isGameOverDismissed: false,
-      isPromoting: false,
-      promotionSource: null,
-      promotionDestination: null,
-      isTimeOut: false,
-      isResigned: false,
-      premoveFrom: null,
-      premoveTo: null,
-      activeOpponent: opponent,
-      activeRatedMatchId: DateTime.now().millisecondsSinceEpoch.toString(), // Mark active rated match
-    );
-
-    await _saveSettings();
-
-    _startClockTicker();
-
-    if (aiMovesFirst) {
-      unawaited(
-        ensureGameServicesStarted(analyzeCurrentPosition: true).then((_) {
-          if (!_isDisposed && state.engineReady && _isAiTurn()) {
-            state = state.copyWith(isEngineThinking: true);
-          }
-        }),
-      );
-    }
-  }
 
   Future<void> startGame() async {
     if (state.game.gameOver || state.isTimeOut) return;
@@ -2095,6 +2041,7 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
     double speedSum = 0.0;
     int speedCount = 0;
     for (final s in ratedSaves) {
+      if (s.whiteTimeLeftMs == 0 || s.blackTimeLeftMs == 0) continue;
       final double baseTimeMs = s.baseTimeMs > 0 ? s.baseTimeMs.toDouble() : 600000.0;
       final playerTimeLeftMs = s.isPlayerWhite
           ? s.whiteTimeLeftMs
@@ -2150,7 +2097,7 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
     // 4. Endgame calculations
     EndgamePerformanceStats? endgames;
     final endgameSaves = ratedSaves
-        .where((s) => s.reachedEndgame || (s.endgameFen != null && FenParser.isEndgame(s.endgameFen!)) || FenParser.isEndgame(s.fen))
+        .where((s) => s.reachedEndgame || s.endgameFen != null)
         .toList();
     if (endgameSaves.isNotEmpty) {
       double totalWeightedScore = 0.0;
