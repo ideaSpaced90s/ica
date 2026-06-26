@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+14
+version: 1.0.0+16
 
 environment:
   sdk: ^3.11.0
@@ -120,7 +120,9 @@ flutter:
     - assets/sfx/
     - assets/bgm/
     - assets/splash/
-    - assets/engine/
+    # assets/engine/ removed — Stockfish binaries moved to desktop_engines/ (not bundled in Android AAB)
+    # Android uses libstockfish.so from the stockfish_chess_engine package (native lib, not assets)
+    # Windows dev: engines are at desktop_engines/wincessengines/
     - assets/data/
     - assets/prescriptions/
     - assets/lottie/
