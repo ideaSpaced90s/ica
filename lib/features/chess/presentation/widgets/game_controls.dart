@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../application/chess_provider.dart';
@@ -140,12 +141,14 @@ class ActionIconButton extends ConsumerStatefulWidget {
     this.onBlinkComplete,
     this.isBlinkingContinuous = false,
     this.isFlat = false,
+    this.enableLongPressRepeat = false,
   });
 
   final bool shouldBlink;
   final VoidCallback? onBlinkComplete;
   final bool isBlinkingContinuous;
   final bool isFlat;
+  final bool enableLongPressRepeat;
 
   final IconData icon;
   final VoidCallback? onTap;
@@ -256,8 +259,45 @@ class _ActionIconButtonState extends ConsumerState<ActionIconButton> with Ticker
     widget.onBlinkComplete?.call();
   }
 
+  Timer? _holdDelayTimer;
+  Timer? _holdRepeatTimer;
+  bool _isHolding = false;
+
+  void _startHolding() {
+    if (widget.onTap == null || !widget.isEnabled) return;
+    _isHolding = true;
+    
+    // Play sfx and trigger onTap on initial tap
+    ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+    widget.onTap!();
+
+    _holdDelayTimer?.cancel();
+    _holdRepeatTimer?.cancel();
+
+    _holdDelayTimer = Timer(const Duration(milliseconds: 400), () {
+      if (_isHolding) {
+        _holdRepeatTimer = Timer.periodic(const Duration(milliseconds: 120), (timer) {
+          if (_isHolding && widget.onTap != null && widget.isEnabled) {
+            ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+            widget.onTap!();
+          } else {
+            timer.cancel();
+          }
+        });
+      }
+    });
+  }
+
+  void _stopHolding() {
+    _isHolding = false;
+    _holdDelayTimer?.cancel();
+    _holdRepeatTimer?.cancel();
+  }
+
   @override
   void dispose() {
+    _holdDelayTimer?.cancel();
+    _holdRepeatTimer?.cancel();
     _blinkController.dispose();
     _pulseController.dispose();
     _continuousBlinkController.dispose();
@@ -284,13 +324,28 @@ class _ActionIconButtonState extends ConsumerState<ActionIconButton> with Ticker
 
     return GestureDetector(
       onTapDown: widget.isEnabled
-          ? (_) => setState(() => _isPressed = true)
+          ? (_) {
+              setState(() => _isPressed = true);
+              if (widget.enableLongPressRepeat) {
+                _startHolding();
+              }
+            }
           : null,
       onTapUp: widget.isEnabled
-          ? (_) => setState(() => _isPressed = false)
+          ? (_) {
+              setState(() => _isPressed = false);
+              if (widget.enableLongPressRepeat) {
+                _stopHolding();
+              }
+            }
           : null,
-      onTapCancel: () => setState(() => _isPressed = false),
-      onTap: widget.isEnabled && widget.onTap != null
+      onTapCancel: () {
+        setState(() => _isPressed = false);
+        if (widget.enableLongPressRepeat) {
+          _stopHolding();
+        }
+      },
+      onTap: !widget.enableLongPressRepeat && widget.isEnabled && widget.onTap != null
           ? () {
               ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
               widget.onTap!();

@@ -163,7 +163,7 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
       "Analyzing opening lines...",
       "Calculating middlegame strategy...",
       "Evaluating critical tactical moments...",
-      "Stockfish is searching deep for alternate paths...",
+      "Engine is searching deep for alternate paths...",
       "Looking for brilliant sacrifices...",
       "Formulating final report..."
     ];
@@ -220,7 +220,7 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
           _isAnalyzingGame = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to run Stockfish Game Review.')),
+          const SnackBar(content: Text('Failed to run Engine Game Review.')),
         );
       }
     }
@@ -1277,6 +1277,7 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
         icon: Icons.undo_rounded,
         isEnabled: state.canUndo,
         isFlat: isDocked,
+        enableLongPressRepeat: true,
         onTap: state.canUndo ? () => ref.read(arenaProvider.notifier).undo() : null,
       ),
       const SizedBox(width: 8),
@@ -1284,6 +1285,7 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
         icon: Icons.redo_rounded,
         isEnabled: state.canRedo,
         isFlat: isDocked,
+        enableLongPressRepeat: true,
         onTap: state.canRedo ? () => ref.read(arenaProvider.notifier).redo() : null,
       ),
       const SizedBox(width: 8),

@@ -18,6 +18,7 @@ import 'local/plasma_theme.dart';
 import 'local/overgrown_theme.dart';
 import 'local/diamonds_sprite_theme.dart';
 import 'local/fairytale_theme.dart';
+import 'local/desert_theme.dart';
 import '../../../application/chess_provider.dart';
 
 class ThemeRegistry {
@@ -45,11 +46,6 @@ class ThemeRegistry {
       id: 'vector_championship',
       name: 'Champions',
       packageTheme: assets_lib.ChessThemes.championshipClassic,
-    ),
-    'vector_egyptian': const VectorChessTheme(
-      id: 'vector_egyptian',
-      name: 'Sand',
-      packageTheme: assets_lib.ChessThemes.egyptianSand,
     ),
     'sprite_bubblegum': const SpriteChessTheme(
       id: 'sprite_bubblegum',
@@ -85,14 +81,7 @@ class ThemeRegistry {
       darkSquare: Color(0xFFB4B4B4),
       frameColor: Color(0xFFC9A84C),
     ),
-    'sprite_desert': const SpriteChessTheme(
-      id: 'sprite_desert',
-      name: 'Desert',
-      individualPiecesFolder: 'assets/pieces/sandmud',
-      lightSquare: Color(0xFFF5DEB3),
-      darkSquare: Color(0xFF8B6914),
-      frameColor: Color(0xFF5C3A1E),
-    ),
+    'sprite_desert': const DesertChessTheme(),
     'sprite_ivory': const SpriteChessTheme(
       id: 'sprite_ivory',
       name: 'Ivory',
@@ -107,7 +96,7 @@ class ThemeRegistry {
       name: 'Timber',
       individualPiecesFolder: 'assets/pieces/woodyy',
       lightSquare: Color(0xFFE7CFA8),
-      darkSquare: Color(0xFF3F2411),
+      darkSquare: Color(0xFFB35942),
       frameColor: Color(0xFF7A421E),
     ),
     'sprite_lightning': const LightningChessTheme(),
@@ -152,7 +141,6 @@ class ThemeRegistry {
         _themes['sprite_ivory']!,
         _themes['theme5']!, // Steampunk
         _themes['sprite_seasons']!,
-        _themes['vector_egyptian']!, // Sand
         _themes['sprite_timber']!,
         _themes['theme4']!, // Platinum Metallic
         _themes['sprite_fairytale']!,

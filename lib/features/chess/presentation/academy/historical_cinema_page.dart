@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -417,6 +418,7 @@ class _HistoricalCinemaPageState extends ConsumerState<HistoricalCinemaPage> {
           _buildControlButton(
             icon: Icons.chevron_left_rounded,
             tooltip: "Previous Move",
+            enableLongPressRepeat: true,
             onPressed: state.currentMoveIndex > 0
                 ? () {
                     notifier.previousMove();
@@ -454,6 +456,7 @@ class _HistoricalCinemaPageState extends ConsumerState<HistoricalCinemaPage> {
           _buildControlButton(
             icon: Icons.chevron_right_rounded,
             tooltip: "Next Move",
+            enableLongPressRepeat: true,
             onPressed: state.activeGame != null && state.currentMoveIndex < state.activeGame!.moves.length
                 ? () {
                     notifier.nextMove();
@@ -482,14 +485,16 @@ class _HistoricalCinemaPageState extends ConsumerState<HistoricalCinemaPage> {
     required IconData icon,
     required String tooltip,
     required VoidCallback? onPressed,
+    bool enableLongPressRepeat = false,
   }) {
+    final isEnabled = onPressed != null;
     return Tooltip(
       message: tooltip,
-      child: IconButton(
-        icon: Icon(icon, size: 24),
-        color: ScholarlyTheme.textPrimary,
-        disabledColor: ScholarlyTheme.textSubtle.withValues(alpha: 0.4),
-        onPressed: onPressed,
+      child: _HoldToRepeatButton(
+        icon: icon,
+        onTap: onPressed,
+        isEnabled: isEnabled,
+        enableLongPressRepeat: enableLongPressRepeat,
       ),
     );
   }
@@ -714,5 +719,103 @@ class _HistoricalCinemaPageState extends ConsumerState<HistoricalCinemaPage> {
     } else {
       soundService.playSfx(SoundEffect.move);
     }
+  }
+}
+
+class _HoldToRepeatButton extends StatefulWidget {
+  final IconData icon;
+  final VoidCallback? onTap;
+  final bool isEnabled;
+  final bool enableLongPressRepeat;
+
+  const _HoldToRepeatButton({
+    required this.icon,
+    required this.onTap,
+    required this.isEnabled,
+    required this.enableLongPressRepeat,
+  });
+
+  @override
+  State<_HoldToRepeatButton> createState() => _HoldToRepeatButtonState();
+}
+
+class _HoldToRepeatButtonState extends State<_HoldToRepeatButton> {
+  Timer? _holdDelayTimer;
+  Timer? _holdRepeatTimer;
+  bool _isHolding = false;
+  bool _isPressed = false;
+
+  void _startHolding() {
+    if (widget.onTap == null || !widget.isEnabled) return;
+    _isHolding = true;
+    widget.onTap!();
+
+    _holdDelayTimer?.cancel();
+    _holdRepeatTimer?.cancel();
+
+    _holdDelayTimer = Timer(const Duration(milliseconds: 400), () {
+      if (_isHolding) {
+        _holdRepeatTimer = Timer.periodic(const Duration(milliseconds: 120), (timer) {
+          if (_isHolding && widget.onTap != null && widget.isEnabled) {
+            widget.onTap!();
+          } else {
+            timer.cancel();
+          }
+        });
+      }
+    });
+  }
+
+  void _stopHolding() {
+    _isHolding = false;
+    _holdDelayTimer?.cancel();
+    _holdRepeatTimer?.cancel();
+  }
+
+  @override
+  void dispose() {
+    _holdDelayTimer?.cancel();
+    _holdRepeatTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = widget.isEnabled
+        ? ScholarlyTheme.textPrimary
+        : ScholarlyTheme.textSubtle.withValues(alpha: 0.4);
+
+    return GestureDetector(
+      onTapDown: widget.isEnabled && widget.onTap != null
+          ? (_) {
+              setState(() => _isPressed = true);
+              if (widget.enableLongPressRepeat) {
+                _startHolding();
+              }
+            }
+          : null,
+      onTapUp: (_) {
+        setState(() => _isPressed = false);
+        if (widget.enableLongPressRepeat) {
+          _stopHolding();
+        }
+      },
+      onTapCancel: () {
+        setState(() => _isPressed = false);
+        if (widget.enableLongPressRepeat) {
+          _stopHolding();
+        }
+      },
+      onTap: !widget.enableLongPressRepeat && widget.isEnabled && widget.onTap != null
+          ? widget.onTap
+          : null,
+      child: Opacity(
+        opacity: _isPressed ? 0.7 : 1.0,
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Icon(widget.icon, size: 24, color: color),
+        ),
+      ),
+    );
   }
 }

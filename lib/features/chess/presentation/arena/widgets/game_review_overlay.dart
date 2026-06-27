@@ -84,7 +84,7 @@ class GameReviewOverlay extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Stockfish Match Analysis Summary',
+                          'Engine Match Analysis Summary',
                           style: GoogleFonts.inter(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,

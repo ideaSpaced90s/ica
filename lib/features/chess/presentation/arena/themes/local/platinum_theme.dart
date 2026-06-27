@@ -78,7 +78,8 @@ class PlatinumTheme extends ChessTheme {
         pType = chess_lib.PieceType.PAWN;
     }
 
-    return AspectRatio(
+    final isPawn = type.toUpperCase() == 'P';
+    final pieceWidget = AspectRatio(
       aspectRatio: 1,
       child: CustomPaint(
         painter: PlatinumSpritePiecePainter(
@@ -88,6 +89,14 @@ class PlatinumTheme extends ChessTheme {
         ),
       ),
     );
+
+    if (isPawn) {
+      return Transform.scale(
+        scale: 0.8,
+        child: pieceWidget,
+      );
+    }
+    return pieceWidget;
   }
 
   @override

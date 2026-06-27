@@ -1049,7 +1049,7 @@ class _ArenaPersonasSelectionPageState extends ConsumerState<ArenaPersonasSelect
                         const SizedBox(height: 10),
                         _buildSpecRow(
                           icon: Icons.speed_rounded,
-                          label: 'Stockfish Skill Level',
+                          label: 'Engine Skill Level',
                           value: '${config.skillLevel} / 20',
                         ),
                         const SizedBox(height: 10),

@@ -49,11 +49,20 @@ class ShadowTheme extends ChessTheme {
     bool isHighlighted,
     double animationValue,
   ) {
-    return HighContrastPiece(
+    final isPawn = type.toUpperCase() == 'P';
+    final pieceWidget = HighContrastPiece(
       type: type.toUpperCase(),
       isWhite: isWhite,
       isHighlighted: isHighlighted,
     );
+
+    if (isPawn) {
+      return Transform.scale(
+        scale: 0.8,
+        child: pieceWidget,
+      );
+    }
+    return pieceWidget;
   }
 
   @override

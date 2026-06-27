@@ -28,7 +28,7 @@ class ChessboardThemesPage extends ConsumerWidget {
 
     // Group definitions based on user preferences
     final groupAIds = ['classic', 'scholar', 'vector_glass', 'vector_championship'];
-    final groupDIds = ['theme2', 'theme3', 'theme5', 'vector_egyptian', 'theme4', 'theme10'];
+    final groupDIds = ['theme2', 'theme3', 'theme5', 'theme4', 'theme10'];
     final groupCIds = ['sprite_plasma', 'sprite_lightning', 'sprite_diamonds', 'sprite_arc', 'sprite_fairytale'];
 
     final themesA = ThemeRegistry.allThemes.where((t) => groupAIds.contains(t.id) && storeNotifier.isBoardThemePurchased(t.id)).toList();

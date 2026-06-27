@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:chess_assets/chess_assets.dart' as assets_lib;
 import '../../../shared/themes/chess_theme.dart';
-import '../../effects/walnut_piece_painter.dart';
-import 'package:chess/chess.dart' as chess_lib;
 import '../../../shared/themes/animation_group.dart';
 import '../../effects/group_b_effects.dart';
-import 'dart:math';
+import 'dart:math' as math;
+
 
 
 class VectorChessTheme extends ChessTheme {
@@ -28,7 +27,7 @@ class VectorChessTheme extends ChessTheme {
   @override
   Color get darkSquare {
     if (id == 'vector_wood') {
-      return const Color(0xFF6B4527); // Darker rich walnut/rosewood color that contrasts with the mahogany outlines
+      return const Color(0xFFAC7C54); // Light brown wood color
     }
     return packageTheme.darkSquare;
   }
@@ -69,7 +68,15 @@ class VectorChessTheme extends ChessTheme {
   }
 
   @override
-  CustomPainter? getSquarePainter(bool isLight, double animationValue) => null;
+  CustomPainter? getSquarePainter(bool isLight, double animationValue) {
+    if (id == 'vector_wood') {
+      return WoodMosaicPainter(
+        isLight: isLight,
+        baseColor: isLight ? lightSquare : darkSquare,
+      );
+    }
+    return null;
+  }
 
   @override
   Widget buildPiece(
@@ -79,40 +86,49 @@ class VectorChessTheme extends ChessTheme {
     bool isHighlighted,
     double animationValue,
   ) {
-
-    if (id == 'vector_egyptian') {
-      chess_lib.PieceType pType;
+    if (id == 'vector_wood') {
+      final colorStr = isWhite ? 'light' : 'dark';
+      String typeStr;
       switch (type.toUpperCase()) {
         case 'K':
-          pType = chess_lib.PieceType.KING;
+          typeStr = 'king';
           break;
         case 'Q':
-          pType = chess_lib.PieceType.QUEEN;
-          break;
-        case 'R':
-          pType = chess_lib.PieceType.ROOK;
+          typeStr = 'queen';
           break;
         case 'B':
-          pType = chess_lib.PieceType.BISHOP;
+          typeStr = 'bishop';
           break;
         case 'N':
-          pType = chess_lib.PieceType.KNIGHT;
+          typeStr = 'knight';
+          break;
+        case 'R':
+          typeStr = 'rook';
           break;
         case 'P':
         default:
-          pType = chess_lib.PieceType.PAWN;
+          typeStr = 'pawn';
           break;
       }
-      return AspectRatio(
-        aspectRatio: 1,
-        child: CustomPaint(
-          painter: WalnutPiecePainter(
-            type: pType,
-            isWhite: isWhite,
-            isHighlighted: isHighlighted,
-          ),
+      final assetPath = 'assets/pieces/persia/${colorStr}_$typeStr.png';
+      final isPawn = type.toUpperCase() == 'P';
+
+      final pieceWidget = AspectRatio(
+        aspectRatio: 1.0,
+        child: Image.asset(
+          assetPath,
+          fit: BoxFit.contain,
+          filterQuality: FilterQuality.high,
         ),
       );
+
+      if (!isPawn) {
+        return Transform.scale(
+          scale: 1.2,
+          child: pieceWidget,
+        );
+      }
+      return pieceWidget;
     }
 
     if (id == 'vector_glass' || id == 'vector_championship' || id == 'rated_bnw') {
@@ -195,9 +211,6 @@ class VectorChessTheme extends ChessTheme {
     if (id == 'vector_glass' || id == 'vector_championship') {
       return AnimationGroup.a;
     }
-    if (id == 'vector_egyptian') {
-      return AnimationGroup.d;
-    }
     return AnimationGroup.b; // e.g. vector_wood
   }
 
@@ -205,8 +218,6 @@ class VectorChessTheme extends ChessTheme {
   Widget buildSelectionRing(BuildContext context) {
     if (animationGroup == AnimationGroup.a) {
       return DefaultSelectionRing(color: packageTheme.activeHighlight);
-    } else if (id == 'vector_egyptian') {
-      return DuneSelectionRing(color: packageTheme.activeHighlight);
     }
     return GroupBSelectionPulse(color: packageTheme.activeHighlight);
   }
@@ -216,8 +227,6 @@ class VectorChessTheme extends ChessTheme {
       BuildContext context, Offset position, VoidCallback onComplete) {
     if (animationGroup == AnimationGroup.a) {
       return null;
-    } else if (id == 'vector_egyptian') {
-      return SandGrainCapture(position: position, onComplete: onComplete);
     }
     return GroupBCaptureFlash(position: position, onComplete: onComplete);
   }
@@ -245,181 +254,131 @@ class VectorChessTheme extends ChessTheme {
   }
 }
 
-class DuneSelectionRing extends StatefulWidget {
-  final Color color;
-  const DuneSelectionRing({super.key, required this.color});
+class WoodMosaicPainter extends CustomPainter {
+  final bool isLight;
+  final Color baseColor;
 
-  @override
-  State<DuneSelectionRing> createState() => _DuneSelectionRingState();
-}
-
-class _DuneSelectionRingState extends State<DuneSelectionRing>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _scaleAnimation;
-  late Animation<double> _opacityAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    )..repeat();
-    
-    _scaleAnimation = Tween<double>(begin: 0.9, end: 1.05).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
-    );
-    _opacityAnimation = Tween<double>(begin: 0.8, end: 0.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeIn),
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return IgnorePointer(
-          child: Transform.scale(
-            scale: _scaleAnimation.value,
-            child: Opacity(
-              opacity: _opacityAnimation.value,
-              child: Container(
-                decoration: BoxDecoration(
-                  border: Border.all(
-                    color: widget.color,
-                    width: 2.5,
-                  ),
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class SandGrainCapture extends StatefulWidget {
-  final Offset position;
-  final VoidCallback onComplete;
-  const SandGrainCapture({
-    super.key,
-    required this.position,
-    required this.onComplete,
-  });
-
-  @override
-  State<SandGrainCapture> createState() => _SandGrainCaptureState();
-}
-
-class _SandGrainCaptureState extends State<SandGrainCapture>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  final List<_SandGrain> _grains = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    );
-
-    final random = Random();
-    for (int i = 0; i < 10; i++) {
-      final angle = -pi / 6 - random.nextDouble() * 2 * pi / 3;
-      final speed = 40.0 + random.nextDouble() * 50.0;
-      final size = 1.5 + random.nextDouble() * 2.0;
-      _grains.add(_SandGrain(
-        angle: angle,
-        speed: speed,
-        size: size,
-        color: random.nextBool()
-            ? const Color(0xFFD2B48C)
-            : const Color(0xFFEDC9AF),
-      ));
-    }
-
-    _controller.forward().then((_) => widget.onComplete());
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return CustomPaint(
-          painter: _SandGrainPainter(
-            center: widget.position,
-            progress: _controller.value,
-            grains: _grains,
-          ),
-          size: Size.infinite,
-        );
-      },
-    );
-  }
-}
-
-class _SandGrain {
-  final double angle;
-  final double speed;
-  final double size;
-  final Color color;
-
-  _SandGrain({
-    required this.angle,
-    required this.speed,
-    required this.size,
-    required this.color,
-  });
-}
-
-class _SandGrainPainter extends CustomPainter {
-  final Offset center;
-  final double progress;
-  final List<_SandGrain> grains;
-
-  _SandGrainPainter({
-    required this.center,
-    required this.progress,
-    required this.grains,
-  });
+  WoodMosaicPainter({required this.isLight, required this.baseColor});
 
   @override
   void paint(Canvas canvas, Size size) {
-    final opacity = 1.0 - progress;
+    final rect = Offset.zero & size;
+    final Paint paint = Paint()..color = baseColor;
+    canvas.drawRect(rect, paint);
 
-    for (final g in grains) {
-      final x = center.dx + cos(g.angle) * g.speed * progress;
-      final y = center.dy + sin(g.angle) * g.speed * progress + 120.0 * progress * progress;
+    final random = math.Random(isLight ? 777 : 888);
 
-      final paint = Paint()
-        ..color = g.color.withValues(alpha: opacity)
-        ..style = PaintingStyle.fill;
+    final bool isVertical = !isLight;
+    final int plankCount = 4;
+    final double step = size.width / plankCount;
 
-      canvas.drawCircle(Offset(x, y), g.size, paint);
+    for (int i = 0; i < plankCount; i++) {
+      Rect plankRect;
+      if (isVertical) {
+        plankRect = Rect.fromLTWH(i * step, 0, step, size.height);
+      } else {
+        plankRect = Rect.fromLTWH(0, i * step, size.width, step);
+      }
+
+      final double toneShift = (random.nextDouble() - 0.5) * 0.08;
+      final plankColor = _shiftColor(baseColor, toneShift);
+
+      final plankPaint = Paint()..color = plankColor;
+      canvas.drawRect(plankRect, plankPaint);
+
+      _drawWoodGrain(canvas, plankRect, isVertical, random, plankColor);
+
+      final borderPaint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.0;
+
+      // Dark shadow groove
+      borderPaint.color = Colors.black.withValues(alpha: 0.15);
+      if (isVertical) {
+        canvas.drawLine(plankRect.topRight, plankRect.bottomRight, borderPaint);
+      } else {
+        canvas.drawLine(plankRect.bottomLeft, plankRect.bottomRight, borderPaint);
+      }
+
+      // Light highlight groove
+      borderPaint.color = Colors.white.withValues(alpha: 0.15);
+      if (isVertical) {
+        canvas.drawLine(plankRect.topLeft, plankRect.bottomLeft, borderPaint);
+      } else {
+        canvas.drawLine(plankRect.topLeft, plankRect.topRight, borderPaint);
+      }
+    }
+
+    final bevelPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+
+    // Dark bevel
+    bevelPaint.color = Colors.black.withValues(alpha: 0.2);
+    canvas.drawLine(rect.bottomLeft, rect.bottomRight, bevelPaint);
+    canvas.drawLine(rect.topRight, rect.bottomRight, bevelPaint);
+
+    // Light bevel
+    bevelPaint.color = Colors.white.withValues(alpha: 0.25);
+    canvas.drawLine(rect.topLeft, rect.bottomLeft, bevelPaint);
+    canvas.drawLine(rect.topLeft, rect.topRight, bevelPaint);
+  }
+
+  Color _shiftColor(Color color, double shift) {
+    final hsl = HSLColor.fromColor(color);
+    final newLightness = (hsl.lightness + shift).clamp(0.0, 1.0);
+    return hsl.withLightness(newLightness).toColor();
+  }
+
+  void _drawWoodGrain(Canvas canvas, Rect rect, bool isVertical, math.Random random, Color base) {
+    final grainPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2;
+
+    final int grainCount = 3 + random.nextInt(3);
+    for (int j = 0; j < grainCount; j++) {
+      grainPaint.color = Colors.black.withValues(alpha: 0.04 + random.nextDouble() * 0.05);
+
+      final path = Path();
+      if (isVertical) {
+        final double startX = rect.left + random.nextDouble() * rect.width;
+        final double endX = rect.left + random.nextDouble() * rect.width;
+        final double controlX = rect.left + random.nextDouble() * rect.width;
+
+        path.moveTo(startX, rect.top);
+        path.quadraticBezierTo(controlX, rect.top + rect.height / 2, endX, rect.bottom);
+      } else {
+        final double startY = rect.top + random.nextDouble() * rect.height;
+        final double endY = rect.top + random.nextDouble() * rect.height;
+        final double controlY = rect.top + random.nextDouble() * rect.height;
+
+        path.moveTo(rect.left, startY);
+        path.quadraticBezierTo(rect.left + rect.width / 2, controlY, rect.right, endY);
+      }
+      canvas.drawPath(path, grainPaint);
+    }
+
+    if (random.nextDouble() < 0.25) {
+      final knotPaint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.0
+        ..color = Colors.black.withValues(alpha: 0.05);
+
+      final double knotX = rect.left + random.nextDouble() * rect.width;
+      final double knotY = rect.top + random.nextDouble() * rect.height;
+      final double rx = 2.0 + random.nextDouble() * 5.0;
+      final double ry = 1.0 + random.nextDouble() * 2.0;
+
+      canvas.save();
+      canvas.translate(knotX, knotY);
+      canvas.rotate(isVertical ? 0 : math.pi / 2);
+      canvas.drawOval(Rect.fromLTWH(-rx, -ry, rx * 2, ry * 2), knotPaint);
+      canvas.drawOval(Rect.fromLTWH(-rx * 0.6, -ry * 0.6, rx * 1.2, ry * 1.2), knotPaint);
+      canvas.restore();
     }
   }
 
   @override
-  bool shouldRepaint(covariant _SandGrainPainter oldDelegate) {
-    return true;
-  }
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 

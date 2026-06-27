@@ -149,18 +149,6 @@ class ChessThemes {
     blackPieceSecondary: Color(0xFFFFFFFF),
   );
 
-  static const egyptianSand = ChessTheme(
-    name: 'Sand',
-    lightSquare: Color(0xFFF0E68C), // Alabaster
-    darkSquare: Color(0xFFD2B48C),  // Desert sandstone
-    boardBorder: Color(0xFF8B4513),
-    activeHighlight: Color(0x66FFFFFF),
-    whitePiecePrimary: Color(0xFFFFF8DC),
-    whitePieceSecondary: Color(0xFF8B4513),
-    blackPiecePrimary: Color(0xFF8B4513),
-    blackPieceSecondary: Color(0xFFFFF8DC),
-  );
-
   static const underwaterAbyss = ChessTheme(
     name: 'Underwater Abyss',
     lightSquare: Color(0xFF000080), // Deep navy
@@ -201,7 +189,6 @@ class ChessThemes {
     classicWood,
     glassMorphic,
     championshipClassic,
-    egyptianSand,
     fairytaleCastle,
   ];
 }

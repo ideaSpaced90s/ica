@@ -759,7 +759,7 @@ class StoreNotifier extends Notifier<StoreState> {
   void _startNewCycle(DateTime startDate) {
     const List<String> premiumThemeIds = [
       'theme2', 'theme4', 'theme5', 'theme10',
-      'vector_glass', 'vector_championship', 'vector_egyptian',
+      'vector_glass', 'vector_championship',
       'sprite_bubblegum', 'sprite_copper', 'sprite_plasma', 'sprite_overgrown',
       'sprite_goldsilver', 'sprite_marble', 'sprite_desert', 'sprite_ivory',
       'sprite_seasons', 'sprite_timber', 'sprite_lightning', 'sprite_diamonds',

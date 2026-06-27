@@ -577,6 +577,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> with TickerProvider
               _CompactBoxButton(
                 tooltip: 'Step Backward',
                 activeColor: const Color(0xFF29B6F6),
+                enableLongPressRepeat: true,
                 onTap: canStepBack
                     ? () {
                         practiceNotifier.stepBackward();
@@ -590,6 +591,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> with TickerProvider
               _CompactBoxButton(
                 tooltip: 'Step Forward',
                 activeColor: const Color(0xFF29B6F6),
+                enableLongPressRepeat: true,
                 onTap: canStepForward
                     ? () {
                         practiceNotifier.stepForward();
@@ -616,6 +618,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> with TickerProvider
               _CompactBoxButton(
                 tooltip: 'Undo Move',
                 activeColor: const Color(0xFF29B6F6),
+                enableLongPressRepeat: true,
                 onTap: canUndo
                     ? () {
                         practiceNotifier.undo();
@@ -1320,6 +1323,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> with TickerProvider
                   _CompactBoxButton(
                     tooltip: 'Undo Move',
                     activeColor: const Color(0xFF69F0AE), // Vibrant Green
+                    enableLongPressRepeat: true,
                     onTap: state.canUndo
                         ? () {
                             _stopAutoPlay();
@@ -1332,6 +1336,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> with TickerProvider
                   _CompactBoxButton(
                     tooltip: 'Redo Move',
                     activeColor: const Color(0xFF69F0AE), // Vibrant Green
+                    enableLongPressRepeat: true,
                     onTap: state.canRedo
                         ? () {
                             _stopAutoPlay();
@@ -2425,6 +2430,7 @@ class _CompactBoxButton extends StatefulWidget {
   final VoidCallback? onTap;
   final bool isActive;
   final Color activeColor;
+  final bool enableLongPressRepeat;
 
   const _CompactBoxButton({
     required this.child,
@@ -2432,6 +2438,7 @@ class _CompactBoxButton extends StatefulWidget {
     this.onTap,
     this.isActive = false,
     required this.activeColor,
+    this.enableLongPressRepeat = false,
   });
 
   @override
@@ -2442,6 +2449,35 @@ class _CompactBoxButtonState extends State<_CompactBoxButton>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
+  Timer? _holdDelayTimer;
+  Timer? _holdRepeatTimer;
+  bool _isHolding = false;
+
+  void _startHolding() {
+    if (widget.onTap == null) return;
+    _isHolding = true;
+    widget.onTap!();
+
+    _holdDelayTimer?.cancel();
+    _holdRepeatTimer?.cancel();
+    _holdDelayTimer = Timer(const Duration(milliseconds: 400), () {
+      if (_isHolding) {
+        _holdRepeatTimer = Timer.periodic(const Duration(milliseconds: 120), (timer) {
+          if (_isHolding && widget.onTap != null) {
+            widget.onTap!();
+          } else {
+            timer.cancel();
+          }
+        });
+      }
+    });
+  }
+
+  void _stopHolding() {
+    _isHolding = false;
+    _holdDelayTimer?.cancel();
+    _holdRepeatTimer?.cancel();
+  }
 
   @override
   void initState() {
@@ -2457,6 +2493,8 @@ class _CompactBoxButtonState extends State<_CompactBoxButton>
 
   @override
   void dispose() {
+    _holdDelayTimer?.cancel();
+    _holdRepeatTimer?.cancel();
     _controller.dispose();
     super.dispose();
   }
@@ -2570,10 +2608,31 @@ class _CompactBoxButtonState extends State<_CompactBoxButton>
         fontWeight: FontWeight.w500,
       ),
       child: GestureDetector(
-        onTapDown: isEnabled ? (_) => _controller.forward() : null,
-        onTapUp: isEnabled ? (_) => _controller.reverse() : null,
-        onTapCancel: isEnabled ? () => _controller.reverse() : null,
-        onTap: widget.onTap,
+        onTapDown: isEnabled
+            ? (_) {
+                _controller.forward();
+                if (widget.enableLongPressRepeat) {
+                  _startHolding();
+                }
+              }
+            : null,
+        onTapUp: isEnabled
+            ? (_) {
+                _controller.reverse();
+                if (widget.enableLongPressRepeat) {
+                  _stopHolding();
+                }
+              }
+            : null,
+        onTapCancel: isEnabled
+            ? () {
+                _controller.reverse();
+                if (widget.enableLongPressRepeat) {
+                  _stopHolding();
+                }
+              }
+            : null,
+        onTap: !widget.enableLongPressRepeat ? widget.onTap : null,
         child: ScaleTransition(
           scale: _scaleAnimation,
           child: content,

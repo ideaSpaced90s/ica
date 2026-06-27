@@ -513,6 +513,46 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
     Widget movingPiece,
     bool isGroupCQueenTeleport,
   ) {
+    final isDesertTheme = widget.theme?.id == 'sprite_desert';
+    final isKnight = widget.data.pieceCode.substring(1).toUpperCase() == 'N';
+
+    if (isDesertTheme && isKnight) {
+      final origin = _path.first;
+      final dest = _path.last;
+
+      final Offset targetPos;
+      final double opacity;
+      final double scale;
+
+      if (rawProgress < 0.4) {
+        targetPos = origin;
+        final t = rawProgress / 0.4;
+        opacity = (1.0 - t).clamp(0.0, 1.0);
+        scale = (1.0 - t).clamp(0.0, 1.0);
+      } else if (rawProgress < 0.6) {
+        targetPos = dest;
+        opacity = 0.0;
+        scale = 0.0;
+      } else {
+        targetPos = dest;
+        final t = (rawProgress - 0.6) / 0.4;
+        opacity = t.clamp(0.0, 1.0);
+        scale = t.clamp(0.0, 1.0);
+      }
+
+      return Positioned(
+        left: targetPos.dx - _squareSize / 2,
+        top: targetPos.dy - _squareSize / 2,
+        child: Opacity(
+          opacity: opacity,
+          child: Transform.scale(
+            scale: scale,
+            child: movingPiece,
+          ),
+        ),
+      );
+    }
+
     if (isGroupCQueenTeleport) {
       final origin = _path.first;
       final dest = _path.last;
@@ -614,6 +654,17 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
       DiamondsModernSignature() => CustomPaint(
           size: Size(widget.boardSize, widget.boardSize),
           painter: _DiamondsModernSignaturePainter(
+            path: _path,
+            progress: progress,
+            rawProgress: raw,
+            pieceCode: widget.data.pieceCode,
+            squareSize: _squareSize,
+            isTeleport: isTeleport,
+          ),
+        ),
+      SandModernSignature() => CustomPaint(
+          size: Size(widget.boardSize, widget.boardSize),
+          painter: _SandModernSignaturePainter(
             path: _path,
             progress: progress,
             rawProgress: raw,
@@ -2517,5 +2568,274 @@ Offset _getPositionOnPath(List<Offset> path, double t) {
   final segment = (t * totalSegments).floor();
   final segmentT = (t * totalSegments) - segment;
   return Offset.lerp(path[segment], path[segment + 1], segmentT)!;
+}
+
+class _SandModernSignaturePainter extends CustomPainter {
+  final List<Offset> path;
+  final double progress;
+  final double rawProgress;
+  final String pieceCode;
+  final double squareSize;
+  final bool isTeleport;
+
+  _SandModernSignaturePainter({
+    required this.path,
+    required this.progress,
+    required this.rawProgress,
+    required this.pieceCode,
+    required this.squareSize,
+    required this.isTeleport,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (path.isEmpty) return;
+
+    final pieceType = pieceCode.length > 1
+        ? pieceCode.substring(1).toUpperCase()
+        : pieceCode.toUpperCase();
+    final origin = path.first;
+    final dest = path.last;
+
+    // Palette
+    const sandGold = Color(0xFFD4AF37);
+    const ochreClay = Color(0xFFC19A6B);
+    const dustAmber = Color(0x8BFFE0B2);
+
+    final currentPos = Offset.lerp(origin, dest, progress)!;
+
+    // 1. KNIGHT: Dune Burrower (Quicksand Leap)
+    if (pieceType == 'N') {
+      // Quicksand vortex at start
+      if (rawProgress < 0.4) {
+        final startT = rawProgress / 0.4;
+        final ringPaint = Paint()
+          ..color = ochreClay.withValues(alpha: (1.0 - startT) * 0.8)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.5;
+
+        canvas.save();
+        canvas.translate(origin.dx, origin.dy);
+        canvas.rotate(startT * 2 * math.pi); // spin vortex
+
+        for (int i = 0; i < 3; i++) {
+          final radius = (squareSize * 0.4) * (1.0 - startT) * (1.0 - i * 0.25);
+          if (radius > 0) {
+            canvas.drawOval(
+              Rect.fromCenter(center: Offset.zero, width: radius * 2, height: radius * 1.4),
+              ringPaint,
+            );
+          }
+        }
+        
+        final particlePaint = Paint()
+          ..color = sandGold.withValues(alpha: (1.0 - startT) * 0.9)
+          ..style = PaintingStyle.fill;
+        for (int i = 0; i < 8; i++) {
+          final angle = (i * math.pi / 4) - (startT * math.pi);
+          final dist = (squareSize * 0.3) * (1.0 - startT);
+          canvas.drawCircle(Offset(math.cos(angle) * dist, math.sin(angle) * dist), 2.0, particlePaint);
+        }
+
+        canvas.restore();
+      }
+
+      // Sand splash geyser at landing
+      if (rawProgress > 0.6) {
+        final endT = (rawProgress - 0.6) / 0.4;
+        final splashPaint = Paint()
+          ..color = sandGold.withValues(alpha: (1.0 - endT) * 0.95)
+          ..style = PaintingStyle.fill;
+
+        canvas.save();
+        canvas.translate(dest.dx, dest.dy);
+
+        final randomSplash = math.Random(5678);
+        for (int i = 0; i < 16; i++) {
+          final angle = -math.pi / 6 - randomSplash.nextDouble() * (2 * math.pi / 3); // upward geyser arc
+          final speed = 25.0 + randomSplash.nextDouble() * 35.0;
+          
+          final dx = math.cos(angle) * speed * endT;
+          final dy = math.sin(angle) * speed * endT + 12.0 * endT * endT;
+          
+          canvas.drawCircle(
+            Offset(dx, dy),
+            (2.5 * (1.0 - endT)).clamp(0.5, 4.0),
+            splashPaint,
+          );
+        }
+        
+        final shockPaint = Paint()
+          ..color = ochreClay.withValues(alpha: (1.0 - endT) * 0.7)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.0;
+        
+        for (int i = 0; i < 2; i++) {
+          final radius = (squareSize * 0.4) * endT * (1.0 - i * 0.3);
+          if (radius > 0) {
+            canvas.drawOval(
+              Rect.fromCenter(center: Offset.zero, width: radius * 2, height: radius * 1.2),
+              shockPaint,
+            );
+          }
+        }
+
+        canvas.restore();
+      }
+      return;
+    }
+
+    // 2. ROOK: Dune Carver (Sand Trench)
+    if (pieceType == 'R') {
+      final rayPaint = Paint()
+        ..color = ochreClay.withValues(alpha: 0.5 * (1.0 - progress))
+        ..strokeWidth = 5.0
+        ..strokeCap = StrokeCap.round
+        ..style = PaintingStyle.stroke;
+
+      // Draw the carved path trench
+      canvas.drawLine(origin, currentPos, rayPaint);
+
+      // Draw side dust clouds
+      final random = math.Random(5678);
+      if (progress > 0.1 && progress < 0.95) {
+        final cloudPaint = Paint()..color = dustAmber.withValues(alpha: 0.4);
+        final normalVector = Offset(-(dest.dy - origin.dy), dest.dx - origin.dx);
+        final length = normalVector.distance;
+        if (length > 0) {
+          final unitNormal = normalVector / length;
+          // Spawn dust particles on either side of the moving rook
+          for (int i = 0; i < 6; i++) {
+            final double side = i % 2 == 0 ? 1.0 : -1.0;
+            final offsetDist = (random.nextDouble() * 12.0 + 4.0);
+            final dustPos = currentPos + (unitNormal * side * offsetDist);
+            canvas.drawCircle(dustPos, 3.0 + random.nextDouble() * 4.0, cloudPaint);
+          }
+        }
+      }
+      return;
+    }
+
+    // 3. QUEEN: Sandstorm Tempest (Vortex)
+    if (pieceType == 'Q' || isTeleport) {
+      final opacity = math.sin(progress * math.pi);
+      final vortexPaint = Paint()
+        ..color = sandGold.withValues(alpha: opacity * 0.6)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5;
+
+      // Draw a swirling spiral around the current moving position
+      final spiralPath = Path();
+      const numTurns = 3;
+      final maxRadius = squareSize * 0.45;
+      
+      for (int i = 0; i < 50; i++) {
+        final t = i / 50;
+        final angle = t * numTurns * 2 * math.pi + (progress * 10);
+        final radius = t * maxRadius;
+        final offset = Offset(math.cos(angle) * radius, math.sin(angle) * radius);
+        if (i == 0) {
+          spiralPath.moveTo(currentPos.dx + offset.dx, currentPos.dy + offset.dy);
+        } else {
+          spiralPath.lineTo(currentPos.dx + offset.dx, currentPos.dy + offset.dy);
+        }
+      }
+      canvas.drawPath(spiralPath, vortexPaint);
+
+      // Sparkles spinning out
+      final sparklePaint = Paint()..color = Colors.white.withValues(alpha: opacity);
+      for (int i = 0; i < 6; i++) {
+        final angle = (progress * 8) + (i * math.pi / 3);
+        final pos = currentPos + Offset(math.cos(angle) * maxRadius, math.sin(angle) * maxRadius);
+        canvas.drawCircle(pos, 1.5, sparklePaint);
+      }
+      return;
+    }
+
+    // 4. BISHOP: Mirage Shift (Heatwave Diagonal)
+    if (pieceType == 'B') {
+      final opacity = math.sin(progress * math.pi);
+
+      // Draw a wavy/blurry heat signature along the movement vector
+      final wavePaint = Paint()
+        ..color = sandGold.withValues(alpha: opacity * 0.3)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3.0;
+
+      final wavePath = Path();
+      wavePath.moveTo(origin.dx, origin.dy);
+      
+      final segments = 10;
+      for (int i = 1; i <= segments; i++) {
+        final t = i / segments;
+        final pointOnPath = Offset.lerp(origin, dest, t)!;
+        
+        // Perpendicular offset to make a sine wave distortion
+        final travelVec = dest - origin;
+        final normal = Offset(-travelVec.dy, travelVec.dx);
+        final normalLength = normal.distance;
+        final normalUnit = normalLength > 0 ? normal / normalLength : Offset.zero;
+
+        final waveOffset = math.sin(t * 4 * math.pi + (rawProgress * 15)) * 6.0 * opacity;
+        final jitterPoint = pointOnPath + (normalUnit * waveOffset);
+        wavePath.lineTo(jitterPoint.dx, jitterPoint.dy);
+      }
+
+      canvas.drawPath(wavePath, wavePaint);
+      return;
+    }
+
+    // 5. KING: Pharaoh's Aegis (Sun Ring)
+    if (pieceType == 'K') {
+      final opacity = math.sin(progress * math.pi);
+      final ringPaint = Paint()
+        ..color = sandGold.withValues(alpha: opacity * 0.7)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.0;
+
+      // Draw the circular shield ring
+      final radius = squareSize * 0.45;
+      canvas.drawCircle(currentPos, radius, ringPaint);
+
+      // Golden solar sparks orbiting
+      final sparklePaint = Paint()..color = Colors.white.withValues(alpha: opacity);
+      for (int i = 0; i < 8; i++) {
+        final angle = (progress * 2 * math.pi) + (i * math.pi / 4);
+        final sparkPos = currentPos + Offset(math.cos(angle) * radius, math.sin(angle) * radius);
+        canvas.drawCircle(sparkPos, 1.8, sparklePaint);
+      }
+      return;
+    }
+
+    // 6. PAWN: Sand Devil (Dust Trail)
+    if (pieceType == 'P') {
+      if (progress > 0.1 && progress < 0.95) {
+        final random = math.Random(1111);
+        final opacity = math.sin(progress * math.pi);
+        final trailPaint = Paint()
+          ..color = ochreClay.withValues(alpha: 0.4 * opacity)
+          ..style = PaintingStyle.fill;
+
+        // Trace a small offset dust trail behind the pawn
+        final trailPos = Offset.lerp(origin, dest, progress - 0.15)!;
+        for (int i = 0; i < 4; i++) {
+          final offset = Offset(
+            (random.nextDouble() - 0.5) * 14.0,
+            (random.nextDouble() - 0.5) * 14.0,
+          );
+          canvas.drawCircle(trailPos + offset, 2.0 + random.nextDouble() * 3.0, trailPaint);
+        }
+      }
+      return;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _SandModernSignaturePainter oldDelegate) {
+    return oldDelegate.progress != progress ||
+        oldDelegate.rawProgress != rawProgress ||
+        oldDelegate.pieceCode != pieceCode ||
+        oldDelegate.isTeleport != isTeleport;
+  }
 }
 

@@ -42,4 +42,8 @@ class DiamondsModernSignature extends SignatureMoveStyle {
   const DiamondsModernSignature();
 }
 
+class SandModernSignature extends SignatureMoveStyle {
+  const SandModernSignature();
+}
+
 
