@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/analysis_stockfish_service.dart';
 import '../data/uci_parser.dart';
+import '../domain/chess_game.dart';
 import 'study_lab_provider.dart';
 import 'practice_lab_provider.dart';
 
@@ -444,6 +445,144 @@ class AnalysisEngineController extends Notifier<AnalysisEngineState> {
     return score / 100.0;
   }
 
+  Future<Map<String, dynamic>> classifyUciMoves(
+    List<String> uciMoves,
+    String startFen, {
+    int targetDepth = 16,
+    Function(double)? onProgress,
+  }) async {
+    final wasEngineOn = state.isEngineOn;
+    if (wasEngineOn) {
+      await _service.stopAnalysis();
+    }
+
+    final results = <int, MoveClassification>{};
+    final history = <double>[];
+    final whiteLosses = <double>[];
+    final blackLosses = <double>[];
+
+    final wCounts = <MoveClassification, int>{
+      MoveClassification.brilliant: 0,
+      MoveClassification.best: 0,
+      MoveClassification.good: 0,
+      MoveClassification.inaccuracy: 0,
+      MoveClassification.mistake: 0,
+      MoveClassification.blunder: 0,
+      MoveClassification.none: 0,
+    };
+    final bCounts = Map<MoveClassification, int>.from(wCounts);
+
+    // Reconstruct list of FENs before each move
+    final fensBefore = <String>[];
+    final tempGame = ChessGame(fen: startFen);
+    for (final uci in uciMoves) {
+      fensBefore.add(tempGame.fen);
+      tempGame.makeMove({'from': uci.substring(0, 2), 'to': uci.substring(2, 4), 'promotion': uci.length > 4 ? uci[4] : 'q'});
+    }
+
+    final totalMoves = uciMoves.length;
+    for (var i = 0; i < totalMoves; i++) {
+      final playedMove = uciMoves[i];
+      final fenBefore = fensBefore[i];
+      final isWhite = !fenBefore.contains(' b ');
+
+      // Evaluate position before
+      final beforeEval = await _evaluatePositionAtDepth(fenBefore, targetDepth);
+      final bestMove = beforeEval['bestMove'] as String?;
+
+      // Reconstruct FEN after this specific move
+      final afterGame = ChessGame(fen: fenBefore);
+      afterGame.makeMove({'from': playedMove.substring(0, 2), 'to': playedMove.substring(2, 4), 'promotion': playedMove.length > 4 ? playedMove[4] : 'q'});
+      final fenAfter = afterGame.fen;
+
+      // Evaluate position after
+      final afterEval = await _evaluatePositionAtDepth(fenAfter, targetDepth);
+      final double scorePlayedWhite = _parseScoreToWhitePerspective(afterEval, fenAfter);
+      history.add(scorePlayedWhite);
+
+      MoveClassification classification = MoveClassification.best;
+
+      if (playedMove == bestMove) {
+        // Did we play the best move? Check if it can be considered Brilliant or Great
+        final double scoreBefore = _parseScoreToDouble(beforeEval);
+        final isMateThreat = beforeEval['scoreType'] == 'mate';
+        
+        if (playedMove.length >= 4 && (afterGame.inCheckmate || (isMateThreat && scoreBefore.abs() < 5.0))) {
+          classification = MoveClassification.brilliant;
+        } else if (i > 2 && (playedMove.contains('x') || playedMove.length > 4)) {
+          classification = MoveClassification.brilliant;
+        } else {
+          classification = MoveClassification.best;
+        }
+
+        if (isWhite) {
+          whiteLosses.add(0.0);
+        } else {
+          blackLosses.add(0.0);
+        }
+      } else {
+        final double scoreBefore = _parseScoreToDouble(beforeEval);
+        final double scoreAfterOpponent = _parseScoreToDouble(afterEval);
+        final double scorePlayed = -scoreAfterOpponent;
+        final double loss = scoreBefore - scorePlayed;
+
+        // Accumulate cp loss for accuracy computation
+        final double cpLoss = (loss * 100).clamp(0.0, double.infinity);
+        if (isWhite) {
+          whiteLosses.add(cpLoss);
+        } else {
+          blackLosses.add(cpLoss);
+        }
+
+        // Expanded Classification Rules
+        if (loss < 0.15) {
+          classification = MoveClassification.best;
+        } else if (loss < 0.35) {
+          classification = MoveClassification.good;
+        } else if (loss < 0.7) {
+          classification = MoveClassification.inaccuracy;
+        } else if (loss < 1.5) {
+          classification = MoveClassification.mistake;
+        } else {
+          classification = MoveClassification.blunder;
+        }
+      }
+
+      results[i] = classification;
+      if (isWhite) {
+        wCounts[classification] = (wCounts[classification] ?? 0) + 1;
+      } else {
+        bCounts[classification] = (bCounts[classification] ?? 0) + 1;
+      }
+
+      if (onProgress != null) {
+        onProgress((i + 1) / totalMoves);
+      }
+    }
+
+    final wAccuracy = _computeAccuracy(whiteLosses);
+    final bAccuracy = _computeAccuracy(blackLosses);
+
+    // Estimate Elos
+    final whiteElo = (wAccuracy * 20 + 400).toInt();
+    final blackElo = (bAccuracy * 20 + 400).toInt();
+
+    if (wasEngineOn) {
+      final activeFen = uciMoves.isEmpty ? startFen : fensBefore.last;
+      await toggleEngine(true, activeFen);
+    }
+
+    return {
+      'classifications': results,
+      'whiteAccuracy': wAccuracy,
+      'blackAccuracy': bAccuracy,
+      'whiteCounts': wCounts,
+      'blackCounts': bCounts,
+      'whiteElo': whiteElo,
+      'blackElo': blackElo,
+      'evalHistory': history,
+    };
+  }
 }
 
 final analysisEngineControllerProvider =

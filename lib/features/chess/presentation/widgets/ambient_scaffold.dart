@@ -9,6 +9,7 @@ class AmbientScaffold extends StatelessWidget {
   final Widget body;
   final Widget? drawer;
   final Widget? bottomNavigationBar;
+  final PreferredSizeWidget? appBar;
   final GlobalKey<ScaffoldState>? scaffoldKey;
 
   // Optional per-screen palette
@@ -25,6 +26,7 @@ class AmbientScaffold extends StatelessWidget {
     required this.body,
     this.drawer,
     this.bottomNavigationBar,
+    this.appBar,
     this.scaffoldKey,
     this.blob1Color = const Color(0xFFDBEAFE),
     this.blob2Color = const Color(0xFFFEF3C7),
@@ -38,6 +40,7 @@ class AmbientScaffold extends StatelessWidget {
     return Scaffold(
       key: scaffoldKey,
       backgroundColor: const Color(0xFFF8F9FA),
+      appBar: appBar,
       drawer: drawer,
       bottomNavigationBar: bottomNavigationBar,
       extendBodyBehindAppBar: extendBodyBehindAppBar,

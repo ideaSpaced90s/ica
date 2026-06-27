@@ -30,6 +30,9 @@ class SignatureMoveOverlay extends ConsumerStatefulWidget {
   /// Trigger for special visual effects (e.g. 'dust_puff')
   final void Function(String action, Offset position)? onActionTrigger;
 
+  /// Exposes real-time progress of the moving piece for interactive board effects.
+  final void Function(double progress, Offset piecePos)? onProgressUpdate;
+
   const SignatureMoveOverlay({
     super.key,
     required this.data,
@@ -39,6 +42,7 @@ class SignatureMoveOverlay extends ConsumerStatefulWidget {
     required this.onComplete,
     this.onLand,
     this.onActionTrigger,
+    this.onProgressUpdate,
     this.theme,
   });
 
@@ -84,41 +88,50 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
     }
 
     _controller =
-        AnimationController(vsync: this, duration: _effectiveMoveDuration)
-          ..addStatusListener((status) {
-            if (status == AnimationStatus.completed) {
-              if (widget.data.isWrongMove) {
-                setState(() {
-                  _isBlinkingRed = true;
-                });
-                Future.delayed(const Duration(milliseconds: 400), () {
-                  if (!mounted) return;
-                  setState(() {
-                    _isBlinkingRed = false;
-                  });
-                  _controller.reverse();
-                });
-              } else {
-                // Fire landing callback before completing
-                widget.onLand?.call(
-                  widget.data.from,
-                  widget.data.to,
-                  widget.data.pieceCode,
-                  _profile,
-                );
-                widget.onComplete();
-              }
-            } else if (status == AnimationStatus.dismissed) {
-              if (widget.data.isWrongMove) {
-                widget.onComplete();
-              }
-            }
-          });
+        AnimationController(vsync: this, duration: _effectiveMoveDuration);
 
     _curvedProgress = CurvedAnimation(
       parent: _controller,
       curve: _profile.moveCurve,
     );
+
+    _controller.addListener(() {
+      if (!mounted) return;
+      final progressValue = _curvedProgress.value;
+      final rawValue = _controller.value;
+      final pos = _calculateCurrentPiecePos(rawValue, progressValue);
+      widget.onProgressUpdate?.call(rawValue, pos);
+    });
+
+    _controller.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        if (widget.data.isWrongMove) {
+          setState(() {
+            _isBlinkingRed = true;
+          });
+          Future.delayed(const Duration(milliseconds: 400), () {
+            if (!mounted) return;
+            setState(() {
+              _isBlinkingRed = false;
+            });
+            _controller.reverse();
+          });
+        } else {
+          // Fire landing callback before completing
+          widget.onLand?.call(
+            widget.data.from,
+            widget.data.to,
+            widget.data.pieceCode,
+            _profile,
+          );
+          widget.onComplete();
+        }
+      } else if (status == AnimationStatus.dismissed) {
+        if (widget.data.isWrongMove) {
+          widget.onComplete();
+        }
+      }
+    });
 
     // Check if provider disabled animations altogether.
     final animationsEnabled = ref.read(chessProvider).isAnimationsEnabled;
@@ -235,14 +248,44 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
     return Offset(x, y);
   }
 
-  Offset _getPositionOnPath(List<Offset> path, double t) {
-    if (path.isEmpty) return Offset.zero;
-    if (t <= 0) return path.first;
-    if (t >= 1) return path.last;
-    final totalSegments = path.length - 1;
-    final segment = (t * totalSegments).floor();
-    final segmentT = (t * totalSegments) - segment;
-    return Offset.lerp(path[segment], path[segment + 1], segmentT)!;
+
+
+  Offset _calculateCurrentPiecePos(double rawProgress, double progress) {
+    final pieceType = widget.data.pieceCode.substring(1).toUpperCase();
+    Offset piecePos = _getPositionOnPath(_path, progress);
+    
+    final isArcTheme = widget.theme?.id == 'sprite_arc';
+    final isFairytaleTheme = widget.theme?.id == 'sprite_fairytale';
+    final isPlasmaTheme = widget.theme?.id == 'sprite_plasma';
+    final isLightningTheme = widget.theme?.id == 'sprite_lightning';
+    final isDiamondsTheme = widget.theme?.id == 'sprite_diamonds';
+
+    if (isArcTheme || isFairytaleTheme || isPlasmaTheme || isLightningTheme || isDiamondsTheme) {
+      if (pieceType == 'N' && _path.length >= 3) {
+        final p0 = _path[0];
+        final p1 = _path[1];
+        final p2 = _path[2];
+        final t = progress;
+        piecePos = Offset(
+          (1 - t) * (1 - t) * p0.dx + 2 * (1 - t) * t * p1.dx + t * t * p2.dx,
+          (1 - t) * (1 - t) * p0.dy + 2 * (1 - t) * t * p1.dy + t * t * p2.dy,
+        );
+
+        final jumpY = -math.sin(rawProgress * math.pi) * _squareSize * 0.9;
+        piecePos = piecePos.translate(0, jumpY);
+        
+        if (isArcTheme) {
+          final dir = p2 - p0;
+          if (dir.distance > 0.1) {
+            final norm = dir / dir.distance;
+            final ortho = Offset(-norm.dy, norm.dx);
+            final sway = math.sin(rawProgress * 3 * math.pi) * 20.0 * (1.0 - rawProgress);
+            piecePos += ortho * sway;
+          }
+        }
+      }
+    }
+    return piecePos;
   }
 
   @override
@@ -276,6 +319,12 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
         );
 
         final isArcTheme = widget.theme?.id == 'sprite_arc';
+        if (isArcTheme && widget.data.pieceCode.substring(1).toUpperCase() == 'P') {
+          movingPiece = Transform.scale(
+            scale: 0.80,
+            child: movingPiece,
+          );
+        }
         final isFairytaleTheme = widget.theme?.id == 'sprite_fairytale';
         final isPlasmaTheme = widget.theme?.id == 'sprite_plasma';
         final isLightningTheme = widget.theme?.id == 'sprite_lightning';
@@ -297,6 +346,16 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
             // Add dynamic vertical height representing jumping over pieces
             final jumpY = -math.sin(rawProgress * math.pi) * _squareSize * 0.9;
             piecePos = piecePos.translate(0, jumpY);
+
+            if (isArcTheme) {
+              final dir = p2 - p0;
+              if (dir.distance > 0.1) {
+                final norm = dir / dir.distance;
+                final ortho = Offset(-norm.dy, norm.dx);
+                final sway = math.sin(rawProgress * 3 * math.pi) * 20.0 * (1.0 - rawProgress);
+                piecePos += ortho * sway;
+              }
+            }
 
             if (isPlasmaTheme) {
               // Quantum phase jump: fade out slightly in transit
@@ -339,6 +398,20 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
                 alignment: Alignment.center,
                 child: movingPiece,
               );
+            }
+
+            if (isArcTheme) {
+              final to = widget.data.to;
+              final isBorder = to.startsWith('a') || to.startsWith('h') || to.endsWith('1') || to.endsWith('8');
+              if (isBorder && rawProgress > 0.85) {
+                final direction = _path.last - _path.first;
+                if (direction.distance > 0.1) {
+                  final norm = direction / direction.distance;
+                  final progressFactor = (rawProgress - 0.85) / 0.15;
+                  final shake = math.sin(progressFactor * 8 * math.pi) * 4.0 * (1.0 - progressFactor);
+                  piecePos += norm * shake;
+                }
+              }
             }
 
             // Fairytale Rook: Add heavy ground rumble shake perpendicular to movement direction
@@ -443,6 +516,29 @@ class _SignatureMoveOverlayState extends ConsumerState<SignatureMoveOverlay>
     if (isGroupCQueenTeleport) {
       final origin = _path.first;
       final dest = _path.last;
+      
+      if (widget.theme?.id == 'sprite_arc') {
+        final Offset teleportPos;
+        if (rawProgress < 0.15) {
+          teleportPos = origin;
+        } else if (rawProgress < 0.30) {
+          teleportPos = dest;
+        } else if (rawProgress < 0.45) {
+          teleportPos = origin;
+        } else if (rawProgress < 0.60) {
+          teleportPos = dest;
+        } else if (rawProgress < 0.75) {
+          teleportPos = origin;
+        } else {
+          teleportPos = dest;
+        }
+
+        return Positioned(
+          left: teleportPos.dx - _squareSize / 2,
+          top: teleportPos.dy - _squareSize / 2,
+          child: movingPiece,
+        );
+      }
       
       final Offset teleportPos;
       final double teleportOpacity;
@@ -917,63 +1013,33 @@ class _ArcModernSignaturePainter extends CustomPainter {
     const goldColor = Color(0xFFC3A555);
 
     if (isTeleport || pieceType == 'Q') {
-      // ♛ Queen: Wormhole Transit / Gravitational Fold
-      // 1. Draw origin portal imploding (0.0 to 0.4)
-      if (rawProgress < 0.4) {
-        final t = rawProgress / 0.4;
-        final paint = Paint()
-          ..color = goldColor.withValues(alpha: 0.8 * (1.0 - t))
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 2.0 + (1.0 - t) * 3.0;
-
-        canvas.save();
-        canvas.translate(origin.dx, origin.dy);
-        canvas.rotate(t * math.pi * 2);
-        canvas.drawCircle(Offset.zero, (squareSize * 0.55) * (1.0 - t), paint);
-        
-        final lineLen = (squareSize * 0.4) * (1.0 - t);
-        canvas.drawLine(Offset(-lineLen, 0), Offset(lineLen, 0), paint);
-        canvas.drawLine(Offset(0, -lineLen), Offset(0, lineLen), paint);
-        canvas.restore();
-      }
-
-      // 2. Draw destination portal expanding (0.6 to 1.0)
-      if (rawProgress > 0.6) {
-        final t = (rawProgress - 0.6) / 0.4;
-        final paint = Paint()
-          ..color = goldColor.withValues(alpha: 0.8 * t)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 2.0 + t * 2.0;
-
-        canvas.save();
-        canvas.translate(dest.dx, dest.dy);
-        canvas.rotate(t * math.pi * 2);
-        canvas.drawCircle(Offset.zero, (squareSize * 0.55) * t, paint);
-        
-        final lineLen = (squareSize * 0.4) * t;
-        canvas.drawLine(Offset(-lineLen, 0), Offset(lineLen, 0), paint);
-        canvas.drawLine(Offset(0, -lineLen), Offset(0, lineLen), paint);
-        canvas.restore();
-      }
-
-      // 3. Draw warp speed light-streaks during transit (0.2 to 0.8)
-      if (rawProgress >= 0.2 && rawProgress <= 0.8) {
-        final random = math.Random(1234);
-        final opacity = math.sin((rawProgress - 0.2) / 0.6 * math.pi);
-        
-        final paint = Paint()
-          ..color = goldColor.withValues(alpha: opacity * 0.5)
-          ..strokeWidth = 1.5;
-
-        for (int i = 0; i < 8; i++) {
-          final offset = Offset(
-            (random.nextDouble() - 0.5) * squareSize * 0.5,
-            (random.nextDouble() - 0.5) * squareSize * 0.5,
-          );
+      final random = math.Random(999);
+      final transitions = [0.15, 0.30, 0.45, 0.60, 0.75];
+      for (final tTrigger in transitions) {
+        final age = rawProgress - tTrigger;
+        if (age >= 0 && age < 0.15) {
+          final pAge = age / 0.15;
+          final opacity = (1.0 - pAge).clamp(0.0, 1.0);
+          final center = (tTrigger == 0.15 || tTrigger == 0.45 || tTrigger == 0.75) ? dest : origin;
           
-          final start = Offset.lerp(origin, dest, (rawProgress - 0.12).clamp(0.0, 1.0))! + offset;
-          final end = Offset.lerp(origin, dest, (rawProgress + 0.12).clamp(0.0, 1.0))! + offset;
-          canvas.drawLine(start, end, paint);
+          // Draw expand ring
+          final ringPaint = Paint()
+            ..color = goldColor.withValues(alpha: opacity * 0.8)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2.0;
+          canvas.drawCircle(center, squareSize * 0.65 * pAge, ringPaint);
+          
+          // Draw electric sparks
+          final sparkPaint = Paint()
+            ..color = Colors.white.withValues(alpha: opacity * 0.95)
+            ..strokeWidth = 1.8;
+          for (int j = 0; j < 8; j++) {
+            final angle = random.nextDouble() * 2 * math.pi;
+            final length = squareSize * (0.3 + random.nextDouble() * 0.4);
+            final start = center + Offset(math.cos(angle) * squareSize * 0.1, math.sin(angle) * squareSize * 0.1);
+            final end = start + Offset(math.cos(angle) * length * pAge, math.sin(angle) * length * pAge);
+            canvas.drawLine(start, end, sparkPaint);
+          }
         }
       }
       return;
@@ -1047,22 +1113,46 @@ class _ArcModernSignaturePainter extends CustomPainter {
     }
 
     if (pieceType == 'B') {
-      // ♝ Bishop: Refraction Laser Vector
-      final currentPos = Offset.lerp(origin, dest, progress)!;
+      // ♝ Bishop: Refraction Laser Vector (last 2 tiles trail)
+      final isWhitePiece = pieceCode.startsWith('w');
+      final trailColor = isWhitePiece ? const Color(0xFFFFD96A) : const Color(0xFFFF5733);
 
+      final totalSegments = path.length - 1;
+      final tTrailStart = (progress - 2.0 / totalSegments).clamp(0.0, 1.0);
+      
+      final trailPath = Path();
+      final startPos = _getPositionOnPath(path, tTrailStart);
+      trailPath.moveTo(startPos.dx, startPos.dy);
+      
+      final startIndex = (tTrailStart * totalSegments).ceil();
+      final endIndex = (progress * totalSegments).floor();
+      
+      for (int i = startIndex; i <= endIndex; i++) {
+        if (i > 0 && i < path.length) {
+          trailPath.lineTo(path[i].dx, path[i].dy);
+        }
+      }
+      
+      final currentPos = _getPositionOnPath(path, progress);
+      trailPath.lineTo(currentPos.dx, currentPos.dy);
+      
       final glowPaint = Paint()
-        ..color = goldColor.withValues(alpha: 0.24)
+        ..color = trailColor.withValues(alpha: 0.5 * (1.0 - progress))
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 6.0
+        ..strokeWidth = 8.0
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
 
       final corePaint = Paint()
-        ..color = Colors.white.withValues(alpha: 0.9)
+        ..color = Colors.white.withValues(alpha: 0.9 * (1.0 - progress))
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5;
+        ..strokeWidth = 2.5
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round;
 
-      canvas.drawLine(origin, currentPos, glowPaint);
-      canvas.drawLine(origin, currentPos, corePaint);
+      canvas.drawPath(trailPath, glowPaint);
+      canvas.drawPath(trailPath, corePaint);
 
       for (int i = 0; i < 5; i++) {
         final tSpawn = 0.15 + i * 0.18;
@@ -1075,7 +1165,7 @@ class _ArcModernSignaturePainter extends CustomPainter {
         final pos = Offset.lerp(origin, dest, tSpawn)!;
 
         final shardPaint = Paint()
-          ..color = goldColor.withValues(alpha: opacity)
+          ..color = trailColor.withValues(alpha: opacity)
           ..style = PaintingStyle.fill;
 
         canvas.save();
@@ -1095,12 +1185,34 @@ class _ArcModernSignaturePainter extends CustomPainter {
     }
 
     if (pieceType == 'R') {
-      // ♜ Rook: Linear Railgun
+      // ♜ Rook: Linear Railgun + momentum trail
+      final isWhitePiece = pieceCode.startsWith('w');
+      final trailColor = isWhitePiece ? const Color(0xFFE0F7FA) : const Color(0xFFFF5722);
+      
       final currentPos = Offset.lerp(origin, dest, progress)!;
-      final railPaint = Paint()
-        ..color = goldColor.withValues(alpha: 0.2)
+
+      // Draw thick energy trail behind rook
+      final trailPaint = Paint()
+        ..color = trailColor.withValues(alpha: 0.3 * (1.0 - progress))
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.2;
+        ..strokeWidth = 12.0
+        ..strokeCap = StrokeCap.round
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
+
+      final corePaint = Paint()
+        ..color = Colors.white.withValues(alpha: 0.8 * (1.0 - progress))
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3.0
+        ..strokeCap = StrokeCap.round;
+
+      canvas.drawLine(origin, currentPos, trailPaint);
+      canvas.drawLine(origin, currentPos, corePaint);
+
+      // Keep rail lines but color-coded and themed
+      final railPaint = Paint()
+        ..color = trailColor.withValues(alpha: 0.3 * (1.0 - progress))
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5;
 
       final dx = (dest.dx - origin.dx).abs();
       final dy = (dest.dy - origin.dy).abs();
@@ -1120,7 +1232,7 @@ class _ArcModernSignaturePainter extends CustomPainter {
         final arcCenter = currentPos + dirNorm * (squareSize * 0.4);
         
         final arcPaint = Paint()
-          ..color = goldColor.withValues(alpha: 0.65 * (1.0 - progress))
+          ..color = trailColor.withValues(alpha: 0.7 * (1.0 - progress))
           ..style = PaintingStyle.stroke
           ..strokeWidth = 2.0;
 
@@ -1138,7 +1250,7 @@ class _ArcModernSignaturePainter extends CustomPainter {
     }
 
     if (pieceType == 'P') {
-      // ♟ Pawn: Micro-Thruster Glide
+      // ♟ Pawn: Micro-Thruster Glide + Capture slice
       final currentPos = Offset.lerp(origin, dest, progress)!;
       final direction = (dest - origin);
       if (direction.distance > 0.1) {
@@ -1153,6 +1265,45 @@ class _ArcModernSignaturePainter extends CustomPainter {
 
         canvas.drawLine(backPos - ortho, backPos - ortho - dirNorm * 12.0, thrusterPaint);
         canvas.drawLine(backPos + ortho, backPos + ortho - dirNorm * 12.0, thrusterPaint);
+      }
+
+      // Capture slicing effect
+      final isCapture = (origin.dx - dest.dx).abs() > 1.0 && (origin.dy - dest.dy).abs() > 1.0;
+      if (isCapture && progress > 0.4) {
+        final isWhitePiece = pieceCode.startsWith('w');
+        final slashColor = isWhitePiece ? const Color(0xFFFFD96A) : const Color(0xFFFF5733);
+        final sliceProgress = (progress - 0.4) / 0.6;
+        final opacity = (1.0 - sliceProgress).clamp(0.0, 1.0);
+        
+        final slashPaint = Paint()
+          ..color = slashColor.withValues(alpha: opacity * 0.9)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3.0
+          ..strokeCap = StrokeCap.round;
+          
+        final glowPaint = Paint()
+          ..color = slashColor.withValues(alpha: opacity * 0.45)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 8.0
+          ..strokeCap = StrokeCap.round
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
+
+        final halfSize = squareSize * 0.4;
+        
+        final pStart1 = dest + Offset(-halfSize, -halfSize * 0.5);
+        final pEnd1 = dest + Offset(halfSize, halfSize * 0.5);
+        
+        final pStart2 = dest + Offset(-halfSize * 0.8, halfSize * 0.6);
+        final pEnd2 = dest + Offset(halfSize * 0.8, -halfSize * 0.6);
+
+        final sEnd1 = Offset.lerp(pStart1, pEnd1, sliceProgress.clamp(0.0, 1.0))!;
+        final sEnd2 = Offset.lerp(pStart2, pEnd2, sliceProgress.clamp(0.0, 1.0))!;
+
+        canvas.drawPath(Path()..moveTo(pStart1.dx, pStart1.dy)..lineTo(sEnd1.dx, sEnd1.dy), glowPaint);
+        canvas.drawPath(Path()..moveTo(pStart1.dx, pStart1.dy)..lineTo(sEnd1.dx, sEnd1.dy), slashPaint);
+        
+        canvas.drawPath(Path()..moveTo(pStart2.dx, pStart2.dy)..lineTo(sEnd2.dx, sEnd2.dy), glowPaint);
+        canvas.drawPath(Path()..moveTo(pStart2.dx, pStart2.dy)..lineTo(sEnd2.dx, sEnd2.dy), slashPaint);
       }
       return;
     }
@@ -1184,6 +1335,16 @@ class _ArcModernSignaturePainter extends CustomPainter {
       hexPath.close();
       canvas.drawPath(hexPath, shieldPaint);
       canvas.restore();
+
+      // Golden landing shimmer ring expansion
+      if (progress > 0.8) {
+        final lt = (progress - 0.8) / 0.2;
+        final shimmerPaint = Paint()
+          ..color = goldColor.withValues(alpha: 0.7 * (1.0 - lt))
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.0 * (1.0 - lt);
+        canvas.drawCircle(dest, squareSize * 0.55 * lt, shimmerPaint);
+      }
       return;
     }
   }
@@ -2346,5 +2507,15 @@ class _DiamondsModernSignaturePainter extends CustomPainter {
         oldDelegate.pieceCode != pieceCode ||
         oldDelegate.isTeleport != isTeleport;
   }
+}
+
+Offset _getPositionOnPath(List<Offset> path, double t) {
+  if (path.isEmpty) return Offset.zero;
+  if (t <= 0) return path.first;
+  if (t >= 1) return path.last;
+  final totalSegments = path.length - 1;
+  final segment = (t * totalSegments).floor();
+  final segmentT = (t * totalSegments) - segment;
+  return Offset.lerp(path[segment], path[segment + 1], segmentT)!;
 }
 

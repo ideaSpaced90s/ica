@@ -128,4 +128,43 @@ void main() {
     // Allow pending async microtasks to settle before disposing container
     await Future.delayed(const Duration(milliseconds: 500));
   });
+
+  test('Verify isEngineThinking shows up immediately when AI goes first on game start or board flip', () async {
+    final fakeStockfish = FakeStockfishService();
+    final fakeSavedGameRepo = FakeSavedGameRepository();
+    final fakeSoundService = FakeChessSoundService();
+    final fakeHapticsService = FakeChessHapticsService();
+    final fakeSettingsRepo = FakeSettingsRepository();
+
+    final container = ProviderContainer(
+      overrides: [
+        stockfishServiceProvider.overrideWithValue(fakeStockfish),
+        savedGameRepositoryProvider.overrideWithValue(fakeSavedGameRepo),
+        chessSoundServiceProvider.overrideWithValue(fakeSoundService),
+        chessHapticsServiceProvider.overrideWithValue(fakeHapticsService),
+        settingsRepositoryProvider.overrideWithValue(fakeSettingsRepo),
+        storeProvider.overrideWith(() => StoreNotifier(loadData: false, initializeBilling: false)),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final notifier = container.read(arenaProvider.notifier);
+
+    // Case 1: Start a new game as Black, meaning AI goes first.
+    // The thinking indicator (isEngineThinking) should be true immediately.
+    notifier.reset(forcedPlayerWhite: false);
+    expect(notifier.state.isEngineThinking, isTrue);
+
+    // Reset back to player playing White (AI turn is false).
+    notifier.reset(forcedPlayerWhite: true);
+    expect(notifier.state.isEngineThinking, isFalse);
+
+    // Case 2: Toggle/flip the board orientation when it is the first move.
+    // Flipping makes the player Black and the AI White (so AI's turn immediately).
+    // The thinking indicator (isEngineThinking) should become true immediately.
+    notifier.toggleBoardOrientation();
+    expect(notifier.state.isEngineThinking, isTrue);
+
+    await Future.delayed(const Duration(milliseconds: 500));
+  });
 }

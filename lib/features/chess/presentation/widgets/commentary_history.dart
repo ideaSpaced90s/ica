@@ -604,7 +604,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
             child: CircleAvatar(
               radius: 14,
               backgroundColor: Colors.transparent,
-              backgroundImage: const AssetImage('assets/persona/gm_chanakya.png'),
+              backgroundImage: const AssetImage('assets/persona/gm_chanakya.webp'),
             ),
           ),
           const SizedBox(width: 12),

@@ -34,7 +34,7 @@ class TutorialProgressRepository {
       final completedList = _prefs.getStringList(_kCompleted) ?? [];
       final completed = completedList.map((e) => int.tryParse(e) ?? 0).where((e) => e > 0).toSet();
 
-      final unlockedList = _prefs.getStringList(_kUnlocked) ?? List.generate(kTutorialChapterCount, (i) => (i + 1).toString());
+      final unlockedList = _prefs.getStringList(_kUnlocked) ?? List.generate(8, (i) => (i + 1).toString());
       final unlocked = unlockedList.map((e) => int.tryParse(e) ?? 0).where((e) => e > 0).toSet();
 
       final starsString = _prefs.getString(_kStars);
@@ -63,7 +63,7 @@ class TutorialProgressRepository {
 
       TutorialProgress progress = TutorialProgress(
         completedChapters: completed,
-        unlockedChapters: unlocked.isEmpty ? {1} : unlocked,
+        unlockedChapters: unlocked.isEmpty ? {1, 2, 3, 4, 5, 6, 7, 8} : unlocked,
         stars: stars,
         totalXp: totalXp,
         currentRank: TutorialRank.fromXp(totalXp),
@@ -155,7 +155,7 @@ class TutorialProgressRepository {
       }
       // Re-establish version anchor
       await _prefs.setInt(_kVersion, kTutorialDataVersion);
-      await _prefs.setStringList(_kUnlocked, List.generate(kTutorialChapterCount, (i) => (i + 1).toString()));
+      await _prefs.setStringList(_kUnlocked, List.generate(8, (i) => (i + 1).toString()));
     } catch (e) {
       debugPrint('Error resetting tutorial progress: $e');
     }

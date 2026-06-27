@@ -22,6 +22,8 @@ import 'widgets/practice_mode_panel.dart';
 import 'widgets/practice_lab_board.dart';
 import 'widgets/sparring_active_view.dart';
 import '../mobile_navigation_shell.dart';
+import '../../application/store_provider.dart';
+import '../widgets/premium_nudge_overlay.dart';
 
 enum EnginePlayMode {
   manual,
@@ -268,9 +270,26 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> with TickerProvider
     _horizontalPageController = PageController(initialPage: 1);
     _tabController = TabController(length: 5, vsync: this, initialIndex: 2);
     _tabController.addListener(() {
-      setState(() {
-        _currentTabIndex = _tabController.index;
-      });
+      final isPremium = ref.read(storeProvider).isPremium;
+      if (_tabController.index == 3 && !isPremium) {
+        Future.microtask(() {
+          if (mounted) {
+            _tabController.index = _currentTabIndex;
+          }
+        });
+        PremiumNudgeOverlay.show(
+          context,
+          ref,
+          title: 'SPARRING LOCKED',
+          description: 'Sparring allows you to play against the bot from any board state to explore different continuations, check how the bot would play the next few moves, or flip the board to see how things turn out from different perspectives. Upgrade to Premium to unlock!',
+        );
+        return;
+      }
+      if (_currentTabIndex != _tabController.index) {
+        setState(() {
+          _currentTabIndex = _tabController.index;
+        });
+      }
     });
     Future.microtask(() => ref.read(chessProvider.notifier).loadSavedGames());
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -704,6 +723,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> with TickerProvider
     final state = ref.watch(studyLabProvider);
     final notifier = ref.read(studyLabProvider.notifier);
     final practiceState = ref.watch(practiceLabProvider);
+    final isPremium = ref.watch(storeProvider).isPremium;
 
     // Listen to FEN changes to restart the engine
     ref.listen<String>(studyLabProvider.select((s) => s.activeFen), (previous, next) {
@@ -794,12 +814,37 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> with TickerProvider
             onTap: (idx) {
               ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
             },
-            tabs: const [
-              Tab(icon: Icon(Icons.folder_copy_rounded, size: 20), text: 'Library'),
-              Tab(icon: Icon(Icons.design_services_rounded, size: 20), text: 'Editor'),
-              Tab(icon: Icon(Icons.grid_on_rounded, size: 20), text: 'Board'),
-              Tab(icon: Icon(Icons.sports_esports_rounded, size: 20), text: 'Sparring'),
-              Tab(icon: Icon(Icons.analytics_rounded, size: 20), text: 'Report'),
+            tabs: [
+              const Tab(icon: Icon(Icons.folder_copy_rounded, size: 20), text: 'Library'),
+              const Tab(icon: Icon(Icons.design_services_rounded, size: 20), text: 'Editor'),
+              const Tab(icon: Icon(Icons.grid_on_rounded, size: 20), text: 'Board'),
+              Tab(
+                icon: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    const Icon(Icons.sports_esports_rounded, size: 20),
+                    if (!isPremium)
+                      Positioned(
+                        right: -6,
+                        top: -6,
+                        child: Container(
+                          padding: const EdgeInsets.all(1.5),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.shade700,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.lock_rounded,
+                            size: 9,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                text: 'Sparring',
+              ),
+              const Tab(icon: Icon(Icons.analytics_rounded, size: 20), text: 'Report'),
             ],
           ),
         ),

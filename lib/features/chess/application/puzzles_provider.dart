@@ -332,7 +332,7 @@ class PuzzlesNotifier extends Notifier<PuzzlesState> {
     if (state.puzzleMovesRemaining.isEmpty) return;
 
     // Record theme usage day
-    ref.read(storeProvider.notifier).recordThemeDay(ref.read(chessProvider).boardThemeId);
+    ref.read(storeProvider.notifier).recordThemeDay('classic');
 
     final expectedMove = state.puzzleMovesRemaining.first;
     final uciAttempt = '$from$to';

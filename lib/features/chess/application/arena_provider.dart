@@ -16,6 +16,7 @@ import '../data/uci_parser.dart';
 import '../data/saved_game.dart';
 import 'chess_provider.dart';
 import 'store_provider.dart';
+import 'analysis_engine_controller.dart';
 import 'package:kingslayer_chess/src/rust/api/persona.dart' as rust_persona;
 import 'package:kingslayer_chess/src/rust/api/threats.dart' as rust_threats;
 
@@ -27,6 +28,9 @@ class _ArenaSnapshot {
   final String fen;
   final String? lastMove;
   final List<String> recentMoves;
+  final List<String> recentMovesUci;
+  final List<Duration> whiteTimeHistory;
+  final List<Duration> blackTimeHistory;
   final double previousEvaluation;
   final double currentEvaluation;
   final Duration whiteTimeLeft;
@@ -44,6 +48,9 @@ class _ArenaSnapshot {
     required this.fen,
     this.lastMove,
     required this.recentMoves,
+    required this.recentMovesUci,
+    required this.whiteTimeHistory,
+    required this.blackTimeHistory,
     required this.previousEvaluation,
     required this.currentEvaluation,
     required this.whiteTimeLeft,
@@ -63,6 +70,17 @@ class ArenaState {
   final ChessGame game;
   final String? lastMove;
   final List<String> recentMoves;
+  final List<String> recentMovesUci;
+  final List<Duration> whiteTimeHistory;
+  final List<Duration> blackTimeHistory;
+  final Map<int, MoveClassification>? reviewClassifications;
+  final double? whiteAccuracy;
+  final double? blackAccuracy;
+  final Map<MoveClassification, int>? whiteCounts;
+  final Map<MoveClassification, int>? blackCounts;
+  final int? reviewEstimatedWhiteRating;
+  final int? reviewEstimatedBlackRating;
+  final List<double>? evalHistory;
   final Map<String, dynamic> analysis;
   final double previousEvaluation;
   final double currentEvaluation;
@@ -108,15 +126,23 @@ class ArenaState {
   final String? premoveFrom;
   final String? premoveTo;
   final bool isTemporaryQuickPlay;
-  /// True when the clock has been permanently disabled after a timeout
-  /// (user chose "Continue" from the timeout popup). Clock will not
-  /// restart on subsequent moves until a new game is started.
   final bool clockDisabledAfterTimeout;
 
   ArenaState({
     required this.game,
     this.lastMove,
     this.recentMoves = const [],
+    this.recentMovesUci = const [],
+    this.whiteTimeHistory = const [],
+    this.blackTimeHistory = const [],
+    this.reviewClassifications,
+    this.whiteAccuracy,
+    this.blackAccuracy,
+    this.whiteCounts,
+    this.blackCounts,
+    this.reviewEstimatedWhiteRating,
+    this.reviewEstimatedBlackRating,
+    this.evalHistory,
     this.analysis = const {},
     this.previousEvaluation = 0.0,
     this.currentEvaluation = 0.0,
@@ -175,7 +201,6 @@ class ArenaState {
 
   bool get canNavigateForward => viewingMoveIndex != null;
 
-
   String get currentBoardFen {
     if (viewingMoveIndex == null || viewingMoveIndex! >= recentMoves.length) {
       return game.fen;
@@ -194,6 +219,17 @@ class ArenaState {
     ChessGame? game,
     Object? lastMove = const Object(),
     List<String>? recentMoves,
+    List<String>? recentMovesUci,
+    List<Duration>? whiteTimeHistory,
+    List<Duration>? blackTimeHistory,
+    Object? reviewClassifications = const Object(),
+    Object? whiteAccuracy = const Object(),
+    Object? blackAccuracy = const Object(),
+    Object? whiteCounts = const Object(),
+    Object? blackCounts = const Object(),
+    Object? reviewEstimatedWhiteRating = const Object(),
+    Object? reviewEstimatedBlackRating = const Object(),
+    Object? evalHistory = const Object(),
     Map<String, dynamic>? analysis,
     double? previousEvaluation,
     double? currentEvaluation,
@@ -245,6 +281,17 @@ class ArenaState {
       game: game ?? this.game,
       lastMove: lastMove == const Object() ? this.lastMove : lastMove as String?,
       recentMoves: recentMoves ?? this.recentMoves,
+      recentMovesUci: recentMovesUci ?? this.recentMovesUci,
+      whiteTimeHistory: whiteTimeHistory ?? this.whiteTimeHistory,
+      blackTimeHistory: blackTimeHistory ?? this.blackTimeHistory,
+      reviewClassifications: reviewClassifications == const Object() ? this.reviewClassifications : reviewClassifications as Map<int, MoveClassification>?,
+      whiteAccuracy: whiteAccuracy == const Object() ? this.whiteAccuracy : whiteAccuracy as double?,
+      blackAccuracy: blackAccuracy == const Object() ? this.blackAccuracy : blackAccuracy as double?,
+      whiteCounts: whiteCounts == const Object() ? this.whiteCounts : whiteCounts as Map<MoveClassification, int>?,
+      blackCounts: blackCounts == const Object() ? this.blackCounts : blackCounts as Map<MoveClassification, int>?,
+      reviewEstimatedWhiteRating: reviewEstimatedWhiteRating == const Object() ? this.reviewEstimatedWhiteRating : reviewEstimatedWhiteRating as int?,
+      reviewEstimatedBlackRating: reviewEstimatedBlackRating == const Object() ? this.reviewEstimatedBlackRating : reviewEstimatedBlackRating as int?,
+      evalHistory: evalHistory == const Object() ? this.evalHistory : evalHistory as List<double>?,
       analysis: analysis ?? this.analysis,
       previousEvaluation: previousEvaluation ?? this.previousEvaluation,
       currentEvaluation: currentEvaluation ?? this.currentEvaluation,
@@ -398,6 +445,17 @@ class ArenaNotifier extends Notifier<ArenaState> {
       game: initialGame,
       lastMove: null,
       recentMoves: const [],
+      recentMovesUci: const [],
+      whiteTimeHistory: const [],
+      blackTimeHistory: const [],
+      reviewClassifications: null,
+      whiteAccuracy: null,
+      blackAccuracy: null,
+      whiteCounts: null,
+      blackCounts: null,
+      reviewEstimatedWhiteRating: null,
+      reviewEstimatedBlackRating: null,
+      evalHistory: null,
       analysis: const {},
       previousEvaluation: 0.0,
       currentEvaluation: 0.0,
@@ -530,6 +588,7 @@ class ArenaNotifier extends Notifier<ArenaState> {
         servicesStarting: false,
         servicesStarted: false,
         engineReady: false,
+        isEngineThinking: false,
         startupError: 'Unable to start the engine.',
       );
     }
@@ -589,6 +648,7 @@ class ArenaNotifier extends Notifier<ArenaState> {
 
   void _handleEngineOutput(String line) {
     if (_isDisposed) return;
+    debugPrint('Arena Engine Raw Output: $line');
 
     final trimmed = line.trim();
     if (trimmed == 'readyok') {
@@ -601,11 +661,15 @@ class ArenaNotifier extends Notifier<ArenaState> {
     }
 
     if (_waitingForReady) {
+      debugPrint('Arena Engine: Waiting for ready, ignoring: $trimmed');
       return;
     }
 
     // Check if output is relevant to the search FEN of the current game
-    if (_searchFen != state.game.fen) return;
+    if (_searchFen != state.game.fen) {
+      debugPrint('Arena Engine: FEN mismatch! _searchFen: $_searchFen, game.fen: ${state.game.fen}');
+      return;
+    }
 
     final parsed = UCIParser.parseLine(line);
     if (parsed.isEmpty) return;
@@ -642,6 +706,7 @@ class ArenaNotifier extends Notifier<ArenaState> {
     if (parsed.containsKey('bestMove')) {
       final rawBestMove = parsed['bestMove'] as String?;
       final aiTurn = _isAiTurn();
+      debugPrint('Arena Engine: parsed bestMove = $rawBestMove, pendingHintFen = $_pendingHintFen, game.fen = ${state.game.fen}');
 
       String? bestMoveToPlay = rawBestMove;
 
@@ -670,6 +735,7 @@ class ArenaNotifier extends Notifier<ArenaState> {
       if (bestMoveToPlay != null &&
           _pendingHintFen != null &&
           _pendingHintFen == state.game.fen) {
+        debugPrint('Arena Engine: FEN matched! Executing unawaited(_runHintFlow($bestMoveToPlay))');
         _pendingHintFen = null;
         unawaited(_runHintFlow(bestMoveToPlay));
       }
@@ -686,7 +752,6 @@ class ArenaNotifier extends Notifier<ArenaState> {
         _makeEngineMove(bestMoveToPlay);
       }
     }
-
     if (parsed['type'] == 'info') {
       final now = DateTime.now();
       if (now.difference(_lastInfoUpdateTime).inMilliseconds < 250) {
@@ -774,6 +839,7 @@ class ArenaNotifier extends Notifier<ArenaState> {
         _startClockTicker();
       }
       if (_isAiTurn() && !state.game.gameOver && !state.isPaused) {
+        state = state.copyWith(isEngineThinking: true);
         unawaited(ensureGameServicesStarted(analyzeCurrentPosition: true));
       }
     } else {
@@ -815,6 +881,9 @@ class ArenaNotifier extends Notifier<ArenaState> {
       fen: state.game.fen,
       lastMove: state.lastMove,
       recentMoves: List<String>.from(state.recentMoves),
+      recentMovesUci: List<String>.from(state.recentMovesUci),
+      whiteTimeHistory: List<Duration>.from(state.whiteTimeHistory),
+      blackTimeHistory: List<Duration>.from(state.blackTimeHistory),
       previousEvaluation: state.previousEvaluation,
       currentEvaluation: state.currentEvaluation,
       whiteTimeLeft: state.whiteTimeLeft,
@@ -839,6 +908,9 @@ class ArenaNotifier extends Notifier<ArenaState> {
       game: restoredGame,
       lastMove: snapshot.lastMove,
       recentMoves: snapshot.recentMoves,
+      recentMovesUci: snapshot.recentMovesUci,
+      whiteTimeHistory: snapshot.whiteTimeHistory,
+      blackTimeHistory: snapshot.blackTimeHistory,
       previousEvaluation: snapshot.previousEvaluation,
       currentEvaluation: snapshot.currentEvaluation,
       analysis: const {},
@@ -1009,25 +1081,31 @@ class ArenaNotifier extends Notifier<ArenaState> {
       state = state.copyWith(isEngineThinking: true);
     }
     await ensureGameServicesStarted(analyzeCurrentPosition: true);
-    state = state.copyWith(isEngineThinking: state.engineReady);
+    state = state.copyWith(isEngineThinking: _isAiTurn() && state.engineReady);
   }
 
   void _truncateToViewingIndex() {
     if (state.viewingMoveIndex == null) return;
     final index = state.viewingMoveIndex!;
     final movesToKeep = state.recentMoves.sublist(0, index + 1);
+    final uciMovesToKeep = state.recentMovesUci.sublist(0, index + 1);
+    final whiteTimeHistoryToKeep = state.whiteTimeHistory.sublist(0, index + 1);
+    final blackTimeHistoryToKeep = state.blackTimeHistory.sublist(0, index + 1);
 
     final is960 = state.gameMode == 'chess960';
     final tempGame = ChessGame(fen: state.game.initialFen, isChess960: is960);
 
-    for (final m in movesToKeep) {
+    for (final m in uciMovesToKeep) {
       tempGame.makeMove({'from': m.substring(0, 2), 'to': m.substring(2, 4), 'promotion': m.length > 4 ? m[4] : 'q'});
     }
 
     state = state.copyWith(
       game: tempGame,
       recentMoves: movesToKeep,
-      lastMove: movesToKeep.isEmpty ? null : movesToKeep.last,
+      recentMovesUci: uciMovesToKeep,
+      whiteTimeHistory: whiteTimeHistoryToKeep,
+      blackTimeHistory: blackTimeHistoryToKeep,
+      lastMove: movesToKeep.isEmpty ? null : uciMovesToKeep.last,
       viewingMoveIndex: null,
       isGameOver: tempGame.gameOver,
     );
@@ -1035,6 +1113,7 @@ class ArenaNotifier extends Notifier<ArenaState> {
 
   void _onMoveCompleted(String moveLabel) {
     final updatedMoves = state.game.moveHistoryLabels();
+    final updatedMovesUci = state.game.moveHistoryUci();
     final move = state.game.history.isEmpty ? null : state.game.history.last;
     final isWhiteTurn = state.game.turn == chess_lib.Color.WHITE;
     final playerJustMoved = isWhiteTurn ? 'Black' : 'White';
@@ -1045,6 +1124,9 @@ class ArenaNotifier extends Notifier<ArenaState> {
         blackTimeLeft: isWhiteTurn ? state.blackTimeLeft + state.incrementDuration : state.blackTimeLeft,
       );
     }
+
+    final updatedWhiteTimeHistory = List<Duration>.from(state.whiteTimeHistory)..add(state.whiteTimeLeft);
+    final updatedBlackTimeHistory = List<Duration>.from(state.blackTimeHistory)..add(state.blackTimeLeft);
 
     if (ref.read(chessProvider).isHapticsEnabled) {
       if (state.game.inCheckmate) {
@@ -1089,6 +1171,9 @@ class ArenaNotifier extends Notifier<ArenaState> {
       game: state.game,
       lastMove: moveLabel,
       recentMoves: updatedMoves,
+      recentMovesUci: updatedMovesUci,
+      whiteTimeHistory: updatedWhiteTimeHistory,
+      blackTimeHistory: updatedBlackTimeHistory,
       isEngineThinking: _isAiTurn() && state.servicesStarted && state.engineReady,
       activeClockSide: state.clockStarted ? _clockSideForTurn() : state.activeClockSide,
       threatenedSquares: threatened,
@@ -1198,8 +1283,11 @@ class ArenaNotifier extends Notifier<ArenaState> {
         state = state.copyWith(activeClockSide: _clockSideForTurn());
         _startClockTicker();
       }
+      if (_isAiTurn()) {
+        state = state.copyWith(isEngineThinking: true);
+      }
       unawaited(ensureGameServicesStarted(analyzeCurrentPosition: true));
-      state = state.copyWith(isEngineThinking: state.engineReady);
+      state = state.copyWith(isEngineThinking: _isAiTurn() && state.engineReady);
     } else {
       state = state.copyWith(moveAnimation: null);
     }
@@ -1284,6 +1372,7 @@ class ArenaNotifier extends Notifier<ArenaState> {
         _startClockTicker();
       }
       if (_isAiTurn()) {
+        state = state.copyWith(isEngineThinking: true);
         unawaited(ensureGameServicesStarted(analyzeCurrentPosition: true));
       }
     }
@@ -1357,9 +1446,12 @@ class ArenaNotifier extends Notifier<ArenaState> {
   }
 
   Future<void> requestHint() async {
+    debugPrint('Arena requestHint() clicked. gameOver: ${state.game.gameOver}, isHintLoading: ${state.isHintLoading}, isEngineThinking: ${state.isEngineThinking}');
     if (state.game.gameOver || state.isHintLoading || state.isEngineThinking) return;
 
     _pendingHintFen = state.game.fen;
+    _searchFen = state.game.fen;
+    _currentCandidates.clear();
     state = state.copyWith(
       isHintLoading: true,
       isHintVisible: false,
@@ -1370,8 +1462,20 @@ class ArenaNotifier extends Notifier<ArenaState> {
       hintTo: null,
     );
     await ensureGameServicesStarted();
+    debugPrint('Arena requestHint() - ensureGameServicesStarted done. engineReady: ${state.engineReady}');
     if (state.engineReady) {
+      debugPrint('Arena requestHint() - Starting engine search up to depth 14 on FEN: ${state.game.fen}');
+      _engine.sendCommand('setoption name MultiPV value 1');
       _engine.analyzePosition(state.game.fen, depth: 14);
+
+      // Safety fallback timer for hint search
+      _engineMoveTimer?.cancel();
+      _engineMoveTimer = Timer(const Duration(milliseconds: 3000), () {
+        if (!_isDisposed && _pendingHintFen == state.game.fen) {
+          debugPrint('ArenaNotifier: Hint safety timer fired after 3000ms. Forcing bestmove.');
+          _engine.stopAnalysis();
+        }
+      });
     }
   }
 
@@ -1414,6 +1518,7 @@ class ArenaNotifier extends Notifier<ArenaState> {
       customFen: customFen,
     );
     if (_isAiTurn()) {
+      state = state.copyWith(isEngineThinking: true);
       unawaited(ensureGameServicesStarted(analyzeCurrentPosition: true));
     }
   }
@@ -1425,7 +1530,10 @@ class ArenaNotifier extends Notifier<ArenaState> {
       isPlayerWhite: !isFlipped,
     );
     if (_isAiTurn()) {
+      state = state.copyWith(isEngineThinking: true);
       unawaited(ensureGameServicesStarted(analyzeCurrentPosition: true));
+    } else {
+      state = state.copyWith(isEngineThinking: false);
     }
     _soundService.playSfx(SoundEffect.uiClick);
   }
@@ -1592,6 +1700,7 @@ class ArenaNotifier extends Notifier<ArenaState> {
       clockDisabledAfterTimeout: true,
     );
     if (_isAiTurn()) {
+      state = state.copyWith(isEngineThinking: true);
       unawaited(ensureGameServicesStarted(analyzeCurrentPosition: true));
     }
     _soundService.playSfx(SoundEffect.uiClick);
@@ -1703,6 +1812,40 @@ class ArenaNotifier extends Notifier<ArenaState> {
     }
   }
 
+  void setReviewData({
+    required Map<int, MoveClassification> classifications,
+    required double whiteAccuracy,
+    required double blackAccuracy,
+    required Map<MoveClassification, int> whiteCounts,
+    required Map<MoveClassification, int> blackCounts,
+    required int reviewEstimatedWhiteRating,
+    required int reviewEstimatedBlackRating,
+    required List<double> evalHistory,
+  }) {
+    state = state.copyWith(
+      reviewClassifications: classifications,
+      whiteAccuracy: whiteAccuracy,
+      blackAccuracy: blackAccuracy,
+      whiteCounts: whiteCounts,
+      blackCounts: blackCounts,
+      reviewEstimatedWhiteRating: reviewEstimatedWhiteRating,
+      reviewEstimatedBlackRating: reviewEstimatedBlackRating,
+      evalHistory: evalHistory,
+    );
+  }
+
+  void clearReviewData() {
+    state = state.copyWith(
+      reviewClassifications: null,
+      whiteAccuracy: null,
+      blackAccuracy: null,
+      whiteCounts: null,
+      blackCounts: null,
+      reviewEstimatedWhiteRating: null,
+      reviewEstimatedBlackRating: null,
+      evalHistory: null,
+    );
+  }
 }
 
 final arenaProvider = NotifierProvider<ArenaNotifier, ArenaState>(ArenaNotifier.new);

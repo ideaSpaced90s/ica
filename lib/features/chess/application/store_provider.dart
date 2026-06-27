@@ -662,7 +662,7 @@ class StoreNotifier extends Notifier<StoreState> {
   // Board theme ownership checking
   bool isBoardThemePurchased(String themeId) {
     // Free themes
-    const freeThemes = {'classic', 'scholar', 'vector_wood', 'theme3', 'sprite_fairytale'};
+    const freeThemes = {'classic', 'scholar', 'vector_wood', 'theme3', 'sprite_fairytale', 'sprite_persia'};
     if (freeThemes.contains(themeId)) return true;
 
     // Purchased premium themes
@@ -705,7 +705,7 @@ class StoreNotifier extends Notifier<StoreState> {
 
   void recordThemeDay(String themeId) {
     if (!state.isPremium) return;
-    const freeThemes = {'classic', 'scholar', 'vector_wood', 'theme3', 'sprite_fairytale'};
+    const freeThemes = {'classic', 'scholar', 'vector_wood', 'theme3', 'sprite_fairytale', 'sprite_persia'};
     if (freeThemes.contains(themeId)) return;
     if (state.purchasedBoardThemes.contains(themeId)) return;
 

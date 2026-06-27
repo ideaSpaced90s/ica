@@ -141,7 +141,7 @@ class _GMChanakyaNewGameOverlayState extends ConsumerState<GMChanakyaNewGameOver
                               ),
                             ],
                             image: DecorationImage(
-                              image: AssetImage('assets/persona/gm_chanakya.png'),
+                              image: AssetImage('assets/persona/gm_chanakya.webp'),
                               fit: BoxFit.cover,
                             ),
                           ),
@@ -450,7 +450,31 @@ class _GMChanakyaNewGameOverlayState extends ConsumerState<GMChanakyaNewGameOver
             color: const Color(0xFF7C3AED),
           ),
         ),
-        const TextSpan(text: '. Watch for structure, pressure, and critical errors.'),
+        const TextSpan(text: '. Watch for '),
+        TextSpan(
+          text: 'structure',
+          style: GoogleFonts.inter(
+            fontWeight: FontWeight.w900,
+            color: const Color(0xFF7C3AED),
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+        const TextSpan(text: ', '),
+        TextSpan(
+          text: 'pressure',
+          style: GoogleFonts.inter(
+            fontWeight: FontWeight.w900,
+            color: const Color(0xFFDC2626),
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+        TextSpan(
+          text: ', and critical errors.',
+          style: GoogleFonts.inter(
+            fontStyle: FontStyle.italic,
+            color: const Color(0xFF64748B),
+          ),
+        ),
       ];
     } else {
       final opponent = AiAvatar.getAvatar(state.engineLevel);
@@ -503,7 +527,31 @@ class _GMChanakyaNewGameOverlayState extends ConsumerState<GMChanakyaNewGameOver
             color: const Color(0xFF2563EB),
           ),
         ),
-        const TextSpan(text: '. Play with discipline and review the turning points.'),
+        const TextSpan(text: '. Play with '),
+        TextSpan(
+          text: 'discipline',
+          style: GoogleFonts.inter(
+            fontWeight: FontWeight.w900,
+            color: const Color(0xFF059669),
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+        const TextSpan(text: ' and review the '),
+        TextSpan(
+          text: 'turning points',
+          style: GoogleFonts.inter(
+            fontWeight: FontWeight.w900,
+            color: const Color(0xFF2563EB),
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+        TextSpan(
+          text: '.',
+          style: GoogleFonts.inter(
+            fontStyle: FontStyle.italic,
+            color: const Color(0xFF64748B),
+          ),
+        ),
       ];
     }
   }

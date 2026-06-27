@@ -161,7 +161,7 @@ class _WelcomeGuidePageState extends ConsumerState<WelcomeGuidePage>
                 decoration: const BoxDecoration(
                   shape: BoxShape.circle,
                   image: DecorationImage(
-                    image: AssetImage('assets/persona/gm_chanakya.png'),
+                    image: AssetImage('assets/persona/gm_chanakya.webp'),
                     fit: BoxFit.cover,
                   ),
                 ),
@@ -196,25 +196,33 @@ class _WelcomeGuidePageState extends ConsumerState<WelcomeGuidePage>
             behavior: HitTestBehavior.opaque,
             child: Stack(
               children: [
+                // Invisible spacer — keeps height stable at full text length
                 Opacity(
                   opacity: 0.0,
-                  child: Text(
-                    _introText,
+                  child: RichText(
+                    text: TextSpan(
+                      style: GoogleFonts.inter(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w500,
+                        height: 1.6,
+                      ),
+                      children: _buildHighlightedSpans(_introText),
+                    ),
+                  ),
+                ),
+                // Visible typewriter text with color highlights
+                RichText(
+                  text: TextSpan(
                     style: GoogleFonts.inter(
-                      color: ScholarlyTheme.textPrimary,
                       fontSize: 13.5,
                       fontWeight: FontWeight.w500,
                       height: 1.6,
                     ),
-                  ),
-                ),
-                Text(
-                  _displayedText + (_isTyping ? ' |' : ''),
-                  style: GoogleFonts.inter(
-                    color: ScholarlyTheme.textPrimary,
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w500,
-                    height: 1.6,
+                    children: [
+                      ..._buildHighlightedSpans(
+                        _displayedText + (_isTyping ? ' |' : ''),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -312,5 +320,100 @@ class _WelcomeGuidePageState extends ConsumerState<WelcomeGuidePage>
         ],
       ),
     );
+  }
+  /// Splits [text] into word-level [TextSpan]s, applying semantic color-coding
+  /// to key chess, mentor, feature, and motivational vocabulary.
+  List<InlineSpan> _buildHighlightedSpans(String text) {
+    final baseStyle = GoogleFonts.inter(
+      color: ScholarlyTheme.textPrimary,
+      fontSize: 13.5,
+      fontWeight: FontWeight.w500,
+      height: 1.6,
+    );
+
+    final List<InlineSpan> spans = [];
+    final words = text.split(' ');
+
+    for (int i = 0; i < words.length; i++) {
+      final word = words[i];
+      final cleanWord = word
+          .replaceAll(RegExp(r"[.,!?:;🕉️\(\)''\x22]"), '')
+          .toLowerCase();
+
+      Color? highlightColor;
+      FontWeight fontWeight = FontWeight.w500;
+
+      // 🟠 Mentor / Identity — Warm Amber
+      if ([
+        'chanakya', 'gm', 'mentor', 'guide', 'i', 'my', 'avatar', 'avatars',
+        'apprentice', 'strategist', 'strategists', 'warrior', 'tactician', 'critic',
+      ].contains(cleanWord)) {
+        highlightColor = const Color(0xFFD97706);
+        fontWeight = FontWeight.w800;
+
+      // 🔵 Features / Zones — Royal Blue
+      } else if ([
+        'arena', 'battleground', 'puzzles', 'academy', 'chamber', 'sanctuary',
+        'desk', 'assignment', 'assignments', 'session', 'sessions', 'lessons',
+        'lesson', 'program', 'scenarios', 'profile', 'rated', 'games', 'game',
+        'clock', 'foundation', 'chapters', 'chapter', 'tutorials', 'tutorial',
+        'training', 'rules', 'rule', 'moves',
+      ].contains(cleanWord)) {
+        highlightColor = const Color(0xFF2563EB);
+        fontWeight = FontWeight.w800;
+
+      // 🟣 Chess Thinking — Violet
+      } else if ([
+        'openings', 'endgames', 'tactics', 'patterns', 'calculation', 'calculate',
+        'sight', 'ideas', 'decisions', 'analyze', 'calibration', 'baseline',
+        'report', 'tuning', 'tune', 'theory', 'theories', 'intuition',
+        'scotomas', 'scotoma', 'drills',
+      ].contains(cleanWord)) {
+        highlightColor = const Color(0xFF7C3AED);
+        fontWeight = FontWeight.w800;
+
+      // 🔴 Pressure / Stakes — Crimson
+      } else if ([
+        'weaknesses', 'mistakes', 'defeat', 'fire', 'stakes', 'pressure',
+        'blunders', 'hesitation', 'blindness', 'blind', 'spots', 'spot',
+        'difficulty', 'limit', 'required', 'trials',
+      ].contains(cleanWord)) {
+        highlightColor = const Color(0xFFDC2626);
+        fontWeight = FontWeight.w800;
+
+      // 🟢 Growth / Victory — Emerald
+      } else if ([
+        'mastery', 'victory', 'learn', 'understanding', 'instincts', 'resilience',
+        'conditioning', 'discipline', 'welcome', 'practice', 'construct',
+        'tailored', 'personalized', 'strength', 'sharpen', 'reduce',
+        'strengthen', 'solve', 'freely', 'deliberate', 'self-grind',
+      ].contains(cleanWord)) {
+        highlightColor = const Color(0xFF059669);
+        fontWeight = FontWeight.w800;
+      }
+
+      if (highlightColor != null) {
+        spans.add(TextSpan(
+          text: word,
+          style: baseStyle.copyWith(
+            color: highlightColor,
+            fontWeight: fontWeight,
+          ),
+        ));
+      } else {
+        spans.add(TextSpan(
+          text: word,
+          style: baseStyle,
+        ));
+      }
+
+      if (i < words.length - 1) {
+        spans.add(TextSpan(
+          text: ' ',
+          style: baseStyle,
+        ));
+      }
+    }
+    return spans;
   }
 }

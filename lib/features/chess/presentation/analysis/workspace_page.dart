@@ -217,7 +217,7 @@ class _GameLibraryTabState extends ConsumerState<GameLibraryTab> {
 
   Future<void> _importPgnFromFile(BuildContext context, StudyLabNotifier notifier) async {
     try {
-      final result = await FilePicker.platform.pickFiles(
+      final result = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pgn'],
       );

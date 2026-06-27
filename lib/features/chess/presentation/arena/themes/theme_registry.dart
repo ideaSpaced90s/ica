@@ -1,23 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:chess_assets/chess_assets.dart' as assets_lib;
 import '../../shared/themes/chess_theme.dart';
-import 'classic_theme.dart';
-import 'forest_theme.dart';
-import 'ink_theme.dart';
-import 'platinum_theme.dart';
-import 'steampunk_theme.dart';
-import 'shadow_theme.dart';
-import 'scholar_theme.dart';
-import 'vector_chess_theme.dart';
-import 'bnw_theme.dart';
-import 'sprite_chess_theme.dart';
-import 'arc_theme.dart';
-import 'seasons_theme.dart';
-import 'lightning_theme.dart';
-import 'plasma_theme.dart';
-import 'overgrown_theme.dart';
-import 'diamonds_sprite_theme.dart';
-import 'fairytale_theme.dart';
+import 'local/classic_theme.dart';
+import 'local/forest_theme.dart';
+import 'local/ink_theme.dart';
+import 'local/platinum_theme.dart';
+import 'local/steampunk_theme.dart';
+import 'local/shadow_theme.dart';
+import 'local/scholar_theme.dart';
+import 'global/vector_chess_theme.dart';
+import 'global/bnw_theme.dart';
+import 'global/sprite_chess_theme.dart';
+import 'local/arc_theme.dart';
+import 'local/seasons_theme.dart';
+import 'local/lightning_theme.dart';
+import 'local/plasma_theme.dart';
+import 'local/overgrown_theme.dart';
+import 'local/diamonds_sprite_theme.dart';
+import 'local/fairytale_theme.dart';
 import '../../../application/chess_provider.dart';
 
 class ThemeRegistry {
@@ -122,6 +122,14 @@ class ThemeRegistry {
     ),
     'sprite_fairytale': const FairytaleChessTheme(),
     'sprite_arc': const ArcChessTheme(),
+    'sprite_persia': const SpriteChessTheme(
+      id: 'sprite_persia',
+      name: 'Persia',
+      individualPiecesFolder: 'assets/pieces/persia',
+      lightSquare: Color(0xFFFFF5F7),
+      darkSquare: Color(0xFFD85D83),
+      frameColor: Color(0xFFC5A059),
+    ),
   };
 
   static ChessTheme getTheme(String id) {
@@ -148,6 +156,7 @@ class ThemeRegistry {
         _themes['sprite_timber']!,
         _themes['theme4']!, // Platinum Metallic
         _themes['sprite_fairytale']!,
+        _themes['sprite_persia']!, // Persia
         _themes['theme10']!, // Shadow High-Contrast
         _themes['sprite_royal']!,
         _themes['sprite_bubblegum']!,

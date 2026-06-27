@@ -56,6 +56,13 @@ class AnalysisStockfishService implements ChessEngineService {
         final String libDir = await _channel.invokeMethod(
           'getNativeLibraryDir',
         );
+        try {
+          final dir = Directory(libDir);
+          final files = dir.listSync();
+          debugPrint('AnalysisStockfishService: Files in libDir ($libDir): ${files.map((f) => f.path).toList()}');
+        } catch (e) {
+          debugPrint('AnalysisStockfishService: Error listing libDir: $e');
+        }
         final enginePath = p.join(libDir, 'libstockfish.so');
         final success = await _tryLaunchEngine(enginePath, const Duration(seconds: 20));
         if (!success) {
@@ -65,8 +72,8 @@ class AnalysisStockfishService implements ChessEngineService {
         final exePath = Platform.resolvedExecutable;
         final exeDir = p.dirname(exePath);
         
-        const relPathAvx2 = 'assets/engine/wincessengines/stockfish-windows-x86-64-avx2/stockfish/stockfish-windows-x86-64-avx2.exe';
-        const relPathNonAvx2 = 'assets/engine/wincessengines/stockfish-windows-x86-64/stockfish/stockfish-windows-x86-64.exe';
+        const relPathAvx2 = 'desktop_engines/wincessengines/stockfish-windows-x86-64-avx2/stockfish/stockfish-windows-x86-64-avx2.exe';
+        const relPathNonAvx2 = 'desktop_engines/wincessengines/stockfish-windows-x86-64/stockfish/stockfish-windows-x86-64.exe';
 
         final potentialPathsAvx2 = [
           p.join(Directory.current.path, relPathAvx2),

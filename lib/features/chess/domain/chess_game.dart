@@ -461,6 +461,19 @@ class ChessGame {
     return _cachedSanLabels!;
   }
 
+  List<String> moveHistoryUci() {
+    return _chess.history.map((h) {
+      final m = h.move;
+      final from = chess_lib.Chess.algebraic(m.from);
+      final to = chess_lib.Chess.algebraic(m.to);
+      final promotion = m.promotion != null
+          ? m.promotion.toString().split('.').last.toLowerCase()[0]
+          : '';
+      return '$from$to$promotion';
+    }).toList();
+  }
+
+
   List<chess_lib.Color?> get board {
     return List<chess_lib.Color?>.filled(64, null);
   }

@@ -196,7 +196,7 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
     final chessNotifier = ref.read(chessProvider.notifier);
 
     // Grouping themes
-    final freeThemeIds = {'classic', 'scholar', 'vector_wood', 'theme3', 'sprite_fairytale'};
+    final freeThemeIds = {'classic', 'scholar', 'vector_wood', 'theme3', 'sprite_fairytale', 'sprite_persia'};
     final featuredThemeIds = {
       'sprite_diamonds',
       'sprite_lightning',
@@ -733,6 +733,8 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
             _buildFreeFeatureRow('GM Chanakya: unlimited library search', 
                 null, isPremium),
             _buildFreeFeatureRow('3 Puzzles per 24h', 
+                null, isPremium),
+            _buildFreeFeatureRow('1st Historical Cinema game per category unlocked', 
                 null, isPremium),
             _buildFreeFeatureRow('Assignment page visible (calibration locked)', 
                 null, isPremium),
@@ -1323,6 +1325,7 @@ const List<SubscriptionPlan> plans = [
       'Full Assignment calibration tracking',
       'All board themes included',
       'Unlimited GM Chanakya Academy coaching',
+      'Full Historical Cinema access',
       'Exclusive premium profile badge',
     ],
   ),
@@ -1341,6 +1344,7 @@ const List<SubscriptionPlan> plans = [
       'Full Assignment calibration tracking',
       'All board themes included',
       'Unlimited GM Chanakya Academy coaching',
+      'Full Historical Cinema access',
       'Exclusive premium profile badge',
       'Save 26% vs Monthly rate',
     ],
@@ -1361,6 +1365,7 @@ const List<SubscriptionPlan> plans = [
       'Full Assignment calibration tracking',
       'All board themes included',
       'Unlimited GM Chanakya Academy coaching',
+      'Full Historical Cinema access',
       'Exclusive premium profile badge',
       'Save 33% vs Monthly rate',
     ],

@@ -270,7 +270,7 @@ class _LandfallOverlayState extends ConsumerState<LandfallOverlay>
                                 width: 1.5,
                               ),
                               image: const DecorationImage(
-                                image: AssetImage('assets/persona/gm_chanakya.png'),
+                                image: AssetImage('assets/persona/gm_chanakya.webp'),
                                 fit: BoxFit.cover,
                               ),
                             ),

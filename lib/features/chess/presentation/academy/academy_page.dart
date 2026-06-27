@@ -118,7 +118,7 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
       children: [
         CircleAvatar(
           radius: 20,
-          backgroundImage: const AssetImage('assets/persona/gm_chanakya.png'),
+          backgroundImage: const AssetImage('assets/persona/gm_chanakya.webp'),
         ),
         const SizedBox(width: 12),
         Text(
@@ -893,7 +893,7 @@ class _AcademyPageState extends ConsumerState<AcademyPage> with SingleTickerProv
                 ),
                 const SizedBox(width: 12),
                 _PremiumActionIcon(
-                  imagePath: 'assets/persona/gm_chanakya.png',
+                  imagePath: 'assets/persona/gm_chanakya.webp',
                   tooltip: 'Consult GM Chanakya',
                   baseColor: ScholarlyTheme.accentGold,
                   isFlat: isDocked,
@@ -1777,7 +1777,7 @@ Future<bool?> showAcademyExitDialog(BuildContext context, {required bool hasActi
         children: [
           const CircleAvatar(
             radius: 20,
-            backgroundImage: AssetImage('assets/persona/gm_chanakya.png'),
+            backgroundImage: AssetImage('assets/persona/gm_chanakya.webp'),
           ),
           const SizedBox(width: 12),
           Text(

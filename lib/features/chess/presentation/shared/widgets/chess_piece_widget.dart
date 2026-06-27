@@ -6,6 +6,7 @@ import '../themes/chess_theme.dart';
 import '../themes/classic_theme.dart';
 
 import 'package:chess/chess.dart' as chess_lib;
+import 'dart:math' as math;
 
 class ChessPieceWidget extends ConsumerStatefulWidget {
   final String squareName;
@@ -47,8 +48,8 @@ class _ChessPieceWidgetState extends ConsumerState<ChessPieceWidget>
   /// Breathing scale effect for selected pieces — very subtle 1–2% variation.
   late AnimationController _breathingController;
 
-  /// Low-frequency pulse for King when in check state.
   late AnimationController _checkPulseController;
+  bool _isHovered = false;
 
   @override
   void initState() {
@@ -103,14 +104,28 @@ class _ChessPieceWidgetState extends ConsumerState<ChessPieceWidget>
     final isWhite = code.startsWith('w');
     final type = code.substring(1).toUpperCase();
 
+    final isArc = theme.id == 'sprite_arc';
+    final isInteract = widget.highlighted || _isHovered;
+    final animValue = isArc && isInteract
+        ? (_matrixDataController.value * 3.0) % 1.0
+        : _matrixDataController.value;
+
     // Render piece based on theme
     Widget pieceWidget = theme.buildPiece(
       context,
       type,
       isWhite,
       widget.highlighted,
-      _matrixDataController.value,
+      animValue,
     );
+
+    if (isArc) {
+      pieceWidget = MouseRegion(
+        onEnter: (_) => setState(() => _isHovered = true),
+        onExit: (_) => setState(() => _isHovered = false),
+        child: pieceWidget,
+      );
+    }
 
     // Note: Global piece selection enlargement and movement stretch animations have been disabled/removed.
 
@@ -123,7 +138,16 @@ class _ChessPieceWidgetState extends ConsumerState<ChessPieceWidget>
               1.0 +
               0.015 *
                   Curves.easeInOutSine.transform(_breathingController.value);
-          return Transform.scale(scale: breathScale, child: child);
+
+          Widget childWidget = child!;
+          if (isArc) {
+            final floatOffset = -4.0 - 2.0 * math.sin(_breathingController.value * math.pi);
+            childWidget = Transform.translate(
+              offset: Offset(0, floatOffset),
+              child: childWidget,
+            );
+          }
+          return Transform.scale(scale: breathScale, child: childWidget);
         },
         child: pieceWidget,
       );

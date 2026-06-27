@@ -7,6 +7,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../application/chess_provider.dart';
 import '../../application/arena_provider.dart';
 import '../../application/store_provider.dart';
+import '../../application/analysis_engine_controller.dart';
+import 'widgets/game_review_overlay.dart';
 import '../../services/chess_sound_service.dart';
 import '../scholarly_theme.dart';
 import '../widgets/game_controls.dart';
@@ -62,6 +64,10 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
   int _selectedArenaTab = 0;
   int _selectedPersonaSubTab = 0;
   Timer? _gameOverDelayTimer;
+  bool _isAnalyzingGame = false;
+  double _analysisProgress = 0.0;
+  bool _showGameReviewOverlay = false;
+  String _currentTip = "Analyzing your moves...";
 
   @override
   void initState() {
@@ -138,9 +144,218 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
     }
   }
 
+  Future<void> _startGameReviewAnalysis() async {
+    final state = ref.read(arenaProvider);
+    if (state.recentMovesUci.isEmpty) {
+      setState(() {
+        _showGameReviewOverlay = true;
+      });
+      return;
+    }
+
+    setState(() {
+      _isAnalyzingGame = true;
+      _analysisProgress = 0.0;
+      _currentTip = "Analyzing opening lines...";
+    });
+
+    final tips = [
+      "Analyzing opening lines...",
+      "Calculating middlegame strategy...",
+      "Evaluating critical tactical moments...",
+      "Stockfish is searching deep for alternate paths...",
+      "Looking for brilliant sacrifices...",
+      "Formulating final report..."
+    ];
+    int tipIndex = 0;
+    final tipTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
+      if (!mounted || !_isAnalyzingGame) {
+        timer.cancel();
+        return;
+      }
+      setState(() {
+        tipIndex = (tipIndex + 1) % tips.length;
+        _currentTip = tips[tipIndex];
+      });
+    });
+
+    try {
+      final results = await ref.read(analysisEngineControllerProvider.notifier).classifyUciMoves(
+        state.recentMovesUci,
+        state.game.initialFen,
+        targetDepth: 20,
+        onProgress: (prog) {
+          if (mounted) {
+            setState(() {
+              _analysisProgress = prog;
+            });
+          }
+        },
+      );
+
+      tipTimer.cancel();
+
+      if (mounted) {
+        ref.read(arenaProvider.notifier).setReviewData(
+          classifications: results['classifications'] as Map<int, MoveClassification>,
+          whiteAccuracy: results['whiteAccuracy'] as double,
+          blackAccuracy: results['blackAccuracy'] as double,
+          whiteCounts: results['whiteCounts'] as Map<MoveClassification, int>,
+          blackCounts: results['blackCounts'] as Map<MoveClassification, int>,
+          reviewEstimatedWhiteRating: results['whiteElo'] as int,
+          reviewEstimatedBlackRating: results['blackElo'] as int,
+          evalHistory: results['evalHistory'] as List<double>,
+        );
+
+        setState(() {
+          _isAnalyzingGame = false;
+          _showGameReviewOverlay = true;
+        });
+      }
+    } catch (e) {
+      tipTimer.cancel();
+      debugPrint('Game Review Analysis failed: $e');
+      if (mounted) {
+        setState(() {
+          _isAnalyzingGame = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to run Stockfish Game Review.')),
+        );
+      }
+    }
+  }
+
+  Widget _buildFloatingAnnotationCard(ArenaState state) {
+    if (state.reviewClassifications == null) return const SizedBox.shrink();
+    
+    final curIdx = state.viewingMoveIndex ?? (state.recentMoves.length - 1);
+    if (curIdx < 0 || curIdx >= state.recentMoves.length) return const SizedBox.shrink();
+    
+    final classification = state.reviewClassifications![curIdx];
+    if (classification == MoveClassification.none) return const SizedBox.shrink();
+    
+    final moveLabel = state.recentMoves[curIdx];
+    final moveNum = (curIdx ~/ 2) + 1;
+    final isWhite = curIdx % 2 == 0;
+    final moveText = isWhite ? '$moveNum. $moveLabel' : '$moveNum... $moveLabel';
+    
+    String text = '';
+    Color color = Colors.grey;
+    
+    switch (classification) {
+      case MoveClassification.brilliant:
+        text = 'is a Brilliant move! !!';
+        color = const Color(0xFF00BCD4);
+        break;
+      case MoveClassification.best:
+        text = 'is the Best move.';
+        color = const Color(0xFF00C853);
+        break;
+      case MoveClassification.good:
+        text = 'is a Good move.';
+        color = const Color(0xFF4CAF50);
+        break;
+      case MoveClassification.inaccuracy:
+        text = 'is an Inaccuracy. ?!';
+        color = const Color(0xFFFFB300);
+        break;
+      case MoveClassification.mistake:
+        text = 'is a Mistake. ?';
+        color = const Color(0xFFFF6D00);
+        break;
+      case MoveClassification.blunder:
+        text = 'is a Blunder! ??';
+        color = const Color(0xFFD50000);
+        break;
+      default:
+        return const SizedBox.shrink();
+    }
+    
+    final isBad = classification == MoveClassification.inaccuracy ||
+                  classification == MoveClassification.mistake ||
+                  classification == MoveClassification.blunder;
+                  
+    final textColor = isBad ? const Color(0xFFE53935) : const Color(0xFF00C853);
+
+    return Positioned(
+      bottom: 8,
+      left: 24,
+      right: 24,
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.9),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: color.withValues(alpha: 0.4), width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.15),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 18,
+                height: 18,
+                decoration: BoxDecoration(
+                  color: color,
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Text(
+                    classification == MoveClassification.brilliant ? '!!' :
+                    classification == MoveClassification.blunder ? '??' :
+                    classification == MoveClassification.mistake ? '?' :
+                    classification == MoveClassification.inaccuracy ? '?!' : '✓',
+                    style: GoogleFonts.outfit(
+                      fontSize: 8,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      height: 1.0,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              RichText(
+                text: TextSpan(
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: ScholarlyTheme.textPrimary,
+                  ),
+                  children: [
+                    TextSpan(
+                      text: '$moveText ',
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                    TextSpan(
+                      text: text,
+                      style: TextStyle(
+                        color: textColor,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(arenaProvider);
+
+
 
     final storeState = ref.watch(storeProvider);
     final storeNotifier = ref.read(storeProvider.notifier);
@@ -307,6 +522,99 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                     if (repo.shouldPersistIntroSeen()) {
                       repo.setArenaIntroSeen(true);
                     }
+                  },
+                ),
+              if (_isAnalyzingGame)
+                Positioned.fill(
+                  child: Container(
+                    color: Colors.black.withValues(alpha: 0.75),
+                    child: Center(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                          child: Container(
+                            width: 320,
+                            padding: const EdgeInsets.all(24),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.9),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.2)),
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const SizedBox(
+                                  width: 48,
+                                  height: 48,
+                                  child: CircularProgressIndicator(
+                                    color: ScholarlyTheme.accentBlue,
+                                    strokeWidth: 4,
+                                  ),
+                                ),
+                                const SizedBox(height: 24),
+                                Text(
+                                  'ANALYZING MATCH',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 1.5,
+                                    color: ScholarlyTheme.textPrimary,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                LinearProgressIndicator(
+                                  value: _analysisProgress,
+                                  backgroundColor: Colors.grey.shade200,
+                                  color: ScholarlyTheme.accentBlue,
+                                  minHeight: 6,
+                                  borderRadius: BorderRadius.circular(3),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  '${(_analysisProgress * 100).toInt()}% Complete (Depth 20)',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: ScholarlyTheme.textMuted,
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                const Divider(),
+                                const SizedBox(height: 12),
+                                Text(
+                                  _currentTip,
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                    color: ScholarlyTheme.textPrimary,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              if (_showGameReviewOverlay)
+                GameReviewOverlay(
+                  whiteAccuracy: state.whiteAccuracy ?? 0.0,
+                  blackAccuracy: state.blackAccuracy ?? 0.0,
+                  whiteElo: state.reviewEstimatedWhiteRating ?? 1200,
+                  blackElo: state.reviewEstimatedBlackRating ?? 1200,
+                  whiteCounts: state.whiteCounts ?? const {},
+                  blackCounts: state.blackCounts ?? const {},
+                  evalHistory: state.evalHistory ?? const [],
+                  whitePlayerName: state.isPlayerWhite ? 'You' : AiAvatar.getAvatar(state.engineLevel).name,
+                  blackPlayerName: state.isPlayerWhite ? AiAvatar.getAvatar(state.engineLevel).name : 'You',
+                  onStartReview: () {
+                    setState(() {
+                      _showGameReviewOverlay = false;
+                    });
                   },
                 ),
             ] else if (_selectedArenaTab == 1) ...[
@@ -525,6 +833,17 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
 
   Widget _buildLandscapeLayout(BuildContext context, WidgetRef ref, ArenaState state) {
     final isTurn = _isPlayerTurn(state);
+    final showHistoricalTimes = state.viewingMoveIndex != null &&
+        state.whiteTimeHistory.length > state.viewingMoveIndex! &&
+        state.blackTimeHistory.length > state.viewingMoveIndex!;
+        
+    final whiteTimeToShow = showHistoricalTimes
+        ? (state.viewingMoveIndex! < 0 ? state.baseTimeDuration : state.whiteTimeHistory[state.viewingMoveIndex!])
+        : state.whiteTimeLeft;
+        
+    final blackTimeToShow = showHistoricalTimes
+        ? (state.viewingMoveIndex! < 0 ? state.baseTimeDuration : state.blackTimeHistory[state.viewingMoveIndex!])
+        : state.blackTimeLeft;
     final isFlipped = state.isBoardFlipped;
     final topPieces = isFlipped ? state.game.capturedByWhite : state.game.capturedByBlack;
     final bottomPieces = isFlipped ? state.game.capturedByBlack : state.game.capturedByWhite;
@@ -553,7 +872,7 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                           ArenaTimeDisplay(
                             isWhite: !state.isPlayerWhite,
                             isActive: !isTurn,
-                            timeLeft: !state.isPlayerWhite ? state.whiteTimeLeft : state.blackTimeLeft,
+                            timeLeft: !state.isPlayerWhite ? whiteTimeToShow : blackTimeToShow,
                             baseTimeDuration: state.baseTimeDuration,
                           ),
                           const SizedBox(width: 8),
@@ -602,6 +921,7 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                   children: [
                     const ArenaChessBoard(alignment: Alignment.topCenter),
                     if (state.isPaused) _buildPauseOverlay(context, ref),
+                    _buildFloatingAnnotationCard(state),
                   ],
                 ),
               ),
@@ -655,7 +975,7 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                           ArenaTimeDisplay(
                             isWhite: state.isPlayerWhite,
                             isActive: isTurn,
-                            timeLeft: state.isPlayerWhite ? state.whiteTimeLeft : state.blackTimeLeft,
+                            timeLeft: state.isPlayerWhite ? whiteTimeToShow : blackTimeToShow,
                             baseTimeDuration: state.baseTimeDuration,
                           ),
                         ],
@@ -710,6 +1030,17 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
 
   Widget _buildPortraitLayout(BuildContext context, WidgetRef ref, ArenaState state) {
     final isTurn = _isPlayerTurn(state);
+    final showHistoricalTimes = state.viewingMoveIndex != null &&
+        state.whiteTimeHistory.length > state.viewingMoveIndex! &&
+        state.blackTimeHistory.length > state.viewingMoveIndex!;
+        
+    final whiteTimeToShow = showHistoricalTimes
+        ? (state.viewingMoveIndex! < 0 ? state.baseTimeDuration : state.whiteTimeHistory[state.viewingMoveIndex!])
+        : state.whiteTimeLeft;
+        
+    final blackTimeToShow = showHistoricalTimes
+        ? (state.viewingMoveIndex! < 0 ? state.baseTimeDuration : state.blackTimeHistory[state.viewingMoveIndex!])
+        : state.blackTimeLeft;
     final isFlipped = state.isBoardFlipped;
     final topPieces = isFlipped ? state.game.capturedByWhite : state.game.capturedByBlack;
     final bottomPieces = isFlipped ? state.game.capturedByBlack : state.game.capturedByWhite;
@@ -733,7 +1064,7 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                     ArenaTimeDisplay(
                       isWhite: !state.isPlayerWhite,
                       isActive: !isTurn,
-                      timeLeft: !state.isPlayerWhite ? state.whiteTimeLeft : state.blackTimeLeft,
+                      timeLeft: !state.isPlayerWhite ? whiteTimeToShow : blackTimeToShow,
                       baseTimeDuration: state.baseTimeDuration,
                     ),
                     const SizedBox(width: 8),
@@ -785,6 +1116,7 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
               children: [
                 const ArenaChessBoard(alignment: Alignment.center),
                 if (state.isPaused) _buildPauseOverlay(context, ref),
+                _buildFloatingAnnotationCard(state),
               ],
             ),
           ),
@@ -840,7 +1172,7 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                     ArenaTimeDisplay(
                       isWhite: state.isPlayerWhite,
                       isActive: isTurn,
-                      timeLeft: state.isPlayerWhite ? state.whiteTimeLeft : state.blackTimeLeft,
+                      timeLeft: state.isPlayerWhite ? whiteTimeToShow : blackTimeToShow,
                       baseTimeDuration: state.baseTimeDuration,
                     ),
                   ],
@@ -1058,8 +1390,9 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
       const SizedBox(width: 8),
       ActionIconButton(
         icon: state.isBulbGlowing ? Icons.lightbulb_rounded : Icons.lightbulb_outline_rounded,
-        isEnabled: !state.isHintLoading,
+        isEnabled: _isPlayerTurn(state),
         isActive: state.isBulbGlowing,
+        isBlinkingContinuous: state.isHintLoading,
         isFlat: isDocked,
         activeColor: ScholarlyTheme.accentYellowSoft,
         activeIconColor: ScholarlyTheme.accentYellow,
@@ -1349,6 +1682,7 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                         child: OutlinedButton(
                           onPressed: () {
                             ref.read(arenaProvider.notifier).dismissGameOver();
+                            _startGameReviewAnalysis();
                           },
                           style: OutlinedButton.styleFrom(
                             foregroundColor: ScholarlyTheme.accentBlue,
@@ -1650,6 +1984,7 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                         child: OutlinedButton(
                           onPressed: () {
                             ref.read(arenaProvider.notifier).dismissGameOver();
+                            _startGameReviewAnalysis();
                           },
                           style: OutlinedButton.styleFrom(
                             foregroundColor: ScholarlyTheme.accentBlue,

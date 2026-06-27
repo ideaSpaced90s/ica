@@ -317,7 +317,7 @@ class _PersonaSectionState extends State<PersonaSection> {
   final List<PersonaMini> _personas = [
     const PersonaMini(
       name: 'Chanakya',
-      imagePath: 'assets/persona/gm_chanakya.png',
+      imagePath: 'assets/persona/gm_chanakya.webp',
       color: ScholarlyTheme.accentBlue,
       title: 'The Chess Mentor AI',
       description: 'The academy director and mentor. Chanakya analyzes your previous games and dynamically alters his heuristic algorithms to target your diagnosed tactical and spatial weaknesses, providing real-time feedback.',

@@ -239,7 +239,7 @@ class _PuzzlesPageState extends ConsumerState<PuzzlesPage> {
                               decoration: const BoxDecoration(
                                 shape: BoxShape.circle,
                                 image: DecorationImage(
-                                  image: AssetImage('assets/persona/gm_chanakya.png'),
+                                  image: AssetImage('assets/persona/gm_chanakya.webp'),
                                   fit: BoxFit.cover,
                                 ),
                               ),
@@ -485,7 +485,7 @@ class _PuzzlesPageState extends ConsumerState<PuzzlesPage> {
                           decoration: const BoxDecoration(
                             shape: BoxShape.circle,
                             image: DecorationImage(
-                              image: AssetImage('assets/persona/gm_chanakya.png'),
+                              image: AssetImage('assets/persona/gm_chanakya.webp'),
                               fit: BoxFit.cover,
                             ),
                           ),

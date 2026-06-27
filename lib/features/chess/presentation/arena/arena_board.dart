@@ -1,11 +1,13 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/chess_provider.dart';
 import '../../application/arena_provider.dart';
 import '../shared/widgets/chess_piece_widget.dart';
 import 'widgets/arena_system_indicators.dart';
+import 'widgets/arena_hint_overlay.dart';
 import '../../domain/chess_game.dart';
 import '../shared/widgets/promotion_overlay.dart';
 import 'package:chess/chess.dart' as chess_lib;
@@ -18,6 +20,9 @@ import 'themes/theme_registry.dart';
 import '../shared/themes/chess_theme.dart';
 import '../../services/chess_sound_service.dart';
 import '../scholarly_theme.dart';
+import '../analysis/widgets/move_annotation_badge.dart';
+import '../../application/study_lab_provider.dart' show MoveAnnotation;
+import '../../application/analysis_engine_controller.dart' show MoveClassification;
 
 class ArenaChessBoard extends ConsumerStatefulWidget {
   final AlignmentGeometry alignment;
@@ -45,6 +50,14 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
   // Tier 1 global tap ripples
   final List<Offset> _tapRipples = [];
 
+  double? _moveProgress;
+  Offset? _movingPiecePos;
+
+  late AnimationController _cameraShakeController;
+  late AnimationController _focalZoomController;
+  String _shakeType = 'capture';
+  Offset _zoomCenter = Offset.zero;
+
   @override
   void initState() {
     super.initState();
@@ -56,11 +69,21 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
         });
       }
     });
+    _cameraShakeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 350),
+    );
+    _focalZoomController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
   }
 
   @override
   void dispose() {
     _dropController.dispose();
+    _cameraShakeController.dispose();
+    _focalZoomController.dispose();
     super.dispose();
   }
 
@@ -91,23 +114,65 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
           child: SizedBox(
             width: boardSize,
             height: boardSize,
-            child: Container(
+            child: Stack(
               clipBehavior: Clip.none,
-              decoration: chessTheme.id == 'theme2'
-                  ? BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.18),
-                          blurRadius: 18,
-                          spreadRadius: 2,
-                        ),
-                      ],
-                    )
-                  : null,
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
+              children: [
+                AnimatedBuilder(
+                  animation: Listenable.merge([_cameraShakeController, _focalZoomController]),
+                  builder: (context, child) {
+                    final shakeVal = _cameraShakeController.value;
+                    final zoomVal = _focalZoomController.value;
+
+                    double dx = 0.0;
+                    double dy = 0.0;
+                    final t = 1.0 - shakeVal;
+
+                    if (shakeVal > 0.0) {
+                      if (_shakeType == 'capture') {
+                        dx = sin(shakeVal * 12 * pi) * 6.0 * t;
+                        dy = cos(shakeVal * 10 * pi) * 6.0 * t;
+                      } else if (_shakeType == 'rook') {
+                        dx = sin(shakeVal * 8 * pi) * 8.0 * t;
+                        dy = cos(shakeVal * 6 * pi) * 8.0 * t;
+                      } else if (_shakeType == 'king') {
+                        dx = sin(shakeVal * 6 * pi) * 4.0 * t;
+                        dy = cos(shakeVal * 4 * pi) * 8.0 * t;
+                      }
+                    }
+
+                    final scale = 1.0 + 0.04 * sin(zoomVal * pi);
+                    final focusCenter = _zoomCenter == Offset.zero 
+                        ? Offset(boardSize / 2, boardSize / 2) 
+                        : _zoomCenter;
+
+                    final matrix = Matrix4.translationValues(dx, dy, 0.0) *
+                        Matrix4.translationValues(focusCenter.dx, focusCenter.dy, 0.0) *
+                        Matrix4.diagonal3Values(scale, scale, 1.0) *
+                        Matrix4.translationValues(-focusCenter.dx, -focusCenter.dy, 0.0);
+
+                    return Transform(
+                      transform: matrix,
+                      alignment: Alignment.center,
+                      child: child,
+                    );
+                  },
+                  child: Container(
+                    clipBehavior: Clip.none,
+                    decoration: chessTheme.id == 'theme2'
+                        ? BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.18),
+                                blurRadius: 18,
+                                spreadRadius: 2,
+                              ),
+                            ],
+                          )
+                        : null,
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
                   // 1. Board Background
                   RepaintBoundary(
                     child: chessTheme.buildBackground(
@@ -164,6 +229,16 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
                         final isPremoveStartOrEnd =
                             arenaState.premoveFrom == squareName ||
                             arenaState.premoveTo == squareName;
+
+                        final activeMoveIndex = arenaState.viewingMoveIndex ?? (arenaState.recentMoves.length - 1);
+                        final hasReview = arenaState.reviewClassifications != null;
+                        final isDestSquare = hasReview &&
+                            activeMoveIndex >= 0 &&
+                            activeMoveIndex < arenaState.recentMovesUci.length &&
+                            arenaState.recentMovesUci[activeMoveIndex].substring(2, 4) == squareName;
+                        final classification = isDestSquare
+                            ? arenaState.reviewClassifications![activeMoveIndex]
+                            : null;
 
                         chess_lib.Piece? piece;
                         bool isGhostPiece = false;
@@ -362,9 +437,18 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
                                                 );
                                               }
 
+                                              final offset = _calculatePieceInteractiveOffset(
+                                                squareName: squareName,
+                                                boardSize: boardSize,
+                                                themeId: themeId,
+                                                masterAnimationsEnabled: masterAnimationsEnabled,
+                                                arenaState: arenaState,
+                                              );
+
+                                              Widget finalPieceWidget;
                                               if (isPlayerPiece) {
                                                 final squareSize = boardSize / 8;
-                                                return Draggable<String>(
+                                                finalPieceWidget = Draggable<String>(
                                                   data: squareName,
                                                   onDragStarted: () {
                                                     _handlePieceSelection(squareName, displayGame);
@@ -380,13 +464,23 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
                                                     child: SizedBox(
                                                       width: squareSize * 1.2,
                                                       height: squareSize * 1.2,
-                                                      child: ChessPieceWidget(
-                                                        squareName: squareName,
-                                                        game: displayGame,
-                                                        highlighted: false,
-                                                        theme: chessTheme,
-                                                        isMoving: false,
-                                                      ),
+                                                      child: themeId == 'sprite_arc'
+                                                          ? DragTiltWidget(
+                                                              child: ChessPieceWidget(
+                                                                squareName: squareName,
+                                                                game: displayGame,
+                                                                highlighted: false,
+                                                                theme: chessTheme,
+                                                                isMoving: false,
+                                                              ),
+                                                            )
+                                                          : ChessPieceWidget(
+                                                              squareName: squareName,
+                                                              game: displayGame,
+                                                              highlighted: false,
+                                                              theme: chessTheme,
+                                                              isMoving: false,
+                                                            ),
                                                     ),
                                                   ),
                                                   childWhenDragging: Opacity(
@@ -401,9 +495,17 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
                                                   ),
                                                   child: pieceWidget,
                                                 );
+                                              } else {
+                                                finalPieceWidget = pieceWidget;
                                               }
 
-                                              return pieceWidget;
+                                              if (offset != Offset.zero) {
+                                                return Transform.translate(
+                                                  offset: offset,
+                                                  child: finalPieceWidget,
+                                                );
+                                              }
+                                              return finalPieceWidget;
                                             },
                                           ),
                                         ),
@@ -417,6 +519,15 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
                                         isLight,
                                         arenaState.isBoardFlipped,
                                         chessTheme,
+                                      ),
+
+                                    if (isDestSquare && classification != null && classification != MoveClassification.none)
+                                      Positioned(
+                                        top: 2,
+                                        right: 2,
+                                        child: MoveAnnotationBadge(
+                                          annotation: _mapClassificationToAnnotation(classification),
+                                        ),
                                       ),
                                   ],
                                 ),
@@ -436,7 +547,17 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
                       isFlipped: arenaState.isBoardFlipped,
                       isCheckmate: arenaState.game.inCheckmate,
                       theme: chessTheme,
+                      onProgressUpdate: (progress, piecePos) {
+                        setState(() {
+                          _moveProgress = progress;
+                          _movingPiecePos = piecePos;
+                        });
+                      },
                       onComplete: () {
+                        setState(() {
+                          _moveProgress = null;
+                          _movingPiecePos = null;
+                        });
                         ref
                             .read(arenaProvider.notifier)
                             .clearMoveAnimation();
@@ -448,7 +569,22 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
                         pieceCode,
                         profile,
                         boardSize,
-                        isCritical: arenaState.game.inCheckmate,
+                        isCritical: arenaState.game.inCheckmate ||
+                            (pieceCode.substring(1).toUpperCase() == 'K' &&
+                                themeId == 'sprite_arc'),
+                      ),
+                    ),
+
+                  // 5.1 Hint Overlay (glowing path and tile animation)
+                  if (arenaState.isHintVisible &&
+                      arenaState.hintFrom != null &&
+                      arenaState.hintTo != null)
+                    Positioned.fill(
+                      child: ArenaHintOverlay(
+                        from: arenaState.hintFrom!,
+                        to: arenaState.hintTo!,
+                        boardSize: boardSize,
+                        isFlipped: arenaState.isBoardFlipped,
                       ),
                     ),
 
@@ -488,8 +624,41 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
                     onCompleteOverride: (piece) => ref.read(arenaProvider.notifier).completePromotion(piece),
                     onCancelOverride: () => ref.read(arenaProvider.notifier).cancelPromotion(),
                   ),
-                ],
-              ),
+                      ],
+                    ),
+                  ),
+                ),
+                if (themeId == 'sprite_arc')
+                  IgnorePointer(
+                    child: AnimatedBuilder(
+                      animation: _focalZoomController,
+                      builder: (context, child) {
+                        final zoomVal = _focalZoomController.value;
+                        final vignetteOpacity = (sin(zoomVal * pi) * 0.45).clamp(0.0, 1.0);
+                        final focusCenter = _zoomCenter == Offset.zero 
+                            ? Offset(boardSize / 2, boardSize / 2) 
+                            : _zoomCenter;
+
+                        return Container(
+                          decoration: BoxDecoration(
+                            gradient: RadialGradient(
+                              center: Alignment(
+                                ((focusCenter.dx / boardSize) * 2.0) - 1.0,
+                                ((focusCenter.dy / boardSize) * 2.0) - 1.0,
+                              ),
+                              radius: 0.7,
+                              colors: [
+                                Colors.transparent,
+                                Colors.black.withValues(alpha: vignetteOpacity),
+                              ],
+                              stops: const [0.35, 1.0],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+              ],
             ),
           ),
         );
@@ -615,6 +784,73 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
     });
   }
 
+  Offset _calculatePieceInteractiveOffset({
+    required String squareName,
+    required double boardSize,
+    required String themeId,
+    required bool masterAnimationsEnabled,
+    required ArenaState arenaState,
+  }) {
+    if (!masterAnimationsEnabled || themeId != 'sprite_arc') return Offset.zero;
+    final moveAnim = arenaState.moveAnimation;
+    if (moveAnim == null || _movingPiecePos == null || _moveProgress == null) return Offset.zero;
+
+    final pieceType = moveAnim.pieceCode.substring(1).toUpperCase();
+    final squareSize = boardSize / 8;
+    final sCenter = _getSquareCenter(squareName, boardSize);
+
+    // 1. Knight piece-bump effect (adjacent pushing)
+    if (pieceType == 'N') {
+      final vec = sCenter - _movingPiecePos!;
+      final dist = vec.distance;
+      final threshold = squareSize * 1.5;
+      if (dist > 0.1 && dist < threshold) {
+        final dir = vec / dist;
+        final factor = 1.0 - (dist / threshold);
+        // Sinusoidal bump factor based on progress
+        final strength = sin(_moveProgress! * pi);
+        final bump = factor * factor * 14.0 * strength;
+        return dir * bump;
+      }
+    }
+
+    // 2. Rook downstream momentum shake
+    // If the Rook lands, the tile behind point B shakes
+    if (pieceType == 'R' && _moveProgress! > 0.85) {
+      final fromCol = moveAnim.from.codeUnitAt(0) - 'a'.codeUnitAt(0);
+      final fromRow = 8 - int.parse(moveAnim.from[1]);
+      final toCol = moveAnim.to.codeUnitAt(0) - 'a'.codeUnitAt(0);
+      final toRow = 8 - int.parse(moveAnim.to[1]);
+      
+      final dc = toCol - fromCol;
+      final dr = toRow - fromRow;
+      if (dc != 0 || dr != 0) {
+        final stepCol = dc.sign;
+        final stepRow = dr.sign;
+        
+        final pastCol = toCol + stepCol;
+        final pastRow = toRow + stepRow;
+        
+        if (pastCol >= 0 && pastCol < 8 && pastRow >= 0 && pastRow < 8) {
+          final files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+          final ranks = ['8', '7', '6', '5', '4', '3', '2', '1'];
+          final pastSquareName = '${files[pastCol]}${ranks[pastRow]}';
+          
+          if (squareName == pastSquareName) {
+            final progressFactor = (_moveProgress! - 0.85) / 0.15;
+            final shakeMagnitude = sin(progressFactor * 6 * pi) * 3.0 * (1.0 - progressFactor);
+            final colOffset = stepCol * shakeMagnitude;
+            final rowOffset = stepRow * shakeMagnitude;
+            final flipMult = arenaState.isBoardFlipped ? -1.0 : 1.0;
+            return Offset(colOffset, rowOffset * flipMult);
+          }
+        }
+      }
+    }
+
+    return Offset.zero;
+  }
+
   String _getSquareName(int row, int col, bool isFlipped) {
     const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
     const ranks = ['8', '7', '6', '5', '4', '3', '2', '1'];
@@ -720,16 +956,47 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
     bool isCritical = false,
   }) {
     if (!mounted) return;
+
+    final moveAnim = ref.read(arenaProvider).moveAnimation;
+    final isCapture = moveAnim?.isCapture ?? false;
     final themeId = ref.read(chessProvider).boardThemeId;
     final chessTheme = ThemeRegistry.getTheme(themeId);
+
+    // Trigger board camera shake & focal zoom for Arc theme
+    if (themeId == 'sprite_arc' && ref.read(chessProvider.notifier).masterAnimationsEnabled) {
+      _zoomCenter = _getSquareCenter(to, boardSize);
+      final isRook = pieceCode.substring(1).toUpperCase() == 'R';
+      final isKing = pieceCode.substring(1).toUpperCase() == 'K';
+      final isBorder = to.startsWith('a') || to.startsWith('h') || to.endsWith('1') || to.endsWith('8');
+
+      if (isCapture) {
+        _shakeType = 'capture';
+        _cameraShakeController.forward(from: 0.0);
+        _focalZoomController.forward(from: 0.0).then((_) {
+          if (mounted) {
+            _focalZoomController.reverse();
+          }
+        });
+      } else if (isRook && isBorder) {
+        _shakeType = 'rook';
+        _cameraShakeController.forward(from: 0.0);
+      } else if (isKing) {
+        _shakeType = 'king';
+        _cameraShakeController.forward(from: 0.0);
+      }
+    }
 
     // 1. Trigger global Landing Feedback (Tier 1)
     _triggerLandingFeedback(to, profile, boardSize, isCritical: isCritical);
 
     // 2. Trigger theme-specific Capture Effect (Tier 2/3, gated by masterAnimationsEnabled)
-    final isCapture = ref.read(arenaProvider).moveAnimation?.isCapture ?? false;
     if (isCapture && ref.read(chessProvider.notifier).masterAnimationsEnabled) {
-      _triggerCaptureEffect(to, chessTheme, boardSize);
+      final capturingPieceType = moveAnim?.pieceCode.substring(1).toUpperCase();
+      if (themeId == 'sprite_arc' && capturingPieceType == 'P') {
+        // Skip the radiating orbital capture effect to ensure the signature pawn capturing slash is fully visible
+      } else {
+        _triggerCaptureEffect(to, chessTheme, boardSize);
+      }
     }
   }
 
@@ -805,5 +1072,83 @@ class _ArenaChessBoardState extends ConsumerState<ArenaChessBoard>
       list.add('${files[c]}${r + 1}');
     }
     return list;
+  }
+
+  MoveAnnotation _mapClassificationToAnnotation(MoveClassification? classification) {
+    if (classification == null) return MoveAnnotation.none;
+    switch (classification) {
+      case MoveClassification.brilliant:
+        return MoveAnnotation.brilliant;
+      case MoveClassification.best:
+        return MoveAnnotation.good;
+      case MoveClassification.good:
+        return MoveAnnotation.good;
+      case MoveClassification.inaccuracy:
+        return MoveAnnotation.dubious;
+      case MoveClassification.mistake:
+        return MoveAnnotation.mistake;
+      case MoveClassification.blunder:
+        return MoveAnnotation.blunder;
+      default:
+        return MoveAnnotation.none;
+    }
+  }
+}
+
+class DragTiltWidget extends StatefulWidget {
+  final Widget child;
+  const DragTiltWidget({super.key, required this.child});
+
+  @override
+  State<DragTiltWidget> createState() => _DragTiltWidgetState();
+}
+
+class _DragTiltWidgetState extends State<DragTiltWidget> with SingleTickerProviderStateMixin {
+  Offset _lastPos = Offset.zero;
+  Offset _velocity = Offset.zero;
+  late Ticker _ticker;
+
+  @override
+  void initState() {
+    super.initState();
+    _ticker = createTicker((elapsed) {
+      if (!mounted) return;
+      final renderBox = context.findRenderObject() as RenderBox?;
+      if (renderBox != null && renderBox.attached) {
+        final currentPos = renderBox.localToGlobal(Offset.zero);
+        if (_lastPos != Offset.zero) {
+          final diff = currentPos - _lastPos;
+          setState(() {
+            _velocity = _velocity * 0.75 + diff * 0.25;
+          });
+        }
+        _lastPos = currentPos;
+      }
+    });
+    _ticker.start();
+  }
+
+  @override
+  void dispose() {
+    _ticker.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tiltX = (_velocity.dx * -0.012).clamp(-0.25, 0.25);
+    final speed = _velocity.distance;
+    final stretchY = 1.0 + (speed * 0.005).clamp(0.0, 0.08);
+
+    final matrix = Matrix4.identity()
+      ..setEntry(3, 2, 0.001)
+      ..rotateZ(tiltX);
+    final scaledMatrix = matrix * Matrix4.diagonal3Values(1.0, stretchY, 1.0);
+
+    return Transform(
+      transform: scaledMatrix,
+      alignment: Alignment.bottomCenter,
+      child: widget.child,
+    );
   }
 }

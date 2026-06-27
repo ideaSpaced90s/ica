@@ -21,6 +21,8 @@ import 'game_controls.dart';
 import '../../domain/models/historical_game.dart';
 import '../../application/historical_cinema_provider.dart';
 import '../academy/historical_cinema_page.dart';
+import '../../application/store_provider.dart';
+import 'premium_nudge_overlay.dart';
 
 import '../../application/var_notifier.dart';
 
@@ -223,7 +225,7 @@ class ChapterSelectScreen extends ConsumerWidget {
                     shape: BoxShape.circle,
                     border: Border.all(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.45)),
                     image: const DecorationImage(
-                      image: AssetImage('assets/persona/gm_chanakya.png'),
+                      image: AssetImage('assets/persona/gm_chanakya.webp'),
                       fit: BoxFit.cover,
                     ),
                   ),
@@ -315,6 +317,7 @@ class ChapterSelectScreen extends ConsumerWidget {
     final targetChapter = ref.watch(onboardingTargetChapterProvider);
     final targetLesson = TutorialLessonsDatabase.getLesson(targetChapter);
     final activeTab = ref.watch(tutorialTabProvider);
+    final isPremium = ref.watch(storeProvider).isPremium;
 
     return AmbientScaffold(
       scaffoldKey: scaffoldKey,
@@ -375,7 +378,7 @@ class ChapterSelectScreen extends ConsumerWidget {
                   activeChapter: progress.activeChapterIndex,
                 ),
             ] else ...[
-              ..._buildHistoricalCinemaSection(ref, context),
+              ..._buildHistoricalCinemaSection(ref, context, isPremium),
             ],
             const SliverToBoxAdapter(child: SizedBox(height: 28)),
           ],
@@ -605,7 +608,7 @@ class ChapterSelectScreen extends ConsumerWidget {
     );
   }
 
-  List<Widget> _buildHistoricalCinemaSection(WidgetRef ref, BuildContext context) {
+  List<Widget> _buildHistoricalCinemaSection(WidgetRef ref, BuildContext context, bool isPremium) {
     final state = ref.watch(historicalCinemaProvider);
     if (state.isLoading) {
       return [
@@ -809,16 +812,27 @@ class ChapterSelectScreen extends ConsumerWidget {
                 delegate: SliverChildBuilderDelegate(
                   (context, index) {
                     final game = catGames[index];
+                    final isGameUnlocked = isPremium || index == 0;
                     return _HistoricalGameCard(
                       game: game,
                       groupColor: color,
+                      isUnlocked: isGameUnlocked,
                       onTap: () {
-                        ref.read(historicalCinemaProvider.notifier).selectGame(game);
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => const HistoricalCinemaPage(),
-                          ),
-                        );
+                        if (isGameUnlocked) {
+                          ref.read(historicalCinemaProvider.notifier).selectGame(game);
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => const HistoricalCinemaPage(),
+                            ),
+                          );
+                        } else {
+                          PremiumNudgeOverlay.show(
+                            context,
+                            ref,
+                            title: 'Unlock Historical Cinema',
+                            description: 'Upgrade to premium to unlock all annotated historical masterpieces.',
+                          );
+                        }
                       },
                     );
                   },
@@ -864,7 +878,7 @@ class ChapterSelectScreen extends ConsumerWidget {
                 (context, index) {
                   final lesson = lessons[index];
                   final isTarget = isOnboarding && lesson.chapterId == targetChapter;
-                  final isUnlocked = true;
+                  final isUnlocked = lesson.chapterId <= 8 || unlockedChapters.contains(lesson.chapterId);
                   final isCompleted = completedChapters.contains(lesson.chapterId);
 
                   return PulsingGlowWrapper(
@@ -1349,46 +1363,50 @@ class _HistoricalGameCard extends StatelessWidget {
     required this.game,
     required this.groupColor,
     required this.onTap,
+    this.isUnlocked = true,
   });
 
   final HistoricalGame game;
   final Color groupColor;
   final VoidCallback onTap;
+  final bool isUnlocked;
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-        child: Material(
-          color: Colors.white.withValues(alpha: 0.92),
-          child: InkWell(
-            onTap: onTap,
-            child: Container(
-              padding: const EdgeInsets.all(11),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: ScholarlyTheme.panelStroke.withValues(alpha: 0.72),
-                  width: 1.0,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: groupColor.withValues(alpha: 0.10),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.play_arrow_rounded,
-                      size: 20,
-                      color: groupColor,
-                    ),
+    return Opacity(
+      opacity: isUnlocked ? 1.0 : 0.5,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+          child: Material(
+            color: Colors.white.withValues(alpha: 0.92),
+            child: InkWell(
+              onTap: onTap,
+              child: Container(
+                padding: const EdgeInsets.all(11),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: ScholarlyTheme.panelStroke.withValues(alpha: 0.72),
+                    width: 1.0,
                   ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: groupColor.withValues(alpha: 0.10),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        isUnlocked ? Icons.play_arrow_rounded : Icons.lock_rounded,
+                        size: isUnlocked ? 20 : 16,
+                        color: groupColor,
+                      ),
+                    ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -1446,6 +1464,7 @@ class _HistoricalGameCard extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

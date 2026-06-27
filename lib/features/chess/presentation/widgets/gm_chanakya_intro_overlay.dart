@@ -114,7 +114,7 @@ class _GMChanakyaIntroOverlayState extends ConsumerState<GMChanakyaIntroOverlay>
                                 ),
                               ],
                               image: DecorationImage(
-                                image: AssetImage('assets/persona/gm_chanakya.png'),
+                                image: AssetImage('assets/persona/gm_chanakya.webp'),
                                 fit: BoxFit.cover,
                               ),
                             ),
@@ -280,31 +280,69 @@ class _GMChanakyaIntroOverlayState extends ConsumerState<GMChanakyaIntroOverlay>
     );
   }
 
+  /// Splits [text] into word-level [TextSpan]s applying semantic color-coding
+  /// to key chess, mentor, feature, and motivational vocabulary.
   List<InlineSpan> _buildHighlightedText(String text) {
     final List<InlineSpan> spans = [];
     final words = text.split(' ');
     for (int i = 0; i < words.length; i++) {
       final word = words[i];
-      final cleanWord = word.replaceAll(RegExp(r"[.,!?:;🕉️\(\)'’\x22]"), '').toLowerCase();
+      final cleanWord = word
+          .replaceAll(RegExp(r"[.,!?:;🕉️\(\)'']"), '')
+          .replaceAll('"', '')
+          .toLowerCase();
 
       Color? highlightColor;
-      FontWeight fontWeight = FontWeight.normal;
+      FontWeight fontWeight = FontWeight.w500;
 
-      if (['apprentice', 'strategist', 'strategists', 'warrior', 'tactician', 'mentor', 'guide', 'critic', 'chanakya', 'avatar', 'avatars'].contains(cleanWord)) {
-        highlightColor = const Color(0xFFD97706); // Warm Amber
-        fontWeight = FontWeight.bold;
-      } else if (['chamber', 'crucible', 'arena', 'battleground', 'puzzles', 'sanctuary', 'prescription', 'academy', 'assignment', 'desk', 'session', 'sessions', 'lessons', 'lesson', 'program', 'scenarios', 'profile', 'rated', 'games', 'game', 'clock'].contains(cleanWord)) {
-        highlightColor = const Color(0xFF2563EB); // Royal Blue
-        fontWeight = FontWeight.bold;
-      } else if (['intuition', 'calculation', 'calculate', 'theory', 'theories', 'sight', 'ideas', 'patterns', 'decisions', 'analyze', 'calibration', 'baseline', 'report', 'tuning', 'tune'].contains(cleanWord)) {
-        highlightColor = const Color(0xFF7C3AED); // Purple
-        fontWeight = FontWeight.bold;
-      } else if (['defeat', 'crucible', 'fire', 'stakes', 'pressure', 'blunders', 'hesitation', 'blindness', 'scotoma', 'difficulty', 'blind', 'spots', 'spot', 'limit', 'required', 'trials'].contains(cleanWord)) {
-        highlightColor = const Color(0xFFDC2626); // Crimson Red
-        fontWeight = FontWeight.bold;
-      } else if (['victory', 'mastery', 'understanding', 'instincts', 'resilience', 'conditioning', 'discipline', 'welcome', 'practice', 'learn', 'construct', 'tailored', 'personalized', 'strength', 'sharpen', 'reduce', 'strengthen', 'solve', 'freely'].contains(cleanWord)) {
-        highlightColor = const Color(0xFF059669); // Emerald Green
-        fontWeight = FontWeight.bold;
+      // 🟠 Mentor / Identity — Warm Amber
+      if ([
+        'apprentice', 'strategist', 'strategists', 'warrior', 'tactician',
+        'mentor', 'guide', 'critic', 'chanakya', 'gm', 'avatar', 'avatars',
+        'am', 'i',
+      ].contains(cleanWord)) {
+        highlightColor = const Color(0xFFD97706);
+        fontWeight = FontWeight.w800;
+
+      // 🔵 Features / Zones — Royal Blue
+      } else if ([
+        'chamber', 'crucible', 'arena', 'battleground', 'puzzles', 'sanctuary',
+        'prescription', 'academy', 'assignment', 'assignments', 'desk',
+        'session', 'sessions', 'lessons', 'lesson', 'program', 'scenarios',
+        'profile', 'rated', 'games', 'game', 'clock', 'foundation', 'chapters',
+        'chapter', 'tutorials', 'tutorial', 'training', 'rules', 'rule', 'moves',
+      ].contains(cleanWord)) {
+        highlightColor = const Color(0xFF2563EB);
+        fontWeight = FontWeight.w800;
+
+      // 🟣 Chess Thinking — Violet
+      } else if ([
+        'intuition', 'calculation', 'calculate', 'theory', 'theories', 'sight',
+        'ideas', 'patterns', 'decisions', 'analyze', 'calibration', 'baseline',
+        'report', 'tuning', 'tune', 'tactical', 'tactics', 'openings',
+        'endgames', 'scotoma', 'scotomas', 'drills', 'test',
+      ].contains(cleanWord)) {
+        highlightColor = const Color(0xFF7C3AED);
+        fontWeight = FontWeight.w800;
+
+      // 🔴 Pressure / Stakes — Crimson
+      } else if ([
+        'defeat', 'fire', 'stakes', 'pressure', 'blunders', 'hesitation',
+        'blindness', 'difficulty', 'blind', 'spots', 'spot', 'limit',
+        'required', 'trials', 'weaknesses', 'mistakes',
+      ].contains(cleanWord)) {
+        highlightColor = const Color(0xFFDC2626);
+        fontWeight = FontWeight.w800;
+
+      // 🟢 Growth / Victory — Emerald
+      } else if ([
+        'victory', 'mastery', 'understanding', 'instincts', 'resilience',
+        'conditioning', 'discipline', 'welcome', 'practice', 'learn',
+        'construct', 'tailored', 'personalized', 'strength', 'sharpen',
+        'reduce', 'strengthen', 'solve', 'freely', 'deliberate',
+      ].contains(cleanWord)) {
+        highlightColor = const Color(0xFF059669);
+        fontWeight = FontWeight.w800;
       }
 
       if (highlightColor != null) {

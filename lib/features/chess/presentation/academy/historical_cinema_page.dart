@@ -153,6 +153,54 @@ class _HistoricalCinemaPageState extends ConsumerState<HistoricalCinemaPage> {
         }
       },
       child: AmbientScaffold(
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          centerTitle: true,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: ScholarlyTheme.textPrimary, size: 20),
+            onPressed: () {
+              notifier.pause();
+              Navigator.of(context).pop();
+            },
+          ),
+          title: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                "${game.white} vs. ${game.black}".toUpperCase(),
+                style: GoogleFonts.outfit(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.5,
+                  color: ScholarlyTheme.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                "${game.event} (${game.year}) — ${game.educationalTheme}",
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: ScholarlyTheme.textMuted,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+          actions: [
+            Padding(
+              padding: const EdgeInsets.only(right: 16.0),
+              child: Image.asset(
+                'assets/splash/ideaspace.png',
+                height: 20,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) => const SizedBox(),
+              ),
+            ),
+          ],
+        ),
         blob1Color: const Color(0xFFFEF9C3), // Soft Gold
         blob2Color: const Color(0xFFDBEAFE), // Soft Blue
         blob3Color: const Color(0xFFF3E8FF), // Soft Purple
@@ -160,8 +208,6 @@ class _HistoricalCinemaPageState extends ConsumerState<HistoricalCinemaPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Custom Header
-              _buildHeader(context, game),
               
               Expanded(
                 child: isLandscape
@@ -236,47 +282,6 @@ class _HistoricalCinemaPageState extends ConsumerState<HistoricalCinemaPage> {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context, HistoricalGame game) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      child: Row(
-        children: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "${game.white} vs. ${game.black}".toUpperCase(),
-                  style: GoogleFonts.outfit(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: ScholarlyTheme.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  "${game.event} (${game.year}) — ${game.educationalTheme}",
-                  style: GoogleFonts.inter(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: ScholarlyTheme.textMuted,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -557,7 +562,7 @@ class _HistoricalCinemaPageState extends ConsumerState<HistoricalCinemaPage> {
                   shape: BoxShape.circle,
                   border: Border.all(color: moodColor.withValues(alpha: 0.4), width: 1.5),
                   image: const DecorationImage(
-                    image: AssetImage('assets/persona/gm_chanakya.png'),
+                    image: AssetImage('assets/persona/gm_chanakya.webp'),
                     fit: BoxFit.cover,
                   ),
                 ),

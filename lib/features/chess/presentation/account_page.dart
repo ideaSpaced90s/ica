@@ -774,7 +774,7 @@ class _AccountPageState extends ConsumerState<AccountPage> {
           ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 360),
             child: Text(
-              'All AI opponents are unlocked and free. Upgrade for unlimited games, puzzles, and coaching.',
+              'All AI opponents are unlocked and free. Upgrade for unlimited games, puzzles, coaching, and full historical cinema.',
               textAlign: TextAlign.center,
               style: GoogleFonts.inter(
                 fontSize: 12,

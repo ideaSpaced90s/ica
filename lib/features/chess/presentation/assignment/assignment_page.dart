@@ -302,7 +302,7 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
               shape: BoxShape.circle,
               border: Border.all(color: ScholarlyTheme.accentGold.withValues(alpha: 0.5), width: 2),
               image: const DecorationImage(
-                image: AssetImage('assets/persona/gm_chanakya.png'),
+                image: AssetImage('assets/persona/gm_chanakya.webp'),
                 fit: BoxFit.cover,
               ),
             ),

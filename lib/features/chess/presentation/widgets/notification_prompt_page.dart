@@ -168,36 +168,98 @@ class _NotificationPromptPageState extends ConsumerState<NotificationPromptPage>
               ),
             ],
           ),
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.fromLTRB(18, 20, 18, 20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               _buildAnimatedBell(),
-              const SizedBox(height: 24),
+              const SizedBox(height: 14),
               PremiumGradientText(
                 'NEVER MISS AN ASSIGNMENT',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.outfit(
-                  fontSize: 20,
+                  fontSize: 17,
                   fontWeight: FontWeight.w900,
-                  letterSpacing: 1.5,
+                  letterSpacing: 1.2,
                 ),
               ),
-              const SizedBox(height: 16),
-              Text(
-                'To build a strong chess foundation, consistency is key. We send reminders to you daily tailor-made custom training tasks, tournament alerts, and streak protection to keep your progress on track. Enable notifications to keep your progress on track.',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.inter(
-                  color: ScholarlyTheme.textPrimary,
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w500,
-                  height: 1.6,
+              const SizedBox(height: 14),
+              _buildBulletPoints(),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildBulletPoints() {
+    const bullets = [
+      (
+        icon: Icons.menu_book_rounded,
+        color: Color(0xFF2979FF),
+        label: 'Daily training tasks',
+        sub: 'assigned by GM Chanakya',
+      ),
+      (
+        icon: Icons.local_fire_department_rounded,
+        color: Color(0xFFFFB300),
+        label: 'Streak protection',
+        sub: 'miss a day, lose your rank',
+      ),
+      (
+        icon: Icons.shield_rounded,
+        color: Color(0xFF7C4DFF),
+        label: 'Class reminders',
+        sub: 'so you never miss the daily rhythm!',
+      ),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: bullets.map((b) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: b.color.withValues(alpha: 0.12),
+                ),
+                child: Icon(b.icon, color: b.color, size: 16),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: RichText(
+                  text: TextSpan(
+                    children: [
+                      TextSpan(
+                        text: b.label,
+                        style: GoogleFonts.inter(
+                          color: b.color,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      TextSpan(
+                        text: ' — ${b.sub}',
+                        style: GoogleFonts.inter(
+                          color: ScholarlyTheme.textPrimary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
           ),
         );
-      },
+      }).toList(),
     );
   }
 
@@ -208,8 +270,8 @@ class _NotificationPromptPageState extends ConsumerState<NotificationPromptPage>
         children: [
           // Background soft glowing pulse rings
           Container(
-            width: 80,
-            height: 80,
+            width: 60,
+            height: 60,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: ScholarlyTheme.accentBlue.withValues(
@@ -218,8 +280,8 @@ class _NotificationPromptPageState extends ConsumerState<NotificationPromptPage>
             ),
           ),
           Container(
-            width: 64,
-            height: 64,
+            width: 48,
+            height: 48,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: ScholarlyTheme.accentBlue.withValues(
@@ -233,14 +295,14 @@ class _NotificationPromptPageState extends ConsumerState<NotificationPromptPage>
             child: Transform.rotate(
               angle: 0.08 * (0.5 - _pulseController.value),
               child: Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(9),
                 decoration: const BoxDecoration(
                   shape: BoxShape.circle,
                   color: ScholarlyTheme.accentBlueSoft,
                 ),
                 child: const Icon(
                   Icons.notifications_active_rounded,
-                  size: 36,
+                  size: 28,
                   color: ScholarlyTheme.accentBlue,
                 ),
               ),

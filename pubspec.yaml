@@ -44,7 +44,7 @@ dependencies:
   flutter_soloud: ^3.2.7
   google_fonts: ^6.2.1
   intl: ^0.19.0
-  share_plus: ^12.0.2
+  share_plus: ^13.1.0
   rust_lib_kingslayer_chess:
     path: rust_builder
   flutter_rust_bridge: 2.12.0
@@ -52,7 +52,7 @@ dependencies:
   fl_chart: ^1.2.0
   confetti: ^0.7.0
   image_picker: ^1.1.2
-  file_picker: ^8.0.0
+  file_picker: ^12.0.0-beta.7
   video_player: ^2.11.1
   chess_assets:
     path: packages/chess_assets
@@ -60,7 +60,7 @@ dependencies:
   url_launcher: ^6.3.2
   flutter_local_notifications: ^17.1.2
   timezone: ^0.9.4
-  flutter_timezone: ^3.0.1
+  flutter_timezone: ^5.1.0
   permission_handler: ^11.3.1
   firebase_core: ^4.11.0
   firebase_auth: ^6.5.3
@@ -81,6 +81,8 @@ dev_dependencies:
   integration_test:
     sdk: flutter
   image: ^4.8.0
+
+
 
 flutter_launcher_icons:
   android: true
@@ -111,6 +113,7 @@ flutter:
     - assets/pieces/royal/
     - assets/pieces/rootpieces/
     - assets/pieces/energy/
+    - assets/pieces/persia/
     - assets/pieces/energy-webP/
     - assets/pieces/forrest/
     - assets/pieces/arc/

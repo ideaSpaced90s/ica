@@ -203,7 +203,7 @@ class _TutorialMentorPanelState extends ConsumerState<TutorialMentorPanel> with 
               ),
               child: const CircleAvatar(
                 backgroundColor: Colors.transparent,
-                backgroundImage: AssetImage('assets/persona/gm_chanakya.png'),
+                backgroundImage: AssetImage('assets/persona/gm_chanakya.webp'),
               ),
             );
           },

@@ -1,5 +1,5 @@
 import 'package:chess_assets/chess_assets.dart' as assets_lib;
-import '../../arena/themes/bnw_theme.dart';
+import '../../arena/themes/global/bnw_theme.dart';
 import 'package:flutter/material.dart';
 
 /// Locked BNW board theme for Battleground (Rated mode).
