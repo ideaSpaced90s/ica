@@ -1019,7 +1019,17 @@ class DominanceHeatmap extends ConsumerStatefulWidget {
 }
 
 class _DominanceHeatmapState extends ConsumerState<DominanceHeatmap> {
-  int? _selectedTileIndex;
+  late DateTime _selectedDate;
+
+  DateTime _normalizeDate(DateTime dt) {
+    return DateTime(dt.year, dt.month, dt.day);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedDate = _normalizeDate(DateTime.now());
+  }
 
   Widget _buildLegendDot(Color color) {
     return Container(
@@ -1028,6 +1038,46 @@ class _DominanceHeatmapState extends ConsumerState<DominanceHeatmap> {
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(2),
+      ),
+    );
+  }
+
+  Widget _buildNavArrow({
+    required IconData icon,
+    required VoidCallback? onTap,
+    required String tooltip,
+  }) {
+    final isDisabled = onTap == null;
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(10),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: isDisabled
+                  ? Colors.transparent
+                  : ScholarlyTheme.panelStroke.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: isDisabled
+                    ? Colors.transparent
+                    : ScholarlyTheme.panelStroke.withValues(alpha: 0.15),
+              ),
+            ),
+            child: Icon(
+              icon,
+              color: isDisabled
+                  ? ScholarlyTheme.textMuted.withValues(alpha: 0.25)
+                  : ScholarlyTheme.textPrimary,
+              size: 20,
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -1061,10 +1111,16 @@ class _DominanceHeatmapState extends ConsumerState<DominanceHeatmap> {
       dayMatches.putIfAbsent(dateKey, () => []).add(entry);
     }
 
-    final now = DateTime.now();
+    final today = _normalizeDate(DateTime.now());
+    final selectedDate = _selectedDate;
+
+    // Generate list of 30 days ending today
+    final List<DateTime> dailyDates = List.generate(30, (index) {
+      return today.subtract(Duration(days: 29 - index));
+    });
+
     final List<double> dailyPointsList = [];
-    for (int i = 29; i >= 0; i--) {
-      final day = now.subtract(Duration(days: i));
+    for (final day in dailyDates) {
       final dateKey = '${day.year}-${day.month}-${day.day}';
       final matches = dayMatches[dateKey];
       if (matches == null || matches.isEmpty) {
@@ -1082,32 +1138,24 @@ class _DominanceHeatmapState extends ConsumerState<DominanceHeatmap> {
       }
     }
 
-    // Default to the most recent active day if not selected yet
-    int? selectedIdx = _selectedTileIndex;
-    if (selectedIdx == null && dailyPointsList.isNotEmpty) {
-      for (int i = dailyPointsList.length - 1; i >= 0; i--) {
-        if (!dailyPointsList[i].isNaN) {
-          selectedIdx = i;
-          break;
-        }
-      }
+    final difference = selectedDate.difference(today).inDays;
+    String formattedDayLabel;
+    if (difference == 0) {
+      formattedDayLabel = 'Today, ${DateFormat('MMM d').format(selectedDate)}';
+    } else if (difference == -1) {
+      formattedDayLabel = 'Yesterday, ${DateFormat('MMM d').format(selectedDate)}';
+    } else if (difference == 1) {
+      formattedDayLabel = 'Tomorrow, ${DateFormat('MMM d').format(selectedDate)}';
+    } else {
+      formattedDayLabel = DateFormat('EEEE, MMM d').format(selectedDate);
     }
 
-    Widget detailsWidget;
-    if (selectedIdx != null) {
-      final selectedDate = now.subtract(Duration(days: 29 - selectedIdx));
-      final dateKey =
-          '${selectedDate.year}-${selectedDate.month}-${selectedDate.day}';
-      final matches = dayMatches[dateKey] ?? [];
+    final dateKey = '${selectedDate.year}-${selectedDate.month}-${selectedDate.day}';
+    final matches = dayMatches[dateKey] ?? [];
 
-      final formattedDayLabel = (29 - selectedIdx) == 0
-          ? 'Today, ${DateFormat('MMM d').format(selectedDate)}'
-          : (29 - selectedIdx) == 1
-          ? 'Yesterday, ${DateFormat('MMM d').format(selectedDate)}'
-          : DateFormat('EEEE, MMM d').format(selectedDate);
-
-      if (matches.isNotEmpty) {
-        final totalPoints = matches
+    final double totalPoints = matches.isEmpty
+        ? 0.0
+        : matches
             .map((m) {
               if (m.result == 'W') return 1.0;
               if (m.result == 'D') return 0.5;
@@ -1115,247 +1163,242 @@ class _DominanceHeatmapState extends ConsumerState<DominanceHeatmap> {
             })
             .reduce((a, b) => a + b);
 
-        detailsWidget = Container(
-          margin: const EdgeInsets.only(top: 16),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: ScholarlyTheme.panelBase.withValues(alpha: 0.4),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: ScholarlyTheme.panelStroke.withValues(alpha: 0.5),
+    final hasPrev = selectedDate.isAfter(today.subtract(const Duration(days: 29)));
+    final hasNext = selectedDate.isBefore(today.add(const Duration(days: 1)));
+
+    void onPrevDay() {
+      if (hasPrev) {
+        setState(() {
+          _selectedDate = selectedDate.subtract(const Duration(days: 1));
+        });
+      }
+    }
+
+    void onNextDay() {
+      if (hasNext) {
+        setState(() {
+          _selectedDate = selectedDate.add(const Duration(days: 1));
+        });
+      }
+    }
+
+    final detailsContent = matches.isNotEmpty
+        ? LayoutBuilder(
+            builder: (context, constraints) {
+              Widget buildMatchRow(PerformanceLedgerEntry match) {
+                final matchTime = DateFormat('jm').format(match.timestamp);
+                final modeLabel =
+                    '${match.ratingCategory.toUpperCase()} ${match.gameMode == 'chess960' ? '960' : 'Classic'}';
+
+                Color outcomeColor;
+                String resultText;
+                if (match.result == 'W') {
+                  outcomeColor = const Color(0xFF10B981);
+                  resultText = 'W';
+                } else if (match.result == 'L') {
+                  outcomeColor = const Color(0xFFEF4444);
+                  resultText = 'L';
+                } else {
+                  outcomeColor = const Color(0xFF64748B);
+                  resultText = 'D';
+                }
+
+                return Container(
+                  margin: const EdgeInsets.symmetric(vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 6,
+                    horizontal: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: ScholarlyTheme.panelStroke.withValues(alpha: 0.25),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 20,
+                        height: 20,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: outcomeColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: outcomeColor.withValues(alpha: 0.25),
+                            width: 1,
+                          ),
+                        ),
+                        child: Text(
+                          resultText,
+                          style: GoogleFonts.jetBrainsMono(
+                            color: outcomeColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'vs ${match.opponentName}',
+                              style: GoogleFonts.inter(
+                                color: ScholarlyTheme.textPrimary,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '$matchTime • $modeLabel',
+                              style: GoogleFonts.inter(
+                                color: ScholarlyTheme.textMuted,
+                                fontSize: 9.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${match.ratingSnapshot} ELO',
+                        style: GoogleFonts.jetBrainsMono(
+                          color: ScholarlyTheme.textPrimary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 10.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              final isWide = constraints.maxWidth > 600;
+              if (isWide) {
+                final colWidth = (constraints.maxWidth - 12) / 2;
+                return Wrap(
+                  spacing: 12,
+                  runSpacing: 0,
+                  children: matches
+                      .map<Widget>(
+                        (match) => SizedBox(
+                          width: colWidth,
+                          child: buildMatchRow(match),
+                        ),
+                      )
+                      .toList(),
+                );
+              }
+              return Column(
+                children: matches.map<Widget>(buildMatchRow).toList(),
+              );
+            },
+          )
+        : Container(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            alignment: Alignment.center,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.calendar_today_rounded,
+                  color: ScholarlyTheme.textMuted.withValues(alpha: 0.4),
+                  size: 28,
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  difference == 1
+                      ? 'No matches scheduled for tomorrow.'
+                      : 'No rated battles on this day.',
+                  style: GoogleFonts.inter(
+                    color: ScholarlyTheme.textMuted,
+                    fontSize: 11.5,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
             ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          );
+
+    final detailsWidget = Container(
+      margin: const EdgeInsets.only(top: 16),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: ScholarlyTheme.panelBase.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: ScholarlyTheme.panelStroke.withValues(alpha: 0.5),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Date Bar inside the container
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Summary Header
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
+              _buildNavArrow(
+                icon: Icons.chevron_left_rounded,
+                onTap: hasPrev ? onPrevDay : null,
+                tooltip: 'Previous Day',
+              ),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
                       formattedDayLabel,
                       style: GoogleFonts.inter(
                         color: ScholarlyTheme.textPrimary,
                         fontWeight: FontWeight.bold,
-                        fontSize: 12.5,
+                        fontSize: 13,
                       ),
-                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
                     ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: ScholarlyTheme.accentBlue.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: ScholarlyTheme.accentBlue.withValues(
-                          alpha: 0.15,
+                    const SizedBox(height: 2),
+                    if (matches.isNotEmpty)
+                      Text(
+                        'Score: ${totalPoints % 1 == 0 ? totalPoints.toInt() : totalPoints} / ${matches.length} matches',
+                        style: GoogleFonts.jetBrainsMono(
+                          color: ScholarlyTheme.accentBlue,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 10,
+                        ),
+                      )
+                    else
+                      Text(
+                        'No battles',
+                        style: GoogleFonts.inter(
+                          color: ScholarlyTheme.textMuted,
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
-                    ),
-                    child: Text(
-                      'Score: ${totalPoints % 1 == 0 ? totalPoints.toInt() : totalPoints} / ${matches.length}',
-                      style: GoogleFonts.jetBrainsMono(
-                        color: ScholarlyTheme.accentBlue,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 10.5,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              // Match grid — 2 cols on desktop, 1 col on mobile
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  Widget buildMatchRow(match) {
-                    final matchTime = DateFormat('jm').format(match.timestamp);
-                    final modeLabel =
-                        '${match.ratingCategory.toUpperCase()} ${match.gameMode == 'chess960' ? '960' : 'Classic'}';
-
-                    Color outcomeColor;
-                    String resultText;
-                    if (match.result == 'W') {
-                      outcomeColor = const Color(0xFF10B981);
-                      resultText = 'W';
-                    } else if (match.result == 'L') {
-                      outcomeColor = const Color(0xFFEF4444);
-                      resultText = 'L';
-                    } else {
-                      outcomeColor = const Color(0xFF64748B);
-                      resultText = 'D';
-                    }
-
-                    return Container(
-                      margin: const EdgeInsets.symmetric(vertical: 4),
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 6,
-                        horizontal: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.5),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: ScholarlyTheme.panelStroke.withValues(alpha: 0.25),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 20,
-                            height: 20,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: outcomeColor.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(
-                                color: outcomeColor.withValues(alpha: 0.25),
-                                width: 1,
-                              ),
-                            ),
-                            child: Text(
-                              resultText,
-                              style: GoogleFonts.jetBrainsMono(
-                                color: outcomeColor,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 10,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'vs ${match.opponentName}',
-                                  style: GoogleFonts.inter(
-                                    color: ScholarlyTheme.textPrimary,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  '$matchTime • $modeLabel',
-                                  style: GoogleFonts.inter(
-                                    color: ScholarlyTheme.textMuted,
-                                    fontSize: 9.5,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            '${match.ratingSnapshot} ELO',
-                            style: GoogleFonts.jetBrainsMono(
-                              color: ScholarlyTheme.textPrimary,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 10.5,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-
-                  final isWide = constraints.maxWidth > 600;
-                  if (isWide) {
-                    // Two-column grid via Wrap
-                    final colWidth = (constraints.maxWidth - 12) / 2;
-                    return Wrap(
-                      spacing: 12,
-                      runSpacing: 0,
-                      children: matches
-                          .map<Widget>(
-                            (match) => SizedBox(
-                              width: colWidth,
-                              child: buildMatchRow(match),
-                            ),
-                          )
-                          .toList(),
-                    );
-                  }
-                  // Single column
-                  return Column(
-                    children: matches.map<Widget>(buildMatchRow).toList(),
-                  );
-                },
-              ),
-            ],
-          ),
-        );
-      } else {
-        detailsWidget = Container(
-          margin: const EdgeInsets.only(top: 16),
-          padding: const EdgeInsets.all(16),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: ScholarlyTheme.panelBase.withValues(alpha: 0.2),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: ScholarlyTheme.panelStroke.withValues(alpha: 0.3),
-            ),
-          ),
-          child: Column(
-            children: [
-              Icon(
-                Icons.calendar_today_rounded,
-                color: ScholarlyTheme.textMuted.withValues(alpha: 0.4),
-                size: 24,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'No rated battles on this day.',
-                style: GoogleFonts.inter(
-                  color: ScholarlyTheme.textMuted,
-                  fontSize: 11,
-                  fontStyle: FontStyle.italic,
+                  ],
                 ),
               ),
+              _buildNavArrow(
+                icon: Icons.chevron_right_rounded,
+                onTap: hasNext ? onNextDay : null,
+                tooltip: 'Next Day',
+              ),
             ],
           ),
-        );
-      }
-    } else {
-      detailsWidget = Container(
-        margin: const EdgeInsets.only(top: 16),
-        padding: const EdgeInsets.all(16),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: ScholarlyTheme.panelBase.withValues(alpha: 0.2),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
+          const SizedBox(height: 12),
+          Divider(
             color: ScholarlyTheme.panelStroke.withValues(alpha: 0.3),
+            height: 1,
           ),
-        ),
-        child: Column(
-          children: [
-            Icon(
-              Icons.history_rounded,
-              color: ScholarlyTheme.textMuted.withValues(alpha: 0.4),
-              size: 24,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'No matches played in the last 30 days.',
-              style: GoogleFonts.inter(
-                color: ScholarlyTheme.textMuted,
-                fontSize: 11.5,
-                fontStyle: FontStyle.italic,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      );
-    }
+          const SizedBox(height: 12),
+          detailsContent,
+        ],
+      ),
+    );
 
     final double gridWidth = (24.0 * 30) + (5.0 * 29);
 
@@ -1378,13 +1421,14 @@ class _DominanceHeatmapState extends ConsumerState<DominanceHeatmap> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: List.generate(30, (index) {
                       final avg = dailyPointsList[index];
-                      final isSelected = selectedIdx == index;
+                      final cellDate = dailyDates[index];
+                      final isSelected = selectedDate == cellDate;
                       final tileColor = getTileColor(avg);
 
                       return GestureDetector(
                         onTap: () {
                           setState(() {
-                            _selectedTileIndex = index;
+                            _selectedDate = cellDate;
                           });
                         },
                         child: Container(
@@ -1510,9 +1554,119 @@ class _DominanceHeatmapState extends ConsumerState<DominanceHeatmap> {
             ],
           ),
 
-          // Daily details
-          detailsWidget,
+          // Flippable Details Box
+          FlippableDetailsContainer(
+            selectedDate: selectedDate,
+            onSwipeLeft: onNextDay,
+            onSwipeRight: onPrevDay,
+            child: detailsWidget,
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class FlippableDetailsContainer extends StatefulWidget {
+  final DateTime selectedDate;
+  final Widget child;
+  final VoidCallback onSwipeLeft;
+  final VoidCallback onSwipeRight;
+
+  const FlippableDetailsContainer({
+    super.key,
+    required this.selectedDate,
+    required this.child,
+    required this.onSwipeLeft,
+    required this.onSwipeRight,
+  });
+
+  @override
+  State<FlippableDetailsContainer> createState() => _FlippableDetailsContainerState();
+}
+
+class _FlippableDetailsContainerState extends State<FlippableDetailsContainer>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+  Widget? _oldChild;
+  DateTime? _oldDate;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _animation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+    _oldChild = widget.child;
+    _oldDate = widget.selectedDate;
+  }
+
+  @override
+  void didUpdateWidget(covariant FlippableDetailsContainer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.selectedDate != widget.selectedDate) {
+      _oldChild = oldWidget.child;
+      _oldDate = oldWidget.selectedDate;
+      _controller.forward(from: 0.0).then((_) {
+        if (mounted) {
+          setState(() {
+            _oldChild = widget.child;
+            _oldDate = widget.selectedDate;
+            _controller.value = 0.0;
+          });
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onHorizontalDragEnd: (details) {
+        if (details.primaryVelocity == null) return;
+        // Swipe left (finger right to left) goes to next day (Tomorrow)
+        if (details.primaryVelocity! < -200) {
+          widget.onSwipeLeft();
+        }
+        // Swipe right (finger left to right) goes to previous day (Yesterday)
+        else if (details.primaryVelocity! > 200) {
+          widget.onSwipeRight();
+        }
+      },
+      child: AnimatedBuilder(
+        animation: _animation,
+        builder: (context, child) {
+          final val = _animation.value;
+          final isForward = _oldDate == null || widget.selectedDate.isAfter(_oldDate!);
+          
+          if (val == 0.0) {
+            return widget.child;
+          }
+
+          final isFront = val < 0.5;
+          final double angle = isFront
+              ? (isForward ? -val * math.pi : val * math.pi)
+              : (isForward ? (1.0 - val) * math.pi : -(1.0 - val) * math.pi);
+
+          return Transform(
+            transform: Matrix4.identity()
+              ..setEntry(3, 2, 0.0012) // perspective
+              ..rotateY(angle),
+            alignment: Alignment.center,
+            child: isFront ? (_oldChild ?? widget.child) : widget.child,
+          );
+        },
       ),
     );
   }

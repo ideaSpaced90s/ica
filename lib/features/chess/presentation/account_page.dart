@@ -1029,10 +1029,9 @@ class _AccountPageState extends ConsumerState<AccountPage> {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text(
-              'Everything reset: ratings, XP, LP, match history, saved games, tutorials, and daily assignments.',
-            ),
-            backgroundColor: Colors.redAccent,
+            content: Text('Reset successful!'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
           ),
         );
       }
