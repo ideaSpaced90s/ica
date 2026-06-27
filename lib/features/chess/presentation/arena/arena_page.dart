@@ -609,6 +609,8 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                   whiteCounts: state.whiteCounts ?? const {},
                   blackCounts: state.blackCounts ?? const {},
                   evalHistory: state.evalHistory ?? const [],
+                  recentMoves: state.recentMoves,
+                  reviewClassifications: state.reviewClassifications ?? const {},
                   whitePlayerName: state.isPlayerWhite ? 'You' : AiAvatar.getAvatar(state.engineLevel).name,
                   blackPlayerName: state.isPlayerWhite ? AiAvatar.getAvatar(state.engineLevel).name : 'You',
                   onStartReview: () {

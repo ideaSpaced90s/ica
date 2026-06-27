@@ -662,7 +662,7 @@ class StoreNotifier extends Notifier<StoreState> {
   // Board theme ownership checking
   bool isBoardThemePurchased(String themeId) {
     // Free themes
-    const freeThemes = {'classic', 'scholar', 'vector_wood', 'theme3', 'sprite_fairytale', 'sprite_persia'};
+    const freeThemes = {'classic', 'scholar', 'vector_wood', 'theme3', 'sprite_fairytale'};
     if (freeThemes.contains(themeId)) return true;
 
     // Purchased premium themes
@@ -705,7 +705,7 @@ class StoreNotifier extends Notifier<StoreState> {
 
   void recordThemeDay(String themeId) {
     if (!state.isPremium) return;
-    const freeThemes = {'classic', 'scholar', 'vector_wood', 'theme3', 'sprite_fairytale', 'sprite_persia'};
+    const freeThemes = {'classic', 'scholar', 'vector_wood', 'theme3', 'sprite_fairytale'};
     if (freeThemes.contains(themeId)) return;
     if (state.purchasedBoardThemes.contains(themeId)) return;
 
@@ -763,7 +763,7 @@ class StoreNotifier extends Notifier<StoreState> {
       'sprite_bubblegum', 'sprite_copper', 'sprite_plasma', 'sprite_overgrown',
       'sprite_goldsilver', 'sprite_marble', 'sprite_desert', 'sprite_ivory',
       'sprite_seasons', 'sprite_timber', 'sprite_lightning', 'sprite_diamonds',
-      'sprite_royal', 'sprite_arc'
+      'sprite_royal', 'sprite_arc', 'sprite_persia'
     ];
 
     final shuffled = List<String>.from(premiumThemeIds);

@@ -196,7 +196,7 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
     final chessNotifier = ref.read(chessProvider.notifier);
 
     // Grouping themes
-    final freeThemeIds = {'classic', 'scholar', 'vector_wood', 'theme3', 'sprite_fairytale', 'sprite_persia'};
+    final freeThemeIds = {'classic', 'scholar', 'vector_wood', 'theme3', 'sprite_fairytale'};
     final featuredThemeIds = {
       'sprite_diamonds',
       'sprite_lightning',

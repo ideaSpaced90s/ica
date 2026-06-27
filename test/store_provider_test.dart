@@ -68,4 +68,37 @@ void main() {
     // Give time for fire-and-forget saveStore async I/O to finish before tearDown deletes tempDir
     await Future<void>.delayed(const Duration(milliseconds: 100));
   });
+
+  test('Persia theme is premium and locked by default, but can be purchased or unlocked via premium', () async {
+    final container = ProviderContainer(
+      overrides: [
+        storeProvider.overrideWith(
+          () => StoreNotifier(
+            loadData: false,
+            initializeBilling: false,
+          ),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final storeNotifier = container.read(storeProvider.notifier);
+
+    // Verify classic is free and unlocked
+    expect(storeNotifier.isBoardThemePurchased('classic'), isTrue);
+
+    // Verify Persia is not free and locked by default
+    expect(storeNotifier.isBoardThemePurchased('sprite_persia'), isFalse);
+
+    // Verify Persia is in premium cycle allocation
+    storeNotifier.simulateUSDSubscription('monthly');
+    expect(container.read(storeProvider).cycleThemeAllocation, contains('sprite_persia'));
+
+    // Verify purchase unlocks Persia
+    storeNotifier.purchaseBoardTheme('sprite_persia');
+    expect(storeNotifier.isBoardThemePurchased('sprite_persia'), isTrue);
+
+    // Give time for fire-and-forget saveStore async I/O to finish before tearDown deletes tempDir
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+  });
 }
