@@ -538,7 +538,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
         ),
         const SizedBox(height: 8),
         Text(
-          'v1.0.0',
+          'v1.0.18',
           style: GoogleFonts.inter(
             color: const Color(0xFF94A3B8), // Muted slate
             fontSize: 11,
