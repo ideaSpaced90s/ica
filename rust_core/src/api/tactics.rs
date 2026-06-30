@@ -162,9 +162,9 @@ pub fn generate_tactics_analysis(
     let your_tactic_explanation = if user_moves.is_empty() {
         "No moves were provided for analysis.".to_string()
     } else if !user_moves_valid {
-        format!("The sequence contains illegal moves after: {}.", user_san_moves.join(" "))
+        format!("The sequence starts with promise, but the path becomes invalid after playing: {}.", user_san_moves.last().cloned().unwrap_or_default())
     } else {
-        format!("Your proposed line leads to a position where pieces are active and tension is established.")
+        format!("Your sequence maintains tension and seeks piece activity. Pay close attention to how it impacts your coordination.")
     };
 
     let your_tactic = TacticData {
@@ -192,10 +192,9 @@ pub fn generate_tactics_analysis(
                 continue;
             }
 
-            let m1_uci = &alt_line.pv[0];
-            // Skip user's first move for the first alternative card if there are choices
-            if let Some(user_first) = user_first_move_uci {
-                if m1_uci == user_first && pos.legal_moves().len() > 1 && alternatives.is_empty() {
+            let m1_uci = &alt_line.pv[0]; // Opponent response
+            if let Some(user_second) = user_uci_moves.get(1) {
+                if m1_uci == user_second && alternatives.is_empty() {
                     continue;
                 }
             }
@@ -205,14 +204,30 @@ pub fn generate_tactics_analysis(
             let mut seq_san = Vec::new();
             let mut valid = true;
 
-            for uci in &alt_line.pv {
-                if let Some(m) = parse_uci_to_move(&sim_pos, uci) {
+            // Play the user's first move first on the base position
+            if let Some(first_uci) = user_first_move_uci {
+                if let Some(m) = parse_uci_to_move(&sim_pos, first_uci) {
                     seq_san.push(San::from_move(&sim_pos, &m).to_string());
-                    seq_moves.push(uci.clone());
+                    seq_moves.push(first_uci.clone());
                     sim_pos.play_unchecked(&m);
                 } else {
                     valid = false;
-                    break;
+                }
+            }
+
+            if valid {
+                for uci in &alt_line.pv {
+                    if seq_moves.len() >= user_uci_moves.len() {
+                        break;
+                    }
+                    if let Some(m) = parse_uci_to_move(&sim_pos, uci) {
+                        seq_san.push(San::from_move(&sim_pos, &m).to_string());
+                        seq_moves.push(uci.clone());
+                        sim_pos.play_unchecked(&m);
+                    } else {
+                        valid = false;
+                        break;
+                    }
                 }
             }
 
@@ -227,11 +242,21 @@ pub fn generate_tactics_analysis(
                 format!("{:.2} pawns", alt_line.evaluation)
             };
 
-            let explanation = format!(
-                "Stockfish identifies this line as a critical tactical path (evaluated at {}). A solid continuation path involves {}.",
-                eval_desc,
-                if seq_san.len() > 2 { seq_san[2].clone() } else { "rapid piece development".to_string() }
-            );
+            let continuation_move = if seq_san.len() > 2 { seq_san[2].clone() } else { "rapid piece development".to_string() };
+            let explanation = match alternatives.len() {
+                0 => format!(
+                    "My analysis favors this path (which I evaluate at {}). A strong continuation involves playing **{}**.",
+                    eval_desc, continuation_move
+                ),
+                1 => format!(
+                    "Consider this alternative branch (valued at {}). It focuses on optimizing your piece activity, expecting **{}**.",
+                    eval_desc, continuation_move
+                ),
+                _ => format!(
+                    "This variation is highly principled (evaluated at {}). It directs pressure to key squares, expecting **{}**.",
+                    eval_desc, continuation_move
+                ),
+            };
 
             alternatives.push(TacticData {
                 name,
@@ -244,7 +269,7 @@ pub fn generate_tactics_analysis(
 
     // 3. Build Chanakya text response containing the hidden tags
     let mut prose = String::new();
-    prose.push_str("I have analyzed your candidate lines, Apprentice. Here is my tactical report:\n\n");
+    prose.push_str("I have mapped out the tactical currents of your sequence, Apprentice. Let us review the lines:\n\n");
     
     // Describe User's tactic
     if user_moves.is_empty() {
@@ -277,9 +302,9 @@ pub fn generate_tactics_analysis(
     }
     
     if piece_count <= 10 {
-        prose.push_str("In this simplified endgame position, alternative paths are highly constrained, hence fewer lines are suggested.");
+        prose.push_str("In this simplified endgame position, alternative paths are highly constrained. Play with precision.");
     } else {
-        prose.push_str("Evaluate the pressure and structural changes of these choices before executing your move.");
+        prose.push_str("Weigh these variations with care, Apprentice. The board demands structural harmony on every single move.");
     }
 
     TacticsResult {

@@ -54,7 +54,7 @@ class PositionContextBuilder {
     List<CandidateMove> candidates = const [],
     PrecomputedRustContext? precomputed,
   }) async {
-    final evalDiff = currentEval - previousEval;
+    final evalDiff = -currentEval - previousEval;
     final quality = _classifyQuality(evalDiff);
 
     String moveDescription;

@@ -20,9 +20,9 @@ pub fn select_commentary_template_rust(
     previous_quality: String,
     game_phase: String,
     eval_diff: f64,
-    has_fork: bool,
-    has_pin: bool,
-    has_hanging: bool,
+    _has_fork: bool,
+    _has_pin: bool,
+    _has_hanging: bool,
 ) -> String {
     // 1. Narrative Continuity / Transition Anchors
     if previous_quality == "Blunder" || previous_quality == "Mistake" {
@@ -78,9 +78,11 @@ pub fn select_commentary_template_rust(
             "C1" // Major Blunders
         } else if quality == "Brilliant" {
             "C2" // Brilliant/Surgical Strike
+        } else if quality == "Strong" {
+            "B1" // Outpost Creation / Piece Optimization
         } else {
-            // Inaccuracy, Neutral, Strong
-            if eval_diff <= -0.5 || has_fork || has_pin || has_hanging {
+            // Inaccuracy, Neutral
+            if quality == "Inaccuracy" || eval_diff <= -0.5 {
                 "B2" // Structural Degradation
             } else {
                 "B1" // Outpost Creation / Piece Optimization

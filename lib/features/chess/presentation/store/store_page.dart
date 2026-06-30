@@ -13,6 +13,7 @@ import '../arena/themes/theme_registry.dart';
 import '../widgets/theme_preview_dialog.dart';
 import '../widgets/premium_membership_card.dart';
 import '../../services/auth_service.dart';
+import '../../services/analytics_service.dart';
 import '../widgets/sign_in_prompt_dialog.dart';
 
 class StorePage extends ConsumerStatefulWidget {
@@ -46,6 +47,10 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
   Widget build(BuildContext context) {
     final storeState = ref.watch(storeProvider);
     final storeNotifier = ref.read(storeProvider.notifier);
+    final localizedPrices = ref.watch(storePricesProvider).maybeWhen(
+          data: (prices) => prices,
+          orElse: () => const <String, LocalizedPlanPrice>{},
+        );
 
     // Refresh checking on enter
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -111,8 +116,8 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
               child: TabBarView(
                 controller: _tabController,
                 children: [
-                  _buildPlansTab(context, storeState, storeNotifier),
-                  _buildThemesTab(context, storeState, storeNotifier),
+                  _buildPlansTab(context, storeState, storeNotifier, localizedPrices),
+                  _buildThemesTab(context, storeState, storeNotifier, localizedPrices),
                 ],
               ),
             ),
@@ -122,10 +127,42 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
     );
   }
 
+  String _getPlanPrice(SubscriptionPlan plan, Map<String, LocalizedPlanPrice> localizedPrices) {
+    final localized = localizedPrices[plan.id];
+    if (localized != null) {
+      return localized.basePrice;
+    }
+    return '\$${plan.price.toStringAsFixed(2)}';
+  }
+
+  String _getPlanDescription(SubscriptionPlan plan, Map<String, LocalizedPlanPrice> localizedPrices) {
+    final localized = localizedPrices[plan.id];
+    if (localized == null) {
+      return plan.description;
+    }
+
+    if (localized.introPrice != null && localized.introMonths > 0) {
+      final periodText = plan.id == 'yearly'
+          ? 'yr'
+          : (plan.id == 'sixmonth' ? '6 months' : 'mo');
+      return 'Pay ${localized.introPrice} for the first ${localized.introMonths} months, thereafter ${localized.basePrice}/$periodText.';
+    }
+
+    if (plan.id == 'monthly') {
+      return 'First 3 months 15% discount, thereafter ${localized.basePrice}/mo.';
+    } else if (plan.id == 'sixmonth') {
+      return '3-day free trial, then ${localized.basePrice} every 6 months.';
+    } else if (plan.id == 'yearly') {
+      return '7-day free trial, then ${localized.basePrice}/yr.';
+    }
+    return plan.description;
+  }
+
   Widget _buildPlansTab(
     BuildContext context,
     StoreState storeState,
     StoreNotifier storeNotifier,
+    Map<String, LocalizedPlanPrice> localizedPrices,
   ) {
     return ListView(
       physics: const BouncingScrollPhysics(),
@@ -160,7 +197,9 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
         // Paid Plans
         ...plans.map((plan) {
           final isActive = storeState.isPremium && storeState.subscriptionPlan == plan.id;
-          return _buildPaidPlanCard(context, plan, isActive, storeState, storeNotifier);
+          final planPrice = _getPlanPrice(plan, localizedPrices);
+          final planDescription = _getPlanDescription(plan, localizedPrices);
+          return _buildPaidPlanCard(context, plan, isActive, storeState, storeNotifier, planPrice, planDescription);
         }),
 
         if (storeState.isPremium) ...[
@@ -191,9 +230,11 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
     BuildContext context,
     StoreState storeState,
     StoreNotifier storeNotifier,
+    Map<String, LocalizedPlanPrice> localizedPrices,
   ) {
     final chessState = ref.watch(chessProvider);
     final chessNotifier = ref.read(chessProvider.notifier);
+    final themePrice = localizedPrices['themes']?.basePrice ?? '\$0.99';
 
     // Grouping themes
     final freeThemeIds = {'classic', 'scholar', 'vector_wood', 'theme3', 'sprite_fairytale'};
@@ -247,7 +288,7 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
               (context, index) {
                 final theme = featuredThemes[index];
                 final isSelected = theme.id == chessState.boardThemeId;
-                return _buildThemeShopCard(context, theme, false, isSelected, storeState, storeNotifier, chessNotifier, isFeatured: true);
+                return _buildThemeShopCard(context, theme, false, isSelected, storeState, storeNotifier, chessNotifier, themePrice, isFeatured: true);
               },
               childCount: featuredThemes.length,
             ),
@@ -284,7 +325,7 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
               (context, index) {
                 final theme = otherPremiumThemes[index];
                 final isSelected = theme.id == chessState.boardThemeId;
-                return _buildThemeShopCard(context, theme, false, isSelected, storeState, storeNotifier, chessNotifier);
+                return _buildThemeShopCard(context, theme, false, isSelected, storeState, storeNotifier, chessNotifier, themePrice);
               },
               childCount: otherPremiumThemes.length,
             ),
@@ -321,7 +362,7 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
               (context, index) {
                 final theme = freeThemes[index];
                 final isSelected = theme.id == chessState.boardThemeId;
-                return _buildThemeShopCard(context, theme, true, isSelected, storeState, storeNotifier, chessNotifier);
+                return _buildThemeShopCard(context, theme, true, isSelected, storeState, storeNotifier, chessNotifier, themePrice);
               },
               childCount: freeThemes.length,
             ),
@@ -343,7 +384,8 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
     bool isSelected,
     StoreState storeState,
     StoreNotifier storeNotifier,
-    dynamic chessNotifier, {
+    dynamic chessNotifier,
+    String themePrice, {
     bool isFeatured = false,
   }) {
     final bool isDirectlyPurchased = storeState.purchasedBoardThemes.contains(theme.id);
@@ -369,7 +411,7 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
       badgeText = '$remainingDays ${remainingDays == 1 ? "DAY" : "DAYS"} LEFT';
       badgeColor = const Color(0xFFFFD700).withValues(alpha: 0.9); // Gold for subscription access
     } else {
-      badgeText = '\$0.99';
+      badgeText = themePrice;
       badgeColor = Colors.black.withValues(alpha: 0.65);
     }
 
@@ -575,11 +617,11 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
                                 title: 'Sign In Required',
                                 description: 'To buy premium board themes and sync them to your account, please sign in with Google.',
                                 onSignInSuccess: () {
-                                  _showThemePurchaseConfirmation(context, theme, storeNotifier, chessNotifier);
+                                  _showThemePurchaseConfirmation(context, theme, storeNotifier, chessNotifier, themePrice);
                                 },
                               );
                             } else {
-                              _showThemePurchaseConfirmation(context, theme, storeNotifier, chessNotifier);
+                              _showThemePurchaseConfirmation(context, theme, storeNotifier, chessNotifier, themePrice);
                             }
                           },
                           style: ElevatedButton.styleFrom(
@@ -591,9 +633,9 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
                               borderRadius: BorderRadius.circular(10),
                             ),
                           ),
-                          child: const Text(
-                            'BUY \$0.99',
-                            style: TextStyle(
+                          child: Text(
+                            'BUY $themePrice',
+                            style: const TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
                               letterSpacing: 0.5,
@@ -614,7 +656,16 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
     ChessTheme theme,
     StoreNotifier storeNotifier,
     dynamic chessNotifier,
+    String themePrice,
   ) {
+    ref.read(analyticsServiceProvider).logEvent(
+      name: 'select_store_item',
+      parameters: {
+        'item_id': theme.id,
+        'item_type': 'theme',
+        'price': 0.99,
+      },
+    );
     showDialog(
       context: context,
       builder: (context) {
@@ -627,7 +678,7 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
             style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary),
           ),
           content: Text(
-            'Would you like to buy the premium theme "${theme.name}" for \$0.99? It will be unlocked permanently.',
+            'Would you like to buy the premium theme "${theme.name}" for $themePrice? It will be unlocked permanently.',
             style: GoogleFonts.inter(fontSize: 13, color: ScholarlyTheme.textPrimary, height: 1.4),
           ),
           actions: [
@@ -815,6 +866,8 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
     bool isActive,
     StoreState storeState,
     StoreNotifier storeNotifier,
+    String planPrice,
+    String planDescription,
   ) {
     final isYearly = plan.id == 'yearly';
     final titleColor = isYearly ? Colors.white : ScholarlyTheme.textPrimary;
@@ -929,7 +982,7 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
                       textBaseline: TextBaseline.alphabetic,
                       children: [
                         Text(
-                          '\$${plan.price.toStringAsFixed(2)}',
+                          planPrice,
                           style: GoogleFonts.jetBrainsMono(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
@@ -949,7 +1002,7 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  plan.description,
+                  planDescription,
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     color: descColor,
@@ -974,8 +1027,8 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
                             child: Text(
                               feature,
                               style: GoogleFonts.inter(
-                                fontSize: 12,
-                                color: featureTextColor,
+                                  fontSize: 12,
+                                  color: featureTextColor,
                               ),
                             ),
                           ),
@@ -991,6 +1044,16 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
                         ? null
                         : () {
                             ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                            
+                            ref.read(analyticsServiceProvider).logEvent(
+                              name: 'select_store_item',
+                              parameters: {
+                                'item_id': plan.id,
+                                'item_type': 'subscription',
+                                'price': plan.price,
+                              },
+                            );
+
                             if (isDowngrade) {
                               storeNotifier.openSubscriptionManagement();
                               return;
@@ -998,7 +1061,7 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
                             
                             void action() {
                               if (isUpgrade) {
-                                _showUpgradeConfirmation(context, plan, storeNotifier);
+                                _showUpgradeConfirmation(context, plan, storeNotifier, planPrice);
                               } else {
                                 storeNotifier.buySubscription(plan.id);
                               }
@@ -1247,6 +1310,7 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
     BuildContext context,
     SubscriptionPlan plan,
     StoreNotifier storeNotifier,
+    String planPrice,
   ) {
     showDialog(
       context: context,
@@ -1260,7 +1324,7 @@ class _StorePageState extends ConsumerState<StorePage> with SingleTickerProvider
             style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary),
           ),
           content: Text(
-            'Would you like to upgrade to the "${plan.title}" for \$${plan.price}? Your current plan will end immediately, and Google Play will apply a prorated credit toward your new plan.',
+            'Would you like to upgrade to the "${plan.title}" for $planPrice? Your current plan will end immediately, and Google Play will apply a prorated credit toward your new plan.',
             style: GoogleFonts.inter(fontSize: 13, color: ScholarlyTheme.textPrimary, height: 1.4),
           ),
           actions: [

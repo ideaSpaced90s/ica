@@ -9,6 +9,7 @@ import '../application/battleground_provider.dart';
 import '../application/arena_provider.dart';
 import '../application/study_lab_provider.dart';
 import '../services/chess_sound_service.dart';
+import '../services/analytics_service.dart';
 import 'scholarly_theme.dart';
 
 import 'dashboard_page.dart';
@@ -38,6 +39,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 
 
 import '../application/navigation_provider.dart';
+import '../application/update_provider.dart';
+import 'widgets/update_check_tile.dart' show PulsingDotIndicator;
 export '../application/navigation_provider.dart';
 
 
@@ -50,9 +53,81 @@ class MobileNavigationShell extends ConsumerStatefulWidget {
 
 class _MobileNavigationShellState extends ConsumerState<MobileNavigationShell> {
   DailyTask? _completedTaskBanner;
+  late DateTime _lastTabChangeTime;
+
+  @override
+  void initState() {
+    super.initState();
+    _lastTabChangeTime = DateTime.now();
+    
+    // Log the initial tab view (usually index 0, Dashboard) after the first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final initialIndex = ref.read(mobileNavIndexProvider);
+      ref.read(analyticsServiceProvider).logScreenView(
+        screenName: _getTabName(initialIndex),
+      );
+    });
+  }
+
+  String _getTabName(int index) {
+    switch (index) {
+      case 0:
+        return 'Dashboard';
+      case 1:
+        return 'Arena';
+      case 2:
+        return 'Battleground';
+      case 3:
+        return 'Academy';
+      case 4:
+        return 'Puzzles';
+      case 5:
+        return 'Analysis';
+      case 6:
+        return 'Archive';
+      case 7:
+        return 'Tutorial';
+      case 8:
+        return 'About Us';
+      case 9:
+        return 'Settings';
+      case 10:
+        return 'Store';
+      case 11:
+        return 'Assignment';
+      case 12:
+        return 'Account';
+      case 13:
+        return 'Achievements';
+      default:
+        return 'Unknown';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    // Listen to tab changes to log screen views and duration spent on previous tab
+    ref.listen<int>(mobileNavIndexProvider, (previous, next) {
+      final now = DateTime.now();
+      final duration = now.difference(_lastTabChangeTime);
+      _lastTabChangeTime = now;
+
+      // Log duration of previous section
+      if (previous != null) {
+        final previousTabName = _getTabName(previous);
+        ref.read(analyticsServiceProvider).logTimeSpent(
+          sectionName: previousTabName.toLowerCase(),
+          durationSeconds: duration.inSeconds,
+        );
+      }
+
+      // Log screen view of next section
+      final nextTabName = _getTabName(next);
+      ref.read(analyticsServiceProvider).logScreenView(
+        screenName: nextTabName,
+      );
+    });
+
     final currentIndex = ref.watch(mobileNavIndexProvider);
     final bgState = ref.watch(battlegroundProvider);
     final isBgMatchActive = currentIndex == 2 && bgState.activeRatedMatchId != null;
@@ -397,6 +472,7 @@ class _MobileSidebarDrawer extends ConsumerWidget {
     final currentIndex = ref.watch(mobileNavIndexProvider);
     final assignmentState = ref.watch(assignmentProvider);
     final pendingCount = assignmentState.dailyTasks.where((task) => !task.isCompleted).length;
+    final hasUpdate = ref.watch(updateProvider).hasUpdateBadge;
 
     return Drawer(
       backgroundColor: Colors.transparent,
@@ -547,6 +623,7 @@ class _MobileSidebarDrawer extends ConsumerWidget {
                   icon: Icons.settings_rounded,
                   isSelected: currentIndex == 9,
                   index: 9,
+                  trailing: hasUpdate ? const PulsingDotIndicator(color: Colors.redAccent) : null,
                   onTap: () {
                     _navigate(ref, context, 9);
                   },

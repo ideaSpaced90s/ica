@@ -13,6 +13,7 @@ import '../../services/chess_sound_service.dart';
 import '../scholarly_theme.dart';
 import '../mobile_navigation_shell.dart';
 import 'premium_nudge_overlay.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 class CommentaryHistory extends ConsumerStatefulWidget {
   const CommentaryHistory({
@@ -37,6 +38,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
   int _pulse = 0;
   late final ScrollController _scrollController;
   String? _selectedMode;
+  final Map<int, ScrollController> _candidateHorizontalScrollControllers = {};
 
 
   @override
@@ -89,7 +91,9 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
     if (widget.controller == null) {
       _scrollController.dispose();
     }
-
+    for (final controller in _candidateHorizontalScrollControllers.values) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
@@ -101,6 +105,41 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
   Widget build(BuildContext context) {
     final state = widget.state;
     final history = state.commentaryHistory;
+
+    ref.listen<int>(chessProvider.select((s) => s.candidatePlaybackPosition), (prev, next) {
+      final activeIndex = ref.read(chessProvider).activeCandidateIndex;
+      if (activeIndex != null) {
+        final rank = activeIndex + 1;
+        final controller = _candidateHorizontalScrollControllers[rank];
+        if (controller != null && controller.hasClients) {
+          final positionIndex = next - 1;
+          double targetOffset = 0.0;
+          if (positionIndex > 0) {
+            targetOffset = 85.0 + 8.0 + 24.0 + 6.0 + (positionIndex - 1) * 79.0 - 75.0;
+          }
+          if (targetOffset < 0) targetOffset = 0;
+          controller.animateTo(
+            targetOffset,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+          );
+        }
+      }
+    });
+
+    ref.listen<int?>(chessProvider.select((s) => s.activeCandidateIndex), (prev, next) {
+      if (next != null) {
+        final rank = next + 1;
+        final controller = _candidateHorizontalScrollControllers[rank];
+        if (controller != null && controller.hasClients) {
+          controller.animateTo(
+            0.0,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+          );
+        }
+      }
+    });
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -126,6 +165,28 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
         state.isBoardInChampionsTheme ||
         state.game.gameOver;
     final bool hasHistory = state.game.history.isNotEmpty;
+
+    // Determine if it is the player's turn
+    bool isPlayerTurn = true;
+    final fenParts = state.currentBoardFen.split(' ');
+    if (fenParts.length > 1) {
+      final turnWhite = fenParts[1] == 'w';
+      isPlayerTurn = state.isPlayerWhite == turnWhite;
+    }
+
+    // Chanakya is playing if it's not player's turn or engine is thinking
+    final bool isChanakyaPlaying = !isPlayerTurn || state.isEngineThinking;
+
+    // Check if any prompt has already been raised in the current turn (represented by currentBoardFen)
+    bool anyPromptRaised = false;
+    for (final entry in state.commentaryHistory) {
+      if (entry.isUser && entry.associatedFen == state.currentBoardFen) {
+        anyPromptRaised = true;
+        break;
+      }
+    }
+
+    final bool disableChips = isBusy || isChanakyaPlaying || anyPromptRaised;
 
     if (state.isTacticsModeActive) {
       final moves = state.tacticsSequence;
@@ -164,11 +225,11 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
                       decoration: BoxDecoration(
                         color: isUser
                             ? ScholarlyTheme.accentGold.withValues(alpha: 0.15)
-                            : ScholarlyTheme.accentBlueSoft.withValues(alpha: 0.15),
+                            : ScholarlyTheme.accentBlue.withValues(alpha: 0.1),
                         border: Border.all(
                           color: isUser
                               ? ScholarlyTheme.accentGold.withValues(alpha: 0.6)
-                              : ScholarlyTheme.accentBlueSoft.withValues(alpha: 0.6),
+                              : ScholarlyTheme.accentBlue.withValues(alpha: 0.6),
                         ),
                         borderRadius: BorderRadius.circular(10),
                       ),
@@ -176,7 +237,7 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
                         child: Text(
                           text,
                           style: GoogleFonts.inter(
-                            color: isUser ? ScholarlyTheme.accentGold : ScholarlyTheme.accentBlueSoft,
+                            color: isUser ? ScholarlyTheme.accentGold : ScholarlyTheme.accentBlue,
                             fontWeight: FontWeight.bold,
                             fontSize: 12,
                           ),
@@ -278,17 +339,11 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
       ),
       child: Row(
         children: [
-          Expanded(child: _buildPromptButton('Analyze', Icons.analytics_rounded, isBusy || _hasPromptBeenRaised('Analyze'))),
-          const SizedBox(width: 4),
-          Expanded(child: _buildPromptButton('Why', Icons.psychology_rounded, isBusy || !hasHistory || _hasPromptBeenRaised('Why'))),
-          const SizedBox(width: 4),
-          Expanded(child: _buildPromptButton('Candidates', Icons.alt_route_rounded, isBusy || _hasPromptBeenRaised('Candidates'))),
-          const SizedBox(width: 4),
-          Expanded(child: _buildPromptButton('Tactics', Icons.flash_on_rounded, isBusy || !hasHistory || _hasPromptBeenRaised('Tactics'))),
-          const SizedBox(width: 4),
-          Expanded(child: _buildPromptButton('Plan', Icons.explore_rounded, isBusy || _hasPromptBeenRaised('Plan'))),
-          const SizedBox(width: 4),
-          Expanded(child: _buildPromptButton('Defend', Icons.shield_rounded, isBusy || !hasHistory || _hasPromptBeenRaised('Defend'))),
+          Expanded(child: _buildPromptButton('Why', Icons.question_mark_rounded, disableChips || !hasHistory || _hasPromptBeenRaised('Why'))),
+          const SizedBox(width: 6),
+          Expanded(child: _buildPromptButton('Tactics', Icons.alt_route_rounded, disableChips || !hasHistory || _hasPromptBeenRaised('Tactics'))),
+          const SizedBox(width: 6),
+          Expanded(child: _buildPromptButton('Defend', Icons.shield_rounded, disableChips || !hasHistory || _hasPromptBeenRaised('Defend'))),
         ],
       ),
     );
@@ -348,7 +403,6 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
   static const Map<String, String> _tooltips = {
     'Analyze':    'Analyze Position',
     'Why':        'Why this move?',
-    'Candidates': 'Candidate Moves',
     'Tactics':    'Find Tactics',
     'Plan':       'Formulate Plan',
     'Defend':     'Defensive Ideas',
@@ -368,13 +422,6 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
       "A move is not just a change of square — it is a statement, Apprentice. ",
       "Let me explain the reasoning behind my choice, Apprentice. ",
       "You question the logic? Let me clarify it for you, Apprentice. ",
-    ],
-    'Candidates': [
-      'I shall lay before you the most worthy paths forward, Apprentice. ',
-      'Consider these candidate options, Apprentice. ',
-      'The position offers a few promising avenues, Apprentice. ',
-      'Here are the moves that command our attention, Apprentice. ',
-      'Let us list the candidate continuations, Apprentice. ',
     ],
     'Tactics': [
       'Does the board harbour hidden danger? — let me expose it, Apprentice. ',
@@ -402,7 +449,6 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
   static const Map<String, String> _fullQuestions = {
     'Analyze':    'Chanakya, can you analyze the current board state and summarize the position?',
     'Why':        'Why did you play that last move, Chanakya? What are your intentions?',
-    'Candidates': 'Chanakya, what candidate moves do you suggest I consider from here?',
     'Tactics':    'Chanakya, are there any active tactics or tactical combinations in this position?',
     'Plan':       'What plan or structural goals should I focus on next, Chanakya?',
     'Defend':     'How should I defend my position and counter your active ideas, Chanakya?',
@@ -654,38 +700,42 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text.rich(
-                              textAlign: TextAlign.justify,
-                              TextSpan(
-                                children: [
-                                  ..._parseAcademyRichText(
-                                    _cleanTacticsText(entry.text),
-                                    widget.state,
-                                    entry.text,
-                                    isBubbleActive: entry.associatedFen == widget.state.currentBoardFen ||
-                                        (widget.state.isAcademyBlunderActive && entry == widget.state.commentaryHistory.last),
-                                  ),
-                                  if (!entry.isComplete && !isStreaming)
-                                    TextSpan(
-                                      text: ' ${'.' * ((_pulse % 3) + 1)}',
-                                      style: GoogleFonts.fraunces(
-                                        color: ScholarlyTheme.accentBlue,
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                            if (_hasCandidatesPattern(entry.text)) ...[
+                              _buildPremiumCandidatesCard(entry, widget.state, isStreaming),
+                            ] else ...[
+                              Text.rich(
+                                textAlign: TextAlign.justify,
+                                TextSpan(
+                                  children: [
+                                    ..._parseAcademyRichText(
+                                      _cleanTacticsText(entry.text),
+                                      widget.state,
+                                      entry.text,
+                                      isBubbleActive: entry.associatedFen == widget.state.currentBoardFen ||
+                                          (widget.state.isAcademyBlunderActive && entry == widget.state.commentaryHistory.last),
                                     ),
-                                  if (isStreaming)
-                                    TextSpan(
-                                      text: _pulse % 2 == 0 ? ' ┃' : '  ',
-                                      style: GoogleFonts.fraunces(
-                                        color: ScholarlyTheme.accentBlue,
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
+                                    if (!entry.isComplete && !isStreaming)
+                                      TextSpan(
+                                        text: ' ${'.' * ((_pulse % 3) + 1)}',
+                                        style: GoogleFonts.fraunces(
+                                          color: ScholarlyTheme.accentBlue,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
-                                    ),
-                                ],
+                                    if (isStreaming)
+                                      TextSpan(
+                                        text: _pulse % 2 == 0 ? ' ┃' : '  ',
+                                        style: GoogleFonts.fraunces(
+                                          color: ScholarlyTheme.accentBlue,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                  ],
+                                ),
                               ),
-                            ),
+                            ],
                             _buildTacticCards(entry, widget.state),
                             if (widget.state.isWaitingForSideChoice &&
                                 widget.state.commentaryHistory.indexOf(entry) ==
@@ -1141,7 +1191,9 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
     final innerRegExp = RegExp(
       r'\b((?:King|Queen|Rook|Bishop|Knight|Pawn)\s+to\s+[a-h][1-8])\b|'
       r'\b([a-h][1-8]-?[a-h][1-8]|[a-h][1-8]|[NBRQK]?[a-h]?[1-8]?x?[a-h][1-8](?:=[NBRQK])?[+#]?|O-O(?:-O)?)\b|'
-      r'(\s*(?:->|→)\s*)',
+      r'(\s*(?:->|→)\s*)|'
+      r'\b(Apprentice|Defender of Humanity|Kingslayer|Chanakya)\b|'
+      r'\b(Consider|Strategy|Warning|Tactics|Recommended|Crucial|Focus|Analyze|Blunder|Mistake|Inaccuracy|Brilliant|Strong|Neutral|Attack|Defend|Defense|Threat|Danger|Outpost|Pin|Fork|Check|Checkmate|Simplify|Passed Pawn|Opposition|Scotoma|Scotoma Report|Vulnerabilities|Arena)\b',
       caseSensitive: false,
     );
 
@@ -1165,6 +1217,51 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
         spans.add(TextSpan(
           text: arrow,
           style: boldStyle,
+        ));
+      } else if (match.group(4) != null) {
+        final name = match.group(4)!;
+        Color color = ScholarlyTheme.accentBlue;
+        if (name.toLowerCase().contains('apprentice')) {
+          color = const Color(0xFFD4AF37); // Academy Gold
+        }
+        if (name.toLowerCase().contains('kingslayer')) color = Colors.redAccent;
+
+        spans.add(TextSpan(
+          text: name,
+          style: boldStyle.copyWith(
+            color: state.academyHouseColorFonts
+                ? (isBubbleActive ? color : color.withValues(alpha: 0.45))
+                : boldStyle.color,
+          ),
+        ));
+      } else if (match.group(5) != null) {
+        final word = match.group(5)!;
+        Color color = Colors.indigo;
+        final lWord = word.toLowerCase();
+        if (lWord.contains('warning') || lWord.contains('blunder') || lWord.contains('mistake') || lWord.contains('vulnerabilit')) {
+          color = Colors.redAccent;
+        } else if (lWord.contains('brilliant') || lWord.contains('strong')) {
+          color = Colors.green;
+        } else if (lWord.contains('inaccuracy')) {
+          color = Colors.amber.shade700;
+        } else if (lWord.contains('strategy') || lWord.contains('defend') || lWord.contains('defense') || lWord.contains('simplify') || lWord.contains('scotoma')) {
+          color = Colors.teal;
+        } else if (lWord.contains('tactics') || lWord.contains('fork') || lWord.contains('pin') || lWord.contains('threat') || lWord.contains('danger') || lWord.contains('attack') || lWord.contains('arena')) {
+          color = Colors.pink;
+        } else if (lWord.contains('crucial') || lWord.contains('focus') || lWord.contains('check') || lWord.contains('checkmate')) {
+          color = Colors.deepOrange;
+        } else if (lWord.contains('analyze') || lWord.contains('observe') || lWord.contains('outpost') || lWord.contains('passed pawn') || lWord.contains('opposition')) {
+          color = Colors.deepPurple;
+        }
+
+        spans.add(TextSpan(
+          text: word,
+          style: boldStyle.copyWith(
+            color: state.academyHouseColorFonts
+                ? (isBubbleActive ? color : color.withValues(alpha: 0.45))
+                : boldStyle.color,
+            fontStyle: FontStyle.italic,
+          ),
         ));
       }
 
@@ -1478,6 +1575,318 @@ class _CommentaryHistoryState extends ConsumerState<CommentaryHistory> {
     ),
   );
 }
+
+  bool _hasCandidatesPattern(String text) {
+    return RegExp(r'\b1\.\s+[a-zA-Z0-9+#=x-]+\b').hasMatch(text);
+  }
+
+  List<ExtractedCandidateLine> _parseCandidatesFromText(String text) {
+    final List<ExtractedCandidateLine> list = [];
+    final lines = text.split('\n');
+    int? currentRank;
+    String? currentMove;
+    
+    for (final line in lines) {
+      final clean = line.trim();
+      if (clean.isEmpty) continue;
+      
+      final rankMatch = RegExp(r'^(\d+)\.\s+(.+)$').firstMatch(clean);
+      if (rankMatch != null) {
+        currentRank = int.tryParse(rankMatch.group(1)!);
+        currentMove = rankMatch.group(2)!;
+        list.add(ExtractedCandidateLine(rank: currentRank ?? 1, move: currentMove, pv: []));
+      } else if (clean.startsWith('=>') && list.isNotEmpty) {
+        final pvText = clean.replaceFirst('=>', '').trim();
+        final pvMoves = pvText.split('→').map((m) => m.trim()).where((m) => m.isNotEmpty).toList();
+        final last = list.last;
+        list[list.length - 1] = ExtractedCandidateLine(rank: last.rank, move: last.move, pv: pvMoves);
+      }
+    }
+    return list;
+  }
+
+  Widget _buildPremiumCandidatesCard(CommentaryEntry entry, ChessState state, bool isStreaming) {
+    final cleanText = _cleanTacticsText(entry.text);
+    final candidates = _parseCandidatesFromText(cleanText);
+    
+    final lines = cleanText.split('\n');
+    final introLines = <String>[];
+    final footerLines = <String>[];
+    
+    bool reachedCandidates = false;
+    
+    for (final line in lines) {
+      final clean = line.trim();
+      if (clean.isEmpty) continue;
+      
+      final isRankMatch = RegExp(r'^(\d+)\.\s+(.+)$').hasMatch(clean);
+      final isPvMatch = clean.startsWith('=>');
+      
+      if (isRankMatch || isPvMatch) {
+        reachedCandidates = true;
+      } else {
+        if (!reachedCandidates) {
+          introLines.add(line);
+        } else {
+          footerLines.add(line);
+        }
+      }
+    }
+    
+    final introText = introLines.join('\n');
+    final footerText = footerLines.join('\n');
+    final isBubbleActive = entry.associatedFen == state.currentBoardFen ||
+        (state.isAcademyBlunderActive && entry == state.commentaryHistory.last);
+
+    final String footerWithCursor = footerText + (isStreaming ? (_pulse % 2 == 0 ? ' ┃' : '  ') : '');
+    final String introWithCursor = introText + ((isStreaming && footerText.isEmpty) ? (_pulse % 2 == 0 ? ' ┃' : '  ') : '');
+
+    return Container(
+      margin: const EdgeInsets.only(top: 6, bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: ScholarlyTheme.panelStroke.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: (isBubbleActive ? ScholarlyTheme.accentBlue : ScholarlyTheme.panelStroke)
+              .withValues(alpha: 0.35),
+          width: 1.2,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.alt_route_rounded,
+                size: 16,
+                color: isBubbleActive ? ScholarlyTheme.accentBlue : ScholarlyTheme.textMuted,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'CANDIDATE ANALYSIS',
+                style: GoogleFonts.inter(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                  color: isBubbleActive ? ScholarlyTheme.accentBlue : ScholarlyTheme.textMuted,
+                  letterSpacing: 1.2,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          
+          if (introText.isNotEmpty) ...[
+            Text(
+              introWithCursor,
+              style: GoogleFonts.fraunces(
+                color: isBubbleActive ? ScholarlyTheme.textPrimary : ScholarlyTheme.textSubtle,
+                fontSize: 13,
+                height: 1.45,
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+          
+          ...candidates.map((c) {
+            final scrollController = _candidateHorizontalScrollControllers.putIfAbsent(
+              c.rank,
+              () => ScrollController(),
+            );
+            final isRowPlaybackActive = state.isCandidatePlaybackActive && state.activeCandidateIndex == c.rank - 1;
+            
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Builder(
+                builder: (rowContext) {
+                  return GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () {
+                      Scrollable.ensureVisible(
+                        rowContext,
+                        alignment: 0.5,
+                        duration: const Duration(milliseconds: 400),
+                        curve: Curves.easeInOut,
+                      );
+                      
+                      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                      
+                      if (isRowPlaybackActive) {
+                        ref.read(chessProvider.notifier).stopCandidatePlayback();
+                      } else {
+                        ref.read(chessProvider.notifier).playCandidateLine(c.rank - 1, entry.associatedFen ?? state.currentBoardFen);
+                      }
+                    },
+                    child: SingleChildScrollView(
+                      controller: scrollController,
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Container(
+                            width: 18,
+                            height: 18,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: ((isRowPlaybackActive || isBubbleActive) ? ScholarlyTheme.accentGold : ScholarlyTheme.panelStroke)
+                                  .withValues(alpha: 0.15),
+                              border: Border.all(
+                                color: ((isRowPlaybackActive || isBubbleActive) ? ScholarlyTheme.accentGold : ScholarlyTheme.panelStroke)
+                                    .withValues(alpha: 0.6),
+                                width: 1,
+                              ),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              '${c.rank}',
+                              style: GoogleFonts.inter(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: (isRowPlaybackActive || isBubbleActive) ? ScholarlyTheme.accentGold : ScholarlyTheme.textMuted,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          
+                          _buildStaticOrInteractiveMoveChip(
+                            c.move,
+                            state,
+                            isBubbleActive,
+                            isPrimary: true,
+                            isActive: isRowPlaybackActive && state.candidatePlaybackPosition == 1,
+                          ),
+                          
+                          if (c.pv.isNotEmpty) ...[
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 6),
+                              child: Icon(
+                                Icons.arrow_forward_rounded,
+                                size: 12,
+                                color: ScholarlyTheme.textMuted.withValues(alpha: 0.6),
+                              ),
+                            ),
+                            ...List.generate(c.pv.length, (pvIndex) {
+                              final pvMove = c.pv[pvIndex];
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 4),
+                                child: _buildStaticOrInteractiveMoveChip(
+                                  pvMove,
+                                  state,
+                                  isBubbleActive,
+                                  isPrimary: false,
+                                  isActive: isRowPlaybackActive && state.candidatePlaybackPosition == 2 + pvIndex,
+                                ),
+                              );
+                            }),
+                          ],
+                        ],
+                      ),
+                    ),
+                  );
+                }
+              ),
+            );
+          }),
+          
+          if (footerText.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              footerWithCursor,
+              style: GoogleFonts.fraunces(
+                color: isBubbleActive ? ScholarlyTheme.textPrimary : ScholarlyTheme.textSubtle,
+                fontSize: 13,
+                height: 1.45,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStaticOrInteractiveMoveChip(
+    String moveLabel,
+    ChessState state,
+    bool isBubbleActive, {
+    required bool isPrimary,
+    required bool isActive,
+  }) {
+    final themeColor = isPrimary
+        ? ScholarlyTheme.accentBlue
+        : ScholarlyTheme.textSubtle;
+
+    final Color chipBgColor = isActive
+        ? ScholarlyTheme.accentGold.withValues(alpha: 0.25)
+        : (isBubbleActive
+            ? themeColor.withValues(alpha: isPrimary ? 0.12 : 0.06)
+            : Colors.white.withValues(alpha: 0.04));
+    final Color chipBorderColor = isActive
+        ? ScholarlyTheme.accentGold
+        : (isBubbleActive
+            ? themeColor.withValues(alpha: isPrimary ? 0.35 : 0.2)
+            : Colors.grey.withValues(alpha: 0.15));
+    final Color chipTextColor = isActive
+        ? ScholarlyTheme.accentGold
+        : (isBubbleActive
+            ? themeColor
+            : ScholarlyTheme.textMuted.withValues(alpha: 0.5));
+
+    String? targetSquare;
+    final squareMatches = RegExp(r'[a-h][1-8]').allMatches(moveLabel);
+    if (squareMatches.isNotEmpty) {
+      targetSquare = squareMatches.last.group(0);
+    }
+
+    final Widget chipContent = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: chipBgColor,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: chipBorderColor,
+          width: 1.0,
+        ),
+      ),
+      child: Text(
+        moveLabel,
+        style: GoogleFonts.inter(
+          color: chipTextColor,
+          fontWeight: FontWeight.bold,
+          fontSize: 11,
+        ),
+      ),
+    );
+
+    final Widget animatedChip = isActive
+        ? chipContent
+            .animate(key: ValueKey('active-$moveLabel'))
+            .flip(direction: Axis.horizontal, duration: const Duration(milliseconds: 500))
+        : chipContent;
+
+    return MouseRegion(
+      cursor: (targetSquare == null || !isBubbleActive) ? SystemMouseCursors.basic : SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: (targetSquare == null || !isBubbleActive)
+            ? null
+            : () {
+                ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                ref.read(chessProvider.notifier).showSuggestionForSquare(targetSquare!, moveLabel);
+              },
+        child: animatedChip,
+      ),
+    );
+  }
+} // Closes _CommentaryHistoryState
+
+class ExtractedCandidateLine {
+  final int rank;
+  final String move;
+  final List<String> pv;
+
+  ExtractedCandidateLine({required this.rank, required this.move, required this.pv});
 }
 
 class ExtractedTactic {

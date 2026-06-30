@@ -132,23 +132,23 @@ class CommentaryEngine {
     'The candidate moves for this position are:\n\n',
     'Here are the strongest moves available in this position:\n\n',
     'Allow me to present the key candidates:\n\n',
-    'The engine identifies these as the principal moves:\n\n',
+    'My calculations identify these as the principal moves:\n\n',
     'Your candidate moves, ranked by priority:\n\n',
     'The strategic options available to you:\n\n',
   ];
 
   static const _candidateSingleBestOpeners = [
     'My recommended candidate in this position is',
-    'The engine\'s strongest suggestion here is',
+    'My strongest suggestion here is',
     'Above all other moves, I would recommend',
     'In this position, the most principled choice is',
-    'After deep calculation, the strongest move is',
+    'After deep calculation, I recommend playing',
   ];
 
   static const _candidateFallbacks = [
-    'The board state is complex, and the engine calculation is still maturing. I suggest developing your least active piece or securing your king\'s safety.',
-    'This is a deeply complex position. No single move stands out decisively. Improve your worst-placed piece and keep the king safe while the engine ponders.',
-    'The position is in flux — the engine has not converged on a decisive line. In the meantime, focus on piece coordination and avoid creating new weaknesses.',
+    'The board state is complex, and my calculations are still maturing. I suggest developing your least active piece or securing your king\'s safety.',
+    'This is a deeply complex position. No single move stands out decisively. Improve your worst-placed piece and keep the king safe while I ponder the options.',
+    'The position is in flux — I have not converged on a decisive line. In the meantime, focus on piece coordination and avoid creating new weaknesses.',
     'Complex positions sometimes defy a single best move. Develop your least active piece, control key squares, and let the situation clarify itself.',
   ];
 
@@ -157,7 +157,7 @@ class CommentaryEngine {
     'The position is tactically quiet for now. No hanging pieces, no immediate combinations. This is the time to execute your long-term strategic plan.',
     'No tactical alarm bells are ringing in this position. The equilibrium holds. Use this calm to improve your piece coordination before creating new tensions.',
     'Tactically, the position is stable. No pins, forks, or back-rank issues are present. This is a purely positional moment — improve your worst-placed piece.',
-    'The engine detects no tactical fireworks here. A peaceful moment in a complex game. Use it wisely: identify your strategic plan and execute one move at a time.',
+    'I detect no tactical fireworks here. A peaceful moment in a complex game. Use it wisely: identify your strategic plan and execute one move at a time.',
   ];
 
   static const _tacticsThreatsOpeners = [
@@ -174,7 +174,7 @@ class CommentaryEngine {
     'The strategic continuation that impresses me most is:',
     'Based on the position\'s demands, I would recommend this sequence:',
     'The principled plan here unfolds as follows:',
-    'The engine\'s preferred strategic line from this position:',
+    'My preferred strategic line from this position:',
   ];
 
   static const _planFallbacks = [
@@ -188,7 +188,7 @@ class CommentaryEngine {
     'The strongest candidate to consider is',
     'I would direct your attention to',
     'The most principled move here is',
-    'Engine evaluation points strongly to',
+    'My evaluation points strongly to',
   ];
 
   static const _generalNoThreatClosers = [
@@ -199,6 +199,198 @@ class CommentaryEngine {
   ];
 
   // ────────────────────────────────────────────────────────────────────────
+
+  /// Generates commentary using the deterministic Rust Engine and Dart parameter replacement
+  String _renderCommentarySentence(String template, bool isUserMove, String playerName) {
+    // 1. Replace placeholder markers first
+    String result = template;
+    
+    if (isUserMove) {
+      // User/Apprentice just moved
+      result = result.replaceAll('[Player]', 'you');
+      
+      // Perform grammar corrections for "you"
+      result = result
+          .replaceAll('you doubles down', 'you double down')
+          .replaceAll('you piles', 'you pile')
+          .replaceAll('you compounds', 'you compound')
+          .replaceAll('you fails', 'you fail')
+          .replaceAll('you walks', 'you walk')
+          .replaceAll('you complies', 'you comply')
+          .replaceAll('you prioritizes', 'you prioritize')
+          .replaceAll('you is playing', 'you are playing')
+          .replaceAll('you ignores', 'you ignore')
+          .replaceAll('you blocks', 'you block')
+          .replaceAll('you leaves', 'you leave')
+          .replaceAll('you retreats', 'you retreat')
+          .replaceAll('you coordinates', 'you coordinate')
+          .replaceAll('you eyes', 'you eye')
+          .replaceAll('you takes', 'you take')
+          .replaceAll('you fumbles', 'you fumble')
+          .replaceAll('you loses', 'you lose')
+          .replaceAll('you wins', 'you win')
+          .replaceAll('you marches', 'you march')
+          .replaceAll('you understands', 'you understand')
+          .replaceAll('you has', 'you have')
+          .replaceAll('you does', 'you do')
+          .replaceAll('you was', 'you were')
+          .replaceAll('you is', 'you are')
+          .replaceAll('you pushes', 'you push')
+          .replaceAll('you maintains', 'you maintain')
+          .replaceAll('you consolidates', 'you consolidate')
+          .replaceAll('you escalates', 'you escalate')
+          .replaceAll('you continues', 'you continue')
+          .replaceAll('you lays', 'you lay')
+          .replaceAll('you avoids', 'you avoid')
+          .replaceAll('you follows', 'you follow')
+          .replaceAll('you makes', 'you make')
+          .replaceAll('you creates', 'you create')
+          .replaceAll('you steps', 'you step')
+          .replaceAll('you misses', 'you miss')
+          .replaceAll('you drops', 'you drop')
+          .replaceAll('you sweeps', 'you sweep')
+          .replaceAll('you restricts', 'you restrict')
+          .replaceAll('you captures', 'you capture')
+          .replaceAll('you brings', 'you bring')
+          .replaceAll('you spots', 'you spot')
+          .replaceAll('you seizes', 'you seize')
+          .replaceAll('you strikes', 'you strike')
+          .replaceAll('you identifies', 'you identify')
+          .replaceAll('you exploits', 'you exploit')
+          .replaceAll('you converts', 'you convert')
+          .replaceAll('you uncorks', 'you uncork')
+          .replaceAll('you realized', 'you realized')
+          .replaceAll('you inserts', 'you insert')
+          .replaceAll('you sacrifices', 'you sacrifice')
+          .replaceAll('you clears', 'you clear')
+          .replaceAll('you orchestrates', 'you orchestrate')
+          .replaceAll('you sidesteps', 'you sidestep')
+          .replaceAll('you finds', 'you find')
+          .replaceAll('you systematically stretches', 'you systematically stretch')
+          .replaceAll('you stretches', 'you stretch')
+          .replaceAll('you uses', 'you use')
+          .replaceAll('you slowly suffocates', 'you slowly suffocate')
+          .replaceAll('you fumbled', 'you fumbled')
+          .replaceAll('you rushed', 'you rush')
+          .replaceAll('you ignores', 'you ignore');
+
+      // Replace possessives / opponent references
+      result = result
+          .replaceAll('their own', 'your own')
+          .replaceAll('their position', 'your position')
+          .replaceAll('their camp', 'your camp')
+          .replaceAll('their army', 'your army')
+          .replaceAll('their defense', 'your defense')
+          .replaceAll('their pieces', 'your pieces')
+          .replaceAll('their king', 'your king')
+          .replaceAll("opponent's camp", 'my camp')
+          .replaceAll("opponent's army", 'my army')
+          .replaceAll("opponent's defense", 'my defense')
+          .replaceAll("opponent's pieces", 'my pieces')
+          .replaceAll("opponent's king", 'my king')
+          .replaceAll("opponent's", 'my')
+          .replaceAll("the opponent", 'me')
+          .replaceAll("opponent", 'me');
+          
+    } else {
+      // GM Chanakya just moved
+      result = result.replaceAll('[Player]', 'I');
+      
+      // Perform grammar corrections for "I"
+      result = result
+          .replaceAll('I doubles down', 'I double down')
+          .replaceAll('I piles', 'I pile')
+          .replaceAll('I compounds', 'I compound')
+          .replaceAll('I fails', 'I fail')
+          .replaceAll('I walks', 'I walk')
+          .replaceAll('I complies', 'I comply')
+          .replaceAll('I prioritizes', 'I prioritize')
+          .replaceAll('I is playing', 'I am playing')
+          .replaceAll('I ignores', 'I ignore')
+          .replaceAll('I blocks', 'I block')
+          .replaceAll('I leaves', 'I leave')
+          .replaceAll('I retreats', 'I retreat')
+          .replaceAll('I coordinates', 'I coordinate')
+          .replaceAll('I eyes', 'I eye')
+          .replaceAll('I takes', 'I take')
+          .replaceAll('I fumbles', 'I fumble')
+          .replaceAll('I loses', 'I lose')
+          .replaceAll('I wins', 'I win')
+          .replaceAll('I marches', 'I march')
+          .replaceAll('I understands', 'I understand')
+          .replaceAll('I has', 'I have')
+          .replaceAll('I does', 'I do')
+          .replaceAll('I is', 'I am')
+          .replaceAll('I pushes', 'I push')
+          .replaceAll('I maintains', 'I maintain')
+          .replaceAll('I consolidates', 'I consolidate')
+          .replaceAll('I escalates', 'I escalate')
+          .replaceAll('I continues', 'I continue')
+          .replaceAll('I lays', 'I lay')
+          .replaceAll('I avoids', 'I avoid')
+          .replaceAll('I follows', 'I follow')
+          .replaceAll('I makes', 'I make')
+          .replaceAll('I creates', 'I create')
+          .replaceAll('I steps', 'I step')
+          .replaceAll('I misses', 'I miss')
+          .replaceAll('I drops', 'I drop')
+          .replaceAll('I sweeps', 'I sweep')
+          .replaceAll('I restricts', 'I restrict')
+          .replaceAll('I captures', 'I capture')
+          .replaceAll('I brings', 'I bring')
+          .replaceAll('I spots', 'I spot')
+          .replaceAll('I seizes', 'I seize')
+          .replaceAll('I strikes', 'I strike')
+          .replaceAll('I identifies', 'I identify')
+          .replaceAll('I exploits', 'I exploit')
+          .replaceAll('I converts', 'I convert')
+          .replaceAll('I uncorks', 'I uncork')
+          .replaceAll('I realized', 'I realized')
+          .replaceAll('I inserts', 'I insert')
+          .replaceAll('I sacrifices', 'I sacrifice')
+          .replaceAll('I clears', 'I clear')
+          .replaceAll('I orchestrates', 'I orchestrate')
+          .replaceAll('I sidesteps', 'I sidestep')
+          .replaceAll('I finds', 'I find')
+          .replaceAll('I systematically stretches', 'I systematically stretch')
+          .replaceAll('I stretches', 'I stretch')
+          .replaceAll('I uses', 'I use')
+          .replaceAll('I slowly suffocates', 'I slowly suffocate')
+          .replaceAll('I fumbled', 'I fumbled')
+          .replaceAll('I rushed', 'I rush')
+          .replaceAll('I ignores', 'I ignore');
+
+      // Replace possessives / opponent references
+      result = result
+          .replaceAll('their own', 'my own')
+          .replaceAll('their position', 'my position')
+          .replaceAll('their camp', 'my camp')
+          .replaceAll('their army', 'my army')
+          .replaceAll('their defense', 'my defense')
+          .replaceAll('their pieces', 'my pieces')
+          .replaceAll('their king', 'my king')
+          .replaceAll("opponent's camp", 'your camp')
+          .replaceAll("opponent's army", 'your army')
+          .replaceAll("opponent's defense", 'your defense')
+          .replaceAll("opponent's pieces", 'your pieces')
+          .replaceAll("opponent's king", 'your king')
+          .replaceAll("opponent's", 'your')
+          .replaceAll("the opponent", 'you')
+          .replaceAll("opponent", 'you');
+    }
+    
+    // Replace third-person GM Chanakya references in the first person
+    result = result
+        .replaceAll('GM Chanakya approves', 'I approve')
+        .replaceAll('GM Chanakya always teaches', 'I always teach')
+        .replaceAll('GM Chanakya preaches', 'I preach')
+        .replaceAll('GM Chanakya warned you', 'I warned you');
+        
+    // Clean up any double spaces, weird formatting, or trailing artifacts
+    result = result.replaceAll(RegExp(r'\s+'), ' ').trim();
+    
+    return result;
+  }
 
   /// Generates commentary using the deterministic Rust Engine and Dart parameter replacement
   Stream<String> generateCommentaryStream({
@@ -214,6 +406,9 @@ class CommentaryEngine {
     List<String>? tacticsSequence,
     List<CandidateMove>? tacticsCandidates,
     bool isChess960 = false,
+    bool isUserMove = true,
+    bool isPlayerWhite = true,
+    String? fen,
   }) async* {
     final isTacticsQuery = userQuery?.startsWith('[TACTICS_QUERY]') ?? false;
     if (isTacticsQuery) {
@@ -342,14 +537,50 @@ class CommentaryEngine {
       }
 
       String describeEvaluation(double eval) {
-        if (eval > 1.5) {
-          return 'strongly in our favor';
-        } else if (eval > 0.5) {
-          return 'slightly in our favor';
-        } else if (eval < -1.5) {
-          return 'strongly in the opponent\'s favor';
-        } else if (eval < -0.5) {
-          return 'slightly in the opponent\'s favor';
+        if (fen == null) {
+          if (eval > 1.5) {
+            return 'strongly in our favor';
+          } else if (eval > 0.5) {
+            return 'slightly in our favor';
+          } else if (eval < -1.5) {
+            return 'strongly in the opponent\'s favor';
+          } else if (eval < -0.5) {
+            return 'slightly in the opponent\'s favor';
+          } else {
+            return 'dynamically balanced';
+          }
+        }
+
+        final fenParts = fen.split(' ');
+        final isWhiteTurn = fenParts.length > 1 && fenParts[1] == 'w';
+        final isPlayerToMove = (isPlayerWhite == isWhiteTurn);
+
+        final hasAdvantage = eval > 0.5;
+        final hasBigAdvantage = eval > 1.5;
+        final hasDisadvantage = eval < -0.5;
+        final hasBigDisadvantage = eval < -1.5;
+
+        bool isPlayerFavoured = false;
+        bool isChanakyaFavoured = false;
+
+        if (hasAdvantage) {
+          if (isPlayerToMove) {
+            isPlayerFavoured = true;
+          } else {
+            isChanakyaFavoured = true;
+          }
+        } else if (hasDisadvantage) {
+          if (isPlayerToMove) {
+            isChanakyaFavoured = true;
+          } else {
+            isPlayerFavoured = true;
+          }
+        }
+
+        if (isPlayerFavoured) {
+          return hasBigAdvantage || hasBigDisadvantage ? 'strongly in your favor' : 'slightly in your favor';
+        } else if (isChanakyaFavoured) {
+          return hasBigAdvantage || hasBigDisadvantage ? 'strongly in my favor' : 'slightly in my favor';
         } else {
           return 'dynamically balanced';
         }
@@ -369,16 +600,17 @@ class CommentaryEngine {
         }
 
         final opener = _pick(_blunderOpeners);
-        response = "$opener playing $lastMoveClean is a blunder, dropping the evaluation by $absoluteDiff pawns.$threatPhrase Seek a more resilient path.";
+        response = "$opener your move $lastMoveClean is a blunder, dropping the evaluation by $absoluteDiff pawns.$threatPhrase Seek a more resilient path.";
       } else if (cleanQuery.contains('why') || cleanQuery.contains('explain') || cleanQuery.contains('reason')) {
         final lastMoveClean = cleanMoveName(context.moveDescription);
         final opener = _pick(_whyOpeners);
+        final subject = isUserMove ? 'You played' : 'I played';
         if (context.pvLine.isNotEmpty) {
           final continuation = context.pvLine.take(3).map(cleanMoveName).join(' → ');
-          response = '$opener I played $lastMoveClean, which I evaluate as a ${context.quality.toLowerCase()} decision. '
-              'The position stands $descEval. By playing this, we align our pieces for the continuation: **$continuation**.';
+          response = '$opener $subject $lastMoveClean, which I evaluate as a ${context.quality.toLowerCase()} decision. '
+              'The position stands $descEval. I expect the following moves: **$continuation**.';
         } else {
-          response = '$opener I played $lastMoveClean, evaluated as a ${context.quality.toLowerCase()} decision. '
+          response = '$opener $subject $lastMoveClean, evaluated as a ${context.quality.toLowerCase()} decision. '
               'The position stands $descEval. This aligns with my ${context.positionStyle.toLowerCase()} style, and the tactical threat level is ${context.threatLevel.toLowerCase()}. ';
           if (context.tacticalThreats.isNotEmpty) {
             response += 'Key tactical details: ${context.tacticalThreats.join(" ")}';
@@ -397,12 +629,12 @@ class CommentaryEngine {
               buffer.write('   => $cleanedPv\n');
             }
           }
-          buffer.write('\nFocus on maintaining structural harmony while executing these paths.');
+          buffer.write('\nFocus on maintaining your structural harmony while executing these paths.');
           response = buffer.toString();
         } else if (context.bestMove != null) {
           final cleanedBest = cleanMoveName(context.bestMove!);
           final opener = _pick(_candidateSingleBestOpeners);
-          response = '$opener $cleanedBest. The engine evaluates the balance as $descEval. Maintain your coordination and seek activity.';
+          response = '$opener $cleanedBest. I evaluate the balance as $descEval. Maintain your coordination and seek activity.';
         } else {
           response = _pick(_candidateFallbacks);
         }
@@ -418,10 +650,10 @@ class CommentaryEngine {
         if (context.candidates.isNotEmpty) {
           final bestDef = context.candidates.first;
           final defMoveName = cleanMoveName(bestDef.uciMove);
-          buffer.write('To maintain coordination, the most principled defense is **$defMoveName**. ');
+          buffer.write('To maintain your coordination, I recommend the defense **$defMoveName**. ');
           if (bestDef.fullPv.length > 1) {
             final continuation = bestDef.fullPv.take(4).map(cleanMoveName).join(' → ');
-            buffer.write('=> **$continuation**');
+            buffer.write('expecting the following line: **$continuation**');
           }
         } else {
           buffer.write('Focus on maintaining your structural harmony and piece activity.');
@@ -436,7 +668,7 @@ class CommentaryEngine {
             response = '$opener My analysis suggests continuing with **$p1**, and you may then proceed with **$p2** to build your piece activity and secure positional strengths.';
           } else {
             final cleanedPv = context.pvLine.take(4).map(cleanMoveName).join(' → ');
-            response = '$opener **$cleanedPv**. This sequence maintains piece activity and coordinates our forces toward key squares.';
+            response = '$opener **$cleanedPv**. I expect this sequence to maintain piece activity and coordinate your forces toward key squares.';
           }
         } else {
           response = _pick(_planFallbacks);
@@ -485,10 +717,11 @@ class CommentaryEngine {
       final pieceName = _extractPiece(context.moveDescription);
 
       var finalizedText = template
-          .replaceAll('[Player]', player ?? 'Apprentice')
           .replaceAll('[Move]', move ?? '')
           .replaceAll('[Square]', destinationSquare)
           .replaceAll('[Piece]', pieceName);
+
+      finalizedText = _renderCommentarySentence(finalizedText, isUserMove, player ?? 'Apprentice');
 
       yield finalizedText;
     } catch (e) {
@@ -505,6 +738,9 @@ class CommentaryEngine {
     required String move,
     required String evalScore,
     PositionContext? context,
+    bool isUserMove = true,
+    bool isPlayerWhite = true,
+    String? fen,
   }) async {
     String lastChunk = '';
     await for (final chunk in generateCommentaryStream(
@@ -512,6 +748,9 @@ class CommentaryEngine {
       move: move,
       evalScore: evalScore,
       context: context,
+      isUserMove: isUserMove,
+      isPlayerWhite: isPlayerWhite,
+      fen: fen,
     )) {
       lastChunk = chunk;
     }

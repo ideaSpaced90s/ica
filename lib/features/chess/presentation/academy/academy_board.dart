@@ -63,6 +63,33 @@ class _AcademyBoardState extends ConsumerState<AcademyBoard>
     super.dispose();
   }
 
+  String _getCandidatePlaybackDisplayFen(ChessState chessState) {
+    final base = chessState.candidatePlaybackBaseFen ?? chessState.currentBoardFen;
+    final board = chess_lib.Chess.fromFEN(base);
+    final moves = chessState.activeCandidateMoves ?? [];
+    final limit = min(chessState.candidatePlaybackPosition, moves.length);
+    for (int i = 0; i < limit; i++) {
+      final uci = moves[i];
+      if (uci.length >= 4) {
+        final from = uci.substring(0, 2);
+        final to = uci.substring(2, 4);
+        final promo = uci.length > 4 ? uci.substring(4) : null;
+        final piece = board.get(from);
+        if (piece != null) {
+          final isWhitePiece = piece.color == chess_lib.Color.WHITE;
+          final currentFen = board.fen;
+          final parts = currentFen.split(' ');
+          if (parts.length > 1) {
+            parts[1] = isWhitePiece ? 'w' : 'b';
+            board.load(parts.join(' '));
+          }
+        }
+        board.move({'from': from, 'to': to, 'promotion': promo});
+      }
+    }
+    return board.fen;
+  }
+
   @override
   Widget build(BuildContext context) {
     final chessState = ref.watch(chessProvider);
@@ -119,6 +146,8 @@ class _AcademyBoardState extends ConsumerState<AcademyBoard>
       displayFen = getPlaybackDisplayFen();
     } else if (chessState.isTacticsModeActive) {
       displayFen = getTacticsDisplayFen();
+    } else if (chessState.isCandidatePlaybackActive && chessState.activeCandidateMoves != null) {
+      displayFen = _getCandidatePlaybackDisplayFen(chessState);
     } else {
       displayFen = chessState.currentBoardFen;
     }
@@ -498,11 +527,18 @@ class _AcademyBoardState extends ConsumerState<AcademyBoard>
                                             child: Center(
                                               child: Builder(
                                                 builder: (context) {
-                                                  final localPiece = piece;
-                                                  final pieceExists = localPiece != null;
-                                                  final isPlayerPiece = localPiece != null && !isGhostPiece &&
-                                                      chessState.activeTacticIndex == null &&
-                                                      (chessState.isTacticsModeActive || ((localPiece.color == chess_lib.Color.WHITE) == chessState.isPlayerWhite));
+                                                   final localPiece = piece;
+                                                   final pieceExists = localPiece != null;
+                                                   final bool isPlayerPiece;
+                                                   if (localPiece == null || isGhostPiece || chessState.activeTacticIndex != null) {
+                                                     isPlayerPiece = false;
+                                                   } else if (chessState.isTacticsModeActive) {
+                                                     final nextIsUser = chessState.tacticsSequence.length % 2 == 0;
+                                                     final isWhiteTurn = nextIsUser ? chessState.isPlayerWhite : !chessState.isPlayerWhite;
+                                                     isPlayerPiece = (localPiece.color == chess_lib.Color.WHITE) == isWhiteTurn;
+                                                   } else {
+                                                     isPlayerPiece = (localPiece.color == chess_lib.Color.WHITE) == chessState.isPlayerWhite;
+                                                   }
 
                                                   Widget pieceWidget = ChessPieceWidget(
                                                     squareName: isGhostPiece ? chessState.premoveFrom! : squareName,
@@ -684,14 +720,9 @@ class _AcademyBoardState extends ConsumerState<AcademyBoard>
       final piece = game.getPiece(squareName);
       if (piece == null) return const [];
       final pieceIsWhite = piece.color == chess_lib.Color.WHITE;
-      try {
-        final fenParts = game.fen.split(' ');
-        if (fenParts.length > 1) {
-          fenParts[1] = pieceIsWhite ? 'w' : 'b';
-          final tempGame = ChessGame(fen: fenParts.join(' '));
-          return tempGame.legalDestinations(squareName);
-        }
-      } catch (_) {}
+      final nextIsUser = chessState.tacticsSequence.length % 2 == 0;
+      final isWhiteTurn = nextIsUser ? chessState.isPlayerWhite : !chessState.isPlayerWhite;
+      if (pieceIsWhite != isWhiteTurn) return const [];
       return game.legalDestinations(squareName);
     }
 
@@ -729,7 +760,7 @@ class _AcademyBoardState extends ConsumerState<AcademyBoard>
     haptics.selection();
     final chessState = ref.read(chessProvider);
 
-    if (chessState.activeTacticIndex != null) return;
+    if (chessState.activeTacticIndex != null || chessState.isCandidatePlaybackActive) return;
 
     String getTacticsDisplayFen() {
       final base = chessState.tacticsBaseFen ?? chessState.currentBoardFen;
@@ -782,6 +813,18 @@ class _AcademyBoardState extends ConsumerState<AcademyBoard>
   void _handlePieceSelection(String squareName, ChessGame displayGame) {
     final chessState = ref.read(chessProvider);
     if (chessState.isTacticsModeActive) {
+      final piece = displayGame.getPiece(squareName);
+      if (piece == null) {
+        _clearSelection();
+        return;
+      }
+      final isPieceWhite = piece.color == chess_lib.Color.WHITE;
+      final nextIsUser = chessState.tacticsSequence.length % 2 == 0;
+      final isWhiteTurn = nextIsUser ? chessState.isPlayerWhite : !chessState.isPlayerWhite;
+      if (isPieceWhite != isWhiteTurn) {
+        _clearSelection();
+        return;
+      }
       setState(() {
         _selectedSquare = squareName;
         _legalTargets = _getLegalTargetsForSquare(squareName, displayGame, chessState);

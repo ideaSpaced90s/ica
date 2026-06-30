@@ -282,6 +282,11 @@ class ChessState {
     this.tacticPlaybackPosition = 0,
     this.isBoardInChampionsTheme = false,
     this.chanakyaEloOffset = 0,
+    this.isCandidatePlaybackActive = false,
+    this.activeCandidateIndex,
+    this.activeCandidateMoves,
+    this.candidatePlaybackPosition = 0,
+    this.candidatePlaybackBaseFen,
   });
 
   final ChessGame game;
@@ -377,6 +382,11 @@ class ChessState {
   final int tacticPlaybackPosition;
   final bool isBoardInChampionsTheme;
   final int chanakyaEloOffset;
+  final bool isCandidatePlaybackActive;
+  final int? activeCandidateIndex;
+  final List<String>? activeCandidateMoves;
+  final int candidatePlaybackPosition;
+  final String? candidatePlaybackBaseFen;
 
   final bool isNotificationsEnabled;
   final bool dailyBriefingEnabled;
@@ -508,6 +518,11 @@ class ChessState {
     String? quietHoursStart,
     String? quietHoursEnd,
     int? chanakyaEloOffset,
+    bool? isCandidatePlaybackActive,
+    Object? activeCandidateIndex = _sentinel,
+    Object? activeCandidateMoves = _sentinel,
+    int? candidatePlaybackPosition,
+    Object? candidatePlaybackBaseFen = _sentinel,
   }) {
     return ChessState(
       game: game ?? this.game,
@@ -651,6 +666,17 @@ class ChessState {
           : activeTacticMoves as List<String>?,
       tacticPlaybackPosition: tacticPlaybackPosition ?? this.tacticPlaybackPosition,
       isBoardInChampionsTheme: isBoardInChampionsTheme ?? this.isBoardInChampionsTheme,
+      isCandidatePlaybackActive: isCandidatePlaybackActive ?? this.isCandidatePlaybackActive,
+      activeCandidateIndex: identical(activeCandidateIndex, _sentinel)
+          ? this.activeCandidateIndex
+          : activeCandidateIndex as int?,
+      activeCandidateMoves: identical(activeCandidateMoves, _sentinel)
+          ? this.activeCandidateMoves
+          : activeCandidateMoves as List<String>?,
+      candidatePlaybackPosition: candidatePlaybackPosition ?? this.candidatePlaybackPosition,
+      candidatePlaybackBaseFen: identical(candidatePlaybackBaseFen, _sentinel)
+          ? this.candidatePlaybackBaseFen
+          : candidatePlaybackBaseFen as String?,
       isNotificationsEnabled: isNotificationsEnabled ?? this.isNotificationsEnabled,
       dailyBriefingEnabled: dailyBriefingEnabled ?? this.dailyBriefingEnabled,
       streakProtectionEnabled: streakProtectionEnabled ?? this.streakProtectionEnabled,
@@ -729,6 +755,7 @@ String _pickSideChoiceResponseBlack(String modeStr) {
 
 class ChessNotifier extends Notifier<ChessState> {
   late final StockfishService _stockfishEngine;
+  late final StockfishService _academyAnalysisEngine;
   late final CommentaryEngine _commentaryEngine;
   late final SavedGameRepository _savedGameRepository;
   late final PerformanceLedgerRepository _performanceLedgerRepository;
@@ -742,6 +769,7 @@ class ChessNotifier extends Notifier<ChessState> {
   @override
   ChessState build() {
     _stockfishEngine = ref.watch(stockfishServiceProvider);
+    _academyAnalysisEngine = ref.watch(academyAnalysisStockfishServiceProvider);
     _commentaryEngine = ref.watch(commentaryEngineProvider);
     _savedGameRepository = ref.watch(savedGameRepositoryProvider);
     _performanceLedgerRepository = ref.watch(performanceLedgerRepositoryProvider);
@@ -754,12 +782,16 @@ class ChessNotifier extends Notifier<ChessState> {
       _isDisposed = true;
       _engineMoveTimer?.cancel();
       _playbackTimer?.cancel();
+      _candidatePlaybackTimer?.cancel();
       _maxThinkingTimer?.cancel();
       _stopClock();
       _cancelCommentaryReveal();
       _stockfishSubscription?.cancel();
       _stockfishSubscription = null;
+      _academyAnalysisSubscription?.cancel();
+      _academyAnalysisSubscription = null;
       _stockfishEngine.dispose();
+      _academyAnalysisEngine.dispose();
       unawaited(_commentaryEngine.dispose());
     });
 
@@ -1342,16 +1374,24 @@ class ChessNotifier extends Notifier<ChessState> {
   Timer? _commentaryRevealTimer;
   Timer? _maxThinkingTimer;
   Timer? _playbackTimer;
+  Timer? _candidatePlaybackTimer;
   StreamSubscription<String>? _stockfishSubscription;
+  StreamSubscription<String>? _academyAnalysisSubscription;
   Completer<void>? _queryAnalysisCompleter;
+  String? _queryAnalysisFen;
 
   Future<void> _cancelEngineSubscriptions() async {
     await _stockfishSubscription?.cancel();
     _stockfishSubscription = null;
+    await _academyAnalysisSubscription?.cancel();
+    _academyAnalysisSubscription = null;
   }
   final List<_BoardSnapshot> _undoStack = [];
   final List<_BoardSnapshot> _redoStack = [];
   final List<CandidateMove> _currentCandidates = [];
+  final List<CandidateMove> _academyAnalysisCandidates = [];
+  double? _academyAnalysisEvaluation;
+  final Map<String, dynamic> _academyAnalysisAccumulated = {};
   Future<PrecomputedRustContext>? _pendingRustContextFuture;
 
   String? _pendingHintFen;
@@ -1406,11 +1446,16 @@ class ChessNotifier extends Notifier<ChessState> {
       _stockfishSubscription ??= _stockfishEngine.outputStream.listen(
         _handleEngineOutput,
       );
+      _academyAnalysisSubscription ??= _academyAnalysisEngine.outputStream.listen(
+        _handleAcademyAnalysisOutput,
+      );
 
       await _stockfishEngine.init();
+      await _academyAnalysisEngine.init();
 
       final is960 = state.gameMode == 'chess960';
       await _stockfishEngine.setChess960Mode(is960);
+      await _academyAnalysisEngine.setChess960Mode(is960);
 
       final avatar = AiAvatar.getAvatar(state.engineLevel);
       final config = rust_persona.getPersonaConfig(avatarName: avatar.name);
@@ -1422,6 +1467,8 @@ class ChessNotifier extends Notifier<ChessState> {
       );
       await _stockfishEngine.sendCommand('setoption name Hash value ${avatar.hashSize}');
       await _stockfishEngine.sendCommand('setoption name Contempt value ${avatar.contempt}');
+
+      await _academyAnalysisEngine.setSkillLevel(20, multiPV: 3);
 
       state = state.copyWith(
         servicesStarted: true,
@@ -1455,6 +1502,56 @@ class ChessNotifier extends Notifier<ChessState> {
     final parsed = UCIParser.parseLine(line);
     if (parsed.isEmpty) {
       return;
+    }
+
+    // Validate PV / bestMove legality to prevent race conditions from previous searches
+    if (parsed.containsKey('pv')) {
+      final pvList = parsed['pv'] as List;
+      if (pvList.isNotEmpty) {
+        final uciMove = pvList.first.toString();
+        final validationFen = _queryAnalysisFen ?? state.game.fen;
+        final validationGame = ChessGame(fen: validationFen, isChess960: state.game.isChess960);
+        final legalMoves = validationGame.generateMoves();
+        bool isLegal = false;
+        for (final m in legalMoves) {
+          final from = chess_lib.Chess.algebraic(m.from);
+          final to = chess_lib.Chess.algebraic(m.to);
+          final promo = m.promotion != null
+              ? m.promotion.toString().split('.').last.toLowerCase()[0]
+              : '';
+          if ('$from$to$promo' == uciMove) {
+            isLegal = true;
+            break;
+          }
+        }
+        if (!isLegal) {
+          return; // Ignore stale info lines from a previous search
+        }
+      }
+    }
+
+    if (parsed.containsKey('bestMove')) {
+      final rawBestMove = parsed['bestMove'] as String?;
+      if (rawBestMove != null && rawBestMove != '(none)') {
+        final validationFen = _queryAnalysisFen ?? state.game.fen;
+        final validationGame = ChessGame(fen: validationFen, isChess960: state.game.isChess960);
+        final legalMoves = validationGame.generateMoves();
+        bool isLegal = false;
+        for (final m in legalMoves) {
+          final from = chess_lib.Chess.algebraic(m.from);
+          final to = chess_lib.Chess.algebraic(m.to);
+          final promo = m.promotion != null
+              ? m.promotion.toString().split('.').last.toLowerCase()[0]
+              : '';
+          if ('$from$to$promo' == rawBestMove) {
+            isLegal = true;
+            break;
+          }
+        }
+        if (!isLegal) {
+          return; // Ignore stale bestmove outputs from a previous search
+        }
+      }
     }
 
     double? newEval;
@@ -1498,8 +1595,12 @@ class ChessNotifier extends Notifier<ChessState> {
       }
       // Bypassing throttle on bestmove since search is complete!
       state = state.copyWith(
-        analysis: Map<String, dynamic>.from(_accumulatedAnalysis),
-        currentEvaluation: _accumulatedEvaluation ?? state.currentEvaluation,
+        analysis: state.isAcademyActive
+            ? state.analysis
+            : Map<String, dynamic>.from(_accumulatedAnalysis),
+        currentEvaluation: state.isAcademyActive
+            ? state.currentEvaluation
+            : (_accumulatedEvaluation ?? state.currentEvaluation),
         engineReady: true,
       );
       final rawBestMove = parsed['bestMove'] as String?;
@@ -1528,47 +1629,6 @@ class ChessNotifier extends Notifier<ChessState> {
         }
       }
 
-      // Check if we are in Academy Mode and it was the user who just moved
-      if (state.isAcademyActive &&
-          aiTurn &&
-          !state.isWaitingForSideChoice &&
-          !state.isAcademyBlunderActive &&
-          !state.game.gameOver &&
-          !state.isPaused &&
-          state.game.history.length >= (state.isPlayerWhite ? 1 : 2)) {
-        
-        // Calculate evaluation delta
-        final double prevEval = state.previousEvaluation;
-        final double currEval = newEval ?? state.currentEvaluation;
-        final double evalDiff = -currEval - prevEval;
-
-        debugPrint('Academy Mode evaluation check: prev=$prevEval, curr=$currEval, diff=$evalDiff, history=${state.game.history.length}');
-
-        if (evalDiff <= -1.2) {
-          // It's an absolute blunder! Set flag and trigger Chanakya's intervention
-          final lastMove = _lastMoveFromHistory();
-          final friendlyMoveName = lastMove != null
-              ? _formatMoveFriendly(lastMove)
-              : (state.recentMoves.isNotEmpty ? state.recentMoves.last : (state.lastMove ?? ''));
-          final titlePrefix = "**${state.userName}: $friendlyMoveName**\n\n";
-
-          state = state.copyWith(
-            isAcademyBlunderActive: true,
-            pendingEngineMove: bestMoveToPlay,
-          );
-
-          final lastMoveStr = state.lastMove ?? '';
-          unawaited(_handleAcademyBlunderIntervention(
-            evalDiff: evalDiff,
-            lastMove: lastMoveStr,
-            titlePrefix: titlePrefix,
-          ));
-
-          // Return early! Do NOT schedule the engine move.
-          return;
-        }
-      }
-
       // Ensure the move is actually intended for the current turn's side
       bool isMoveValidForCurrentTurn = false;
       if (bestMoveToPlay != null && bestMoveToPlay.length >= 4) {
@@ -1590,7 +1650,8 @@ class ChessNotifier extends Notifier<ChessState> {
           aiTurn &&
           isMoveValidForCurrentTurn &&
           !state.game.gameOver &&
-          !state.isPaused) {
+          !state.isPaused &&
+          !state.isAcademyBlunderActive) {
         _maxThinkingTimer?.cancel();
         _maxThinkingTimer = null;
         _engineMoveTimer?.cancel();
@@ -1615,6 +1676,157 @@ class ChessNotifier extends Notifier<ChessState> {
       currentEvaluation: _accumulatedEvaluation ?? state.currentEvaluation,
       engineReady: true,
     );
+  }
+
+  void _handleAcademyAnalysisOutput(String line) {
+    if (_isDisposed) {
+      return;
+    }
+
+    final parsed = UCIParser.parseLine(line);
+    if (parsed.isEmpty) {
+      return;
+    }
+
+    // Validate PV / bestMove legality to prevent race conditions from previous searches
+    if (parsed.containsKey('pv')) {
+      final pvList = parsed['pv'] as List;
+      if (pvList.isNotEmpty) {
+        final uciMove = pvList.first.toString();
+        final validationFen = _queryAnalysisFen ?? state.game.fen;
+        final validationGame = ChessGame(fen: validationFen, isChess960: state.game.isChess960);
+        final legalMoves = validationGame.generateMoves();
+        bool isLegal = false;
+        for (final m in legalMoves) {
+          final from = chess_lib.Chess.algebraic(m.from);
+          final to = chess_lib.Chess.algebraic(m.to);
+          final promo = m.promotion != null
+              ? m.promotion.toString().split('.').last.toLowerCase()[0]
+              : '';
+          if ('$from$to$promo' == uciMove) {
+            isLegal = true;
+            break;
+          }
+        }
+        if (!isLegal) {
+          return; // Ignore stale info lines from a previous search
+        }
+      }
+    }
+
+    if (parsed.containsKey('bestMove')) {
+      final rawBestMove = parsed['bestMove'] as String?;
+      if (rawBestMove != null && rawBestMove != '(none)') {
+        final validationFen = _queryAnalysisFen ?? state.game.fen;
+        final validationGame = ChessGame(fen: validationFen, isChess960: state.game.isChess960);
+        final legalMoves = validationGame.generateMoves();
+        bool isLegal = false;
+        for (final m in legalMoves) {
+          final from = chess_lib.Chess.algebraic(m.from);
+          final to = chess_lib.Chess.algebraic(m.to);
+          final promo = m.promotion != null
+              ? m.promotion.toString().split('.').last.toLowerCase()[0]
+              : '';
+          if ('$from$to$promo' == rawBestMove) {
+            isLegal = true;
+            break;
+          }
+        }
+        if (!isLegal) {
+          return; // Ignore stale bestmove outputs from a previous search
+        }
+      }
+    }
+
+    double? newEval;
+    if (parsed.containsKey('score')) {
+      final score = parsed['score'] as int;
+      newEval = parsed['scoreType'] == 'mate'
+          ? (score > 0 ? 99.0 : -99.0)
+          : score / 100.0;
+    }
+
+    // Always accumulate the parsed variables to never lose PVs, depth, or evaluation
+    _academyAnalysisAccumulated.addAll(parsed);
+    if (newEval != null) {
+      _academyAnalysisEvaluation = newEval;
+    }
+
+    if (parsed.containsKey('multipv') && parsed.containsKey('pv')) {
+      final mpv = parsed['multipv'] as int;
+      final pvList = parsed['pv'] as List<String>;
+      if (pvList.isNotEmpty) {
+        final uciMove = pvList.first;
+        final candidate = CandidateMove(
+          multipvIndex: mpv,
+          uciMove: uciMove,
+          evaluation: newEval ?? _academyAnalysisEvaluation ?? state.currentEvaluation,
+          fullPv: pvList,
+        );
+        final idx = _academyAnalysisCandidates.indexWhere((c) => c.multipvIndex == mpv);
+        if (idx != -1) {
+          _academyAnalysisCandidates[idx] = candidate;
+        } else {
+          _academyAnalysisCandidates.add(candidate);
+        }
+        _academyAnalysisCandidates.sort((a, b) => a.multipvIndex.compareTo(b.multipvIndex));
+      }
+    }
+
+    if (parsed.containsKey('bestMove')) {
+      if (_queryAnalysisCompleter != null && !_queryAnalysisCompleter!.isCompleted) {
+        _queryAnalysisCompleter!.complete();
+      }
+      
+      // Update standard analysis map and eval so UI can show it
+      state = state.copyWith(
+        analysis: Map<String, dynamic>.from(_academyAnalysisAccumulated),
+        currentEvaluation: _academyAnalysisEvaluation ?? state.currentEvaluation,
+      );
+
+      final rawBestMove = parsed['bestMove'] as String?;
+      final aiTurn = _isAiTurn();
+
+      // Check if we are in Academy Mode and it was the user who just moved
+      if (state.isAcademyActive &&
+          aiTurn &&
+          !state.isWaitingForSideChoice &&
+          !state.isAcademyBlunderActive &&
+          !state.game.gameOver &&
+          !state.isPaused &&
+          state.game.history.length >= (state.isPlayerWhite ? 1 : 2)) {
+        
+        // Calculate evaluation delta
+        final double prevEval = state.previousEvaluation;
+        final double currEval = _academyAnalysisEvaluation ?? state.currentEvaluation;
+        final double evalDiff = -currEval - prevEval;
+
+        debugPrint('Academy Analysis Engine blunder check: prev=$prevEval, curr=$currEval, diff=$evalDiff, history=${state.game.history.length}');
+
+        if (evalDiff <= -1.2) {
+          // It's an absolute blunder! Stop the playing engine immediately.
+          _stockfishEngine.stopAnalysis();
+
+          final lastMove = _lastMoveFromHistory();
+          final friendlyMoveName = lastMove != null
+              ? _formatMoveFriendly(lastMove)
+              : (state.recentMoves.isNotEmpty ? state.recentMoves.last : (state.lastMove ?? ''));
+          final titlePrefix = "**${state.userName}: $friendlyMoveName**\n\n";
+
+          state = state.copyWith(
+            isAcademyBlunderActive: true,
+            pendingEngineMove: rawBestMove,
+          );
+
+          final lastMoveStr = state.lastMove ?? '';
+          unawaited(_handleAcademyBlunderIntervention(
+            evalDiff: evalDiff,
+            lastMove: lastMoveStr,
+            titlePrefix: titlePrefix,
+          ));
+        }
+      }
+    }
   }
 
   /// Selects the best move for the current AI persona from Stockfish's MultiPV
@@ -2236,6 +2448,17 @@ class ChessNotifier extends Notifier<ChessState> {
         rookTo: rookTo,
         rookPieceCode: rookPieceCode,
       ),
+      chanakyaSuggestion: state.isAcademyActive
+          ? MoveAnimationData(
+              from: from,
+              to: to,
+              pieceCode: pieceCode,
+              isCapture: state.game.getPiece(to) != null,
+            )
+          : null,
+      academyAnimationTrigger: state.isAcademyActive
+          ? state.academyAnimationTrigger + 1
+          : state.academyAnimationTrigger,
       engineSelectionSquare: null, // Clear selection when move starts
     );
 
@@ -2474,32 +2697,48 @@ class ChessNotifier extends Notifier<ChessState> {
     await ensureGameServicesStarted();
     if (!state.engineReady) return;
 
-    // 1. Maximize settings
-    await _engine.sendCommand('stop');
-    await _engine.setSkillLevel(20, multiPV: 4);
+    _queryAnalysisFen = fen;
+    final targetEngine = state.isAcademyActive ? _academyAnalysisEngine : _engine;
 
-    // 2. Clear caches
-    _currentCandidates.clear();
-    _accumulatedAnalysis.clear();
-    _accumulatedEvaluation = null;
+    try {
+      // 1. Maximize settings
+      await targetEngine.sendCommand('stop');
+      await targetEngine.setSkillLevel(20, multiPV: 4);
 
-    _queryAnalysisCompleter = Completer<void>();
+      // 2. Clear caches
+      if (state.isAcademyActive) {
+        _academyAnalysisCandidates.clear();
+        _academyAnalysisAccumulated.clear();
+        _academyAnalysisEvaluation = null;
+      } else {
+        _currentCandidates.clear();
+        _accumulatedAnalysis.clear();
+        _accumulatedEvaluation = null;
+      }
 
-    // 3. Start deep search (depth 22)
-    await _engine.analyzePosition(fen, depth: 22);
+      _queryAnalysisCompleter = Completer<void>();
 
-    // 4. Wait for bestmove or 10s timeout
-    await _queryAnalysisCompleter!.future.timeout(
-      const Duration(seconds: 10),
-      onTimeout: () {
-        debugPrint('GM Chanakya query analysis timed out, proceeding.');
-      },
-    );
+      // 3. Start deep search (depth 22)
+      await targetEngine.analyzePosition(fen, depth: 22);
 
-    _queryAnalysisCompleter = null;
+      // 4. Wait for bestmove or 10s timeout
+      await _queryAnalysisCompleter!.future.timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          debugPrint('GM Chanakya query analysis timed out, proceeding.');
+        },
+      );
+    } finally {
+      _queryAnalysisCompleter = null;
+      _queryAnalysisFen = null;
 
-    // 5. Restore regular playing Elo settings
-    await _restorePlayingEngineSettings();
+      // 5. Restore regular playing Elo settings
+      if (state.isAcademyActive) {
+        await _academyAnalysisEngine.setSkillLevel(20, multiPV: 3);
+      } else {
+        await _restorePlayingEngineSettings();
+      }
+    }
   }
 
   void _startAnalysis({int? depth}) {
@@ -2523,61 +2762,82 @@ class ChessNotifier extends Notifier<ChessState> {
     final config = rust_persona.getPersonaConfig(avatarName: avatar.name);
     int targetDepth = depth ?? config.depth;
 
-    // ── Academy Mode: dynamic Elo-based difficulty calibration ─────────────
     if (state.isAcademyActive) {
+      // ── Academy Mode: Dynamic Elo-based difficulty calibration for Chanakya ──
       final bgState = ref.read(battlegroundProvider);
       final userElo = bgState.consolidatedRating;
-
-      // Chanakya targets User ELO + dynamic random offset (clamped to range of known avatars)
       final targetElo = (userElo + state.chanakyaEloOffset).clamp(400, 3200);
       final chanakyaAvatar = AiAvatar.getBestMatch(targetElo);
 
-      // Tight-fight detection: game is close (eval within ±1.5) past move 20
       final halfMoveCount = state.game.history.length;
       final evalAbs = state.currentEvaluation.abs();
       final isTightFight = halfMoveCount >= 20 && evalAbs <= 1.5;
 
-      // Apply boosted depth in tight-fight mode
       final chanakyaConfig = rust_persona.getPersonaConfig(avatarName: chanakyaAvatar.name);
       final baseDepth = chanakyaConfig.depth;
       final chanakyaDepth = isTightFight ? (baseDepth + 2) : baseDepth;
 
-      avatar = chanakyaAvatar;
-      targetDepth = depth ?? chanakyaDepth;
-
       debugPrint(
-        '🧠 Chanakya level calibration: userElo=$userElo, offset=${state.chanakyaEloOffset} → target=${chanakyaAvatar.name} '
+        '🧠 Chanakya calibration: target=${chanakyaAvatar.name} '
         '(skillLevel=${chanakyaConfig.skillLevel}, depth=$chanakyaDepth) '
-        '| tightFight=$isTightFight | evalAbs=${evalAbs.toStringAsFixed(2)}',
+        '| tightFight=$isTightFight',
       );
-    }
-    // ────────────────────────────────────────────────────────────────────────
 
-    // Dynamically apply current moving engine's skill level constraints
-    _currentCandidates.clear();
-    final configForMoving = rust_persona.getPersonaConfig(avatarName: avatar.name);
-    _engine.setSkillLevel(
-      configForMoving.skillLevel,
-      multiPV: state.isAcademyActive ? 3 : configForMoving.multiPv,
-    );
-    _engine.sendCommand('setoption name Hash value ${avatar.hashSize}');
-    _engine.sendCommand('setoption name Contempt value ${avatar.contempt}');
+      // 1. Start Chanakya playing search (only if it is the AI's turn to play)
+      if (_isAiTurn()) {
+        _currentCandidates.clear();
+        _stockfishEngine.setSkillLevel(chanakyaConfig.skillLevel, multiPV: 3);
+        _stockfishEngine.sendCommand('setoption name Hash value ${chanakyaAvatar.hashSize}');
+        _stockfishEngine.sendCommand('setoption name Contempt value ${chanakyaAvatar.contempt}');
 
-    // Cancel any existing max thinking timer
-    _maxThinkingTimer?.cancel();
-    _maxThinkingTimer = null;
+        _maxThinkingTimer?.cancel();
+        _maxThinkingTimer = Timer(const Duration(seconds: 10), () {
+          _stockfishEngine.sendCommand('stop');
+        });
 
-    // Only force move (10s timeout) if it's the AI's turn to respond
-    if (_isAiTurn()) {
-      _maxThinkingTimer = Timer(const Duration(seconds: 10), () {
-        _engine.sendCommand('stop');
-      });
-    }
+        try {
+          _stockfishEngine.analyzePosition(state.game.fen, depth: chanakyaDepth);
+        } catch (e) {
+          debugPrint('ChessNotifier: Chanakya playing engine analyze failed: $e');
+        }
+      }
 
-    try {
-      _engine.analyzePosition(state.game.fen, depth: targetDepth);
-    } catch (e) {
-      debugPrint('ChessNotifier: Failed to trigger engine analysis: $e');
+      // 2. Start blunder check & coaching evaluation search on academyAnalysisEngine
+      _academyAnalysisCandidates.clear();
+      _academyAnalysisAccumulated.clear();
+      _academyAnalysisEvaluation = null;
+
+      try {
+        _academyAnalysisEngine.setSkillLevel(20, multiPV: 3);
+        _academyAnalysisEngine.analyzePosition(state.game.fen, depth: 12);
+      } catch (e) {
+        debugPrint('ChessNotifier: Academy analysis engine analyze failed: $e');
+      }
+
+    } else {
+      // ── Non-Academy Mode: Single Engine (standard Arena / Battleground) ──
+      _currentCandidates.clear();
+      final configForMoving = rust_persona.getPersonaConfig(avatarName: avatar.name);
+      _stockfishEngine.setSkillLevel(
+        configForMoving.skillLevel,
+        multiPV: configForMoving.multiPv,
+      );
+      _stockfishEngine.sendCommand('setoption name Hash value ${avatar.hashSize}');
+      _stockfishEngine.sendCommand('setoption name Contempt value ${avatar.contempt}');
+
+      _maxThinkingTimer?.cancel();
+      _maxThinkingTimer = null;
+      if (_isAiTurn()) {
+        _maxThinkingTimer = Timer(const Duration(seconds: 10), () {
+          _stockfishEngine.sendCommand('stop');
+        });
+      }
+
+      try {
+        _stockfishEngine.analyzePosition(state.game.fen, depth: targetDepth);
+      } catch (e) {
+        debugPrint('ChessNotifier: Failed to trigger engine analysis: $e');
+      }
     }
   }
 
@@ -3175,9 +3435,32 @@ class ChessNotifier extends Notifier<ChessState> {
       }
 
       if (userQuery != null) {
-        final targetFen = (userQuery.startsWith('[TACTICS_QUERY]') && state.tacticsBaseFen != null)
-            ? state.tacticsBaseFen!
-            : state.currentBoardFen;
+        var targetFen = state.currentBoardFen;
+        if (userQuery.startsWith('[TACTICS_QUERY]') && state.tacticsBaseFen != null) {
+          targetFen = state.tacticsBaseFen!;
+          if (state.tacticsSequence.isNotEmpty) {
+            try {
+              final board = chess_lib.Chess.fromFEN(state.tacticsBaseFen!);
+              final firstMove = state.tacticsSequence.first;
+              final piece = board.get(firstMove.from);
+              if (piece != null) {
+                final isWhitePiece = piece.color == chess_lib.Color.WHITE;
+                final currentFen = board.fen;
+                final partsFen = currentFen.split(' ');
+                if (partsFen.length > 1) {
+                  partsFen[1] = isWhitePiece ? 'w' : 'b';
+                  board.load(partsFen.join(' '));
+                }
+              }
+              final success = board.move({'from': firstMove.from, 'to': firstMove.to});
+              if (success) {
+                targetFen = board.fen;
+              }
+            } catch (e) {
+              debugPrint('Error calculating tactics target FEN: $e');
+            }
+          }
+        }
         await _runQueryAnalysisAtFullDepth(targetFen);
       }
 
@@ -3204,7 +3487,7 @@ class ChessNotifier extends Notifier<ChessState> {
           game: state.game,
           bestMove: bestMove,
           pvLine: pv,
-          candidates: _currentCandidates,
+          candidates: state.isAcademyActive ? _academyAnalysisCandidates : _currentCandidates,
           precomputed: precomputed,
         );
         _aiContextService.setLastContext(context);
@@ -3221,17 +3504,22 @@ class ChessNotifier extends Notifier<ChessState> {
         context: context,
         previousQuality: previousQuality,
         userQuery: userQuery,
+        userName: state.userName,
         tacticsBaseFen: state.tacticsBaseFen,
         tacticsSequence: state.tacticsSequence.map((s) => '${s.from}${s.to}').toList(),
-        tacticsCandidates: List.from(_currentCandidates),
+        tacticsCandidates: List.from(state.isAcademyActive ? _academyAnalysisCandidates : _currentCandidates),
         isChess960: state.isChess960,
+        isUserMove: player == (state.isPlayerWhite ? 'White' : 'Black'),
+        isPlayerWhite: state.isPlayerWhite,
+        fen: state.currentBoardFen,
       );
 
       String finalResponse = '';
+      final bool isTacticsQuery = userQuery?.startsWith('[TACTICS_QUERY]') == true;
       await for (final chunk in stream) {
         if (_isDisposed) break;
         finalResponse = chunk;
-        if (state.academyHouseAnimations) {
+        if (state.academyHouseAnimations && !isTacticsQuery) {
           _extractMoveSuggestion(chunk);
         }
       }
@@ -3931,6 +4219,7 @@ class ChessNotifier extends Notifier<ChessState> {
       isTacticsModeActive: true,
       tacticsBaseFen: state.currentBoardFen,
       tacticsSequence: const [],
+      chanakyaSuggestion: null,
       isTacticsPlaybackActive: false,
       activeTacticIndex: null,
       activeTacticMoves: null,
@@ -4033,12 +4322,15 @@ class ChessNotifier extends Notifier<ChessState> {
     
     state = state.copyWith(
       isTacticsModeActive: false,
+      chanakyaSuggestion: null,
+      isBoardInChampionsTheme: false,
     );
     
     await sendUserQuery('[TACTICS_QUERY] $question');
   }
 
   void playTactic(int index, List<String> moves) {
+    stopCandidatePlayback();
     _playbackTimer?.cancel();
     state = state.copyWith(
       isTacticsPlaybackActive: true,
@@ -4076,6 +4368,102 @@ class ChessNotifier extends Notifier<ChessState> {
       activeTacticMoves: null,
       tacticPlaybackPosition: 0,
       isBoardInChampionsTheme: false,
+    );
+  }
+
+  void playCandidateLine(int multipvIndex, String baseFen) {
+    _candidatePlaybackTimer?.cancel();
+    stopTacticPlayback();
+    
+    final list = state.isAcademyActive ? _academyAnalysisCandidates : _currentCandidates;
+    final candidateIndex = list.indexWhere((c) => c.multipvIndex == multipvIndex);
+    if (candidateIndex == -1) return;
+
+    final candidate = list[candidateIndex];
+
+    state = state.copyWith(
+      isCandidatePlaybackActive: true,
+      activeCandidateIndex: multipvIndex,
+      activeCandidateMoves: candidate.fullPv,
+      candidatePlaybackPosition: 0,
+      candidatePlaybackBaseFen: baseFen,
+      chanakyaSuggestion: null,
+    );
+
+    _startCandidatePlaybackTimer();
+  }
+
+  void _startCandidatePlaybackTimer() {
+    _candidatePlaybackTimer?.cancel();
+    _candidatePlaybackTimer = Timer.periodic(const Duration(milliseconds: 1500), (timer) {
+      if (state.activeCandidateMoves == null || state.activeCandidateMoves!.isEmpty) {
+        timer.cancel();
+        return;
+      }
+      final nextPos = state.candidatePlaybackPosition + 1;
+      if (nextPos > state.activeCandidateMoves!.length) {
+        state = state.copyWith(
+          candidatePlaybackPosition: 0,
+          chanakyaSuggestion: null,
+        );
+      } else {
+        // Calculate move animation suggestion data for the move that is played
+        final uci = state.activeCandidateMoves![nextPos - 1];
+        if (uci.length >= 4) {
+          final from = uci.substring(0, 2);
+          final to = uci.substring(2, 4);
+          
+          // Construct piece code from current FEN state
+          final tempBoard = chess_lib.Chess.fromFEN(state.candidatePlaybackBaseFen ?? state.currentBoardFen);
+          // Play moves up to nextPos - 1
+          for (int i = 0; i < nextPos - 1; i++) {
+            final m = state.activeCandidateMoves![i];
+            if (m.length >= 4) {
+              tempBoard.move({
+                'from': m.substring(0, 2),
+                'to': m.substring(2, 4),
+                'promotion': m.length > 4 ? m.substring(4) : null,
+              });
+            }
+          }
+          final piece = tempBoard.get(from);
+          final pieceCode = piece != null
+              ? '${piece.color == chess_lib.Color.WHITE ? 'w' : 'b'}${piece.type.toUpperCase()}'
+              : 'wP';
+          
+          state = state.copyWith(
+            candidatePlaybackPosition: nextPos,
+            chanakyaSuggestion: MoveAnimationData(
+              from: from,
+              to: to,
+              pieceCode: pieceCode,
+              isCapture: piece != null && tempBoard.get(to) != null,
+            ),
+            academyAnimationTrigger: state.academyAnimationTrigger + 1,
+          );
+        } else {
+          state = state.copyWith(
+            candidatePlaybackPosition: nextPos,
+            chanakyaSuggestion: null,
+          );
+        }
+      }
+      
+      // Play a subtle move sound effect
+      _soundService.playSfx(SoundEffect.move);
+    });
+  }
+
+  void stopCandidatePlayback() {
+    _candidatePlaybackTimer?.cancel();
+    _candidatePlaybackTimer = null;
+    state = state.copyWith(
+      isCandidatePlaybackActive: false,
+      activeCandidateIndex: null,
+      activeCandidateMoves: null,
+      candidatePlaybackPosition: 0,
+      candidatePlaybackBaseFen: null,
+      chanakyaSuggestion: null,
     );
   }
 
@@ -4243,7 +4631,7 @@ class ChessNotifier extends Notifier<ChessState> {
         }
       }
 
-      for (final c in _currentCandidates) {
+      for (final c in (state.isAcademyActive ? _academyAnalysisCandidates : _currentCandidates)) {
         if (c.fullPv.isEmpty) continue;
         final Map<String, chess_lib.Piece> currentPieces = Map.from(boardPieces);
         for (final uci in c.fullPv) {
@@ -4365,7 +4753,7 @@ class ChessNotifier extends Notifier<ChessState> {
       }
     }
 
-    for (final c in _currentCandidates) {
+    for (final c in (state.isAcademyActive ? _academyAnalysisCandidates : _currentCandidates)) {
       if (c.fullPv.isEmpty) continue;
       final Map<String, chess_lib.Piece> currentPieces = Map.from(boardPieces);
       for (final uci in c.fullPv) {

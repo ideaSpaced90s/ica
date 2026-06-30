@@ -16,6 +16,8 @@ class StockfishService implements ChessEngineService {
   bool _isReady = false;
   bool _isDisposed = false;
   bool _isError = false;
+  bool _isSearching = false;
+  Completer<void>? _stopCompleter;
   Completer<void> _readyCompleter = Completer<void>();
   Process? _process;
   final StreamController<String> _outputController =
@@ -47,6 +49,8 @@ class StockfishService implements ChessEngineService {
 
     _isReady = false;
     _isError = false;
+    _isSearching = false;
+    _stopCompleter = null;
     if (_readyCompleter.isCompleted) {
       _readyCompleter = Completer<void>();
     }
@@ -174,6 +178,12 @@ class StockfishService implements ChessEngineService {
                 if (trimmed == 'uciok') {
                   sendCommand('isready');
                 }
+                if (trimmed.startsWith('bestmove')) {
+                  _isSearching = false;
+                  if (_stopCompleter != null && !_stopCompleter!.isCompleted) {
+                    _stopCompleter!.complete();
+                  }
+                }
                 if (trimmed == 'readyok') {
                   _isReady = true;
                   if (!completer.isCompleted) {
@@ -258,6 +268,9 @@ class StockfishService implements ChessEngineService {
         return;
       }
       debugPrint('StockfishService [SEND] -> $trimmed');
+      if (trimmed.startsWith('go')) {
+        _isSearching = true;
+      }
       _process!.stdin.writeln(trimmed);
       await _process!.stdin.flush().timeout(
         const Duration(milliseconds: 100),
@@ -283,7 +296,15 @@ class StockfishService implements ChessEngineService {
     Duration? bInc,
   }) async {
     if (!_isReady) await _readyCompleter.future;
-    await sendCommand('stop');
+    if (_isSearching) {
+      if (_stopCompleter == null || _stopCompleter!.isCompleted) {
+        _stopCompleter = Completer<void>();
+      }
+      await sendCommand('stop');
+      await _stopCompleter!.future.timeout(const Duration(seconds: 2), onTimeout: () {});
+      _stopCompleter = null;
+      _isSearching = false;
+    }
     await sendCommand('position fen $fen');
     if (wTime != null || bTime != null) {
       final wt = wTime?.inMilliseconds ?? 0;
@@ -341,6 +362,13 @@ final stockfishServiceProvider = Provider<StockfishService>((ref) {
 
 /// Dedicated practice/sparring stockfish service provider.
 final practiceStockfishServiceProvider = Provider<StockfishService>((ref) {
+  final service = StockfishService();
+  ref.onDispose(() => service.dispose());
+  return service;
+});
+
+/// Dedicated academy coaching/analysis stockfish service provider.
+final academyAnalysisStockfishServiceProvider = Provider<StockfishService>((ref) {
   final service = StockfishService();
   ref.onDispose(() => service.dispose());
   return service;

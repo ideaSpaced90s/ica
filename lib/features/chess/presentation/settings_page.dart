@@ -12,6 +12,7 @@ import 'scholarly_theme.dart';
 import 'widgets/ambient_scaffold.dart';
 import 'notification_settings_page.dart';
 import 'account_page.dart' show ResetConfirmationDialog;
+import 'widgets/update_check_tile.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -88,6 +89,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                       ),
                     ],
                   ),
+
+                  const UpdateCheckTile(),
 
                   // DANGER ZONE
                   _DangerZoneSection(

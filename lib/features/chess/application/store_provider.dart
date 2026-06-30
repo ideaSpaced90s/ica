@@ -11,6 +11,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'chess_provider.dart';
+import '../services/analytics_service.dart';
 import 'var_notifier.dart';
 
 String _getCurrentDateKey() {
@@ -245,6 +246,106 @@ class StoreRepository {
 
 final storeProvider = NotifierProvider<StoreNotifier, StoreState>(StoreNotifier.new);
 
+class LocalizedPlanPrice {
+  final String basePrice;
+  final String? introPrice;
+  final int introMonths;
+
+  const LocalizedPlanPrice({
+    required this.basePrice,
+    this.introPrice,
+    this.introMonths = 0,
+  });
+}
+
+final storePricesProvider = FutureProvider<Map<String, LocalizedPlanPrice>>((ref) async {
+  final Map<String, LocalizedPlanPrice> localizedPrices = {};
+
+  try {
+    final bool available = await InAppPurchase.instance.isAvailable();
+    if (!available) {
+      return localizedPrices;
+    }
+
+    final Set<String> productIds;
+    if (Platform.isAndroid) {
+      productIds = {'ica_saas_1', 'themes'};
+    } else {
+      productIds = {'monthly', 'sixmonth', 'yearly', 'themes'};
+    }
+
+    final ProductDetailsResponse response = await InAppPurchase.instance.queryProductDetails(productIds);
+
+    for (final product in response.productDetails) {
+      if (product.id == 'themes') {
+        localizedPrices['themes'] = LocalizedPlanPrice(basePrice: product.price);
+      }
+
+      if (!Platform.isAndroid) {
+        if (product.id == 'monthly' || product.id == 'sixmonth' || product.id == 'yearly') {
+          String? introPrice;
+          int introMonths = 0;
+          if (product.runtimeType.toString() == 'AppStoreProductDetails') {
+            try {
+              final dynamic appStoreProduct = product;
+              final dynamic skProduct = appStoreProduct.skProduct;
+              final dynamic intro = skProduct.introductoryPrice;
+              if (intro != null) {
+                final symbol = product.currencySymbol;
+                introPrice = "$symbol${intro.price}";
+                introMonths = intro.numberOfPeriods ?? 0;
+              }
+            } catch (_) {}
+          }
+          localizedPrices[product.id] = LocalizedPlanPrice(
+            basePrice: product.price,
+            introPrice: introPrice,
+            introMonths: introMonths,
+          );
+        }
+      } else if (product is GooglePlayProductDetails) {
+        final offers = product.productDetails.subscriptionOfferDetails;
+        if (offers != null) {
+          for (final offer in offers) {
+            final phases = offer.pricingPhases;
+            if (phases.isNotEmpty) {
+              final recurringPhase = phases.last;
+              final formattedPrice = recurringPhase.formattedPrice;
+
+              String? introPrice;
+              int introMonths = 0;
+
+              if (phases.length > 1) {
+                final introPhase = phases.first;
+                introPrice = introPhase.formattedPrice;
+                introMonths = introPhase.billingCycleCount;
+              }
+
+              final planPriceObj = LocalizedPlanPrice(
+                basePrice: formattedPrice,
+                introPrice: introPrice,
+                introMonths: introMonths,
+              );
+
+              if (offer.basePlanId == 'monthly-premium') {
+                localizedPrices['monthly'] = planPriceObj;
+              } else if (offer.basePlanId == 'six-monthly-premium') {
+                localizedPrices['sixmonth'] = planPriceObj;
+              } else if (offer.basePlanId == 'annual-premium') {
+                localizedPrices['yearly'] = planPriceObj;
+              }
+            }
+          }
+        }
+      }
+    }
+  } catch (e) {
+    // Fail silently, fallback prices will be used
+  }
+
+  return localizedPrices;
+});
+
 class StoreNotifier extends Notifier<StoreState> {
   final StoreRepository _repository = StoreRepository();
   StreamSubscription<List<PurchaseDetails>>? _purchaseSubscription;
@@ -325,6 +426,17 @@ class StoreNotifier extends Notifier<StoreState> {
       } else {
         if (purchaseDetails.status == PurchaseStatus.error) {
           // Purchase error
+          final pendingThemeId = sharedPrefs.getString('pending_theme_id');
+          final pendingPlanId = sharedPrefs.getString('pending_plan_id');
+          ref.read(analyticsServiceProvider).logEvent(
+            name: 'purchase_failed',
+            parameters: {
+              'item_id': purchaseDetails.productID == 'themes'
+                  ? (pendingThemeId ?? 'unknown_theme')
+                  : (pendingPlanId ?? purchaseDetails.productID),
+              'error_message': purchaseDetails.error?.message ?? 'Unknown error',
+            },
+          );
         } else if (purchaseDetails.status == PurchaseStatus.purchased ||
             purchaseDetails.status == PurchaseStatus.restored) {
           final bool valid = await _verifyPurchase(purchaseDetails);
@@ -359,6 +471,16 @@ class StoreNotifier extends Notifier<StoreState> {
         
         // Auto-apply the theme
         ref.read(chessProvider.notifier).setBoardTheme(pendingThemeId);
+        
+        // Log theme purchase completion
+        ref.read(analyticsServiceProvider).logEvent(
+          name: 'purchase_complete',
+          parameters: {
+            'item_id': pendingThemeId,
+            'item_type': 'theme',
+            'price': 0.99,
+          },
+        );
       }
       sharedPrefs.remove('pending_theme_id');
       return;
@@ -415,6 +537,15 @@ class StoreNotifier extends Notifier<StoreState> {
       currentPurchaseToken: token,
     );
 
+    // Log subscription purchase completion
+    ref.read(analyticsServiceProvider).logEvent(
+      name: 'purchase_complete',
+      parameters: {
+        'item_id': plan,
+        'item_type': 'subscription',
+      },
+    );
+
     if (!wasPremium || oldPlan != plan || state.currentCycleStartDate == null || state.cycleThemeAllocation == null) {
       _startNewCycle(now);
     } else {
@@ -427,6 +558,13 @@ class StoreNotifier extends Notifier<StoreState> {
   }
 
   Future<void> buySubscription(String planId) async {
+    ref.read(analyticsServiceProvider).logEvent(
+      name: 'begin_in_app_purchase',
+      parameters: {
+        'item_id': planId,
+        'item_type': 'subscription',
+      },
+    );
     final bool available = await InAppPurchase.instance.isAvailable();
     if (!available) {
       throw StateError('Google Play Store is not available on this device.');
@@ -524,6 +662,14 @@ class StoreNotifier extends Notifier<StoreState> {
   }
 
   Future<void> buyTheme(String themeId) async {
+    ref.read(analyticsServiceProvider).logEvent(
+      name: 'begin_in_app_purchase',
+      parameters: {
+        'item_id': themeId,
+        'item_type': 'theme',
+        'price': 0.99,
+      },
+    );
     const productId = 'themes';
     final bool available = await InAppPurchase.instance.isAvailable();
     if (!available) {
