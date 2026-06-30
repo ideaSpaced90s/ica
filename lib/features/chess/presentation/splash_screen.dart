@@ -13,6 +13,7 @@ import '../services/auth_service.dart';
 import 'mobile_navigation_shell.dart';
 import 'sign_in_page.dart';
 import 'widgets/notification_prompt_page.dart';
+import 'scholarly_theme.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -391,13 +392,27 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                     ],
                   ),
                 ),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    'Chess Academy',
+                    maxLines: 1,
+                    style: GoogleFonts.pirataOne(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      color: ScholarlyTheme.textPrimary,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
                 Text(
-                  'Chess Academy',
+                  'Learn Chess Intently',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.inter(
-                    fontSize: 28,
-                    color: const Color(0xFF1E293B),
-                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                    color: ScholarlyTheme.textMuted,
+                    fontWeight: FontWeight.w500,
+                    height: 1.4,
                   ),
                 ),
                 const SizedBox(height: 28),
