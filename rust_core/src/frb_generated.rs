@@ -1144,9 +1144,9 @@ fn wire__crate__api__commentary__select_commentary_template_rust_impl(
             let api_previous_quality = <String>::sse_decode(&mut deserializer);
             let api_game_phase = <String>::sse_decode(&mut deserializer);
             let api_eval_diff = <f64>::sse_decode(&mut deserializer);
-            let api_has_fork = <bool>::sse_decode(&mut deserializer);
-            let api_has_pin = <bool>::sse_decode(&mut deserializer);
-            let api_has_hanging = <bool>::sse_decode(&mut deserializer);
+            let api__has_fork = <bool>::sse_decode(&mut deserializer);
+            let api__has_pin = <bool>::sse_decode(&mut deserializer);
+            let api__has_hanging = <bool>::sse_decode(&mut deserializer);
             deserializer.end();
             transform_result_sse::<_, ()>((move || {
                 let output_ok =
@@ -1155,9 +1155,9 @@ fn wire__crate__api__commentary__select_commentary_template_rust_impl(
                         api_previous_quality,
                         api_game_phase,
                         api_eval_diff,
-                        api_has_fork,
-                        api_has_pin,
-                        api_has_hanging,
+                        api__has_fork,
+                        api__has_pin,
+                        api__has_hanging,
                     ))?;
                 Ok(output_ok)
             })())

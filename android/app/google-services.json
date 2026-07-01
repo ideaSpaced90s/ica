@@ -14,19 +14,19 @@
       },
       "oauth_client": [
         {
+          "client_id": "691615456515-e2teku9nvb9rahs2at6ds1mk318hfa79.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.dsamok.ideaspacechess",
+            "certificate_hash": "cac1bf1866513bca3919b1aba307afa73a9ce95a"
+          }
+        },
+        {
           "client_id": "691615456515-lq8q29e11vdh52bv8lq5b2o68uoob4qo.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.dsamok.ideaspacechess",
             "certificate_hash": "dcf90922177651c03261d45fe7c8afeef515ad0d"
-          }
-        },
-        {
-          "client_id": "691615456515-rj4jvkkfvrsslhf3mptlcgt5cfknk9ar.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.dsamok.ideaspacechess",
-            "certificate_hash": "bf7f66c4472fc07a4b8ef866ab96569ddbd814b3"
           }
         },
         {
