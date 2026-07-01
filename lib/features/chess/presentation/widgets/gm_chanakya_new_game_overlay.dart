@@ -53,7 +53,9 @@ class _GMChanakyaNewGameOverlayState extends ConsumerState<GMChanakyaNewGameOver
     final chessState = ref.watch(chessProvider);
 
     final isEvE = arenaState.isEngineVsEngine;
-    final String modeText = arenaState.gameMode == 'chess960' ? 'Chess960' : 'Classic Chess';
+    final String modeText = arenaState.gameMode == 'chess960'
+        ? 'Chess960'
+        : (arenaState.gameMode == 'custom' ? 'Custom' : 'Classic Chess');
 
     // Format Timing
     final String timeStr;
@@ -387,7 +389,9 @@ class _GMChanakyaNewGameOverlayState extends ConsumerState<GMChanakyaNewGameOver
 
   List<TextSpan> _buildChanakyaSpeech(BuildContext context, ArenaState state, ChessState chessState) {
     final isEvE = state.isEngineVsEngine;
-    final String modeText = state.gameMode == 'chess960' ? 'Chess960' : 'Classic Chess';
+    final String modeText = state.gameMode == 'chess960'
+        ? 'Chess960'
+        : (state.gameMode == 'custom' ? 'Custom' : 'Classic Chess');
 
     // Format Timing
     final String timeStr;

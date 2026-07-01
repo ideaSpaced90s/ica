@@ -73,8 +73,10 @@ class AppSettings {
   final String userAvatarPath;
   final String? activeRatedMatchId;
   final String? activeRatedMatchOpponentId;
+  final String? customFen;
 
   AppSettings({
+    this.customFen,
     this.boardThemeId = 'classic',
     this.isSoundEnabled = true,
     this.isGameSoundEnabled = true,
@@ -202,6 +204,7 @@ class AppSettings {
     String? userAvatarPath,
     Object? activeRatedMatchId = const Object(),
     Object? activeRatedMatchOpponentId = const Object(),
+    Object? customFen = const Object(),
     bool? isNotificationsEnabled,
     bool? dailyBriefingEnabled,
     bool? streakProtectionEnabled,
@@ -268,6 +271,9 @@ class AppSettings {
       activeRatedMatchOpponentId: identical(activeRatedMatchOpponentId, const Object())
           ? this.activeRatedMatchOpponentId
           : activeRatedMatchOpponentId as String?,
+      customFen: identical(customFen, const Object())
+          ? this.customFen
+          : customFen as String?,
       isNotificationsEnabled: isNotificationsEnabled ?? this.isNotificationsEnabled,
       dailyBriefingEnabled: dailyBriefingEnabled ?? this.dailyBriefingEnabled,
       streakProtectionEnabled: streakProtectionEnabled ?? this.streakProtectionEnabled,
@@ -340,6 +346,7 @@ class AppSettings {
     'quietHoursEnabled': quietHoursEnabled,
     'quietHoursStart': quietHoursStart,
     'quietHoursEnd': quietHoursEnd,
+    'customFen': customFen,
   };
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
@@ -446,6 +453,7 @@ class AppSettings {
       userAvatarPath: json['userAvatarPath'] ?? 'assets/persona/user_profile_0.png',
       activeRatedMatchId: json['activeRatedMatchId'] as String?,
       activeRatedMatchOpponentId: json['activeRatedMatchOpponentId'] as String?,
+      customFen: json['customFen'] as String?,
       isNotificationsEnabled: json['isNotificationsEnabled'] ?? false,
       dailyBriefingEnabled: json['dailyBriefingEnabled'] ?? true,
       streakProtectionEnabled: json['streakProtectionEnabled'] ?? true,

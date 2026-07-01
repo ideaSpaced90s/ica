@@ -288,7 +288,7 @@ class ChessSoundService {
 
   Future<void> startAlarm() async {
     await initialized;
-    if (!isSfxEnabled || !_isInitialized || !SoLoud.instance.isInitialized) return;
+    if (!isSfxEnabled || !isGameSoundEnabled || isRatedMode || !_isInitialized || !SoLoud.instance.isInitialized) return;
     if (_alarmHandle != null) return; // Already playing
     
     final source = _sfxSources['alarm'];

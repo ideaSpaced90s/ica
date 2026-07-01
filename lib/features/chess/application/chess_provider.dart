@@ -287,6 +287,7 @@ class ChessState {
     this.activeCandidateMoves,
     this.candidatePlaybackPosition = 0,
     this.candidatePlaybackBaseFen,
+    this.customFen,
   });
 
   final ChessGame game;
@@ -387,6 +388,7 @@ class ChessState {
   final List<String>? activeCandidateMoves;
   final int candidatePlaybackPosition;
   final String? candidatePlaybackBaseFen;
+  final String? customFen;
 
   final bool isNotificationsEnabled;
   final bool dailyBriefingEnabled;
@@ -523,6 +525,7 @@ class ChessState {
     Object? activeCandidateMoves = _sentinel,
     int? candidatePlaybackPosition,
     Object? candidatePlaybackBaseFen = _sentinel,
+    Object? customFen = _sentinel,
   }) {
     return ChessState(
       game: game ?? this.game,
@@ -677,6 +680,9 @@ class ChessState {
       candidatePlaybackBaseFen: identical(candidatePlaybackBaseFen, _sentinel)
           ? this.candidatePlaybackBaseFen
           : candidatePlaybackBaseFen as String?,
+      customFen: identical(customFen, _sentinel)
+          ? this.customFen
+          : customFen as String?,
       isNotificationsEnabled: isNotificationsEnabled ?? this.isNotificationsEnabled,
       dailyBriefingEnabled: dailyBriefingEnabled ?? this.dailyBriefingEnabled,
       streakProtectionEnabled: streakProtectionEnabled ?? this.streakProtectionEnabled,
@@ -821,7 +827,9 @@ class ChessNotifier extends Notifier<ChessState> {
               fen: Chess960Generator.generateRandomPosition().fen,
               isChess960: true,
             )
-          : ChessGame(isChess960: false);
+          : (s.gameMode == 'custom' && s.customFen != null
+              ? ChessGame(fen: s.customFen, isChess960: false)
+              : ChessGame(isChess960: false));
 
       state = state.copyWith(
         game: initialGame,
@@ -845,6 +853,7 @@ class ChessNotifier extends Notifier<ChessState> {
         blackTimeLeft: Duration(minutes: s.totalTimeMinutes),
         incrementDuration: Duration(seconds: s.incrementSeconds),
         gameMode: s.gameMode,
+        customFen: s.customFen,
         userName: s.userName,
         userAvatarPath: s.userAvatarPath,
         isNotificationsEnabled: s.isNotificationsEnabled,
@@ -943,6 +952,7 @@ class ChessNotifier extends Notifier<ChessState> {
         totalTimeMinutes: state.baseTimeDuration.inMinutes,
         incrementSeconds: state.incrementDuration.inSeconds,
         gameMode: state.gameMode,
+        customFen: state.customFen,
         userName: state.userName,
         userAvatarPath: state.userAvatarPath,
         isNotificationsEnabled: state.isNotificationsEnabled,
@@ -967,6 +977,12 @@ class ChessNotifier extends Notifier<ChessState> {
     final is960 = mode == 'chess960';
     state = state.copyWith(gameMode: mode);
     await _engine.setChess960Mode(is960);
+    await _saveSettings();
+    await reset();
+  }
+
+  Future<void> setCustomFen(String? fen) async {
+    state = state.copyWith(customFen: fen);
     await _saveSettings();
     await reset();
   }
@@ -3901,7 +3917,9 @@ class ChessNotifier extends Notifier<ChessState> {
             fen: Chess960Generator.generateRandomPosition().fen,
             isChess960: true,
           )
-        : ChessGame(isChess960: false);
+        : (preserveMode == 'custom' && state.customFen != null
+            ? ChessGame(fen: state.customFen, isChess960: false)
+            : ChessGame(isChess960: false));
 
     state = ChessState(
       game: newGame,
@@ -3940,6 +3958,7 @@ class ChessNotifier extends Notifier<ChessState> {
       isTimeOut: false,
       userName: state.userName,
       userAvatarPath: state.userAvatarPath,
+      customFen: state.customFen,
     );
 
     _syncUndoRedoFlags();

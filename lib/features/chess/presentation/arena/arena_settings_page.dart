@@ -13,6 +13,7 @@ import 'dart:ui';
 import 'arena_personas_selection_page.dart';
 import 'chessboard_themes_page.dart';
 import 'arena_random_persona_page.dart';
+import 'arena_board_editor_page.dart';
 
 class ArenaSettingsPage extends ConsumerStatefulWidget {
   final bool embedMode;
@@ -110,6 +111,38 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
                             ? const Icon(
                                 Icons.check_circle_rounded,
                                 color: ScholarlyTheme.accentBlue,
+                              )
+                            : const SizedBox(),
+                      ),
+                      _SettingsTile(
+                        label: 'Custom',
+                        description: state.customFen != null
+                            ? 'Custom position active • Tap to configure'
+                            : 'Configure a custom starting position',
+                        icon: Icons.dashboard_customize_rounded,
+                        onTap: () async {
+                          await notifier.setGameMode('custom');
+                          if (context.mounted) {
+                            _openCustomBoardEditor(context);
+                          }
+                        },
+                        trailing: state.gameMode == 'custom'
+                            ? Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.edit_rounded,
+                                      color: ScholarlyTheme.accentBlue,
+                                      size: 20,
+                                    ),
+                                    onPressed: () => _openCustomBoardEditor(context),
+                                  ),
+                                  const Icon(
+                                    Icons.check_circle_rounded,
+                                    color: ScholarlyTheme.accentBlue,
+                                  ),
+                                ],
                               )
                             : const SizedBox(),
                       ),
@@ -225,6 +258,15 @@ class _ArenaSettingsPageState extends ConsumerState<ArenaSettingsPage> {
       blob2Color: const Color(0xFFDBEAFE),
       blob3Color: const Color(0xFFD1FAE5),
       body: mainContent,
+    );
+  }
+
+  void _openCustomBoardEditor(BuildContext context) {
+    ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const ArenaBoardEditorPage(),
+      ),
     );
   }
 

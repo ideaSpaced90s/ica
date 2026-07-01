@@ -369,15 +369,58 @@ class ArenaNotifier extends Notifier<ArenaState> {
     _soundService = ref.watch(chessSoundServiceProvider);
     _hapticsService = ref.watch(chessHapticsServiceProvider);
 
+    // Sync sound service settings immediately when entering Arena mode
+    final initialSettings = ref.read(chessProvider);
+    _soundService.updateSettings(
+      sfxEnabled: initialSettings.isSoundEnabled,
+      bgmEnabled: initialSettings.isMusicEnabled,
+      gameSoundEnabled: initialSettings.isGameSoundEnabled,
+      soundSettings: initialSettings.soundSettings,
+      academySoundEnabled: initialSettings.isAcademySoundEnabled,
+      academySoundSettings: initialSettings.academySoundSettings,
+      isAcademyActive: false,
+      isRatedMode: false,
+    );
+
     ref.listen<ChessState>(chessProvider, (previous, next) {
+      // Sync sound settings when settings change
+      _soundService.updateSettings(
+        sfxEnabled: next.isSoundEnabled,
+        bgmEnabled: next.isMusicEnabled,
+        gameSoundEnabled: next.isGameSoundEnabled,
+        soundSettings: next.soundSettings,
+        academySoundEnabled: next.isAcademySoundEnabled,
+        academySoundSettings: next.academySoundSettings,
+        isAcademyActive: false,
+        isRatedMode: false,
+      );
+
       if (state.recentMoves.isEmpty && !state.isGameOver) {
         // Sync all settings when no game is in progress
+        final modeChanged = previous?.gameMode != next.gameMode;
+        final customFenChanged = previous?.customFen != next.customFen;
+
+        ChessGame? updatedGame;
+        if (modeChanged || customFenChanged) {
+          final is960 = next.gameMode == 'chess960';
+          final isCustom = next.gameMode == 'custom';
+          final effectiveFen = isCustom ? next.customFen : null;
+
+          updatedGame = effectiveFen != null
+              ? ChessGame(fen: effectiveFen, isChess960: false)
+              : (is960
+                  ? ChessGame(fen: Chess960Generator.generateRandomPosition().fen, isChess960: true)
+                  : ChessGame(isChess960: false));
+        }
+
         state = state.copyWith(
           engineLevel: next.engineLevel,
           bottomAvatarId: next.bottomAvatarId,
           whiteTimeLeft: next.baseTimeDuration,
           blackTimeLeft: next.baseTimeDuration,
           baseTimeDuration: next.baseTimeDuration,
+          gameMode: next.gameMode,
+          game: updatedGame ?? state.game,
         );
       } else {
         // Always sync engine/avatar IDs so the new-game overlay reflects
@@ -401,9 +444,12 @@ class ArenaNotifier extends Notifier<ArenaState> {
     final settings = ref.read(chessProvider);
     final mode = settings.gameMode;
     final is960 = mode == 'chess960';
+    final isCustom = mode == 'custom';
     final initialGame = is960
         ? ChessGame(fen: Chess960Generator.generateRandomPosition().fen, isChess960: true)
-        : ChessGame(isChess960: false);
+        : (isCustom && settings.customFen != null
+            ? ChessGame(fen: settings.customFen, isChess960: false)
+            : ChessGame(isChess960: false));
 
     return ArenaState(
       game: initialGame,
@@ -436,8 +482,10 @@ class ArenaNotifier extends Notifier<ArenaState> {
     final settings = ref.read(chessProvider);
     final mode = customFen != null ? 'classic' : settings.gameMode;
     final is960 = mode == 'chess960';
-    final initialGame = customFen != null
-        ? ChessGame(fen: customFen, isChess960: false)
+    final isCustom = mode == 'custom';
+    final effectiveFen = customFen ?? (isCustom ? settings.customFen : null);
+    final initialGame = effectiveFen != null
+        ? ChessGame(fen: effectiveFen, isChess960: false)
         : (is960
             ? ChessGame(fen: Chess960Generator.generateRandomPosition().fen, isChess960: true)
             : ChessGame(isChess960: false));
