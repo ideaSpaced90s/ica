@@ -925,7 +925,7 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
 
     if (isPawn && isPromotionRank) {
       _stopClockTimer();
-      _soundService.playSfx(SoundEffect.promote);
+      // _soundService.playSfx(SoundEffect.promote);
       _hapticsService.selection();
       state = state.copyWith(
         isPromoting: true,

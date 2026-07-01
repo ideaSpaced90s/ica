@@ -3525,37 +3525,12 @@ class ChessNotifier extends Notifier<ChessState> {
       }
 
       if (!_isDisposed) {
-        // Mark current commentary as complete
-        final finalHistory = List<CommentaryEntry>.from(
-          state.commentaryHistory,
+        _animateCommentaryText(
+          finalResponse,
+          titlePrefix: titlePrefix,
+          isNested: isNested,
+          revealHintAfterTyping: revealHintAfterTyping,
         );
-        if (finalHistory.isNotEmpty) {
-          var textToSet = '$titlePrefix$finalResponse';
-          if (isNested) {
-            textToSet = '$textToSet\n\nWould you like to proceed or alter course? To alter course, use the Back button.';
-          }
-          finalHistory[finalHistory.length - 1] = finalHistory.last.copyWith(
-            text: textToSet,
-            isComplete: true,
-          );
-        }
-        state = state.copyWith(
-          commentaryHistory: finalHistory,
-          isCommentaryStreaming: false,
-          isCommentaryLoading: false,
-        );
-
-        _soundService.playSfx(SoundEffect.gmchanakyaComplete);
-
-        // --- NO AUTOMATIC ORCHESTRATION ---
-        // The High Council (AI) only reveals its intelligence when asked.
-        // It no longer gates the S-engine (Stockfish) moves.
-
-        if (revealHintAfterTyping &&
-            state.hintFrom != null &&
-            state.hintTo != null) {
-          state = state.copyWith(isHintVisible: true, isHintLoading: false);
-        }
       }
     } catch (e) {
       debugPrint('IdeaSpace: AI sequence failed: $e');
@@ -3570,17 +3545,101 @@ class ChessNotifier extends Notifier<ChessState> {
       }
     } finally {
       if (!_isDisposed && !isNested) {
-        state = state.copyWith(isCommentaryLoading: false);
-
-        // Robot Mode Continuity removed.
-        // The AI now only speaks when the user chats or requests a hint.
+        if (!state.isCommentaryStreaming) {
+          state = state.copyWith(isCommentaryLoading: false);
+        }
       }
     }
+  }
+
+  void _animateCommentaryText(
+    String fullText, {
+    required String titlePrefix,
+    required bool isNested,
+    required bool revealHintAfterTyping,
+  }) {
+    _cancelCommentaryReveal();
+
+    if (_isDisposed) return;
+
+    var textToSet = '$titlePrefix$fullText';
+    if (isNested) {
+      textToSet = '$textToSet\n\nWould you like to proceed or alter course? To alter course, use the Back button.';
+    }
+
+    final targetText = textToSet;
+    int currentLength = 0;
+
+    // Set initial loading state to streaming with empty text
+    if (state.commentaryHistory.isNotEmpty) {
+      final finalHistory = List<CommentaryEntry>.from(state.commentaryHistory);
+      finalHistory[finalHistory.length - 1] = finalHistory.last.copyWith(
+        text: '',
+        isComplete: false,
+      );
+      state = state.copyWith(
+        commentaryHistory: finalHistory,
+        isCommentaryStreaming: true,
+        isCommentaryLoading: false,
+      );
+    } else {
+      state = state.copyWith(
+        isCommentaryStreaming: true,
+        isCommentaryLoading: false,
+      );
+    }
+
+    _commentaryRevealTimer = Timer.periodic(const Duration(milliseconds: 32), (timer) {
+      if (_isDisposed) {
+        timer.cancel();
+        _commentaryRevealTimer = null;
+        return;
+      }
+
+      currentLength += 2; // Type 2 characters at a time for snappier reading
+      if (currentLength >= targetText.length) {
+        currentLength = targetText.length;
+        timer.cancel();
+        _commentaryRevealTimer = null;
+      }
+
+      final revealedText = targetText.substring(0, currentLength);
+
+      if (state.commentaryHistory.isNotEmpty) {
+        final finalHistory = List<CommentaryEntry>.from(state.commentaryHistory);
+        finalHistory[finalHistory.length - 1] = finalHistory.last.copyWith(
+          text: revealedText,
+          isComplete: currentLength == targetText.length,
+        );
+        state = state.copyWith(
+          commentaryHistory: finalHistory,
+          isCommentaryStreaming: currentLength < targetText.length,
+        );
+      }
+
+      // Play writing sounds organically (every 6 characters)
+      if (currentLength % 6 == 0 || currentLength == targetText.length) {
+        _soundService.playWriting();
+      }
+
+      if (currentLength == targetText.length) {
+        _soundService.playSfx(SoundEffect.gmchanakyaComplete);
+
+        if (revealHintAfterTyping &&
+            state.hintFrom != null &&
+            state.hintTo != null) {
+          state = state.copyWith(isHintVisible: true, isHintLoading: false);
+        }
+      }
+    });
   }
 
   void _cancelCommentaryReveal() {
     _commentaryRevealTimer?.cancel();
     _commentaryRevealTimer = null;
+    if (state.isCommentaryStreaming) {
+      state = state.copyWith(isCommentaryStreaming: false);
+    }
   }
 
   void _clearHint() {

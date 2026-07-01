@@ -395,6 +395,7 @@ class ArenaNotifier extends Notifier<ArenaState> {
       _engineMoveTimer?.cancel();
       _scheduledMove = null;
       _stockfishSubscription?.cancel();
+      _soundService.stopAlarm();
     });
 
     final settings = ref.read(chessProvider);
@@ -1118,6 +1119,8 @@ class ArenaNotifier extends Notifier<ArenaState> {
     final isWhiteTurn = state.game.turn == chess_lib.Color.WHITE;
     final playerJustMoved = isWhiteTurn ? 'Black' : 'White';
 
+    _soundService.stopAlarm(); // Stop alarm immediately on move completion
+
     if (state.clockStarted) {
       state = state.copyWith(
         whiteTimeLeft: isWhiteTurn ? state.whiteTimeLeft : state.whiteTimeLeft + state.incrementDuration,
@@ -1585,14 +1588,18 @@ class ArenaNotifier extends Notifier<ArenaState> {
     _clockTimer = Timer.periodic(const Duration(milliseconds: 100), (_) {
       if (state.game.gameOver || state.isPaused || !state.clockStarted) {
         _clockTimer?.cancel();
+        _soundService.stopAlarm();
         return;
       }
 
       final side = state.activeClockSide;
+      final userSide = state.isPlayerWhite ? _clockWhite : _clockBlack;
+
       if (side == _clockWhite) {
         final next = state.whiteTimeLeft - const Duration(milliseconds: 100);
         if (next <= Duration.zero) {
           _clockTimer?.cancel();
+          _soundService.stopAlarm();
           state = state.copyWith(
             whiteTimeLeft: Duration.zero,
             isTimeOut: true,
@@ -1608,6 +1615,7 @@ class ArenaNotifier extends Notifier<ArenaState> {
         final next = state.blackTimeLeft - const Duration(milliseconds: 100);
         if (next <= Duration.zero) {
           _clockTimer?.cancel();
+          _soundService.stopAlarm();
           state = state.copyWith(
             blackTimeLeft: Duration.zero,
             isTimeOut: true,
@@ -1620,12 +1628,26 @@ class ArenaNotifier extends Notifier<ArenaState> {
         state = state.copyWith(blackTimeLeft: next);
         _triggerHeartbeatIfRequired(next);
       }
+
+      // Digital clock alarm for human user only when <= 10% time remains
+      if (state.activeClockSide == userSide) {
+        final remaining = state.isPlayerWhite ? state.whiteTimeLeft : state.blackTimeLeft;
+        final alarmThreshold = state.baseTimeDuration * 0.1;
+        if (remaining <= alarmThreshold && remaining > Duration.zero) {
+          _soundService.startAlarm();
+        } else {
+          _soundService.stopAlarm();
+        }
+      } else {
+        _soundService.stopAlarm();
+      }
     });
   }
 
   void _stopClockTimer() {
     _clockTimer?.cancel();
     _clockTimer = null;
+    _soundService.stopAlarm();
   }
 
   void _triggerHeartbeatIfRequired(Duration time) {

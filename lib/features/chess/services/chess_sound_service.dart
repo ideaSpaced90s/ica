@@ -63,12 +63,14 @@ class ChessSoundService {
     'switch_toggle': 'assets/sfx/switch_toggle.ogg',
     'laser_small': 'assets/sfx/laserSmall_004.ogg',
     'book_flip': 'assets/sfx/book_flip.ogg',
+    'alarm': 'assets/sfx/alarm-digital-clock-beep.mp3',
   };
 
   final List<AudioSource> _bgmSources = [];
   final Map<String, AudioSource> _sfxSources = {};
 
   SoundHandle? _bgmHandle;
+  SoundHandle? _alarmHandle;
   final List<SoundHandle> _activeBgmHandles = [];
   AudioSource? _currentBgmSource;
   bool isSfxEnabled = true;
@@ -284,6 +286,37 @@ class ChessSoundService {
     }
   }
 
+  Future<void> startAlarm() async {
+    await initialized;
+    if (!isSfxEnabled || !_isInitialized || !SoLoud.instance.isInitialized) return;
+    if (_alarmHandle != null) return; // Already playing
+    
+    final source = _sfxSources['alarm'];
+    if (source != null) {
+      try {
+        _alarmHandle = await SoLoud.instance.play(
+          source,
+          looping: true,
+          volume: _sfxVolumeScale,
+        );
+      } catch (e) {
+        debugPrint('ChessSoundService: Error starting alarm: $e');
+      }
+    }
+  }
+
+  void stopAlarm() {
+    if (!SoLoud.instance.isInitialized) return;
+    if (_alarmHandle != null) {
+      try {
+        SoLoud.instance.stop(_alarmHandle!);
+      } catch (e) {
+        debugPrint('ChessSoundService: Error stopping alarm: $e');
+      }
+      _alarmHandle = null;
+    }
+  }
+
   bool _isCategoryEnabled(String key) {
     if (isAcademyActive) {
       if (!isAcademySoundEnabled) return false;
@@ -459,6 +492,7 @@ class ChessSoundService {
         _playSound('book_close');
         break;
       case SoundEffect.victory:
+        _playSound('promotion_bell');
         break;
       case SoundEffect.defeat:
         _playSound('creak');
@@ -533,6 +567,7 @@ class ChessSoundService {
   }
 
   void dispose() {
+    stopAlarm();
     try {
       if (SoLoud.instance.isInitialized) {
         SoLoud.instance.deinit();
