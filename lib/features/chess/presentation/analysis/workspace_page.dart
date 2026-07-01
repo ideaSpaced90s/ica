@@ -42,6 +42,8 @@ class _GameLibraryTabState extends ConsumerState<GameLibraryTab> {
   String _searchQuery = '';
   final TextEditingController _librarySearchController = TextEditingController();
   List<GameLibraryFolder> _folders = [];
+  bool _isSelectionMode = false;
+  final Set<String> _selectedItemIds = {};
 
   @override
   void initState() {
@@ -198,6 +200,19 @@ class _GameLibraryTabState extends ConsumerState<GameLibraryTab> {
   }
 
   Widget _buildCompactImportButton(BuildContext context, StudyLabNotifier notifier) {
+    if (_isSelectionMode) {
+      return _buildCompactIconButton(
+        icon: Icons.close_rounded,
+        iconColor: Colors.redAccent,
+        onTap: () {
+          setState(() {
+            _isSelectionMode = false;
+            _selectedItemIds.clear();
+          });
+        },
+        tooltip: 'Cancel Selection',
+      );
+    }
     return _buildCompactIconButton(
       icon: Icons.file_upload_rounded,
       iconColor: ScholarlyTheme.accentBlue,
@@ -206,13 +221,63 @@ class _GameLibraryTabState extends ConsumerState<GameLibraryTab> {
     );
   }
 
-  Widget _buildCompactExportButton(BuildContext context, StudyLabNotifier notifier) {
+  Widget _buildCompactExportButton(BuildContext context, StudyLabNotifier notifier, List<GameLibraryItem> allItems) {
+    final hasSelection = _isSelectionMode && _selectedItemIds.isNotEmpty;
     return _buildCompactIconButton(
       icon: Icons.file_download_rounded,
-      iconColor: Colors.teal,
-      onTap: () => _showExportSelectionDialog(context, notifier),
-      tooltip: 'Export PGN',
+      iconColor: hasSelection ? Colors.green : Colors.teal,
+      onTap: () {
+        if (!hasSelection) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Long press a game in the list to select it for export.',
+                style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.white),
+              ),
+              backgroundColor: Colors.orangeAccent,
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        } else {
+          final selectedItems = allItems.where((item) => _selectedItemIds.contains(item.id)).toList();
+          _performExport(context, selectedItems);
+        }
+      },
+      tooltip: hasSelection ? 'Export Selected (${_selectedItemIds.length})' : 'Export PGN',
     );
+  }
+
+  String _generatePgnFromSavedGame(SavedGameEntry game) {
+    final buffer = StringBuffer();
+    final dateStr = DateFormat('yyyy.MM.dd').format(game.savedAt);
+    final shortId = game.id.length >= 4 ? game.id.substring(0, 4) : game.id;
+    final title = game.customName?.isNotEmpty == true
+        ? game.customName!
+        : 'untitled$shortId';
+
+    buffer.writeln('[Event "$title"]');
+    buffer.writeln('[Site "IdeaSpace Chess Academy"]');
+    buffer.writeln('[Date "$dateStr"]');
+    buffer.writeln('[Round "1"]');
+    buffer.writeln('[White "${game.isPlayerWhite ? "Player" : "Stockfish"}"]');
+    buffer.writeln('[Black "${game.isPlayerWhite ? "Stockfish" : "Player"}"]');
+    buffer.writeln('[Result "*"]');
+    if (game.gameMode == 'chess960') {
+      buffer.writeln('[Variant "Chess960"]');
+      buffer.writeln('[FEN "${game.fen}"]');
+      buffer.writeln('[SetUp "1"]');
+    }
+    buffer.writeln();
+
+    for (int i = 0; i < game.recentMoves.length; i++) {
+      if (i % 2 == 0) {
+        buffer.write('${(i ~/ 2) + 1}. ');
+      }
+      buffer.write('${game.recentMoves[i]} ');
+    }
+    buffer.write('*');
+    return buffer.toString();
   }
 
   Future<void> _importPgnFromFile(BuildContext context, StudyLabNotifier notifier) async {
@@ -235,6 +300,7 @@ class _GameLibraryTabState extends ConsumerState<GameLibraryTab> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('PGN Imported successfully! Save explicitly to add to library.'), backgroundColor: Colors.green),
         );
+        widget.onGameLoaded();
       }
     } catch (e) {
       debugPrint('PGN Import failed: $e');
@@ -249,102 +315,7 @@ class _GameLibraryTabState extends ConsumerState<GameLibraryTab> {
     }
   }
 
-  Future<void> _showExportSelectionDialog(BuildContext context, StudyLabNotifier notifier) async {
-    final records = await notifier.loadGamesFromLibrary();
-    if (records.isEmpty) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No saved studies in library to export! Please save a study first.'),
-            backgroundColor: Colors.orangeAccent,
-          ),
-        );
-      }
-      return;
-    }
-
-    if (!context.mounted) return;
-
-    final selectedIndices = <int>{};
-
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              backgroundColor: ScholarlyTheme.panelBase,
-              title: Text(
-                'Select Studies to Export',
-                style: GoogleFonts.outfit(
-                  fontWeight: FontWeight.bold,
-                  color: ScholarlyTheme.textPrimary,
-                ),
-              ),
-              content: SizedBox(
-                width: double.maxFinite,
-                height: 300,
-                child: ListView.separated(
-                  itemCount: records.length,
-                  separatorBuilder: (c, idx) => const Divider(color: ScholarlyTheme.panelStroke, height: 1),
-                  itemBuilder: (c, idx) {
-                    final r = records[idx];
-                    final isChecked = selectedIndices.contains(idx);
-                    return CheckboxListTile(
-                      activeColor: ScholarlyTheme.accentBlue,
-                      title: Text(
-                        r.header.event,
-                        style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13),
-                      ),
-                      subtitle: Text(
-                        'ECO: ${r.header.eco} | White: ${r.header.white} | Black: ${r.header.black}',
-                        style: GoogleFonts.inter(fontSize: 10, color: ScholarlyTheme.textMuted),
-                      ),
-                      value: isChecked,
-                      onChanged: (val) {
-                        setDialogState(() {
-                          if (val == true) {
-                            selectedIndices.add(idx);
-                          } else {
-                            selectedIndices.remove(idx);
-                          }
-                        });
-                      },
-                    );
-                  },
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: Text('Cancel', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted)),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: ScholarlyTheme.accentBlue,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                  onPressed: selectedIndices.isEmpty
-                      ? null
-                      : () {
-                          Navigator.pop(ctx);
-                          final chosenRecords = selectedIndices.map((i) => records[i]).toList();
-                          _performExport(context, chosenRecords);
-                        },
-                  child: Text(
-                    'Export (${selectedIndices.length})',
-                    style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Future<void> _performExport(BuildContext context, List<rust_pgn.PgnGameRecord> games) async {
+  Future<void> _performExport(BuildContext context, List<GameLibraryItem> items) async {
     try {
       Directory? directory;
       if (Platform.isAndroid) {
@@ -359,14 +330,24 @@ class _GameLibraryTabState extends ConsumerState<GameLibraryTab> {
 
       final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
 
-      if (games.length == 1) {
-        final record = games.first;
-        final pgnText = rust_pgn.exportPgnWithHeaders(
-          header: record.header,
-          annotatedPgn: record.movesPgn,
-        );
+      if (items.length == 1) {
+        final item = items.first;
+        String pgnText;
+        String fileName;
+        if (item.type == GameLibraryItemType.customStudy) {
+          final record = item.customStudy!;
+          pgnText = rust_pgn.exportPgnWithHeaders(
+            header: record.header,
+            annotatedPgn: record.movesPgn,
+          );
+          final eventName = record.header.event.isNotEmpty ? record.header.event : 'Custom Study';
+          fileName = '${eventName.replaceAll(RegExp(r"[^\w\s\-]"), '_')}_$timestamp.pgn';
+        } else {
+          final game = item.savedGame!;
+          pgnText = _generatePgnFromSavedGame(game);
+          fileName = '${item.title.replaceAll(RegExp(r"[^\w\s\-]"), '_')}_$timestamp.pgn';
+        }
 
-        final fileName = '${record.header.event.replaceAll(RegExp(r"[^\w\s\-]"), '_')}_$timestamp.pgn';
         final file = File('${directory.path}/$fileName');
         await file.writeAsString(pgnText);
 
@@ -381,13 +362,23 @@ class _GameLibraryTabState extends ConsumerState<GameLibraryTab> {
       } else {
         final archive = Archive();
 
-        for (final record in games) {
-          final pgnText = rust_pgn.exportPgnWithHeaders(
-            header: record.header,
-            annotatedPgn: record.movesPgn,
-          );
+        for (final item in items) {
+          String pgnText;
+          String safeName;
+          if (item.type == GameLibraryItemType.customStudy) {
+            final record = item.customStudy!;
+            pgnText = rust_pgn.exportPgnWithHeaders(
+              header: record.header,
+              annotatedPgn: record.movesPgn,
+            );
+            final eventName = record.header.event.isNotEmpty ? record.header.event : 'Custom Study';
+            safeName = '${eventName.replaceAll(RegExp(r"[^\w\s\-]"), '_')}.pgn';
+          } else {
+            final game = item.savedGame!;
+            pgnText = _generatePgnFromSavedGame(game);
+            safeName = '${item.title.replaceAll(RegExp(r"[^\w\s\-]"), '_')}.pgn';
+          }
           final pgnBytes = utf8.encode(pgnText);
-          final safeName = '${record.header.event.replaceAll(RegExp(r"[^\w\s\-]"), '_')}.pgn';
           
           archive.addFile(
             ArchiveFile(
@@ -399,7 +390,6 @@ class _GameLibraryTabState extends ConsumerState<GameLibraryTab> {
         }
 
         final zipBytes = ZipEncoder().encode(archive);
-
         final zipFileName = 'ideaspace_export_$timestamp.zip';
         final file = File('${directory.path}/$zipFileName');
         await file.writeAsBytes(zipBytes);
@@ -407,12 +397,17 @@ class _GameLibraryTabState extends ConsumerState<GameLibraryTab> {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Exported ZIP containing ${games.length} PGNs to: ${file.path}', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
+              content: Text('Exported ZIP containing ${items.length} PGNs to: ${file.path}', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
               backgroundColor: Colors.green,
             ),
           );
         }
       }
+
+      setState(() {
+        _isSelectionMode = false;
+        _selectedItemIds.clear();
+      });
     } catch (e) {
       debugPrint('Export failed: $e');
       if (context.mounted) {
@@ -550,7 +545,7 @@ class _GameLibraryTabState extends ConsumerState<GameLibraryTab> {
                 const SizedBox(width: 8),
                 _buildCompactImportButton(context, notifier),
                 const SizedBox(width: 8),
-                _buildCompactExportButton(context, notifier),
+                _buildCompactExportButton(context, notifier, allItems),
               ],
             ),
             const SizedBox(height: 8),
@@ -683,6 +678,26 @@ class _GameLibraryTabState extends ConsumerState<GameLibraryTab> {
           onEditStudy: _promptEditStudyHeaders,
           ref: ref,
           onGameLoaded: widget.onGameLoaded,
+          isSelectionMode: _isSelectionMode,
+          isSelected: _selectedItemIds.contains(item.id),
+          onLongPress: () {
+            setState(() {
+              _isSelectionMode = true;
+              _selectedItemIds.add(item.id);
+            });
+          },
+          onTapSelection: () {
+            setState(() {
+              if (_selectedItemIds.contains(item.id)) {
+                _selectedItemIds.remove(item.id);
+                if (_selectedItemIds.isEmpty) {
+                  _isSelectionMode = false;
+                }
+              } else {
+                _selectedItemIds.add(item.id);
+              }
+            });
+          },
         );
       },
     );
@@ -985,6 +1000,26 @@ class _GameLibraryTabState extends ConsumerState<GameLibraryTab> {
                       onEditStudy: _promptEditStudyHeaders,
                       ref: ref,
                       onGameLoaded: widget.onGameLoaded,
+                      isSelectionMode: _isSelectionMode,
+                      isSelected: _selectedItemIds.contains(item.id),
+                      onLongPress: () {
+                        setState(() {
+                          _isSelectionMode = true;
+                          _selectedItemIds.add(item.id);
+                        });
+                      },
+                      onTapSelection: () {
+                        setState(() {
+                          if (_selectedItemIds.contains(item.id)) {
+                            _selectedItemIds.remove(item.id);
+                            if (_selectedItemIds.isEmpty) {
+                              _isSelectionMode = false;
+                            }
+                          } else {
+                            _selectedItemIds.add(item.id);
+                          }
+                        });
+                      },
                     );
                   },
                 ),
@@ -1277,6 +1312,10 @@ class GameLibraryItemCardWidget extends StatefulWidget {
   final void Function(BuildContext, StudyLabNotifier, int, rust_pgn.PgnGameRecord) onEditStudy;
   final WidgetRef ref;
   final VoidCallback onGameLoaded;
+  final bool isSelectionMode;
+  final bool isSelected;
+  final VoidCallback onLongPress;
+  final VoidCallback onTapSelection;
 
   const GameLibraryItemCardWidget({
     super.key,
@@ -1287,6 +1326,10 @@ class GameLibraryItemCardWidget extends StatefulWidget {
     required this.onEditStudy,
     required this.ref,
     required this.onGameLoaded,
+    this.isSelectionMode = false,
+    this.isSelected = false,
+    required this.onLongPress,
+    required this.onTapSelection,
   });
 
   @override
@@ -1425,9 +1468,18 @@ class _GameLibraryItemCardWidgetState extends State<GameLibraryItemCardWidget>
             return false;
           },
           child: GestureDetector(
-            onLongPress: canDelete ? _toggleDeleteBin : null,
+            onLongPress: widget.isSelectionMode
+                ? widget.onTapSelection
+                : () {
+                    try {
+                      widget.ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                    } catch (_) {}
+                    widget.onLongPress();
+                  },
             onTap: () {
-              if (_showDeleteBin) {
+              if (widget.isSelectionMode) {
+                widget.onTapSelection();
+              } else if (_showDeleteBin) {
                 _toggleDeleteBin();
               } else {
                 _loadGame();
@@ -1438,9 +1490,23 @@ class _GameLibraryItemCardWidgetState extends State<GameLibraryItemCardWidget>
               borderRadius: 12,
               borderColor: _showDeleteBin 
                   ? Colors.redAccent.withValues(alpha: 0.5) 
-                  : ScholarlyTheme.panelStroke.withValues(alpha: 0.3),
+                  : (widget.isSelected 
+                      ? ScholarlyTheme.accentBlue.withValues(alpha: 0.6) 
+                      : ScholarlyTheme.panelStroke.withValues(alpha: 0.3)),
               child: Row(
                 children: [
+                  if (widget.isSelectionMode) ...[
+                    Icon(
+                      widget.isSelected
+                          ? Icons.check_circle_rounded
+                          : Icons.radio_button_unchecked,
+                      color: widget.isSelected
+                          ? ScholarlyTheme.accentBlue
+                          : ScholarlyTheme.textMuted,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                  ],
                   if (_showDeleteBin) ...[
                     const Icon(Icons.arrow_forward_rounded, color: Colors.redAccent, size: 20),
                     const SizedBox(width: 8),
@@ -1488,51 +1554,52 @@ class _GameLibraryItemCardWidgetState extends State<GameLibraryItemCardWidget>
                         ],
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    
-                    IconButton(
-                      icon: const Icon(Icons.folder_open_outlined, color: ScholarlyTheme.textMuted, size: 18),
-                      tooltip: 'Organize Folders',
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                      onPressed: widget.onOrganizeFolders,
-                    ),
-
-                    IconButton(
-                      icon: const Icon(Icons.play_arrow_rounded, color: ScholarlyTheme.accentBlue, size: 20),
-                      tooltip: 'Load Game',
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                      onPressed: _loadGame,
-                    ),
-
-                    if (isCustomStudy)
+                    if (!widget.isSelectionMode) ...[
+                      const SizedBox(width: 8),
                       IconButton(
-                        icon: const Icon(Icons.edit_outlined, color: Colors.teal, size: 18),
-                        tooltip: 'Edit Headers',
+                        icon: const Icon(Icons.folder_open_outlined, color: ScholarlyTheme.textMuted, size: 18),
+                        tooltip: 'Organize Folders',
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                        onPressed: () => widget.onEditStudy(
-                          context,
-                          widget.notifier,
-                          widget.item.customStudy!.index.toInt(),
-                          widget.item.customStudy!,
-                        ),
-                      )
-                    else if (widget.item.type == GameLibraryItemType.battleground)
-                      IconButton(
-                        icon: const Icon(Icons.star_rounded, color: ScholarlyTheme.accentYellow, size: 20),
-                        tooltip: 'Unfavorite',
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                        onPressed: () {
-                          widget.ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
-                          widget.ref.read(chessProvider.notifier).toggleFavorite(widget.item.savedGame!.id);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Removed from Game Library (unfavorited).'), backgroundColor: Colors.orange),
-                          );
-                        },
+                        onPressed: widget.onOrganizeFolders,
                       ),
+
+                      IconButton(
+                        icon: const Icon(Icons.play_arrow_rounded, color: ScholarlyTheme.accentBlue, size: 20),
+                        tooltip: 'Load Game',
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                        onPressed: _loadGame,
+                      ),
+
+                      if (isCustomStudy)
+                        IconButton(
+                          icon: const Icon(Icons.edit_outlined, color: Colors.teal, size: 18),
+                          tooltip: 'Edit Headers',
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                          onPressed: () => widget.onEditStudy(
+                            context,
+                            widget.notifier,
+                            widget.item.customStudy!.index.toInt(),
+                            widget.item.customStudy!,
+                          ),
+                        )
+                      else if (widget.item.type == GameLibraryItemType.battleground)
+                        IconButton(
+                          icon: const Icon(Icons.star_rounded, color: ScholarlyTheme.accentYellow, size: 20),
+                          tooltip: 'Unfavorite',
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                          onPressed: () {
+                            widget.ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                            widget.ref.read(chessProvider.notifier).toggleFavorite(widget.item.savedGame!.id);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Removed from Game Library (unfavorited).'), backgroundColor: Colors.orange),
+                            );
+                          },
+                        ),
+                    ],
                   ],
                 ],
               ),

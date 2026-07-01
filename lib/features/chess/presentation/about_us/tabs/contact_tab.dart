@@ -148,7 +148,7 @@ class ContactTab extends StatelessWidget {
                   ),
                   const SizedBox(width: 6),
                   Text(
-                    'VERSION 1.0.18 (RELEASE)',
+                    'VERSION 1.0.19 (RELEASE)',
                     style: GoogleFonts.jetBrainsMono(
                       color: Colors.amber.shade700,
                       fontSize: 11,

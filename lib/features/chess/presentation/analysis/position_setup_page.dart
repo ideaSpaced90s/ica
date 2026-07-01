@@ -154,7 +154,7 @@ class _BoardEditorTabState extends ConsumerState<BoardEditorTab> {
       if (_selectedPaletteItem == 'trash') {
         if (existing != null) {
           _boardPieces.remove(sq);
-          ref.read(chessSoundServiceProvider).playSfx(SoundEffect.illegal);
+          ref.read(chessSoundServiceProvider).playSfx(SoundEffect.tabSwipe);
           if (ref.read(chessProvider).isHapticsEnabled) {
             ref.read(chessHapticsServiceProvider).errorFeedback();
           }
@@ -162,7 +162,7 @@ class _BoardEditorTabState extends ConsumerState<BoardEditorTab> {
       } else {
         if (existing == _selectedPaletteItem) {
           _boardPieces.remove(sq); // Tap again to remove
-          ref.read(chessSoundServiceProvider).playSfx(SoundEffect.illegal);
+          ref.read(chessSoundServiceProvider).playSfx(SoundEffect.tabSwipe);
           if (ref.read(chessProvider).isHapticsEnabled) {
             ref.read(chessHapticsServiceProvider).errorFeedback();
           }
@@ -247,6 +247,59 @@ class _BoardEditorTabState extends ConsumerState<BoardEditorTab> {
                 fontWeight: FontWeight.bold,
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showFenImportDialog() {
+    final controller = TextEditingController(text: _generateFen());
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: ScholarlyTheme.panelBase,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: ScholarlyTheme.panelStroke, width: 1.5),
+        ),
+        title: Text(
+          'Import FEN Position',
+          style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary),
+        ),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            hintText: 'Paste Forsyth-Edwards Notation here...',
+            border: OutlineInputBorder(),
+          ),
+          style: GoogleFonts.jetBrainsMono(fontSize: 12, color: ScholarlyTheme.textPrimary),
+          maxLines: 3,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel', style: GoogleFonts.inter(color: ScholarlyTheme.textMuted)),
+          ),
+          FilledButton(
+            onPressed: () {
+              final val = chess_lib.Chess.validate_fen(controller.text.trim());
+              if (val['valid'] as bool) {
+                ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiClick);
+                Navigator.pop(context);
+                _loadFenToBoardPieces(controller.text.trim());
+              } else {
+                ref.read(chessSoundServiceProvider).playSfx(SoundEffect.illegal);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Invalid FEN: ${val['error']}'),
+                    backgroundColor: Colors.redAccent,
+                  ),
+                );
+              }
+            },
+            style: FilledButton.styleFrom(backgroundColor: ScholarlyTheme.accentBlue),
+            child: const Text('Import'),
           ),
         ],
       ),
@@ -570,6 +623,24 @@ class _BoardEditorTabState extends ConsumerState<BoardEditorTab> {
                 icon: const Icon(Icons.settings_backup_restore, size: 16),
                 label: const Text('Reset Start', style: TextStyle(fontSize: 12)),
                 onPressed: _resetToDefaultPosition,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: ScholarlyTheme.accentBlue,
+                  side: const BorderSide(color: ScholarlyTheme.accentBlue),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                icon: const Icon(Icons.download_rounded, size: 16),
+                label: const Text('Import FEN', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                onPressed: _showFenImportDialog,
               ),
             ),
           ],

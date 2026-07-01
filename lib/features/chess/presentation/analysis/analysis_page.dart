@@ -819,7 +819,7 @@ class _AnalysisPageState extends ConsumerState<AnalysisPage> with TickerProvider
             },
             tabs: [
               const Tab(icon: Icon(Icons.folder_copy_rounded, size: 20), text: 'Library'),
-              const Tab(icon: Icon(Icons.design_services_rounded, size: 20), text: 'Editor'),
+              const Tab(icon: Icon(Icons.design_services_rounded, size: 20), text: 'Board Editor - Analysis'),
               const Tab(icon: Icon(Icons.grid_on_rounded, size: 20), text: 'Board'),
               Tab(
                 icon: Stack(

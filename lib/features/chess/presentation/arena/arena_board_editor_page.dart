@@ -148,7 +148,7 @@ class _ArenaBoardEditorPageState extends ConsumerState<ArenaBoardEditorPage> {
       if (_selectedPaletteItem == 'trash') {
         if (existing != null) {
           _boardPieces.remove(sq);
-          ref.read(chessSoundServiceProvider).playSfx(SoundEffect.illegal);
+          ref.read(chessSoundServiceProvider).playSfx(SoundEffect.tabSwipe);
           if (ref.read(chessProvider).isHapticsEnabled) {
             ref.read(chessHapticsServiceProvider).errorFeedback();
           }
@@ -156,7 +156,7 @@ class _ArenaBoardEditorPageState extends ConsumerState<ArenaBoardEditorPage> {
       } else {
         if (existing == _selectedPaletteItem) {
           _boardPieces.remove(sq); // Tap again to remove
-          ref.read(chessSoundServiceProvider).playSfx(SoundEffect.illegal);
+          ref.read(chessSoundServiceProvider).playSfx(SoundEffect.tabSwipe);
           if (ref.read(chessProvider).isHapticsEnabled) {
             ref.read(chessHapticsServiceProvider).errorFeedback();
           }
@@ -690,36 +690,29 @@ class _ArenaBoardEditorPageState extends ConsumerState<ArenaBoardEditorPage> {
       blob1Color: const Color(0xFFE2E8F0),
       blob2Color: const Color(0xFFDBEAFE),
       blob3Color: const Color(0xFFD1FAE5),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back_rounded, color: ScholarlyTheme.textPrimary),
-                    onPressed: () {
-                      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
-                      Navigator.of(context).pop();
-                    },
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'BOARD EDITOR',
-                    style: GoogleFonts.outfit(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.5,
-                      color: ScholarlyTheme.textPrimary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(child: content),
-          ],
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: ScholarlyTheme.textPrimary, size: 20),
+          onPressed: () {
+            ref.read(chessSoundServiceProvider).playSfx(SoundEffect.uiNavigate);
+            Navigator.of(context).pop();
+          },
         ),
+        title: Text(
+          'BOARD EDITOR - ARENA',
+          style: GoogleFonts.outfit(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.5,
+            color: ScholarlyTheme.textPrimary,
+          ),
+        ),
+      ),
+      body: SafeArea(
+        child: content,
       ),
     );
   }
