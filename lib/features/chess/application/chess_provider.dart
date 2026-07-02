@@ -2722,6 +2722,19 @@ class ChessNotifier extends Notifier<ChessState> {
     _queryAnalysisFen = fen;
     final targetEngine = state.isAcademyActive ? _academyAnalysisEngine : _engine;
 
+    _queryAnalysisCompleter = Completer<void>();
+
+    if (_bypassChess960EngineSearch(targetEngine, isAcademy: state.isAcademyActive)) {
+      // Wait for the mock search to complete (the 600ms timer will call the output handler and complete it)
+      await _queryAnalysisCompleter!.future.timeout(
+        const Duration(seconds: 2),
+        onTimeout: () {},
+      );
+      _queryAnalysisCompleter = null;
+      _queryAnalysisFen = null;
+      return;
+    }
+
     try {
       // 1. Maximize settings
       await targetEngine.sendCommand('stop');
@@ -2737,8 +2750,6 @@ class ChessNotifier extends Notifier<ChessState> {
         _accumulatedAnalysis.clear();
         _accumulatedEvaluation = null;
       }
-
-      _queryAnalysisCompleter = Completer<void>();
 
       // 3. Start deep search (depth 22)
       await targetEngine.analyzePosition(fen, depth: 22);
