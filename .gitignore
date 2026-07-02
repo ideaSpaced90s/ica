@@ -66,3 +66,9 @@ scratch/
 games.db
 games_db.b64
 lifetime_xp_settings.json
+
+# Android Gradle and CMake build outputs
+**/android/.cxx/
+**/android/.gradle/
+**/android/build/
+
