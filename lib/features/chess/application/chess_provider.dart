@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import 'game_clock_provider.dart';
 import 'assignment_provider.dart';
+import 'performance_ledger_manager.dart';
 import 'package:kingslayer_chess/src/rust/api/threats.dart';
 import 'package:kingslayer_chess/src/rust/api/humanizer.dart';
 import 'package:kingslayer_chess/src/rust/api/context.dart';
@@ -254,7 +255,7 @@ class ChessState {
     this.milestonesEnabled = true,
     this.dailyBriefingTime = '09:00',
     this.streakWarningHoursBeforeReset = 4,
-    this.quietHoursEnabled = false,
+    this.quietHoursEnabled = true,
     this.quietHoursStart = '22:00',
     this.quietHoursEnd = '08:00',
 
@@ -1050,9 +1051,26 @@ class ChessNotifier extends Notifier<ChessState> {
   }
 
   Future<void> toggleNotifications(bool enabled) async {
-    state = state.copyWith(isNotificationsEnabled: enabled);
     if (enabled) {
+      // Apply a full default preset when notifications are first enabled.
+      // This ensures the user has a sensible out-of-the-box schedule
+      // using their device's local (national) timezone, without needing
+      // to manually configure each setting.
+      state = state.copyWith(
+        isNotificationsEnabled: true,
+        dailyBriefingEnabled: true,
+        streakProtectionEnabled: true,
+        weeklyDiagnosticsEnabled: true,
+        milestonesEnabled: true,
+        dailyBriefingTime: '09:00',
+        streakWarningHoursBeforeReset: 4,
+        quietHoursEnabled: true,
+        quietHoursStart: '22:00',
+        quietHoursEnd: '08:00',
+      );
       await ref.read(notificationServiceProvider).initialize();
+    } else {
+      state = state.copyWith(isNotificationsEnabled: false);
     }
     await _saveSettings();
     if (!enabled) {
@@ -2176,7 +2194,7 @@ class ChessNotifier extends Notifier<ChessState> {
   Future<void> clearAllHistory() async {
     try {
       await _savedGameRepository.clearAll();
-      await _performanceLedgerRepository.clearAll();
+      await ref.read(performanceLedgerManagerProvider.notifier).clearAll();
       state = state.copyWith(
         savedGames: const [],
       );

@@ -36,18 +36,11 @@ class AssignmentPage extends ConsumerStatefulWidget {
 class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   bool _showChanakyaIntro = true;
-  bool _hasCheckedInAttendance = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && !_hasCheckedInAttendance) {
-        _hasCheckedInAttendance = true;
-        ref.read(assignmentProvider.notifier).checkInAttendance();
-      }
-    });
   }
 
   @override

@@ -20,6 +20,10 @@ class ScholarlyTheme {
     0xFFFFF9E6,
   ); // Soft Yellow Background
 
+  static const Color borderMedium = Color(0xFFDEE2E6);
+  static const Color borderLight = Color(0xFFE9ECEF);
+  static const Color accentOrange = Color(0xFFF97316);
+
   // Glass utilities
   static Color get glassWhite => Colors.white.withValues(alpha: 0.40);
   static Color get glassBorder => Colors.white.withValues(alpha: 0.55);

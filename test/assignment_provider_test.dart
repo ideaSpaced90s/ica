@@ -14,6 +14,12 @@ import 'package:kingslayer_chess/features/chess/application/chess_provider.dart'
 import 'package:kingslayer_chess/src/rust/api/cognitive.dart' as rust_cognitive;
 import 'package:kingslayer_chess/features/chess/services/cloud_sync_service.dart';
 import 'package:kingslayer_chess/features/chess/domain/performance_ledger_entry.dart';
+import 'package:kingslayer_chess/features/chess/services/chess_sound_service.dart';
+
+class FakeChessSoundService extends Fake implements ChessSoundService {
+  @override
+  dynamic noSuchMethod(Invocation invocation) {}
+}
 
 class FakeAssignmentRepository implements AssignmentRepository {
   AssignmentState? savedState;
@@ -336,6 +342,7 @@ void main() {
             return FakeStoreNotifier(createMockStoreState(isPremium: isPremium));
           }),
           cloudSyncProvider.overrideWith(() => FakeCloudSyncNotifier()),
+          chessSoundServiceProvider.overrideWithValue(FakeChessSoundService()),
         ],
       );
       addTearDown(container.dispose);

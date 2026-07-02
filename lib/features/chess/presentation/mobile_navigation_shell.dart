@@ -473,6 +473,8 @@ class _MobileSidebarDrawer extends ConsumerWidget {
     final assignmentState = ref.watch(assignmentProvider);
     final pendingCount = assignmentState.dailyTasks.where((task) => !task.isCompleted).length;
     final hasUpdate = ref.watch(updateProvider).hasUpdateBadge;
+    final bgState = ref.watch(battlegroundProvider);
+    final isPuzzlesLocked = !assignmentState.isCalibrated || bgState.totalRatedGamesCount < 10;
 
     return Drawer(
       backgroundColor: Colors.transparent,
@@ -572,6 +574,13 @@ class _MobileSidebarDrawer extends ConsumerWidget {
                   icon: Icons.extension_rounded,
                   isSelected: currentIndex == 4,
                   index: 5,
+                  trailing: isPuzzlesLocked
+                      ? Icon(
+                          Icons.lock_outline_rounded,
+                          size: 16,
+                          color: ScholarlyTheme.textMuted.withValues(alpha: 0.7),
+                        )
+                      : null,
                   onTap: () {
                     _navigate(ref, context, 4);
                   },

@@ -63,6 +63,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Puzzle dco_decode_box_autoadd_puzzle(dynamic raw);
 
   @protected
+  SavedGameUci dco_decode_box_autoadd_saved_game_uci(dynamic raw);
+
+  @protected
   ScotomaResult dco_decode_box_autoadd_scotoma_result(dynamic raw);
 
   @protected
@@ -174,6 +177,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ScotomaResult dco_decode_scotoma_result(dynamic raw);
 
   @protected
+  SingleGameAnalysisResult dco_decode_single_game_analysis_result(dynamic raw);
+
+  @protected
   TacticData dco_decode_tactic_data(dynamic raw);
 
   @protected
@@ -225,6 +231,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   Puzzle sse_decode_box_autoadd_puzzle(SseDeserializer deserializer);
+
+  @protected
+  SavedGameUci sse_decode_box_autoadd_saved_game_uci(
+    SseDeserializer deserializer,
+  );
 
   @protected
   ScotomaResult sse_decode_box_autoadd_scotoma_result(
@@ -358,6 +369,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ScotomaResult sse_decode_scotoma_result(SseDeserializer deserializer);
 
   @protected
+  SingleGameAnalysisResult sse_decode_single_game_analysis_result(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   TacticData sse_decode_tactic_data(SseDeserializer deserializer);
 
   @protected
@@ -416,6 +432,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_box_autoadd_puzzle(Puzzle self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_saved_game_uci(
+    SavedGameUci self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_box_autoadd_scotoma_result(
@@ -596,6 +618,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_scotoma_result(ScotomaResult self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_single_game_analysis_result(
+    SingleGameAnalysisResult self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_tactic_data(TacticData self, SseSerializer serializer);

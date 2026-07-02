@@ -34,6 +34,7 @@ class AppSettings {
   final int? lastRatedGameTimestampMs;
   final int recalibrationGamesRemaining;
   final int decayIntervalsApplied;
+  final int decayIntervalsAppliedAtLastGame;
   
   final int totalRatedGamesCount;
   final int bulletGamesClassic;
@@ -71,6 +72,7 @@ class AppSettings {
   final String userAvatarPath;
   final String? activeRatedMatchId;
   final String? activeRatedMatchOpponentId;
+  final String? activeRatedMatchRatingCategory;
   final String? customFen;
 
   AppSettings({
@@ -99,6 +101,7 @@ class AppSettings {
     this.lastRatedGameTimestampMs,
     this.recalibrationGamesRemaining = 0,
     this.decayIntervalsApplied = 0,
+    this.decayIntervalsAppliedAtLastGame = 0,
     this.totalRatedGamesCount = 0,
     this.bulletGamesClassic = 0,
     this.blitzGamesClassic = 0,
@@ -139,6 +142,7 @@ class AppSettings {
     this.userAvatarPath = 'assets/persona/user_profile_0.png',
     this.activeRatedMatchId,
     this.activeRatedMatchOpponentId,
+    this.activeRatedMatchRatingCategory,
     this.isNotificationsEnabled = false,
     this.dailyBriefingEnabled = true,
     this.streakProtectionEnabled = true,
@@ -146,7 +150,7 @@ class AppSettings {
     this.milestonesEnabled = true,
     this.dailyBriefingTime = '09:00',
     this.streakWarningHoursBeforeReset = 4,
-    this.quietHoursEnabled = false,
+    this.quietHoursEnabled = true,
     this.quietHoursStart = '22:00',
     this.quietHoursEnd = '08:00',
   });
@@ -179,6 +183,7 @@ class AppSettings {
     Object? lastRatedGameTimestampMs = const Object(),
     int? recalibrationGamesRemaining,
     int? decayIntervalsApplied,
+    int? decayIntervalsAppliedAtLastGame,
     int? totalRatedGamesCount,
     int? bulletGamesClassic,
     int? blitzGamesClassic,
@@ -198,6 +203,7 @@ class AppSettings {
     String? userAvatarPath,
     Object? activeRatedMatchId = const Object(),
     Object? activeRatedMatchOpponentId = const Object(),
+    Object? activeRatedMatchRatingCategory = const Object(),
     Object? customFen = const Object(),
     bool? isNotificationsEnabled,
     bool? dailyBriefingEnabled,
@@ -240,6 +246,7 @@ class AppSettings {
           : lastRatedGameTimestampMs as int?,
       recalibrationGamesRemaining: recalibrationGamesRemaining ?? this.recalibrationGamesRemaining,
       decayIntervalsApplied: decayIntervalsApplied ?? this.decayIntervalsApplied,
+      decayIntervalsAppliedAtLastGame: decayIntervalsAppliedAtLastGame ?? this.decayIntervalsAppliedAtLastGame,
       totalRatedGamesCount: totalRatedGamesCount ?? this.totalRatedGamesCount,
       bulletGamesClassic: bulletGamesClassic ?? this.bulletGamesClassic,
       blitzGamesClassic: blitzGamesClassic ?? this.blitzGamesClassic,
@@ -263,6 +270,9 @@ class AppSettings {
       activeRatedMatchOpponentId: identical(activeRatedMatchOpponentId, const Object())
           ? this.activeRatedMatchOpponentId
           : activeRatedMatchOpponentId as String?,
+      activeRatedMatchRatingCategory: identical(activeRatedMatchRatingCategory, const Object())
+          ? this.activeRatedMatchRatingCategory
+          : activeRatedMatchRatingCategory as String?,
       customFen: identical(customFen, const Object())
           ? this.customFen
           : customFen as String?,
@@ -304,6 +314,7 @@ class AppSettings {
     'lastRatedGameTimestampMs': lastRatedGameTimestampMs,
     'recalibrationGamesRemaining': recalibrationGamesRemaining,
     'decayIntervalsApplied': decayIntervalsApplied,
+    'decayIntervalsAppliedAtLastGame': decayIntervalsAppliedAtLastGame,
     'totalRatedGamesCount': totalRatedGamesCount,
     'bulletGamesClassic': bulletGamesClassic,
     'blitzGamesClassic': blitzGamesClassic,
@@ -326,6 +337,7 @@ class AppSettings {
     'userAvatarPath': userAvatarPath,
     'activeRatedMatchId': activeRatedMatchId,
     'activeRatedMatchOpponentId': activeRatedMatchOpponentId,
+    'activeRatedMatchRatingCategory': activeRatedMatchRatingCategory,
     'isNotificationsEnabled': isNotificationsEnabled,
     'dailyBriefingEnabled': dailyBriefingEnabled,
     'streakProtectionEnabled': streakProtectionEnabled,
@@ -395,6 +407,7 @@ class AppSettings {
       lastRatedGameTimestampMs: json['lastRatedGameTimestampMs'] as int?,
       recalibrationGamesRemaining: json['recalibrationGamesRemaining'] ?? 0,
       decayIntervalsApplied: json['decayIntervalsApplied'] ?? 0,
+      decayIntervalsAppliedAtLastGame: json['decayIntervalsAppliedAtLastGame'] ?? 0,
       totalRatedGamesCount: json['totalRatedGamesCount'] ?? legacyCount,
       // Migration: merge any historical Chess960 Battleground counts into classic
       // counters. From this version onward, Battleground is Classic-only.
@@ -443,6 +456,7 @@ class AppSettings {
       userAvatarPath: json['userAvatarPath'] ?? 'assets/persona/user_profile_0.png',
       activeRatedMatchId: json['activeRatedMatchId'] as String?,
       activeRatedMatchOpponentId: json['activeRatedMatchOpponentId'] as String?,
+      activeRatedMatchRatingCategory: json['activeRatedMatchRatingCategory'] as String?,
       customFen: json['customFen'] as String?,
       isNotificationsEnabled: json['isNotificationsEnabled'] ?? false,
       dailyBriefingEnabled: json['dailyBriefingEnabled'] ?? true,
@@ -451,7 +465,7 @@ class AppSettings {
       milestonesEnabled: json['milestonesEnabled'] ?? true,
       dailyBriefingTime: json['dailyBriefingTime'] ?? '09:00',
       streakWarningHoursBeforeReset: json['streakWarningHoursBeforeReset'] ?? 4,
-      quietHoursEnabled: json['quietHoursEnabled'] ?? false,
+      quietHoursEnabled: json['quietHoursEnabled'] ?? true,
       quietHoursStart: json['quietHoursStart'] ?? '22:00',
       quietHoursEnd: json['quietHoursEnd'] ?? '08:00',
     );

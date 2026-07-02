@@ -33,18 +33,7 @@ class FakeArasanService extends Fake implements ArasanService {
 
 class FakeChessSoundService extends Fake implements ChessSoundService {
   @override
-  void playSfx(SoundEffect sfx) {}
-  @override
-  void updateSettings({
-    required bool sfxEnabled,
-    required bool bgmEnabled,
-    bool gameSoundEnabled = true,
-    Map<String, bool> soundSettings = const {},
-    bool academySoundEnabled = true,
-    Map<String, bool> academySoundSettings = const {},
-    bool isAcademyActive = false,
-    bool isRatedMode = false,
-  }) {}
+  dynamic noSuchMethod(Invocation invocation) {}
 }
 
 class FakeChessHapticsService extends Fake implements ChessHapticsService {
@@ -62,11 +51,15 @@ class FakeAuthService extends Fake implements AuthService {
 class FakePerformanceLedgerRepository extends Fake implements PerformanceLedgerRepository {
   @override
   Future<List<PerformanceLedgerEntry>> listEntries() async => [];
+  @override
+  Future<List<PerformanceLedgerEntry>> addEntry(PerformanceLedgerEntry entry) async => [];
 }
 
 class FakeSavedGameRepository extends Fake implements SavedGameRepository {
   @override
   Future<List<SavedGameEntry>> save(SavedGameEntry entry) async => [];
+  @override
+  Future<List<SavedGameEntry>> listSaves() async => [];
 }
 
 class TestSettingsRepository implements SettingsRepository {
@@ -219,6 +212,68 @@ void main() {
       expect(notifier.state.consolidatedRating, 1180);
       expect(notifier.state.recalibrationGamesRemaining, 5);
       expect(notifier.state.decayIntervalsApplied, 2);
+    });
+
+    test('Cumulative decay holds history across rated games and subsequent inactivity', () async {
+      final fifteenDaysAgo = DateTime.now().subtract(const Duration(days: 15)).millisecondsSinceEpoch;
+
+      final initialSettings = AppSettings(
+        consolidatedRating: 1200,
+        totalRatedGamesCount: 15,
+        lastRatedGameTimestampMs: fifteenDaysAgo,
+        recalibrationGamesRemaining: 0,
+        decayIntervalsApplied: 0,
+        decayIntervalsAppliedAtLastGame: 0,
+      );
+      final fakeSettingsRepo = TestSettingsRepository(initialSettings);
+
+      final container = ProviderContainer(
+        overrides: [
+          arasanServiceProvider.overrideWithValue(fakeArasan),
+          savedGameRepositoryProvider.overrideWithValue(fakeSavedGameRepo),
+          performanceLedgerRepositoryProvider.overrideWithValue(fakeLedgerRepo),
+          chessSoundServiceProvider.overrideWithValue(fakeSoundService),
+          chessHapticsServiceProvider.overrideWithValue(fakeHapticsService),
+          settingsRepositoryProvider.overrideWithValue(fakeSettingsRepo),
+          authServiceProvider.overrideWithValue(FakeAuthService()),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(battlegroundProvider.notifier);
+      await Future.delayed(const Duration(milliseconds: 10));
+
+      // 1. Initial inactivity decay: 15 days = 2 intervals = -20 ELO
+      expect(notifier.state.consolidatedRating, 1180);
+      expect(notifier.state.decayIntervalsApplied, 2);
+      expect(notifier.state.decayIntervalsAppliedAtLastGame, 0);
+
+      // 2. Play a rated game by resigning (which triggers updateRating)
+      await notifier.resignRatedGame();
+
+      // 3. Verify that after game finishes, decayIntervalsApplied remains 2 (not reset to 0!),
+      // but decayIntervalsAppliedAtLastGame updates to 2.
+      expect(notifier.state.decayIntervalsApplied, 2);
+      expect(notifier.state.decayIntervalsAppliedAtLastGame, 2);
+
+      // 4. Simulate a second inactivity period:
+      // Set lastRatedGameTimestampMs to 22 days ago (3 intervals since the last game).
+      final twentyTwoDaysAgo = DateTime.now().subtract(const Duration(days: 22)).millisecondsSinceEpoch;
+      fakeSettingsRepo.savedSettings = null;
+      fakeSettingsRepo.loadedSettings = fakeSettingsRepo.loadedSettings.copyWith(
+        lastRatedGameTimestampMs: twentyTwoDaysAgo,
+      );
+
+      // Trigger the inactivity check by reloading from settings repository
+      await notifier.reloadFromDisk();
+
+      // 5. Verify subsequent decay: 22 days = 3 intervals.
+      // Since decayIntervalsAppliedAtLastGame was 2, the additional decay is 3 - (2 - 2) = 3 intervals = -30 ELO.
+      // Rating after game drops by another 30 ELO.
+      // Total decayIntervalsApplied should now be 2 + 3 = 5.
+      // decayIntervalsAppliedAtLastGame should remain 2.
+      expect(notifier.state.decayIntervalsApplied, 5);
+      expect(notifier.state.decayIntervalsAppliedAtLastGame, 2);
     });
   });
 }

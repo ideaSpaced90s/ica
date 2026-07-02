@@ -15,6 +15,7 @@ class LifetimeXpNotifier extends Notifier<LifetimeXpState> {
 
   Future<void> _init() async {
     final loaded = await _repository.loadLifetimeXp();
+    if (!ref.mounted) return;
     state = loaded;
   }
 
@@ -51,6 +52,7 @@ class LifetimeXpNotifier extends Notifier<LifetimeXpState> {
 
   Future<void> _saveState() async {
     await _repository.saveLifetimeXp(state);
+    if (!ref.mounted) return;
     ref.read(cloudSyncProvider.notifier).backup(silent: true);
   }
 

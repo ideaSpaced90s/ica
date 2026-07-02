@@ -16,6 +16,7 @@ import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kingslayer_chess/features/chess/data/tutorial_progress_repository.dart';
 import 'package:kingslayer_chess/features/chess/application/tutorial_provider.dart';
+import 'package:kingslayer_chess/features/chess/services/chess_sound_service.dart';
 
 class MockUser extends Fake implements fb_auth.User {
   @override
@@ -115,6 +116,30 @@ class FakeChessState extends Fake implements ChessState {
 
   @override
   String get gameMode => 'classic';
+
+  @override
+  bool get isSoundEnabled => true;
+
+  @override
+  bool get isMusicEnabled => false;
+
+  @override
+  bool get isGameSoundEnabled => true;
+
+  @override
+  Map<String, bool> get soundSettings => const {};
+
+  @override
+  bool get isAcademySoundEnabled => true;
+
+  @override
+  Map<String, bool> get academySoundSettings => const {};
+
+  @override
+  bool get isBattlegroundSoundEnabled => false;
+
+  @override
+  bool get isHapticsEnabled => true;
 }
 
 class FakeChessNotifier extends ChessNotifier {
@@ -137,12 +162,16 @@ class FakeChessNotifier extends ChessNotifier {
 
   @override
   Future<void> setBottomAvatarId(String id) async {}
-
   @override
   Future<void> setBoardTheme(String themeId) async {}
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class FakeChessSoundService extends Fake implements ChessSoundService {
+  @override
+  dynamic noSuchMethod(Invocation invocation) {}
 }
 
 void main() {
@@ -193,6 +222,7 @@ void main() {
         chessProvider.overrideWith(() => fakeChessNotifier),
         storeProvider.overrideWith(() => StoreNotifier(loadData: false)),
         tutorialProgressRepositoryProvider.overrideWithValue(tutorialProgressRepo),
+        chessSoundServiceProvider.overrideWithValue(FakeChessSoundService()),
       ],
     );
 

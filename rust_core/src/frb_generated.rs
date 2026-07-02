@@ -38,7 +38,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.12.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -2042004886;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1528601981;
 
 // Section: executor
 
@@ -108,6 +108,37 @@ fn wire__crate__api__cognitive__analyze_scotoma_impl(
             transform_result_sse::<_, ()>((move || {
                 let output_ok =
                     Result::<_, ()>::Ok(crate::api::cognitive::analyze_scotoma(api_games))?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__cognitive__analyze_single_game_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "analyze_single_game",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_game = <crate::api::cognitive::SavedGameUci>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok =
+                    Result::<_, ()>::Ok(crate::api::cognitive::analyze_single_game(api_game))?;
                 Ok(output_ok)
             })())
         },
@@ -1206,6 +1237,40 @@ fn wire__crate__api__persona__select_persona_move_rust_impl(
         },
     )
 }
+fn wire__crate__api__cognitive__single_game_analysis_result_default_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "single_game_analysis_result_default",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, ()>((move || {
+                    let output_ok = Result::<_, ()>::Ok(
+                        crate::api::cognitive::SingleGameAnalysisResult::default(),
+                    )?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__state__validate_and_apply_move_impl(
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -1805,6 +1870,29 @@ impl SseDecode for crate::api::cognitive::ScotomaResult {
     }
 }
 
+impl SseDecode for crate::api::cognitive::SingleGameAnalysisResult {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_scotomaIncidents =
+            <crate::api::cognitive::GameIncidents>::sse_decode(deserializer);
+        let mut var_openingName = <String>::sse_decode(deserializer);
+        let mut var_reachedEndgame = <bool>::sse_decode(deserializer);
+        let mut var_endgameFen = <Option<String>>::sse_decode(deserializer);
+        let mut var_isMiddlegame = <bool>::sse_decode(deserializer);
+        let mut var_decidedInMiddlegame = <bool>::sse_decode(deserializer);
+        let mut var_isAnalyzed = <bool>::sse_decode(deserializer);
+        return crate::api::cognitive::SingleGameAnalysisResult {
+            scotoma_incidents: var_scotomaIncidents,
+            opening_name: var_openingName,
+            reached_endgame: var_reachedEndgame,
+            endgame_fen: var_endgameFen,
+            is_middlegame: var_isMiddlegame,
+            decided_in_middlegame: var_decidedInMiddlegame,
+            is_analyzed: var_isAnalyzed,
+        };
+    }
+}
+
 impl SseDecode for crate::api::tactics::TacticData {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -1870,15 +1958,21 @@ fn pde_ffi_dispatcher_primary_impl(
 ) {
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
-        12 => wire__crate__api__cognitive__game_incidents_default_impl(
+        13 => wire__crate__api__cognitive__game_incidents_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        17 => wire__crate__api__puzzles__get_random_puzzle_impl(port, ptr, rust_vec_len, data_len),
-        22 => wire__crate__api__simple__init_app_impl(port, ptr, rust_vec_len, data_len),
-        30 => wire__crate__api__puzzles__search_puzzles_impl(port, ptr, rust_vec_len, data_len),
+        18 => wire__crate__api__puzzles__get_random_puzzle_impl(port, ptr, rust_vec_len, data_len),
+        23 => wire__crate__api__simple__init_app_impl(port, ptr, rust_vec_len, data_len),
+        31 => wire__crate__api__puzzles__search_puzzles_impl(port, ptr, rust_vec_len, data_len),
+        35 => wire__crate__api__cognitive__single_game_analysis_result_default_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
         _ => unreachable!(),
     }
 }
@@ -1893,52 +1987,53 @@ fn pde_ffi_dispatcher_sync_impl(
     match func_id {
         1 => wire__crate__api__cognitive__analyze_middlegame_impl(ptr, rust_vec_len, data_len),
         2 => wire__crate__api__cognitive__analyze_scotoma_impl(ptr, rust_vec_len, data_len),
-        3 => wire__crate__api__assignment__analyze_submitted_game_rust_impl(
+        3 => wire__crate__api__cognitive__analyze_single_game_impl(ptr, rust_vec_len, data_len),
+        4 => wire__crate__api__assignment__analyze_submitted_game_rust_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        4 => wire__crate__api__threats__analyze_tactical_threats_impl(ptr, rust_vec_len, data_len),
-        5 => wire__crate__api__pgn_db__classify_opening_eco_impl(ptr, rust_vec_len, data_len),
-        6 => wire__crate__api__pgn_db__clear_all_games_impl(ptr, rust_vec_len, data_len),
-        7 => wire__crate__api__pgn_db__clear_all_studies_impl(ptr, rust_vec_len, data_len),
-        8 => wire__crate__api__pgn_db__delete_game_from_db_impl(ptr, rust_vec_len, data_len),
-        9 => wire__crate__api__status__evaluate_game_status_impl(ptr, rust_vec_len, data_len),
-        10 => {
+        5 => wire__crate__api__threats__analyze_tactical_threats_impl(ptr, rust_vec_len, data_len),
+        6 => wire__crate__api__pgn_db__classify_opening_eco_impl(ptr, rust_vec_len, data_len),
+        7 => wire__crate__api__pgn_db__clear_all_games_impl(ptr, rust_vec_len, data_len),
+        8 => wire__crate__api__pgn_db__clear_all_studies_impl(ptr, rust_vec_len, data_len),
+        9 => wire__crate__api__pgn_db__delete_game_from_db_impl(ptr, rust_vec_len, data_len),
+        10 => wire__crate__api__status__evaluate_game_status_impl(ptr, rust_vec_len, data_len),
+        11 => {
             wire__crate__api__context__evaluate_position_metrics_impl(ptr, rust_vec_len, data_len)
         }
-        11 => wire__crate__api__pgn_db__export_pgn_with_headers_impl(ptr, rust_vec_len, data_len),
-        13 => {
+        12 => wire__crate__api__pgn_db__export_pgn_with_headers_impl(ptr, rust_vec_len, data_len),
+        14 => {
             wire__crate__api__tactics__generate_tactics_analysis_impl(ptr, rust_vec_len, data_len)
         }
-        14 => wire__crate__api__threats__get_dominating_squares_impl(ptr, rust_vec_len, data_len),
-        15 => wire__crate__api__moves__get_legal_destinations_impl(ptr, rust_vec_len, data_len),
-        16 => wire__crate__api__persona__get_persona_config_impl(ptr, rust_vec_len, data_len),
-        18 => wire__crate__api__history__get_san_history_impl(ptr, rust_vec_len, data_len),
-        19 => wire__crate__api__threats__get_threatened_squares_impl(ptr, rust_vec_len, data_len),
-        20 => wire__crate__api__simple__greet_impl(ptr, rust_vec_len, data_len),
-        21 => wire__crate__api__humanizer__humanize_move_rust_impl(ptr, rust_vec_len, data_len),
-        23 => wire__crate__api__pgn_db__load_all_games_from_db_impl(ptr, rust_vec_len, data_len),
-        24 => wire__crate__api__pgn_db__load_studies_from_db_impl(ptr, rust_vec_len, data_len),
-        25 => wire__crate__api__pgn_db__parse_pgn_database_impl(ptr, rust_vec_len, data_len),
-        26 => wire__crate__api__assignment__recommend_tasks_rust_impl(ptr, rust_vec_len, data_len),
-        27 => wire__crate__api__commentary__reset_commentary_history_rust_impl(
+        15 => wire__crate__api__threats__get_dominating_squares_impl(ptr, rust_vec_len, data_len),
+        16 => wire__crate__api__moves__get_legal_destinations_impl(ptr, rust_vec_len, data_len),
+        17 => wire__crate__api__persona__get_persona_config_impl(ptr, rust_vec_len, data_len),
+        19 => wire__crate__api__history__get_san_history_impl(ptr, rust_vec_len, data_len),
+        20 => wire__crate__api__threats__get_threatened_squares_impl(ptr, rust_vec_len, data_len),
+        21 => wire__crate__api__simple__greet_impl(ptr, rust_vec_len, data_len),
+        22 => wire__crate__api__humanizer__humanize_move_rust_impl(ptr, rust_vec_len, data_len),
+        24 => wire__crate__api__pgn_db__load_all_games_from_db_impl(ptr, rust_vec_len, data_len),
+        25 => wire__crate__api__pgn_db__load_studies_from_db_impl(ptr, rust_vec_len, data_len),
+        26 => wire__crate__api__pgn_db__parse_pgn_database_impl(ptr, rust_vec_len, data_len),
+        27 => wire__crate__api__assignment__recommend_tasks_rust_impl(ptr, rust_vec_len, data_len),
+        28 => wire__crate__api__commentary__reset_commentary_history_rust_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        28 => wire__crate__api__pgn_db__save_game_to_db_impl(ptr, rust_vec_len, data_len),
-        29 => wire__crate__api__pgn_db__save_study_to_db_impl(ptr, rust_vec_len, data_len),
-        31 => {
+        29 => wire__crate__api__pgn_db__save_game_to_db_impl(ptr, rust_vec_len, data_len),
+        30 => wire__crate__api__pgn_db__save_study_to_db_impl(ptr, rust_vec_len, data_len),
+        32 => {
             wire__crate__api__chanakya__select_chanakya_move_rust_impl(ptr, rust_vec_len, data_len)
         }
-        32 => wire__crate__api__commentary__select_commentary_template_rust_impl(
+        33 => wire__crate__api__commentary__select_commentary_template_rust_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        33 => wire__crate__api__persona__select_persona_move_rust_impl(ptr, rust_vec_len, data_len),
-        34 => wire__crate__api__state__validate_and_apply_move_impl(ptr, rust_vec_len, data_len),
+        34 => wire__crate__api__persona__select_persona_move_rust_impl(ptr, rust_vec_len, data_len),
+        36 => wire__crate__api__state__validate_and_apply_move_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -2399,6 +2494,32 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::cognitive::ScotomaResult>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::cognitive::SingleGameAnalysisResult {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.scotoma_incidents.into_into_dart().into_dart(),
+            self.opening_name.into_into_dart().into_dart(),
+            self.reached_endgame.into_into_dart().into_dart(),
+            self.endgame_fen.into_into_dart().into_dart(),
+            self.is_middlegame.into_into_dart().into_dart(),
+            self.decided_in_middlegame.into_into_dart().into_dart(),
+            self.is_analyzed.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::cognitive::SingleGameAnalysisResult
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::cognitive::SingleGameAnalysisResult>
+    for crate::api::cognitive::SingleGameAnalysisResult
+{
+    fn into_into_dart(self) -> crate::api::cognitive::SingleGameAnalysisResult {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::tactics::TacticData {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -2834,6 +2955,19 @@ impl SseEncode for crate::api::cognitive::ScotomaResult {
         <i32>::sse_encode(self.total_rated_games, serializer);
         <i32>::sse_encode(self.analyzed_games, serializer);
         <i32>::sse_encode(self.skipped_games, serializer);
+    }
+}
+
+impl SseEncode for crate::api::cognitive::SingleGameAnalysisResult {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <crate::api::cognitive::GameIncidents>::sse_encode(self.scotoma_incidents, serializer);
+        <String>::sse_encode(self.opening_name, serializer);
+        <bool>::sse_encode(self.reached_endgame, serializer);
+        <Option<String>>::sse_encode(self.endgame_fen, serializer);
+        <bool>::sse_encode(self.is_middlegame, serializer);
+        <bool>::sse_encode(self.decided_in_middlegame, serializer);
+        <bool>::sse_encode(self.is_analyzed, serializer);
     }
 }
 

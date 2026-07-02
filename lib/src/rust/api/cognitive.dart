@@ -6,9 +6,9 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `analyze_game`, `chess960_initial_fens`, `expand_fen_rank`, `fen_position_signature`, `find_uci_move`, `is_endgame`, `is_pinned`, `normalize_chess960_castling_rights`, `parse_position`, `position_signature`, `recover_chess960_initial_fen`, `replay_game`, `replay_san`, `replay_uci`, `rook_file_for_castling`
+// These functions are ignored because they are not marked as `pub`: `analyze_game`, `chess960_initial_fens`, `detect_opening`, `expand_fen_rank`, `fen_position_signature`, `find_uci_move`, `is_endgame`, `is_pinned`, `normalize_chess960_castling_rights`, `parse_position`, `position_signature`, `recover_chess960_initial_fen`, `replay_game`, `replay_san`, `replay_uci`, `rook_file_for_castling`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `ReplayedGame`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 ScotomaResult analyzeScotoma({required List<SavedGameUci> games}) =>
     RustLib.instance.api.crateApiCognitiveAnalyzeScotoma(games: games);
@@ -20,6 +20,9 @@ MiddlegameResult analyzeMiddlegame({
   games: games,
   scotoma: scotoma,
 );
+
+SingleGameAnalysisResult analyzeSingleGame({required SavedGameUci game}) =>
+    RustLib.instance.api.crateApiCognitiveAnalyzeSingleGame(game: game);
 
 class GameIncidents {
   final bool diagonalRetreats;
@@ -214,4 +217,50 @@ class ScotomaResult {
           totalRatedGames == other.totalRatedGames &&
           analyzedGames == other.analyzedGames &&
           skippedGames == other.skippedGames;
+}
+
+class SingleGameAnalysisResult {
+  final GameIncidents scotomaIncidents;
+  final String openingName;
+  final bool reachedEndgame;
+  final String? endgameFen;
+  final bool isMiddlegame;
+  final bool decidedInMiddlegame;
+  final bool isAnalyzed;
+
+  const SingleGameAnalysisResult({
+    required this.scotomaIncidents,
+    required this.openingName,
+    required this.reachedEndgame,
+    this.endgameFen,
+    required this.isMiddlegame,
+    required this.decidedInMiddlegame,
+    required this.isAnalyzed,
+  });
+
+  static Future<SingleGameAnalysisResult> default_() =>
+      RustLib.instance.api.crateApiCognitiveSingleGameAnalysisResultDefault();
+
+  @override
+  int get hashCode =>
+      scotomaIncidents.hashCode ^
+      openingName.hashCode ^
+      reachedEndgame.hashCode ^
+      endgameFen.hashCode ^
+      isMiddlegame.hashCode ^
+      decidedInMiddlegame.hashCode ^
+      isAnalyzed.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SingleGameAnalysisResult &&
+          runtimeType == other.runtimeType &&
+          scotomaIncidents == other.scotomaIncidents &&
+          openingName == other.openingName &&
+          reachedEndgame == other.reachedEndgame &&
+          endgameFen == other.endgameFen &&
+          isMiddlegame == other.isMiddlegame &&
+          decidedInMiddlegame == other.decidedInMiddlegame &&
+          isAnalyzed == other.isAnalyzed;
 }

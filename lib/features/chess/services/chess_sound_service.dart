@@ -600,8 +600,8 @@ class ChessSoundService {
   }
 
   void dispose() {
-    stopAlarm();
     try {
+      stopAlarm();
       if (SoLoud.instance.isInitialized) {
         SoLoud.instance.deinit();
         _isInitialized = false;

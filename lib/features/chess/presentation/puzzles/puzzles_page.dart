@@ -19,6 +19,8 @@ import '../../application/store_provider.dart';
 import '../../services/chess_sound_service.dart';
 import '../widgets/gm_chanakya_intro_overlay.dart';
 import '../widgets/premium_nudge_overlay.dart';
+import '../../application/assignment_provider.dart';
+import '../../application/battleground_provider.dart';
 
 class PuzzlesPage extends ConsumerStatefulWidget {
   const PuzzlesPage({super.key});
@@ -617,8 +619,112 @@ class _PuzzlesPageState extends ConsumerState<PuzzlesPage> {
     );
   }
 
+  Widget _buildLockedView(BuildContext context, BattlegroundState bgState) {
+    return AmbientScaffold(
+      blob1Color: const Color(0xFFF0F9FF),
+      blob2Color: const Color(0xFFFDF2F8),
+      blob3Color: const Color(0xFFFFFBEB),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: ScholarlyTheme.panelBase.withValues(alpha: 0.8),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: ScholarlyTheme.borderMedium, width: 2),
+                ),
+                child: const Icon(
+                  Icons.lock_outline_rounded,
+                  color: ScholarlyTheme.accentOrange,
+                  size: 64,
+                ),
+              ),
+              const SizedBox(height: 32),
+              Text(
+                'PUZZLES LOCKED',
+                style: GoogleFonts.inter(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.5,
+                  color: ScholarlyTheme.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Complete 10 rated Battleground games to calibrate your strength and unlock personalized puzzle training.',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: ScholarlyTheme.textMuted,
+                  height: 1.5,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 32),
+              // Calibration Progress Bar
+              Container(
+                width: 240,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: ScholarlyTheme.panelBase.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: ScholarlyTheme.borderLight),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Progress',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: ScholarlyTheme.textPrimary,
+                          ),
+                        ),
+                        Text(
+                          '${bgState.totalRatedGamesCount}/10 games',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: ScholarlyTheme.accentOrange,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: LinearProgressIndicator(
+                        value: (bgState.totalRatedGamesCount / 10).clamp(0.0, 1.0),
+                        backgroundColor: ScholarlyTheme.borderLight,
+                        valueColor: const AlwaysStoppedAnimation<Color>(ScholarlyTheme.accentOrange),
+                        minHeight: 8,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final assignmentState = ref.watch(assignmentProvider);
+    final bgState = ref.watch(battlegroundProvider);
+
+    if (!assignmentState.isCalibrated || bgState.totalRatedGamesCount < 10) {
+      return _buildLockedView(context, bgState);
+    }
+
     final state = ref.watch(puzzlesProvider);
     final notifier = ref.read(puzzlesProvider.notifier);
     final showIntro = ref.watch(showPuzzlesIntroProvider);

@@ -601,6 +601,162 @@ fn is_endgame(pos: &Chess) -> bool {
     non_pawn_material <= 12
 }
 
+#[derive(Clone, Debug, Default)]
+pub struct SingleGameAnalysisResult {
+    pub scotoma_incidents: GameIncidents,
+    pub opening_name: String,
+    pub reached_endgame: bool,
+    pub endgame_fen: Option<String>,
+    pub is_middlegame: bool,
+    pub decided_in_middlegame: bool,
+    pub is_analyzed: bool,
+}
+
+fn detect_opening(moves: &[String], game_mode: &str) -> String {
+    if game_mode == "chess960" {
+        return "Chess 960 Variant".to_string();
+    }
+    if moves.is_empty() {
+        return "Unknown / Open Line".to_string();
+    }
+
+    let has_early_bf4 = (moves.len() > 2 && moves[2] == "Bf4") || (moves.len() > 4 && moves[4] == "Bf4");
+    if moves[0] == "d4" && has_early_bf4 {
+        return "London System".to_string();
+    }
+
+    let limit = std::cmp::min(moves.len(), 10);
+    let pgn_text = moves[..limit].join(" ");
+
+    if pgn_text.starts_with("e4 e5 Nf3 Nc6 Bb5") {
+        "Ruy Lopez".to_string()
+    } else if pgn_text.starts_with("e4 c5") {
+        "Sicilian Defense".to_string()
+    } else if pgn_text.starts_with("d4 d5 c4 c6") {
+        "Slav Defense".to_string()
+    } else if pgn_text.starts_with("d4 d5 c4") {
+        "Queen's Gambit".to_string()
+    } else if pgn_text.starts_with("e4 e5 Nf3 Nc6 Bc4") {
+        "Italian Game".to_string()
+    } else if pgn_text.starts_with("e4 e6") {
+        "French Defense".to_string()
+    } else if pgn_text.starts_with("e4 c6") {
+        "Caro-Kann Defense".to_string()
+    } else if pgn_text.starts_with("d4 Nf6 c4 e6 Nc3 Bb4") {
+        "Nimzo-Indian Defense".to_string()
+    } else if pgn_text.starts_with("d4 Nf6 c4 g6 Nc3 d5")
+        || pgn_text.starts_with("d4 Nf6 c4 g6 Nf3 d5")
+        || pgn_text.starts_with("d4 Nf6 c4 g6 g3 d5")
+    {
+        "Grünfeld Defense".to_string()
+    } else if pgn_text.starts_with("d4 Nf6 c4 g6") {
+        "King's Indian Defense".to_string()
+    } else if pgn_text.starts_with("e4 e5 Nf3 Nf6") {
+        "Petrov's Defense".to_string()
+    } else if pgn_text.starts_with("d4 Nf6 c4 e6 Nf3 d5") || pgn_text.starts_with("d4 d5 c4 e6") {
+        "Queen's Gambit Declined".to_string()
+    } else if pgn_text.starts_with("d4 Nf6 c4 e6 g3 d5") {
+        "Catalan Opening".to_string()
+    } else if pgn_text.starts_with("d4 Nf6 c4 c5 d5") {
+        "Benoni Defense".to_string()
+    } else if pgn_text.starts_with("e4 d6") {
+        "Pirc Defense".to_string()
+    } else if pgn_text.starts_with("e4 g6") {
+        "Modern Defense".to_string()
+    } else if pgn_text.starts_with("e4 d5") {
+        "Scandinavian Defense".to_string()
+    } else if pgn_text.starts_with("e4 Nf6") {
+        "Alekhine's Defense".to_string()
+    } else if pgn_text.starts_with("d4 f5") {
+        "Dutch Defense".to_string()
+    } else if pgn_text.starts_with("e4 e5 Nf3 Nc6 d4") {
+        "Scotch Game".to_string()
+    } else if pgn_text.starts_with("e4 e5 f4") {
+        "King's Gambit".to_string()
+    } else if pgn_text.starts_with("e4 e5 Nc3") {
+        "Vienna Game".to_string()
+    } else if pgn_text.starts_with("e4 e5 Nf3 d6") {
+        "Philidor Defense".to_string()
+    } else if pgn_text.starts_with("Nf3") {
+        "Réti Opening".to_string()
+    } else if pgn_text.starts_with("c4") {
+        "English Opening".to_string()
+    } else if pgn_text.starts_with("f4") {
+        "Bird's Opening".to_string()
+    } else if pgn_text.starts_with("g3") {
+        "King's Fianchetto".to_string()
+    } else if pgn_text.starts_with("b3") {
+        "Nimzowitsch-Larsen Attack".to_string()
+    } else if pgn_text.starts_with("e4 e5 Nf3 Nc6 Nc3 Nf6") {
+        "Four Knights Game".to_string()
+    } else if pgn_text.starts_with("d4 d5") {
+        "Closed Game".to_string()
+    } else if pgn_text.starts_with("e4 e5") {
+        "Open Game".to_string()
+    } else if moves[0] == "e4" {
+        "King's Pawn Game".to_string()
+    } else if moves[0] == "d4" {
+        "Queen's Pawn Game".to_string()
+    } else {
+        "Custom / Unclassified".to_string()
+    }
+}
+
+#[flutter_rust_bridge::frb(sync)]
+pub fn analyze_single_game(game: SavedGameUci) -> SingleGameAnalysisResult {
+    let opening_name = detect_opening(&game.recent_moves, &game.game_mode);
+    
+    let replayed = match replay_game(&game) {
+        Some(r) if !r.moves.is_empty() => r,
+        _ => {
+            return SingleGameAnalysisResult {
+                scotoma_incidents: GameIncidents::default(),
+                opening_name,
+                reached_endgame: false,
+                endgame_fen: None,
+                is_middlegame: false,
+                decided_in_middlegame: false,
+                is_analyzed: false,
+            };
+        }
+    };
+
+    let scotoma_incidents = analyze_game(&game, &replayed);
+
+    // Endgame transition detection
+    let mut reached_endgame = false;
+    let mut endgame_fen = None;
+    for pos in &replayed.positions {
+        if is_endgame(pos) {
+            reached_endgame = true;
+            endgame_fen = Some(Fen::from_position(pos.clone(), EnPassantMode::Legal).to_string());
+            break;
+        }
+    }
+
+    // Middlegame transition detection
+    let mut is_middlegame = false;
+    let mut decided_in_middlegame = false;
+    if replayed.moves.len() > 20 {
+        is_middlegame = true;
+        if let Some(final_pos) = replayed.positions.last() {
+            if !is_endgame(final_pos) {
+                decided_in_middlegame = true;
+            }
+        }
+    }
+
+    SingleGameAnalysisResult {
+        scotoma_incidents,
+        opening_name,
+        reached_endgame,
+        endgame_fen,
+        is_middlegame,
+        decided_in_middlegame,
+        is_analyzed: true,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

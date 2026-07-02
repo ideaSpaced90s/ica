@@ -22,6 +22,7 @@ import '../domain/fen_parser.dart';
 import '../domain/models/dashboard_stats.dart';
 import 'package:kingslayer_chess/src/rust/api/cognitive.dart';
 import 'package:kingslayer_chess/src/rust/api/persona.dart' as rust_persona;
+import 'performance_ledger_manager.dart';
 import 'chess_provider.dart';
 import 'store_provider.dart';
 import '../services/cloud_sync_service.dart';
@@ -30,17 +31,7 @@ const _initialClock = Duration(minutes: 10);
 const _clockWhite = 'white';
 const _clockBlack = 'black';
 
-List<PerformanceLedgerEntry> selectScotomaLedgerEntries(
-  Iterable<PerformanceLedgerEntry> entries,
-) {
-  return entries
-      .where(
-        (entry) =>
-            entry.source == PerformanceLedgerEntry.ratedBattlegroundSource &&
-            const {'W', 'L', 'D'}.contains(entry.result),
-      )
-      .toList();
-}
+
 
 class BattlegroundState {
   final ChessGame game;
@@ -97,10 +88,12 @@ class BattlegroundState {
   final double blitzDominance;
   final double rapidDominance;
   final String? activeRatedMatchId;
+  final String? activeRatedMatchRatingCategory;
 
   final int recalibrationGamesRemaining;
   final int? lastRatedGameTimestampMs;
   final int decayIntervalsApplied;
+  final int decayIntervalsAppliedAtLastGame;
   final bool hasLoadedSettings;
 
   // Cached dashboard metrics
@@ -167,11 +160,13 @@ class BattlegroundState {
     this.blitzDominance = 0.0,
     this.rapidDominance = 0.0,
     this.activeRatedMatchId,
+    this.activeRatedMatchRatingCategory,
 
     // Rated inactivity & recalibration
     this.recalibrationGamesRemaining = 0,
     this.lastRatedGameTimestampMs,
     this.decayIntervalsApplied = 0,
+    this.decayIntervalsAppliedAtLastGame = 0,
     this.hasLoadedSettings = false,
 
     // Cached metrics
@@ -254,10 +249,12 @@ class BattlegroundState {
     double? blitzDominance,
     double? rapidDominance,
     Object? activeRatedMatchId = const Object(),
+    Object? activeRatedMatchRatingCategory = const Object(),
 
     int? recalibrationGamesRemaining,
     int? lastRatedGameTimestampMs,
     int? decayIntervalsApplied,
+    int? decayIntervalsAppliedAtLastGame,
     bool? hasLoadedSettings,
 
     // Cached metrics
@@ -346,10 +343,14 @@ class BattlegroundState {
       activeRatedMatchId: activeRatedMatchId == const Object()
           ? this.activeRatedMatchId
           : activeRatedMatchId as String?,
+      activeRatedMatchRatingCategory: activeRatedMatchRatingCategory == const Object()
+          ? this.activeRatedMatchRatingCategory
+          : activeRatedMatchRatingCategory as String?,
 
       recalibrationGamesRemaining: recalibrationGamesRemaining ?? this.recalibrationGamesRemaining,
       lastRatedGameTimestampMs: lastRatedGameTimestampMs ?? this.lastRatedGameTimestampMs,
       decayIntervalsApplied: decayIntervalsApplied ?? this.decayIntervalsApplied,
+      decayIntervalsAppliedAtLastGame: decayIntervalsAppliedAtLastGame ?? this.decayIntervalsAppliedAtLastGame,
       hasLoadedSettings: hasLoadedSettings ?? this.hasLoadedSettings,
 
       // Cached metrics
@@ -368,7 +369,6 @@ class BattlegroundState {
 class BattlegroundNotifier extends Notifier<BattlegroundState> {
   late final ArasanService _arasanEngine;
   late final SavedGameRepository _savedGameRepository;
-  late final PerformanceLedgerRepository _performanceLedgerRepository;
   // ignore: unused_field
   late final ChessSoundService _soundService;
   // ignore: unused_field
@@ -391,7 +391,6 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
   BattlegroundState build() {
     _arasanEngine = ref.watch(arasanServiceProvider);
     _savedGameRepository = ref.watch(savedGameRepositoryProvider);
-    _performanceLedgerRepository = ref.watch(performanceLedgerRepositoryProvider);
     _soundService = ref.watch(chessSoundServiceProvider);
     _hapticsService = ref.watch(chessHapticsServiceProvider);
     _settingsRepository = ref.watch(settingsRepositoryProvider);
@@ -423,6 +422,21 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
         isRatedMode: true,
         isBattlegroundSoundEnabled: next.isBattlegroundSoundEnabled,
       );
+    });
+
+    ref.listen<PerformanceLedgerManagerState>(performanceLedgerManagerProvider, (previous, next) {
+      if (next.isInitialized) {
+        final dominanceHeatmap = _recalculateHeatmap(next.entries);
+        state = state.copyWith(
+          cachedLedgerEntries: next.entries,
+          cachedScotoma: next.cache.scotomaResult,
+          cachedPlaystyle: next.cache.playstyleStats,
+          cachedOpenings: next.cache.openingsStats,
+          cachedMiddlegames: next.cache.middlegameStats,
+          cachedEndgames: next.cache.endgameStats,
+          cachedDominanceHeatmap: dominanceHeatmap,
+        );
+      }
     });
 
     ref.onDispose(() {
@@ -463,18 +477,28 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
       blitzDominance: s.blitzDominance,
       rapidDominance: s.rapidDominance,
       activeRatedMatchId: s.activeRatedMatchId,
+      activeRatedMatchRatingCategory: s.activeRatedMatchRatingCategory,
       recalibrationGamesRemaining: s.recalibrationGamesRemaining,
       lastRatedGameTimestampMs: s.lastRatedGameTimestampMs,
       decayIntervalsApplied: s.decayIntervalsApplied,
+      decayIntervalsAppliedAtLastGame: s.decayIntervalsAppliedAtLastGame,
     );
 
     // Apply inactivity check and ELO decay before loading history
     await _checkInactivityAndApplyDecay();
 
-    // Load ledger entries
-    final ledgerEntries = await _performanceLedgerRepository.listEntries();
-    state = state.copyWith(cachedLedgerEntries: ledgerEntries);
-    _refreshDashboardStats();
+    // Load ledger entries and cached stats from manager
+    final managerState = ref.read(performanceLedgerManagerProvider);
+    final dominanceHeatmap = _recalculateHeatmap(managerState.entries);
+    state = state.copyWith(
+      cachedLedgerEntries: managerState.entries,
+      cachedScotoma: managerState.cache.scotomaResult,
+      cachedPlaystyle: managerState.cache.playstyleStats,
+      cachedOpenings: managerState.cache.openingsStats,
+      cachedMiddlegames: managerState.cache.middlegameStats,
+      cachedEndgames: managerState.cache.endgameStats,
+      cachedDominanceHeatmap: dominanceHeatmap,
+    );
 
     // Auto select rated opponent
     _autoSelectRatedOpponent();
@@ -493,10 +517,19 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
       // Clear the activeRatedMatchId immediately from state and disk first.
       // This guarantees that any subsequent async step or developer hot restart
       // will not see the stale match ID again, preventing a phantom exit loop.
-      state = state.copyWith(activeRatedMatchId: null);
+      final category = s.activeRatedMatchRatingCategory ?? 'rapid';
+      state = state.copyWith(
+        activeRatedMatchId: null,
+        activeRatedMatchRatingCategory: null,
+      );
       await _saveSettings();
 
-      await _updateRating(0.0, opponentOverride: opponent, skipGameCountUpdate: true);
+      await _updateRating(
+        0.0,
+        opponentOverride: opponent,
+        skipGameCountUpdate: true,
+        categoryOverride: category,
+      );
 
       final entry = SavedGameEntry(
         id: matchId,
@@ -513,6 +546,7 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
         customName: 'Rated Loss (Unfair Exit)',
         isRatedMode: true,
         result: 'L',
+        ratingCategory: category,
       );
       await _savedGameRepository.save(entry);
 
@@ -521,7 +555,7 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
         id: entry.id,
         timestamp: entry.savedAt,
         source: PerformanceLedgerEntry.ratedBattlegroundSource,
-        ratingCategory: 'rapid', // default category
+        ratingCategory: category,
         gameMode: 'classic',
         result: 'L',
         dominance: 0.0,
@@ -537,12 +571,7 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
         reachedEndgame: false,
         baseTimeMs: state.baseTimeDuration.inMilliseconds,
       );
-      await _performanceLedgerRepository.addEntry(ledgerEntry);
-
-      // reload ledger
-      final freshLedger = await _performanceLedgerRepository.listEntries();
-      state = state.copyWith(cachedLedgerEntries: freshLedger);
-      _refreshDashboardStats();
+      await ref.read(performanceLedgerManagerProvider.notifier).addEntry(ledgerEntry);
     }
 
     state = state.copyWith(hasLoadedSettings: true);
@@ -1151,7 +1180,10 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
     await _applyRatedRatingAdjustments(playerJustMoved);
 
     if (state.game.gameOver) {
-      state = state.copyWith(activeRatedMatchId: null);
+      state = state.copyWith(
+        activeRatedMatchId: null,
+        activeRatedMatchRatingCategory: null,
+      );
       await _saveSettings(); // Must be awaited — guarantees null is on disk before any interruption
 
       String? result;
@@ -1244,7 +1276,8 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
       }
 
       final intervals = (diffDays / 7).floor();
-      final newIntervalsToApply = intervals - state.decayIntervalsApplied;
+      final currentPeriodApplied = state.decayIntervalsApplied - state.decayIntervalsAppliedAtLastGame;
+      final newIntervalsToApply = intervals - currentPeriodApplied;
 
       if (newIntervalsToApply > 0) {
         final decayPenalty = newIntervalsToApply * 10;
@@ -1261,7 +1294,7 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
           blitzElo: newBlitz,
           rapidElo: newRapid,
           recalibrationGamesRemaining: newRecalGames,
-          decayIntervalsApplied: intervals,
+          decayIntervalsApplied: state.decayIntervalsApplied + newIntervalsToApply,
         );
         await _saveSettings();
       } else {
@@ -1290,8 +1323,9 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
     AiAvatar? opponentOverride,
     double? dominanceOverride,
     bool skipGameCountUpdate = false,
+    String? categoryOverride,
   }) async {
-    final category = _getRatingCategory(
+    final category = categoryOverride ?? _getRatingCategory(
       state.baseTimeDuration,
       state.incrementDuration,
     );
@@ -1389,7 +1423,7 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
       totalRatedGamesCount: newTotalCount,
       totalWinningStreak: newConsolidatedStreak,
       lastRatedGameTimestampMs: DateTime.now().millisecondsSinceEpoch,
-      decayIntervalsApplied: 0,
+      decayIntervalsAppliedAtLastGame: state.decayIntervalsApplied,
       recalibrationGamesRemaining: skipGameCountUpdate
           ? state.recalibrationGamesRemaining
           : math.max(0, state.recalibrationGamesRemaining - 1),
@@ -1435,6 +1469,7 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
     );
     state = state.copyWith(
       activeRatedMatchId: null,
+      activeRatedMatchRatingCategory: null,
       clockStarted: false,
       activeClockSide: null,
       isGameOverDismissed: false,
@@ -1526,6 +1561,7 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
 
       state = state.copyWith(
         activeRatedMatchId: null,
+        activeRatedMatchRatingCategory: null,
         clockStarted: false,
         activeClockSide: null,
         isGameOverDismissed: false,
@@ -1706,6 +1742,7 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
       isDrawAgreed: false,
       // Clear any stale match ID so a fresh game never inherits a ghost ID
       activeRatedMatchId: null,
+      activeRatedMatchRatingCategory: null,
     );
 
     if (!keepOpponent || state.activeOpponent == null) {
@@ -1733,11 +1770,13 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
 
     final aiMovesFirst = !state.isPlayerWhite;
 
+    final category = _getRatingCategory(state.baseTimeDuration, state.incrementDuration);
     state = state.copyWith(
       clockStarted: true,
       activeClockSide: _clockWhite,
       isEngineThinking: aiMovesFirst && state.servicesStarted && state.engineReady,
       activeRatedMatchId: DateTime.now().millisecondsSinceEpoch.toString(),
+      activeRatedMatchRatingCategory: category,
     );
     await _saveSettings();
 
@@ -1852,7 +1891,10 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
     final score = humanWon ? 1.0 : 0.0;
     await _updateRating(score, dominanceOverride: _getAverageDominance());
 
-    state = state.copyWith(activeRatedMatchId: null);
+    state = state.copyWith(
+      activeRatedMatchId: null,
+      activeRatedMatchRatingCategory: null,
+    );
     await _saveSettings();
 
     final result = humanWon ? 'W' : 'L';
@@ -1891,9 +1933,11 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
       rapidDominance: state.rapidDominance,
       activeRatedMatchId: state.activeRatedMatchId,
       activeRatedMatchOpponentId: state.activeRatedMatchId != null ? state.activeOpponent?.id : null,
+      activeRatedMatchRatingCategory: state.activeRatedMatchRatingCategory,
       lastRatedGameTimestampMs: state.lastRatedGameTimestampMs,
       recalibrationGamesRemaining: state.recalibrationGamesRemaining,
       decayIntervalsApplied: state.decayIntervalsApplied,
+      decayIntervalsAppliedAtLastGame: state.decayIntervalsAppliedAtLastGame,
     ));
     ref.read(cloudSyncProvider.notifier).backup(silent: true);
   }
@@ -1952,7 +1996,6 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
       // Update global savedGames list so history page sees it!
       await ref.read(chessProvider.notifier).loadSavedGames();
 
-      List<PerformanceLedgerEntry> updatedLedger = state.cachedLedgerEntries;
       if (entry.result != null) {
         final opponent =
             state.activeOpponent ??
@@ -2003,24 +2046,22 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
           baseTimeMs: state.baseTimeDuration.inMilliseconds,
           endgameFen: endgameFen,
         );
-        updatedLedger = await _performanceLedgerRepository.addEntry(
-          ledgerEntry,
-        );
+        await ref.read(performanceLedgerManagerProvider.notifier).addEntry(ledgerEntry);
       }
 
       state = state.copyWith(
-        cachedLedgerEntries: updatedLedger,
         activeRatedMatchId: entry.result != null
             ? null
             : state.activeRatedMatchId,
+        activeRatedMatchRatingCategory: entry.result != null
+            ? null
+            : state.activeRatedMatchRatingCategory,
       );
       ref.read(cloudSyncProvider.notifier).backup(silent: true);
 
       if (entry.result != null) {
         await _saveSettings();
       }
-
-      _refreshDashboardStats();
       debugPrint('Rated game saved successfully: ${entry.id}');
       return entry;
     } catch (e) {
@@ -2030,217 +2071,10 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
   }
 
   void refreshDashboardStats() {
-    _refreshDashboardStats();
+    ref.read(performanceLedgerManagerProvider.notifier).reloadFromDisk();
   }
 
-  void _refreshDashboardStats() {
-    final ratedSaves = selectScotomaLedgerEntries(state.cachedLedgerEntries);
-    if (ratedSaves.isEmpty) return;
-
-    // 1. Analyze Scotoma via Rust FFI
-    ScotomaResult? scotoma;
-    final uciGames = ratedSaves.map((s) {
-      return SavedGameUci(
-        recentMoves: s.recentMoves,
-        uciMoves: s.uciMoves,
-        initialFen: s.initialFen,
-        finalFen: s.fen,
-        isChess960: false, // Battleground is always classic
-        isPlayerWhite: s.isPlayerWhite,
-        result: s.result,
-        whiteTimeLeftMs: s.whiteTimeLeftMs,
-        blackTimeLeftMs: s.blackTimeLeftMs,
-        ratingCategory: s.ratingCategory,
-      );
-    }).toList();
-    try {
-      scotoma = analyzeScotoma(games: uciGames);
-    } catch (e) {
-      debugPrint('Failed to run Rust analyzeScotoma in Battleground: $e');
-    }
-
-    // 2. Playstyle calculations
-    TacticalPlaystyleStats? playstyle;
-    final avgDom =
-        ratedSaves.map((s) => s.dominance).reduce((a, b) => a + b) /
-        ratedSaves.length;
-    final aggression = math.min(1.0, math.max(0.0, (avgDom + 5) / 10));
-
-    final maxElo = ratedSaves.map((s) => s.ratingSnapshot).reduce(math.max);
-    final power = math.min(1.0, math.max(0.0, (maxElo - 400) / (2000 - 400)));
-
-    final wins = ratedSaves.where((s) => s.result == 'W').length;
-    final intensity = wins / ratedSaves.length;
-
-    double speedSum = 0.0;
-    int speedCount = 0;
-    for (final s in ratedSaves) {
-      if (s.whiteTimeLeftMs == 0 || s.blackTimeLeftMs == 0) continue;
-      final double baseTimeMs = s.baseTimeMs > 0 ? s.baseTimeMs.toDouble() : 600000.0;
-      final playerTimeLeftMs = s.isPlayerWhite
-          ? s.whiteTimeLeftMs
-          : s.blackTimeLeftMs;
-      final ratio = playerTimeLeftMs / baseTimeMs;
-      speedSum += math.min(1.0, math.max(0.0, ratio));
-      speedCount++;
-    }
-    final speed = speedCount > 0 ? (speedSum / speedCount) : 0.7;
-
-    // Composure: measures ability to hold or save difficult positions under pressure.
-    // Pressure = material disadvantage (dominance < 0) OR facing an equally/more
-    // highly rated opponent.
-    final pressureGames = ratedSaves.where((s) {
-      final opponentAvatar = AiAvatar.getAvatarByName(s.opponentName);
-      final opponentRating = opponentAvatar?.rating ?? s.ratingSnapshot;
-      return s.dominance < 0 || opponentRating >= s.ratingSnapshot;
-    }).toList();
-
-    final pressureSaves = pressureGames
-        .where((s) => s.result == 'W' || s.result == 'D')
-        .length;
-    final pressureSaveRate = pressureGames.isEmpty
-        ? 0.5
-        : pressureSaves / pressureGames.length;
-
-    // Clock stability: ratio of games where player still had ≥5% clock on finish.
-    int clockStableCount = 0;
-    for (final s in ratedSaves) {
-      final baseMs = s.baseTimeMs > 0 ? s.baseTimeMs.toDouble() : 600000.0;
-      final playerTimeMs =
-          s.isPlayerWhite ? s.whiteTimeLeftMs : s.blackTimeLeftMs;
-      if (playerTimeMs / baseMs >= 0.05) clockStableCount++;
-    }
-    final clockStability = clockStableCount / ratedSaves.length;
-
-    final composure = math.min(
-      1.0,
-      (pressureSaveRate * 0.7) + (clockStability * 0.3),
-    );
-
-    playstyle = TacticalPlaystyleStats(
-      aggression: aggression,
-      power: power,
-      composure: composure,
-      intensity: intensity,
-      speed: speed,
-    );
-
-    // 3. Opening Repertoire calculations
-    final List<OpeningRepertoireStats> openings = [];
-    final Map<String, _OpeningRepertoireStatsBuilder> statsMap = {};
-    for (final s in ratedSaves) {
-      final op = OpeningClassifier.detectOpening(
-        s.recentMoves,
-        gameMode: s.gameMode,
-      );
-      if (!statsMap.containsKey(op)) {
-        statsMap[op] = _OpeningRepertoireStatsBuilder(name: op);
-      }
-      statsMap[op]!.addPlay(s.result);
-    }
-
-    final sortedStats = statsMap.values.toList()
-      ..sort((a, b) => b.plays.compareTo(a.plays));
-    final totalPlays = ratedSaves.length;
-
-    for (final s in sortedStats) {
-      final double playPercentage = (s.plays / totalPlays) * 100;
-      final double winRate = (s.wins + 0.5 * s.draws) / s.plays * 100;
-      openings.add(
-        OpeningRepertoireStats(
-          name: s.name,
-          plays: s.plays,
-          wins: s.wins,
-          draws: s.draws,
-          losses: s.losses,
-          playPercentage: playPercentage,
-          winRate: winRate,
-        ),
-      );
-    }
-
-    // 4. Endgame calculations
-    EndgamePerformanceStats? endgames;
-    final endgameSaves = ratedSaves
-        .where((s) => s.reachedEndgame || s.endgameFen != null)
-        .toList();
-    if (endgameSaves.isNotEmpty) {
-      double totalWeightedScore = 0.0;
-      double totalWeight = 0.0;
-
-      int advantageGames = 0;
-      int advantageWins = 0;
-
-      int disadvantageGames = 0;
-      int disadvantageSaves = 0;
-
-      for (final s in endgameSaves) {
-        final score = s.result == 'W' ? 1.0 : (s.result == 'D' ? 0.5 : 0.0);
-        final balance = FenParser.calculateMaterialBalance(
-          s.endgameFen ?? s.fen,
-          s.isPlayerWhite,
-        );
-
-        double complexity = 1.0;
-        if (balance > 0) {
-          complexity = 2.0;
-          advantageGames++;
-          if (s.result == 'W') advantageWins++;
-        } else if (balance < 0) {
-          complexity = 1.5;
-          disadvantageGames++;
-          if (s.result == 'W' || s.result == 'D') disadvantageSaves++;
-        } else {
-          complexity = 1.0;
-        }
-
-        totalWeightedScore += (score * complexity);
-        totalWeight += complexity;
-      }
-
-      final double epi = totalWeight > 0
-          ? (totalWeightedScore / totalWeight) * 100
-          : 0.0;
-      final double conversionRate = advantageGames > 0
-          ? (advantageWins / advantageGames) * 100
-          : 0.0;
-      final double saveRate = disadvantageGames > 0
-          ? (disadvantageSaves / disadvantageGames) * 100
-          : 0.0;
-
-      String ratingCategory = 'Provisional';
-      if (endgameSaves.length >= 15) {
-        if (epi >= 85) {
-          ratingCategory = 'Endgame Grandmaster';
-        } else if (epi >= 70) {
-          ratingCategory = 'Endgame Specialist';
-        } else if (epi >= 50) {
-          ratingCategory = 'Tactician Class I';
-        } else {
-          ratingCategory = 'Endgame Scholar';
-        }
-      } else {
-        if (epi >= 75) {
-          ratingCategory = 'Technician (Provisional)';
-        } else {
-          ratingCategory = 'Apprentice (Provisional)';
-        }
-      }
-
-      endgames = EndgamePerformanceStats(
-        epi: epi,
-        conversionRate: conversionRate,
-        saveRate: saveRate,
-        ratingCategory: ratingCategory,
-        advantageGames: advantageGames,
-        advantageWins: advantageWins,
-        disadvantageGames: disadvantageGames,
-        disadvantageSaves: disadvantageSaves,
-        endgameSavesCount: endgameSaves.length,
-      );
-    }
-
-    // 5. Heatmap daily dominance metrics
+  List<double> _recalculateHeatmap(List<PerformanceLedgerEntry> ratedSaves) {
     final List<double> dominanceHeatmap = [];
     final now = DateTime.now();
     final thirtyDaysAgo = now.subtract(const Duration(days: 30));
@@ -2270,54 +2104,12 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
           : doms.reduce((a, b) => a + b) / doms.length;
       dominanceHeatmap.add(doms.isEmpty ? double.nan : avg);
     }
-
-    // 4.5. Middlegame calculations
-    MiddlegamePerformanceStats? middlegames;
-    if (scotoma != null) {
-      try {
-        final rawMid = analyzeMiddlegame(games: uciGames, scotoma: scotoma);
-
-        // Determine archetype and description dynamically in Dart based on playstyle metrics
-        String archetype = 'Positional';
-        String description = 'You prefer slow, strategic maneuvers, improving piece placement, and grinding down your opponent.';
-
-        if (playstyle.aggression >= 0.65) {
-          archetype = 'Attacker';
-          description = 'You launch direct attacks, look for pawn storms, and push pieces forward to target the opponent king.';
-        } else if (playstyle.intensity >= 0.65) {
-          archetype = 'Tactician';
-          description = 'You thrive in chaotic, double-edged middlegames where quick calculation and sharp shots dominate.';
-        } else if (playstyle.aggression <= 0.42) {
-          archetype = 'Defender';
-          description = 'You prioritize absolute safety, build solid defensive walls, and wait for your opponent to overreach.';
-        }
-
-        middlegames = MiddlegamePerformanceStats(
-          mpi: rawMid.mpi,
-          archetype: archetype,
-          description: description,
-          decidedPercentage: rawMid.decidedPercentage,
-          winRate: rawMid.winRate,
-          totalMiddlegames: rawMid.totalMiddlegames,
-        );
-      } catch (e) {
-        debugPrint('Failed to run Rust analyzeMiddlegame in Battleground: $e');
-      }
-    }
-
-    state = state.copyWith(
-      cachedScotoma: scotoma,
-      cachedPlaystyle: playstyle,
-      cachedOpenings: openings,
-      cachedMiddlegames: middlegames,
-      cachedEndgames: endgames,
-      cachedDominanceHeatmap: dominanceHeatmap,
-    );
+    return dominanceHeatmap;
   }
 
   Future<void> resetRatedStats() async {
     try {
-      await _performanceLedgerRepository.clearAll();
+      await ref.read(performanceLedgerManagerProvider.notifier).clearAll();
       state = state.copyWith(
         consolidatedRating: 400,
         bulletElo: 400,
@@ -2341,6 +2133,8 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
         cachedMiddlegames: null,
         cachedEndgames: null,
         cachedDominanceHeatmap: const [],
+        decayIntervalsApplied: 0,
+        decayIntervalsAppliedAtLastGame: 0,
       );
       await _saveSettings();
     } catch (e) {
@@ -2351,28 +2145,18 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
   void clearMoveAnimation() {
     state = state.copyWith(moveAnimation: null);
   }
-
 }
 
-class _OpeningRepertoireStatsBuilder {
-  final String name;
-  int plays = 0;
-  int wins = 0;
-  int draws = 0;
-  int losses = 0;
-
-  _OpeningRepertoireStatsBuilder({required this.name});
-
-  void addPlay(String? result) {
-    plays++;
-    if (result == 'W') {
-      wins++;
-    } else if (result == 'D') {
-      draws++;
-    } else {
-      losses++;
-    }
-  }
+List<PerformanceLedgerEntry> selectScotomaLedgerEntries(
+  Iterable<PerformanceLedgerEntry> entries,
+) {
+  return entries
+      .where(
+        (entry) =>
+            entry.source == PerformanceLedgerEntry.ratedBattlegroundSource &&
+            const {'W', 'L', 'D'}.contains(entry.result),
+      )
+      .toList();
 }
 
 final battlegroundProvider =

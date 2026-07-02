@@ -9,7 +9,7 @@ void main() {
 
       final contextPos = await PositionContextBuilder.build(
         move: 'e2e4',
-        currentEval: 1.2,
+        currentEval: -1.2,
         previousEval: 0.3,
         game: game,
       );
@@ -17,7 +17,7 @@ void main() {
 
       final contextBrilliant = await PositionContextBuilder.build(
         move: 'e2e4',
-        currentEval: 2.5,
+        currentEval: -2.5,
         previousEval: 0.5,
         game: game,
       );
@@ -25,7 +25,7 @@ void main() {
 
       final contextBlunder = await PositionContextBuilder.build(
         move: 'e2e4',
-        currentEval: -1.5,
+        currentEval: 1.5,
         previousEval: 1.0,
         game: game,
       );

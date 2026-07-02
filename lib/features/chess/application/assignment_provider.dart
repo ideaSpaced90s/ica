@@ -47,37 +47,10 @@ class AssignmentNotifier extends Notifier<AssignmentState> {
     final loaded = await _repository.loadAssignment();
     state = loaded;
 
-    // Wait for battleground provider to finish loading settings from disk (max 5 seconds)
-    final startTime = DateTime.now();
-    while (!ref.read(battlegroundProvider).hasLoadedSettings) {
-      if (DateTime.now().difference(startTime).inSeconds >= 5) {
-        break;
-      }
-      await Future.delayed(const Duration(milliseconds: 20));
-    }
-
     final bgState = ref.read(battlegroundProvider);
-    if (state.isCalibrated != bgState.isCalibrated) {
-      if (bgState.isCalibrated) {
-        _unlockCalibration(bgState.consolidatedRating);
-      } else {
-        state = state.copyWith(
-          isCalibrated: false,
-          calibrationGamesPlayed: bgState.totalRatedGamesCount,
-        );
-        await generateActiveTasks(bgState.consolidatedRating, isNewDay: true);
-      }
-      await _saveState();
-    } else if (!state.isCalibrated) {
-      // Sync calibration progress from battleground on startup if uncalibrated
-      if (bgState.totalRatedGamesCount > state.calibrationGamesPlayed) {
-        state = state.copyWith(calibrationGamesPlayed: bgState.totalRatedGamesCount);
-        await _saveState();
-      }
+    if (bgState.hasLoadedSettings) {
+      await _syncWithBattlegroundAndCheckReset(bgState);
     }
-
-    // Check daily reset on load
-    await checkDailyReset();
 
     // Set up listeners for other providers to auto-complete tasks
     _setupListeners();
@@ -86,11 +59,6 @@ class AssignmentNotifier extends Notifier<AssignmentState> {
     if (ref.read(mobileNavIndexProvider) == 5) {
       _startAnalysisActiveTimer();
     }
-
-    // Check if already calibrated on load (e.g. if provider loads after battleground has loaded)
-    scheduleMicrotask(() {
-      _checkInitialCalibration();
-    });
 
     // Auto check-in attendance on load
     checkInAttendance();
@@ -111,17 +79,47 @@ class AssignmentNotifier extends Notifier<AssignmentState> {
     }
   }
 
+  Future<void> _syncWithBattlegroundAndCheckReset(BattlegroundState bgState) async {
+    if (state.isCalibrated != bgState.isCalibrated) {
+      if (bgState.isCalibrated) {
+        _unlockCalibration(bgState.consolidatedRating);
+      } else {
+        state = state.copyWith(
+          isCalibrated: false,
+          calibrationGamesPlayed: bgState.totalRatedGamesCount,
+        );
+        await generateActiveTasks(bgState.consolidatedRating, isNewDay: true);
+      }
+      await _saveState();
+    } else if (!state.isCalibrated) {
+      // Sync calibration progress from battleground on startup if uncalibrated
+      if (bgState.totalRatedGamesCount > state.calibrationGamesPlayed) {
+        state = state.copyWith(calibrationGamesPlayed: bgState.totalRatedGamesCount);
+        await _saveState();
+      }
+    }
+
+    // Check daily reset when battleground is ready
+    await checkDailyReset();
+
+    // Check if initial calibration completed
+    _checkInitialCalibration();
+  }
+
   void _setupListeners() {
     // Guard against duplicate subscriptions on re-init (e.g. after reloadFromDisk)
     if (_listenersSetup) return;
     _listenersSetup = true;
 
-    ref.listen<int>(mobileNavIndexProvider, (previous, next) {
+    ref.listen<int>(mobileNavIndexProvider, (previous, next) async {
       if (next == 5) {
         _startAnalysisActiveTimer();
       } else {
         _stopAnalysisActiveTimer();
       }
+
+      await checkDailyReset();
+      checkInAttendance();
     });
 
     // Listen to store provider for premium status changes
@@ -134,7 +132,16 @@ class AssignmentNotifier extends Notifier<AssignmentState> {
     });
 
     // Listen to battleground provider
-    ref.listen(battlegroundProvider, (previous, next) {
+    ref.listen<BattlegroundState>(battlegroundProvider, (previous, next) async {
+      final wasReady = previous?.hasLoadedSettings ?? false;
+      final isReady = next.hasLoadedSettings;
+      if (!wasReady && isReady) {
+        await _syncWithBattlegroundAndCheckReset(next);
+        return;
+      }
+
+      if (!isReady) return;
+
       // Sync calibration status changes (e.g. from decay or recalibration completion)
       if (state.isCalibrated != next.isCalibrated) {
         if (next.isCalibrated) {
@@ -142,7 +149,7 @@ class AssignmentNotifier extends Notifier<AssignmentState> {
         } else {
           state = state.copyWith(isCalibrated: false);
           _saveState();
-          generateActiveTasks(next.consolidatedRating, isNewDay: true);
+          await generateActiveTasks(next.consolidatedRating, isNewDay: true);
         }
         return;
       }
@@ -829,6 +836,13 @@ class AssignmentNotifier extends Notifier<AssignmentState> {
 
     final updatedLanded = Set<int>.from(state.landedIslandIndices);
     int? landfallPending;
+    final updatedMap = Map<int, List<int>>.from(state.islandStepProgress);
+
+    if (newIndex != state.currentIslandIndex) {
+      // Arriving on a different island resets or initializes its steps progress to zero
+      // so it is specific to this island progression rather than historical.
+      updatedMap[newIndex] = [0, 0, 0, 0];
+    }
 
     if (!updatedLanded.contains(newIndex)) {
       updatedLanded.add(newIndex);
@@ -850,6 +864,7 @@ class AssignmentNotifier extends Notifier<AssignmentState> {
       currentIslandIndex: newIndex,
       landedIslandIndices: updatedLanded,
       landfallPendingIndex: landfallPending,
+      islandStepProgress: updatedMap,
     );
   }
 

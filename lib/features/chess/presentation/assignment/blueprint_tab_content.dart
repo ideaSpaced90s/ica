@@ -740,23 +740,7 @@ class _BlueprintTabContentState extends ConsumerState<BlueprintTabContent>
                   ),
                   const SizedBox(height: 8),
                 ],
-                if (!isLocked && !isCompleted)
-                  TextButton(
-                    onPressed: onAction,
-                    style: TextButton.styleFrom(
-                      padding: EdgeInsets.zero,
-                      minimumSize: const Size(60, 24),
-                      alignment: Alignment.centerLeft,
-                    ),
-                    child: Text(
-                      actionLabel,
-                      style: GoogleFonts.outfit(
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.bold,
-                        color: ScholarlyTheme.accentBlue,
-                      ),
-                    ),
-                  ),
+
                 if (isCompleted)
                   Container(
                     margin: const EdgeInsets.only(top: 4),

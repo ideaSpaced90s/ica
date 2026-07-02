@@ -59,19 +59,7 @@ class FakeArasanService extends Fake implements ArasanService {
 
 class FakeChessSoundService extends Fake implements ChessSoundService {
   @override
-  void playSfx(SoundEffect sfx) {}
-
-  @override
-  void updateSettings({
-    required bool sfxEnabled,
-    required bool bgmEnabled,
-    bool gameSoundEnabled = true,
-    Map<String, bool> soundSettings = const {},
-    bool academySoundEnabled = true,
-    Map<String, bool> academySoundSettings = const {},
-    bool isAcademyActive = false,
-    bool isRatedMode = false,
-  }) {}
+  dynamic noSuchMethod(Invocation invocation) {}
 }
 
 class FakeChessHapticsService extends Fake implements ChessHapticsService {

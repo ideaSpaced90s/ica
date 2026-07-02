@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../scholarly_theme.dart';
 import '../../application/battleground_provider.dart';
+import '../../application/assignment_provider.dart';
 import 'ambient_scaffold.dart';
 
 bool hasScotomaDiagnosis({
@@ -30,9 +31,10 @@ class ScotomaCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final bgState = ref.watch(battlegroundProvider);
+    final assignmentState = ref.watch(assignmentProvider);
     final scotoma = bgState.cachedScotoma;
 
-    if (scotoma == null) {
+    if (scotoma == null || !assignmentState.isCalibrated || bgState.totalRatedGamesCount < 10) {
       final textMessage = bgState.totalRatedGamesCount < 10
           ? 'Scotoma analysis calibration in progress. Play ${10 - bgState.totalRatedGamesCount} more rated matches in Battleground to calibrate visual scotoma scanning.'
           : (bgState.recalibrationGamesRemaining > 0
