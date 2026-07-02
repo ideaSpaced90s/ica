@@ -394,15 +394,23 @@ Future<bool> showTutorialExitPrompt(BuildContext context, WidgetRef ref) async {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: ScholarlyTheme.accentBlue.withValues(alpha: 0.12),
                 shape: BoxShape.circle,
+                border: Border.all(
+                  color: ScholarlyTheme.accentBlue.withValues(alpha: 0.5),
+                  width: 2.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: ScholarlyTheme.accentBlue.withValues(alpha: 0.25),
+                    blurRadius: 12,
+                    spreadRadius: 2,
+                  ),
+                ],
               ),
-              child: const Icon(
-                Icons.school_rounded,
-                color: ScholarlyTheme.accentBlue,
-                size: 26,
+              child: const CircleAvatar(
+                radius: 36,
+                backgroundImage: AssetImage('assets/persona/gm_chanakya.webp'),
               ),
             ),
             const SizedBox(height: 14),

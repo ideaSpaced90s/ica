@@ -149,6 +149,7 @@ private:
 
     // Execute a perft test and return node count
     uint64_t perft(Board &board, int depth);
+    uint64_t perft_internal(Board &board, int depth, bool root);
 
     // Set the board position from a file
     void loadgame(Board &board, std::ifstream &file);
@@ -162,7 +163,7 @@ private:
     bool uciOptionCompare(const std::string &a, const std::string &b);
 
     // Execute a command, return false if program should terminate.
-    bool do_command(const std::string &cmd, Board &board);
+    bool do_command(const std::string &raw_cmd, Board &board);
 
     // Result from pondering. Hit = predicted opponent move,
     // NoHit = did not predict opponent move, Pending =

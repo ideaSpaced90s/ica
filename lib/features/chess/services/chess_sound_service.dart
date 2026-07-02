@@ -25,6 +25,8 @@ enum SoundEffect {
   pieceSelect,
   bookFlip,
   chanakyaNotify,
+  dice,
+  policeWhistle,
 }
 
 class ChessSoundService {
@@ -39,7 +41,7 @@ class ChessSoundService {
 
   final Map<String, String> _sfxTracks = {
     'move': 'assets/sfx/move-self.mp3',
-    'capture': 'assets/sfx/capture.mp3',
+    'capture': 'assets/sfx/sword-strikes-armor.mp3',
     'notify': 'assets/sfx/notify.mp3',
     'whoosh': 'assets/sfx/whoosh.mp3',
     'piecemove': 'assets/sfx/piecemove.mp3',
@@ -64,6 +66,9 @@ class ChessSoundService {
     'laser_small': 'assets/sfx/laserSmall_004.ogg',
     'book_flip': 'assets/sfx/book_flip.ogg',
     'alarm': 'assets/sfx/alarm-digital-clock-beep.mp3',
+    'fart': 'assets/sfx/fart.mp3',
+    'dice': 'assets/sfx/dice.mp3',
+    'whistle': 'assets/sfx/police-short-whistle.mp3',
   };
 
   final List<AudioSource> _bgmSources = [];
@@ -80,6 +85,7 @@ class ChessSoundService {
   String boardThemeId = 'classic';
   bool isAcademyActive = false;
   bool isRatedMode = false;
+  bool isBattlegroundSoundEnabled = false;
   Map<String, bool> soundSettings = const {
     'moveSounds': true,
     'captureSounds': true,
@@ -166,12 +172,15 @@ class ChessSoundService {
     Map<String, bool> academySoundSettings = const {},
     bool isAcademyActive = false,
     bool isRatedMode = false,
+    bool isBattlegroundSoundEnabled = false,
   }) {
     isSfxEnabled = sfxEnabled;
     isGameSoundEnabled = gameSoundEnabled;
     isAcademySoundEnabled = academySoundEnabled;
     this.isAcademyActive = isAcademyActive;
+    final ratedModeChanged = this.isRatedMode != isRatedMode;
     this.isRatedMode = isRatedMode;
+    this.isBattlegroundSoundEnabled = isBattlegroundSoundEnabled;
     if (soundSettings.isNotEmpty) {
       this.soundSettings = soundSettings;
     }
@@ -179,7 +188,7 @@ class ChessSoundService {
       this.academySoundSettings = academySoundSettings;
     }
 
-    final bgmChanged = isBgmEnabled != bgmEnabled;
+    final bgmChanged = isBgmEnabled != bgmEnabled || ratedModeChanged;
     isBgmEnabled = bgmEnabled;
 
     if (bgmChanged) {
@@ -194,7 +203,7 @@ class ChessSoundService {
   }
 
   void _updateBgmPlayback() {
-    if (isBgmEnabled && !_isInMutedTab) {
+    if (isBgmEnabled && !_isInMutedTab && !isRatedMode) {
       if (_isInitialized) {
         if (_bgmHandle == null) {
           _playRandomBgm();
@@ -206,7 +215,7 @@ class ChessSoundService {
   }
 
   Future<void> _playRandomBgm() async {
-    if (!isBgmEnabled || _isInMutedTab || _bgmSources.isEmpty || !SoLoud.instance.isInitialized) return;
+    if (!isBgmEnabled || _isInMutedTab || isRatedMode || _bgmSources.isEmpty || !SoLoud.instance.isInitialized) return;
 
     try {
       final sources = List<AudioSource>.from(_bgmSources)..shuffle();
@@ -406,6 +415,9 @@ class ChessSoundService {
       case SoundEffect.promote:
       case SoundEffect.pieceSelect:
         return true;
+      case SoundEffect.dice:
+      case SoundEffect.policeWhistle:
+        return true;
       case SoundEffect.click:
       case SoundEffect.uiClick:
       case SoundEffect.uiNavigate:
@@ -428,6 +440,24 @@ class ChessSoundService {
         : true;
     if (!enabled) return;
 
+    _executeSfx(effect);
+  }
+
+  void playBattlegroundSfx(SoundEffect effect) {
+    if (!isSfxEnabled) return;
+    if (!isBattlegroundSoundEnabled) return;
+    final isGame = _isGameSound(effect);
+    if (isGame && !isThemeSoundEnabled) return;
+    final enabled = isGame
+        ? (isAcademyActive ? isAcademySoundEnabled : isGameSoundEnabled)
+        : true;
+    if (!enabled) return;
+
+    _executeSfx(effect);
+  }
+
+  void _executeSfx(SoundEffect effect) {
+    final isGame = _isGameSound(effect);
     // Check specific sub-categories for game sounds
     if (isGame) {
       switch (effect) {
@@ -466,7 +496,7 @@ class ChessSoundService {
         playCapture();
         break;
       case SoundEffect.illegal:
-        _playSound('thud');
+        _playSound('fart');
         break;
       case SoundEffect.click:
       case SoundEffect.uiClick:
@@ -482,7 +512,7 @@ class ChessSoundService {
         playNotify();
         break;
       case SoundEffect.gameover:
-        playWhoosh();
+        _playSound('promotion_bell');
         break;
       // Kenney-based RPG/UI sound enhancements
       case SoundEffect.gmchanakyaThinking:
@@ -495,7 +525,7 @@ class ChessSoundService {
         _playSound('promotion_bell');
         break;
       case SoundEffect.defeat:
-        _playSound('creak');
+        _playSound('fart');
         break;
       case SoundEffect.draw:
         _playSound('metal_latch');
@@ -523,6 +553,12 @@ class ChessSoundService {
       case SoundEffect.chanakyaNotify:
         _playSound('notify', isThemeSound: false);
         break;
+      case SoundEffect.dice:
+        _playSound('dice');
+        break;
+      case SoundEffect.policeWhistle:
+        _playSound('whistle');
+        break;
     }
   }
 
@@ -548,7 +584,7 @@ class ChessSoundService {
   }
 
   String _getCaptureSoundForTheme(String themeId) {
-    return 'creak';
+    return 'capture';
   }
 
   String _getCheckSoundForTheme(String themeId) {
@@ -560,10 +596,7 @@ class ChessSoundService {
   }
 
   String _getCastleSoundForTheme(String themeId) {
-    if (themeId == 'classic' || themeId == 'scholar' || themeId == 'vector_glass') {
-      return 'laser_small';
-    }
-    return 'metal_latch';
+    return 'whoosh';
   }
 
   void dispose() {

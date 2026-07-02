@@ -10,6 +10,7 @@ class AppSettings {
   final bool isSoundEnabled;
   final bool isGameSoundEnabled;
   final bool isAcademySoundEnabled;
+  final bool isBattlegroundSoundEnabled;
   final bool isMusicEnabled;
   final bool isAnimationsEnabled;
   final bool isHapticsEnabled;
@@ -36,11 +37,8 @@ class AppSettings {
   
   final int totalRatedGamesCount;
   final int bulletGamesClassic;
-  final int bulletGames960;
   final int blitzGamesClassic;
-  final int blitzGames960;
   final int rapidGamesClassic;
-  final int rapidGames960;
   
   final int totalWinningStreak;
   final int bulletStreak;
@@ -81,6 +79,7 @@ class AppSettings {
     this.isSoundEnabled = true,
     this.isGameSoundEnabled = true,
     this.isAcademySoundEnabled = true,
+    this.isBattlegroundSoundEnabled = false,
     this.isMusicEnabled = false,
     this.isAnimationsEnabled = true,
     this.isHapticsEnabled = true,
@@ -102,11 +101,8 @@ class AppSettings {
     this.decayIntervalsApplied = 0,
     this.totalRatedGamesCount = 0,
     this.bulletGamesClassic = 0,
-    this.bulletGames960 = 0,
     this.blitzGamesClassic = 0,
-    this.blitzGames960 = 0,
     this.rapidGamesClassic = 0,
-    this.rapidGames960 = 0,
     this.totalWinningStreak = 0,
     this.bulletStreak = 0,
     this.blitzStreak = 0,
@@ -160,6 +156,7 @@ class AppSettings {
     bool? isSoundEnabled,
     bool? isGameSoundEnabled,
     bool? isAcademySoundEnabled,
+    bool? isBattlegroundSoundEnabled,
     bool? isMusicEnabled,
     bool? isAnimationsEnabled,
     bool? isHapticsEnabled,
@@ -184,11 +181,8 @@ class AppSettings {
     int? decayIntervalsApplied,
     int? totalRatedGamesCount,
     int? bulletGamesClassic,
-    int? bulletGames960,
     int? blitzGamesClassic,
-    int? blitzGames960,
     int? rapidGamesClassic,
-    int? rapidGames960,
     int? totalWinningStreak,
     int? bulletStreak,
     int? blitzStreak,
@@ -221,6 +215,7 @@ class AppSettings {
       isSoundEnabled: isSoundEnabled ?? this.isSoundEnabled,
       isGameSoundEnabled: isGameSoundEnabled ?? this.isGameSoundEnabled,
       isAcademySoundEnabled: isAcademySoundEnabled ?? this.isAcademySoundEnabled,
+      isBattlegroundSoundEnabled: isBattlegroundSoundEnabled ?? this.isBattlegroundSoundEnabled,
       isMusicEnabled: isMusicEnabled ?? this.isMusicEnabled,
       isAnimationsEnabled: isAnimationsEnabled ?? this.isAnimationsEnabled,
       isHapticsEnabled: isHapticsEnabled ?? this.isHapticsEnabled,
@@ -247,11 +242,8 @@ class AppSettings {
       decayIntervalsApplied: decayIntervalsApplied ?? this.decayIntervalsApplied,
       totalRatedGamesCount: totalRatedGamesCount ?? this.totalRatedGamesCount,
       bulletGamesClassic: bulletGamesClassic ?? this.bulletGamesClassic,
-      bulletGames960: bulletGames960 ?? this.bulletGames960,
       blitzGamesClassic: blitzGamesClassic ?? this.blitzGamesClassic,
-      blitzGames960: blitzGames960 ?? this.blitzGames960,
       rapidGamesClassic: rapidGamesClassic ?? this.rapidGamesClassic,
-      rapidGames960: rapidGames960 ?? this.rapidGames960,
       totalWinningStreak: totalWinningStreak ?? this.totalWinningStreak,
       bulletStreak: bulletStreak ?? this.bulletStreak,
       blitzStreak: blitzStreak ?? this.blitzStreak,
@@ -292,6 +284,7 @@ class AppSettings {
     'isSoundEnabled': isSoundEnabled,
     'isGameSoundEnabled': isGameSoundEnabled,
     'isAcademySoundEnabled': isAcademySoundEnabled,
+    'isBattlegroundSoundEnabled': isBattlegroundSoundEnabled,
     'isMusicEnabled': isMusicEnabled,
     'isAnimationsEnabled': isAnimationsEnabled,
     'isHapticsEnabled': isHapticsEnabled,
@@ -313,11 +306,8 @@ class AppSettings {
     'decayIntervalsApplied': decayIntervalsApplied,
     'totalRatedGamesCount': totalRatedGamesCount,
     'bulletGamesClassic': bulletGamesClassic,
-    'bulletGames960': bulletGames960,
     'blitzGamesClassic': blitzGamesClassic,
-    'blitzGames960': blitzGames960,
     'rapidGamesClassic': rapidGamesClassic,
-    'rapidGames960': rapidGames960,
     'totalWinningStreak': totalWinningStreak,
     'bulletStreak': bulletStreak,
     'blitzStreak': blitzStreak,
@@ -385,6 +375,7 @@ class AppSettings {
       isSoundEnabled: json['isSoundEnabled'] ?? true,
       isGameSoundEnabled: json['isGameSoundEnabled'] ?? true,
       isAcademySoundEnabled: json['isAcademySoundEnabled'] ?? true,
+      isBattlegroundSoundEnabled: json['isBattlegroundSoundEnabled'] ?? false,
       isMusicEnabled: json['isMusicEnabled'] ?? false,
       isAnimationsEnabled: json['isAnimationsEnabled'] ?? true,
       isHapticsEnabled: json['isHapticsEnabled'] ?? true,
@@ -405,12 +396,11 @@ class AppSettings {
       recalibrationGamesRemaining: json['recalibrationGamesRemaining'] ?? 0,
       decayIntervalsApplied: json['decayIntervalsApplied'] ?? 0,
       totalRatedGamesCount: json['totalRatedGamesCount'] ?? legacyCount,
-      bulletGamesClassic: json['bulletGamesClassic'] ?? 0,
-      bulletGames960: json['bulletGames960'] ?? 0,
-      blitzGamesClassic: json['blitzGamesClassic'] ?? 0,
-      blitzGames960: json['blitzGames960'] ?? 0,
-      rapidGamesClassic: json['rapidGamesClassic'] ?? 0,
-      rapidGames960: json['rapidGames960'] ?? 0,
+      // Migration: merge any historical Chess960 Battleground counts into classic
+      // counters. From this version onward, Battleground is Classic-only.
+      bulletGamesClassic: (json['bulletGamesClassic'] ?? 0) + (json['bulletGames960'] ?? 0),
+      blitzGamesClassic:  (json['blitzGamesClassic']  ?? 0) + (json['blitzGames960']  ?? 0),
+      rapidGamesClassic:  (json['rapidGamesClassic']  ?? 0) + (json['rapidGames960']  ?? 0),
       totalWinningStreak: json['totalWinningStreak'] ?? legacyStreak,
       bulletStreak: json['bulletStreak'] ?? 0,
       blitzStreak: json['blitzStreak'] ?? 0,

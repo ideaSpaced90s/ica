@@ -24,9 +24,9 @@ class TechStackTab extends StatelessWidget {
       },
       {
         'icon': Icons.memory_rounded,
-        'category': 'LOCAL CHESS ENGINE',
-        'technology': 'Arasan 25.4 (Native FFI)',
-        'description': 'Runs locally via an ARMv8 optimized C++ binary (`libarasan_chess_engine.so`) interacting via non-blocking standard I/O pipes.',
+        'category': 'CHESS ENGINE',
+        'technology': 'Kingslayer 1.0 (Native FFI)',
+        'description': 'IdeaSpace\'s proprietary chess engine, powered by IdeaSpace — based on Arasan 25.4 by Jon Dart (MIT License), subsequently modified for Chess 960 (Fischer Random) support. Runs locally via an ARMv8-optimized C++ binary (`libarasan_chess_engine.so`) interacting via non-blocking standard I/O pipes.',
       },
       {
         'icon': Icons.settings_suggest_rounded,

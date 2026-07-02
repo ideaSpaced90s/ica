@@ -43,7 +43,7 @@ class ManualTab extends StatelessWidget {
       {
         'icon': Icons.emoji_events_rounded,
         'title': '🏟️ Battleground',
-        'description': 'A zero-pressure analytical arena. Test new strategies against the native Arasan engine with support for on-board evaluation meters and robot simulation modes.',
+        'description': 'A zero-pressure analytical arena. Test new strategies against the native Kingslayer 1.0 engine with support for on-board evaluation meters and robot simulation modes.',
         'bullets': [
           'Analyze mid-game board dynamics using the liquid centipawn evaluation bar.',
           'Activate Robot Mode to command engine-versus-engine play dynamically.',
@@ -105,7 +105,7 @@ class ManualTab extends StatelessWidget {
         'title': '⚙️ Settings',
         'description': 'Full client configurations. Control native engine thread bounds, background volume mixers, board visual templates, and move confirmation boxes.',
         'bullets': [
-          'Set custom Arasan processing limits from 100ms to 3000ms.',
+          'Set custom Kingslayer 1.0 engine processing limits from 100ms to 3000ms.',
           'Customize your interface by selecting from 26 board themes and piece sets.',
           'Toggle tactile vibrations and visual clock safety warning flashes.',
         ],

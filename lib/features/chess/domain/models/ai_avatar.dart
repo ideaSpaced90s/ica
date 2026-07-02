@@ -408,6 +408,15 @@ class AiAvatar {
     return avatars.firstWhere((a) => a.id == id, orElse: () => avatars[12]); // Default to Vala
   }
 
+  /// Looks up an avatar by display name. Returns null if not found.
+  static AiAvatar? getAvatarByName(String name) {
+    try {
+      return avatars.firstWhere((a) => a.name == name);
+    } catch (_) {
+      return null;
+    }
+  }
+
   static AiAvatar getBestMatch(int rating) {
     AiAvatar best = avatars[0];
     int minDiff = (rating - best.rating).abs();

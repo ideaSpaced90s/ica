@@ -209,7 +209,7 @@ class _GMChanakyaNewGameOverlayState extends ConsumerState<GMChanakyaNewGameOver
                             fontWeight: FontWeight.w500,
                             height: 1.55,
                           ),
-                          children: _buildChanakyaSpeech(context, arenaState, chessState),
+                          children: _buildChanakyaSpeech(context, arenaState, chessState, modeText),
                         ),
                       ),
                     ),
@@ -387,11 +387,8 @@ class _GMChanakyaNewGameOverlayState extends ConsumerState<GMChanakyaNewGameOver
     );
   }
 
-  List<TextSpan> _buildChanakyaSpeech(BuildContext context, ArenaState state, ChessState chessState) {
+  List<TextSpan> _buildChanakyaSpeech(BuildContext context, ArenaState state, ChessState chessState, String modeText) {
     final isEvE = state.isEngineVsEngine;
-    final String modeText = state.gameMode == 'chess960'
-        ? 'Chess960'
-        : (state.gameMode == 'custom' ? 'Custom' : 'Classic Chess');
 
     // Format Timing
     final String timeStr;

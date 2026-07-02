@@ -402,7 +402,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
             children: [
               ConsolidatedEloCard(bgState: bgState),
               TotalMatchesCard(bgState: bgState),
-              const GameModesCard(),
+              const TimeControlCard(),
             ],
           );
 

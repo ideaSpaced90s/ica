@@ -71,7 +71,9 @@ class Options {
         std::string game_pathname;
     } games;
 
-    Options() : memorySet(false), cpusSet(false) {
+    bool uci_chess960;
+
+    Options() : memorySet(false), cpusSet(false), uci_chess960(false) {
     }
 
     template <class T> static bool setOption(const std::string &value, T &dest) {

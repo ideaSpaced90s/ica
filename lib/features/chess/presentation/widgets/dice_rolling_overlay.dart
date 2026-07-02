@@ -2,8 +2,11 @@ import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../services/chess_sound_service.dart';
+import '../../application/chess_provider.dart';
 
-class DiceRollingOverlay extends StatefulWidget {
+class DiceRollingOverlay extends ConsumerStatefulWidget {
   final bool isWhite;
   final VoidCallback onComplete;
 
@@ -14,10 +17,10 @@ class DiceRollingOverlay extends StatefulWidget {
   });
 
   @override
-  State<DiceRollingOverlay> createState() => _DiceRollingOverlayState();
+  ConsumerState<DiceRollingOverlay> createState() => _DiceRollingOverlayState();
 }
 
-class _DiceRollingOverlayState extends State<DiceRollingOverlay> with SingleTickerProviderStateMixin {
+class _DiceRollingOverlayState extends ConsumerState<DiceRollingOverlay> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _rotationAnimation;
   late Animation<double> _scaleAnimation;
@@ -30,6 +33,9 @@ class _DiceRollingOverlayState extends State<DiceRollingOverlay> with SingleTick
       duration: const Duration(milliseconds: 3500),
       vsync: this,
     );
+
+    // Play dice shuffling sound (gated inside playBattlegroundSfx)
+    ref.read(chessSoundServiceProvider).playBattlegroundSfx(SoundEffect.dice);
 
     _rotationAnimation = Tween<double>(begin: 0, end: 8 * math.pi).animate(
       CurvedAnimation(

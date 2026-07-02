@@ -432,6 +432,7 @@ class _ArenaPageState extends ConsumerState<ArenaPage> with WidgetsBindingObserv
                     }
                     ref.read(storeProvider.notifier).recordArenaGame();
                     ref.read(arenaProvider.notifier).reset();
+                    ref.read(chessSoundServiceProvider).playSfx(SoundEffect.dice);
                     setState(() {
                       _showNewGameConfirmOverlay = false;
                     });

@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../domain/chess_game.dart';
-import '../domain/chess_960_generator.dart';
 import '../domain/models/ai_avatar.dart';
 import '../domain/models/candidate_move.dart';
 import '../domain/chess_persona_evaluator.dart';
@@ -88,11 +87,8 @@ class BattlegroundState {
   final int rapidElo;
   final int totalRatedGamesCount;
   final int bulletGamesClassic;
-  final int bulletGames960;
   final int blitzGamesClassic;
-  final int blitzGames960;
   final int rapidGamesClassic;
-  final int rapidGames960;
   final int totalWinningStreak;
   final int bulletStreak;
   final int blitzStreak;
@@ -161,11 +157,8 @@ class BattlegroundState {
     this.rapidElo = 400,
     this.totalRatedGamesCount = 0,
     this.bulletGamesClassic = 0,
-    this.bulletGames960 = 0,
     this.blitzGamesClassic = 0,
-    this.blitzGames960 = 0,
     this.rapidGamesClassic = 0,
-    this.rapidGames960 = 0,
     this.totalWinningStreak = 0,
     this.bulletStreak = 0,
     this.blitzStreak = 0,
@@ -191,7 +184,7 @@ class BattlegroundState {
     this.cachedLedgerEntries = const [],
   });
 
-  bool get isChess960 => gameMode == 'chess960';
+  // Battleground is always Classic chess — Chess 960 is available in Arena and Academy only.
   bool get isCalibrating => totalRatedGamesCount < 10;
   bool get isCalibrated => totalRatedGamesCount >= 10 && recalibrationGamesRemaining == 0;
   int get calibrationGamesRemaining => math.max(0, 10 - totalRatedGamesCount);
@@ -252,11 +245,8 @@ class BattlegroundState {
     int? rapidElo,
     int? totalRatedGamesCount,
     int? bulletGamesClassic,
-    int? bulletGames960,
     int? blitzGamesClassic,
-    int? blitzGames960,
     int? rapidGamesClassic,
-    int? rapidGames960,
     int? totalWinningStreak,
     int? bulletStreak,
     int? blitzStreak,
@@ -345,11 +335,8 @@ class BattlegroundState {
       rapidElo: rapidElo ?? this.rapidElo,
       totalRatedGamesCount: totalRatedGamesCount ?? this.totalRatedGamesCount,
       bulletGamesClassic: bulletGamesClassic ?? this.bulletGamesClassic,
-      bulletGames960: bulletGames960 ?? this.bulletGames960,
       blitzGamesClassic: blitzGamesClassic ?? this.blitzGamesClassic,
-      blitzGames960: blitzGames960 ?? this.blitzGames960,
       rapidGamesClassic: rapidGamesClassic ?? this.rapidGamesClassic,
-      rapidGames960: rapidGames960 ?? this.rapidGames960,
       totalWinningStreak: totalWinningStreak ?? this.totalWinningStreak,
       bulletStreak: bulletStreak ?? this.bulletStreak,
       blitzStreak: blitzStreak ?? this.blitzStreak,
@@ -410,6 +397,35 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
     _hapticsService = ref.watch(chessHapticsServiceProvider);
     _settingsRepository = ref.watch(settingsRepositoryProvider);
 
+    // Sync sound service settings immediately when entering Battleground mode
+    final initialSettings = ref.read(chessProvider);
+    _soundService.updateSettings(
+      sfxEnabled: initialSettings.isSoundEnabled,
+      bgmEnabled: initialSettings.isMusicEnabled,
+      gameSoundEnabled: initialSettings.isGameSoundEnabled,
+      soundSettings: initialSettings.soundSettings,
+      academySoundEnabled: initialSettings.isAcademySoundEnabled,
+      academySoundSettings: initialSettings.academySoundSettings,
+      isAcademyActive: false,
+      isRatedMode: true,
+      isBattlegroundSoundEnabled: initialSettings.isBattlegroundSoundEnabled,
+    );
+
+    ref.listen<ChessState>(chessProvider, (previous, next) {
+      // Sync sound settings when settings change
+      _soundService.updateSettings(
+        sfxEnabled: next.isSoundEnabled,
+        bgmEnabled: next.isMusicEnabled,
+        gameSoundEnabled: next.isGameSoundEnabled,
+        soundSettings: next.soundSettings,
+        academySoundEnabled: next.isAcademySoundEnabled,
+        academySoundSettings: next.academySoundSettings,
+        isAcademyActive: false,
+        isRatedMode: true,
+        isBattlegroundSoundEnabled: next.isBattlegroundSoundEnabled,
+      );
+    });
+
     ref.onDispose(() {
       _isDisposed = true;
       _clockTimer?.cancel();
@@ -429,7 +445,7 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
     state = state.copyWith(
       isBoardFlipped: settings.isBoardFlipped,
       isPlayerWhite: settings.isPlayerWhite,
-      gameMode: settings.gameMode,
+      gameMode: 'classic',
 
       // Load Elo ratings, streaks, and counts
       consolidatedRating: s.consolidatedRating,
@@ -438,11 +454,8 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
       rapidElo: s.rapidElo,
       totalRatedGamesCount: s.totalRatedGamesCount,
       bulletGamesClassic: s.bulletGamesClassic,
-      bulletGames960: s.bulletGames960,
       blitzGamesClassic: s.blitzGamesClassic,
-      blitzGames960: s.blitzGames960,
       rapidGamesClassic: s.rapidGamesClassic,
-      rapidGames960: s.rapidGames960,
       totalWinningStreak: s.totalWinningStreak,
       bulletStreak: s.bulletStreak,
       blitzStreak: s.blitzStreak,
@@ -597,8 +610,7 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
       );
       await _arasanEngine.init();
 
-      final is960 = state.gameMode == 'chess960';
-      await _arasanEngine.setChess960Mode(is960);
+      await _arasanEngine.setChess960Mode(false); // Battleground always classic
 
       final opponent =
           state.activeOpponent ??
@@ -649,50 +661,7 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
     }
 
     _currentCandidates.clear();
-    final is960 = state.gameMode == 'chess960';
-    if (is960) {
-      _searchFen = state.game.fen;
-      final moves = state.game.generateMoves();
-      if (moves.isEmpty) return;
-
-      chess_lib.Move bestM = moves.first;
-      int bestScore = -99999;
-      for (final m in moves) {
-        int score = 0;
-        if (m.captured != null) {
-          score += 100;
-          switch (m.captured) {
-            case chess_lib.PieceType.PAWN: score += 10; break;
-            case chess_lib.PieceType.KNIGHT: score += 30; break;
-            case chess_lib.PieceType.BISHOP: score += 30; break;
-            case chess_lib.PieceType.ROOK: score += 50; break;
-            case chess_lib.PieceType.QUEEN: score += 90; break;
-          }
-        }
-        if (m.promotion != null) {
-          score += 80;
-        }
-        score += (m.hashCode % 10);
-        if (score > bestScore) {
-          bestScore = score;
-          bestM = m;
-        }
-      }
-
-      final fromStr = chess_lib.Chess.algebraic(bestM.from);
-      final toStr = chess_lib.Chess.algebraic(bestM.to);
-      final promoStr = bestM.promotion != null ? bestM.promotion!.name.toLowerCase() : '';
-      final uciMove = '$fromStr$toStr$promoStr';
-
-      Timer(const Duration(milliseconds: 600), () {
-        if (!_isDisposed && _searchFen == state.game.fen) {
-          _handleEngineOutput('bestmove $uciMove');
-        }
-      });
-      return;
-    }
-
-    await _arasanEngine.setChess960Mode(false);
+    await _arasanEngine.setChess960Mode(false); // Battleground always classic
 
     final opponent =
         state.activeOpponent ?? AiAvatar.getBestMatch(state.consolidatedRating);
@@ -967,7 +936,7 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
 
     if (isPawn && isPromotionRank) {
       _stopClockTimer();
-      // _soundService.playSfx(SoundEffect.promote);
+      _soundService.playBattlegroundSfx(SoundEffect.promote);
       _hapticsService.selection();
       state = state.copyWith(
         isPromoting: true,
@@ -1055,8 +1024,7 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
     final movesToKeep = state.recentMoves.sublist(0, index + 1);
     final uciMovesToKeep = state.uciMoves.take(index + 1).toList();
 
-    final is960 = state.gameMode == 'chess960';
-    final tempGame = ChessGame(fen: state.game.initialFen, isChess960: is960);
+    final tempGame = ChessGame(fen: state.game.initialFen, isChess960: false);
 
     for (final m in uciMovesToKeep) {
       tempGame.makeMove({
@@ -1092,9 +1060,10 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
       );
     }
 
-    // Haptics enabled in Battleground when globally enabled, SFX disabled for snappiness
+    final move = state.game.history.isEmpty ? null : state.game.history.last;
+
+    // Haptics enabled in Battleground when globally enabled, SFX enabled if configured
     if (ref.read(chessProvider).isHapticsEnabled) {
-      final move = state.game.history.isEmpty ? null : state.game.history.last;
       if (state.game.inCheckmate) {
         _hapticsService.mateBurst();
       } else if (state.game.inCheck) {
@@ -1104,6 +1073,37 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
       } else {
         _hapticsService.softTap();
       }
+    }
+
+    // Play Battleground SFX
+    bool isCastle = false;
+    if (move != null) {
+      final piece = move.move.piece;
+      final type = piece.toString().toLowerCase();
+      if (type == 'k') {
+        final fromFile = move.move.from % 8;
+        final toFile = move.move.to % 8;
+        if ((fromFile - toFile).abs() == 2) {
+          isCastle = true;
+        }
+      }
+    }
+
+    if (state.game.gameOver) {
+      final isDraw = state.game.inDraw || state.game.inStalemate;
+      if (isDraw) {
+        _soundService.playBattlegroundSfx(SoundEffect.draw);
+      } else {
+        final winnerIsWhite = playerJustMoved == 'White';
+        final humanWon = winnerIsWhite == state.isPlayerWhite;
+        _soundService.playBattlegroundSfx(humanWon ? SoundEffect.victory : SoundEffect.defeat);
+      }
+    } else if (state.game.inCheck) {
+      _soundService.playBattlegroundSfx(SoundEffect.check);
+    } else if (isCastle) {
+      _soundService.playBattlegroundSfx(SoundEffect.castle);
+    } else {
+      _soundService.playBattlegroundSfx(move?.move.captured != null ? SoundEffect.capture : SoundEffect.move);
     }
 
     final threatened = <String>[];
@@ -1296,7 +1296,6 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
       state.baseTimeDuration,
       state.incrementDuration,
     );
-    final is960 = state.gameMode == 'chess960';
     final opponent = opponentOverride ??
         state.activeOpponent ?? AiAvatar.getBestMatch(state.consolidatedRating);
 
@@ -1306,15 +1305,15 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
 
     if (category == 'bullet') {
       currentSpecificElo = state.bulletElo;
-      currentSpecificCount = state.bulletGamesClassic + state.bulletGames960;
+      currentSpecificCount = state.bulletGamesClassic;
       currentSpecificStreak = state.bulletStreak;
     } else if (category == 'blitz') {
       currentSpecificElo = state.blitzElo;
-      currentSpecificCount = state.blitzGamesClassic + state.blitzGames960;
+      currentSpecificCount = state.blitzGamesClassic;
       currentSpecificStreak = state.blitzStreak;
     } else {
       currentSpecificElo = state.rapidElo;
-      currentSpecificCount = state.rapidGamesClassic + state.rapidGames960;
+      currentSpecificCount = state.rapidGamesClassic;
       currentSpecificStreak = state.rapidStreak;
     }
 
@@ -1370,15 +1369,15 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
 
     if (!skipGameCountUpdate) {
       if (category == 'bullet') {
-        final count = state.bulletGamesClassic + state.bulletGames960;
+        final count = state.bulletGamesClassic;
         newBulletDom =
             ((state.bulletDominance * count) + currentMargin) / (count + 1);
       } else if (category == 'blitz') {
-        final count = state.blitzGamesClassic + state.blitzGames960;
+        final count = state.blitzGamesClassic;
         newBlitzDom =
             ((state.blitzDominance * count) + currentMargin) / (count + 1);
       } else {
-        final count = state.rapidGamesClassic + state.rapidGames960;
+        final count = state.rapidGamesClassic;
         newRapidDom =
             ((state.rapidDominance * count) + currentMargin) / (count + 1);
       }
@@ -1399,32 +1398,23 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
       bulletStreak: category == 'bullet'
           ? newSpecificStreak
           : state.bulletStreak,
-      bulletGamesClassic: (category == 'bullet' && !is960 && !skipGameCountUpdate)
+      bulletGamesClassic: (category == 'bullet' && !skipGameCountUpdate)
           ? state.bulletGamesClassic + 1
           : state.bulletGamesClassic,
-      bulletGames960: (category == 'bullet' && is960 && !skipGameCountUpdate)
-          ? state.bulletGames960 + 1
-          : state.bulletGames960,
       bulletDominance: newBulletDom,
 
       blitzElo: category == 'blitz' ? newSpecificElo : state.blitzElo,
       blitzStreak: category == 'blitz' ? newSpecificStreak : state.blitzStreak,
-      blitzGamesClassic: (category == 'blitz' && !is960 && !skipGameCountUpdate)
+      blitzGamesClassic: (category == 'blitz' && !skipGameCountUpdate)
           ? state.blitzGamesClassic + 1
           : state.blitzGamesClassic,
-      blitzGames960: (category == 'blitz' && is960 && !skipGameCountUpdate)
-          ? state.blitzGames960 + 1
-          : state.blitzGames960,
       blitzDominance: newBlitzDom,
 
       rapidElo: category == 'rapid' ? newSpecificElo : state.rapidElo,
       rapidStreak: category == 'rapid' ? newSpecificStreak : state.rapidStreak,
-      rapidGamesClassic: (category == 'rapid' && !is960 && !skipGameCountUpdate)
+      rapidGamesClassic: (category == 'rapid' && !skipGameCountUpdate)
           ? state.rapidGamesClassic + 1
           : state.rapidGamesClassic,
-      rapidGames960: (category == 'rapid' && is960 && !skipGameCountUpdate)
-          ? state.rapidGames960 + 1
-          : state.rapidGames960,
       rapidDominance: newRapidDom,
     );
 
@@ -1452,6 +1442,30 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
       isResigned: true,
     );
     await _saveSettings();
+  }
+
+  void pauseGame() {
+    if (state.isPaused) return;
+    state = state.copyWith(isPaused: true);
+    _stopClockTimer();
+    _engineMoveTimer?.cancel();
+    _engineMoveTimer = null;
+    _stopAnalysisAndReset();
+    state = state.copyWith(isEngineThinking: false);
+    debugPrint('BattlegroundNotifier: Rated game paused via lifecycle.');
+  }
+
+  void resumeGame() {
+    if (!state.isPaused) return;
+    state = state.copyWith(isPaused: false);
+    if (state.clockStarted) {
+      _startClockTicker();
+    }
+    if (_isAiTurn() && !state.game.gameOver && !state.isTimeOut) {
+      state = state.copyWith(isEngineThinking: true);
+      unawaited(ensureGameServicesStarted(analyzeCurrentPosition: true));
+    }
+    debugPrint('BattlegroundNotifier: Rated game resumed via lifecycle.');
   }
 
   Future<bool> offerDraw() async {
@@ -1612,13 +1626,7 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
     _stopAnalysisAndReset();
     _dominanceSamples.clear();
 
-    final is960 = state.gameMode == 'chess960';
-    final initialGame = is960
-        ? ChessGame(
-            fen: Chess960Generator.generateRandomPosition().fen,
-            isChess960: true,
-          )
-        : ChessGame(isChess960: false);
+    final initialGame = ChessGame(isChess960: false); // Battleground always classic
 
     state = state.copyWith(
       game: initialGame,
@@ -1661,13 +1669,7 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
     _stopAnalysisAndReset();
     _dominanceSamples.clear();
 
-    final is960 = state.gameMode == 'chess960';
-    final initialGame = is960
-        ? ChessGame(
-            fen: Chess960Generator.generateRandomPosition().fen,
-            isChess960: true,
-          )
-        : ChessGame(isChess960: false);
+    final initialGame = ChessGame(isChess960: false); // Battleground always classic
 
     // Determine if AI moves first (player is Black means White = AI goes first)
     final aiMovesFirst = !forcedPlayerWhite;
@@ -1755,15 +1757,11 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
 
   void toggleBoardOrientation() {
     state = state.copyWith(isBoardFlipped: !state.isBoardFlipped);
-    // Sound effects disabled in Battleground
-    // _soundService.playSfx(SoundEffect.uiClick);
+    _soundService.playBattlegroundSfx(SoundEffect.uiClick);
   }
 
-  void setGameMode(String mode) {
-    if (state.gameMode == mode) return;
-    state = state.copyWith(gameMode: mode);
-    reset(keepOpponent: true);
-  }
+  // setGameMode removed: Battleground is Classic chess only.
+  // Chess 960 is available in Arena and Academy.
 
   void setTimeControl(Duration total, Duration increment) {
     state = state.copyWith(
@@ -1861,7 +1859,8 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
     final result = humanWon ? 'W' : 'L';
     await saveCurrentGame(resultOverride: result);
 
-    // Timeout sound disabled in Battleground
+    // Timeout sound in Battleground
+    _soundService.playBattlegroundSfx(humanWon ? SoundEffect.victory : SoundEffect.defeat);
   }
 
   String _clockSideForTurn() {
@@ -1882,11 +1881,8 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
       rapidElo: state.rapidElo,
       totalRatedGamesCount: state.totalRatedGamesCount,
       bulletGamesClassic: state.bulletGamesClassic,
-      bulletGames960: state.bulletGames960,
       blitzGamesClassic: state.blitzGamesClassic,
-      blitzGames960: state.blitzGames960,
       rapidGamesClassic: state.rapidGamesClassic,
-      rapidGames960: state.rapidGames960,
       totalWinningStreak: state.totalWinningStreak,
       bulletStreak: state.bulletStreak,
       blitzStreak: state.blitzStreak,
@@ -2050,7 +2046,7 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
         uciMoves: s.uciMoves,
         initialFen: s.initialFen,
         finalFen: s.fen,
-        isChess960: s.gameMode == 'chess960',
+        isChess960: false, // Battleground is always classic
         isPlayerWhite: s.isPlayerWhite,
         result: s.result,
         whiteTimeLeftMs: s.whiteTimeLeftMs,
@@ -2074,9 +2070,6 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
     final maxElo = ratedSaves.map((s) => s.ratingSnapshot).reduce(math.max);
     final power = math.min(1.0, math.max(0.0, (maxElo - 400) / (2000 - 400)));
 
-    final count960 = ratedSaves.where((s) => s.gameMode == 'chess960').length;
-    final versatility = count960 / ratedSaves.length;
-
     final wins = ratedSaves.where((s) => s.result == 'W').length;
     final intensity = wins / ratedSaves.length;
 
@@ -2094,10 +2087,41 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
     }
     final speed = speedCount > 0 ? (speedSum / speedCount) : 0.7;
 
+    // Composure: measures ability to hold or save difficult positions under pressure.
+    // Pressure = material disadvantage (dominance < 0) OR facing an equally/more
+    // highly rated opponent.
+    final pressureGames = ratedSaves.where((s) {
+      final opponentAvatar = AiAvatar.getAvatarByName(s.opponentName);
+      final opponentRating = opponentAvatar?.rating ?? s.ratingSnapshot;
+      return s.dominance < 0 || opponentRating >= s.ratingSnapshot;
+    }).toList();
+
+    final pressureSaves = pressureGames
+        .where((s) => s.result == 'W' || s.result == 'D')
+        .length;
+    final pressureSaveRate = pressureGames.isEmpty
+        ? 0.5
+        : pressureSaves / pressureGames.length;
+
+    // Clock stability: ratio of games where player still had ≥5% clock on finish.
+    int clockStableCount = 0;
+    for (final s in ratedSaves) {
+      final baseMs = s.baseTimeMs > 0 ? s.baseTimeMs.toDouble() : 600000.0;
+      final playerTimeMs =
+          s.isPlayerWhite ? s.whiteTimeLeftMs : s.blackTimeLeftMs;
+      if (playerTimeMs / baseMs >= 0.05) clockStableCount++;
+    }
+    final clockStability = clockStableCount / ratedSaves.length;
+
+    final composure = math.min(
+      1.0,
+      (pressureSaveRate * 0.7) + (clockStability * 0.3),
+    );
+
     playstyle = TacticalPlaystyleStats(
       aggression: aggression,
       power: power,
-      versatility: versatility,
+      composure: composure,
       intensity: intensity,
       speed: speed,
     );
@@ -2302,11 +2326,8 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
         rapidElo: 400,
         totalRatedGamesCount: 0,
         bulletGamesClassic: 0,
-        bulletGames960: 0,
         blitzGamesClassic: 0,
-        blitzGames960: 0,
         rapidGamesClassic: 0,
-        rapidGames960: 0,
         totalWinningStreak: 0,
         bulletStreak: 0,
         blitzStreak: 0,

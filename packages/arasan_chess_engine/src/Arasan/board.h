@@ -30,6 +30,8 @@ enum CastleType { CanCastleEitherSide,
                   CanCastleQSide,
                   CantCastleEitherSide};
 
+enum CastleSide { Queenside = 0, Kingside = 1 };
+
 enum CheckStatusType { NotInCheck, InCheck, CheckUnknown };
 
 using Occupancies = Bitboard[6][2];
@@ -135,9 +137,25 @@ public:
        return OppositeColor(side);
    }
 
-   void setSideToMove( ColorType color ) {
-     side = color;
-   }
+    void setSideToMove( ColorType color ) {
+      side = color;
+    }
+
+    bool isChess960() const noexcept {
+       return chess960;
+    }
+
+    void setChess960(bool val) noexcept {
+       chess960 = val;
+     }
+
+    Square getKingStartSq(ColorType c) const noexcept {
+       return kingStartSq[c];
+    }
+
+    Square getRookStartSq(ColorType c, CastleSide s) const noexcept {
+       return rookStartSq[c][s];
+    }
 
    const Material &getMaterial( ColorType c ) const
    {
@@ -470,6 +488,10 @@ public:
    Bitboard allPawns() const {
        return pawn_bits[White] | pawn_bits[Black];
    }
+
+   bool chess960;
+   Square kingStartSq[2];
+   Square rookStartSq[2][2];
 
    hash_t repList[RepListSize]; //  move history for repetition detection
    hash_t *repListHead; // head of history list

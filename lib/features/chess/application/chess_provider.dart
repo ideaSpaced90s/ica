@@ -207,6 +207,7 @@ class ChessState {
     this.isSoundEnabled = true,
     this.isGameSoundEnabled = true,
     this.isAcademySoundEnabled = true,
+    this.isBattlegroundSoundEnabled = false,
     this.isMusicEnabled = false,
     this.showLog = false,
     this.showCoordinates = true,
@@ -337,6 +338,7 @@ class ChessState {
   final bool isSoundEnabled;
   final bool isGameSoundEnabled;
   final bool isAcademySoundEnabled;
+  final bool isBattlegroundSoundEnabled;
   final bool isMusicEnabled;
   final bool showLog;
   final bool showCoordinates;
@@ -464,6 +466,7 @@ class ChessState {
     bool? isSoundEnabled,
     bool? isGameSoundEnabled,
     bool? isAcademySoundEnabled,
+    bool? isBattlegroundSoundEnabled,
     bool? isMusicEnabled,
     bool? showLog,
     bool? showCoordinates,
@@ -599,6 +602,7 @@ class ChessState {
       isSoundEnabled: isSoundEnabled ?? this.isSoundEnabled,
       isGameSoundEnabled: isGameSoundEnabled ?? this.isGameSoundEnabled,
       isAcademySoundEnabled: isAcademySoundEnabled ?? this.isAcademySoundEnabled,
+      isBattlegroundSoundEnabled: isBattlegroundSoundEnabled ?? this.isBattlegroundSoundEnabled,
       isMusicEnabled: isMusicEnabled ?? this.isMusicEnabled,
       showLog: showLog ?? this.showLog,
       showCoordinates: showCoordinates ?? this.showCoordinates,
@@ -837,6 +841,7 @@ class ChessNotifier extends Notifier<ChessState> {
         isSoundEnabled: s.isSoundEnabled,
         isGameSoundEnabled: s.isGameSoundEnabled,
         isAcademySoundEnabled: s.isAcademySoundEnabled,
+        isBattlegroundSoundEnabled: s.isBattlegroundSoundEnabled,
         isMusicEnabled: s.isMusicEnabled,
         isAnimationsEnabled: s.isAnimationsEnabled,
         animationSettings: s.animationSettings,
@@ -894,6 +899,7 @@ class ChessNotifier extends Notifier<ChessState> {
               academySoundSettings: state.academySoundSettings,
               isAcademyActive: state.isAcademyActive,
               isRatedMode: state.isRatedMode,
+              isBattlegroundSoundEnabled: state.isBattlegroundSoundEnabled,
             );
           }
         });
@@ -908,6 +914,7 @@ class ChessNotifier extends Notifier<ChessState> {
         academySoundSettings: s.academySoundSettings,
         isAcademyActive: state.isAcademyActive,
         isRatedMode: s.isRatedMode,
+        isBattlegroundSoundEnabled: s.isBattlegroundSoundEnabled,
       );
       _hapticsService.updateSettings(hapticsEnabled: s.isHapticsEnabled);
 
@@ -938,6 +945,7 @@ class ChessNotifier extends Notifier<ChessState> {
         isSoundEnabled: state.isSoundEnabled,
         isGameSoundEnabled: state.isGameSoundEnabled,
         isAcademySoundEnabled: state.isAcademySoundEnabled,
+        isBattlegroundSoundEnabled: state.isBattlegroundSoundEnabled,
         isMusicEnabled: state.isMusicEnabled,
         isAnimationsEnabled: state.isAnimationsEnabled,
         animationSettings: state.animationSettings,
@@ -1001,6 +1009,24 @@ class ChessNotifier extends Notifier<ChessState> {
       academySoundSettings: state.academySoundSettings,
       isAcademyActive: state.isAcademyActive,
       isRatedMode: false,
+      isBattlegroundSoundEnabled: state.isBattlegroundSoundEnabled,
+    );
+    _saveSettings();
+  }
+
+  void toggleBattlegroundSound() {
+    final newEnabled = !state.isBattlegroundSoundEnabled;
+    state = state.copyWith(isBattlegroundSoundEnabled: newEnabled);
+    _soundService.updateSettings(
+      sfxEnabled: state.isSoundEnabled,
+      bgmEnabled: _bgmDelayActive ? false : state.isMusicEnabled,
+      gameSoundEnabled: state.isGameSoundEnabled,
+      soundSettings: state.soundSettings,
+      academySoundEnabled: state.isAcademySoundEnabled,
+      academySoundSettings: state.academySoundSettings,
+      isAcademyActive: state.isAcademyActive,
+      isRatedMode: false,
+      isBattlegroundSoundEnabled: newEnabled,
     );
     _saveSettings();
   }
@@ -1018,6 +1044,7 @@ class ChessNotifier extends Notifier<ChessState> {
       academySoundSettings: state.academySoundSettings,
       isAcademyActive: state.isAcademyActive,
       isRatedMode: false,
+      isBattlegroundSoundEnabled: state.isBattlegroundSoundEnabled,
     );
     _saveSettings();
   }
@@ -2724,17 +2751,6 @@ class ChessNotifier extends Notifier<ChessState> {
 
     _queryAnalysisCompleter = Completer<void>();
 
-    if (_bypassChess960EngineSearch(targetEngine, isAcademy: state.isAcademyActive)) {
-      // Wait for the mock search to complete (the 600ms timer will call the output handler and complete it)
-      await _queryAnalysisCompleter!.future.timeout(
-        const Duration(seconds: 2),
-        onTimeout: () {},
-      );
-      _queryAnalysisCompleter = null;
-      _queryAnalysisFen = null;
-      return;
-    }
-
     try {
       // 1. Maximize settings
       await targetEngine.sendCommand('stop');
@@ -2774,55 +2790,7 @@ class ChessNotifier extends Notifier<ChessState> {
     }
   }
 
-  bool _bypassChess960EngineSearch(ChessEngineService targetEngine, {bool isAcademy = false}) {
-    if (!state.isChess960) return false;
 
-    final fen = state.game.fen;
-    _queryAnalysisFen = fen;
-
-    final moves = state.game.generateMoves();
-    if (moves.isEmpty) return true;
-
-    chess_lib.Move bestM = moves.first;
-    int bestScore = -99999;
-    for (final m in moves) {
-      int score = 0;
-      if (m.captured != null) {
-        score += 100;
-        switch (m.captured) {
-          case chess_lib.PieceType.PAWN: score += 10; break;
-          case chess_lib.PieceType.KNIGHT: score += 30; break;
-          case chess_lib.PieceType.BISHOP: score += 30; break;
-          case chess_lib.PieceType.ROOK: score += 50; break;
-          case chess_lib.PieceType.QUEEN: score += 90; break;
-        }
-      }
-      if (m.promotion != null) {
-        score += 80;
-      }
-      score += (m.hashCode % 10);
-      if (score > bestScore) {
-        bestScore = score;
-        bestM = m;
-      }
-    }
-
-    final fromStr = chess_lib.Chess.algebraic(bestM.from);
-    final toStr = chess_lib.Chess.algebraic(bestM.to);
-    final promoStr = bestM.promotion != null ? bestM.promotion!.name.toLowerCase() : '';
-    final uciMove = '$fromStr$toStr$promoStr';
-
-    Timer(const Duration(milliseconds: 600), () {
-      if (!_isDisposed && _queryAnalysisFen == state.game.fen) {
-        if (isAcademy) {
-          _handleAcademyAnalysisOutput('bestmove $uciMove');
-        } else {
-          _handleEngineOutput('bestmove $uciMove');
-        }
-      }
-    });
-    return true;
-  }
 
   void _startAnalysis({int? depth}) {
     if (_isDisposed) return;
@@ -2846,9 +2814,6 @@ class ChessNotifier extends Notifier<ChessState> {
     int targetDepth = depth ?? config.depth;
 
     if (state.isAcademyActive) {
-      if (_bypassChess960EngineSearch(_academyAnalysisEngine, isAcademy: true)) {
-        return;
-      }
       // ── Academy Mode: Sequential Execution to prevent concurrent FFI search crash ──
       // Start blunder check & coaching evaluation search on academyAnalysisEngine FIRST.
       _academyAnalysisCandidates.clear();
@@ -2862,9 +2827,6 @@ class ChessNotifier extends Notifier<ChessState> {
         debugPrint('ChessNotifier: Academy analysis engine analyze failed: $e');
       }
     } else {
-      if (_bypassChess960EngineSearch(_arasanEngine, isAcademy: false)) {
-        return;
-      }
       // ── Non-Academy Mode: Single Engine (standard Arena / Battleground) ──
       _currentCandidates.clear();
       final configForMoving = rust_persona.getPersonaConfig(avatarName: avatar.name);
@@ -2893,9 +2855,6 @@ class ChessNotifier extends Notifier<ChessState> {
 
   void _startChanakyaPlayingSearch() {
     if (_isDisposed) return;
-    if (_bypassChess960EngineSearch(_arasanEngine, isAcademy: false)) {
-      return;
-    }
 
     final bgState = ref.read(battlegroundProvider);
     final userElo = bgState.consolidatedRating;

@@ -759,7 +759,7 @@ class _MobileSidebarDrawer extends ConsumerWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'v1.0.20',
+            'v2.0.22',
             style: GoogleFonts.inter(
               color: const Color(0xFF94A3B8),
               fontSize: 9,

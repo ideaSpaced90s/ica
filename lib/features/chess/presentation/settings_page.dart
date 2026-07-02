@@ -44,22 +44,32 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               // SETTINGS SECTIONS
               SliverList(
                 delegate: SliverChildListDelegate([
-                  // PREFERENCES
+                  // Group 1: SOUND
                   _SettingsCategory(
-                    title: 'GLOBAL PREFERENCES',
+                    title: 'SOUND',
+                    icon: Icons.volume_up_rounded,
                     children: [
                       _SettingsSwitchTile(
                         label: 'Music',
-                        description: 'Background music during gameplay',
+                        description: 'App navigation music except battleground games.',
                         icon: state.isMusicEnabled
                             ? Icons.music_note_rounded
                             : Icons.music_off_rounded,
                         value: state.isMusicEnabled,
                         onChanged: (v) => notifier.toggleMusic(),
                       ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Group 2: SOUND MANAGEMENT
+                  _SettingsCategory(
+                    title: 'SOUND MANAGEMENT',
+                    icon: Icons.tune_rounded,
+                    children: [
                       _SettingsSwitchTile(
-                        label: 'Sound Effects',
-                        description: 'Move sounds and capture alerts',
+                        label: 'App Navigation',
                         icon: state.isSoundEnabled
                             ? Icons.volume_up_rounded
                             : Icons.volume_off_rounded,
@@ -67,13 +77,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         onChanged: (v) => notifier.toggleSound(),
                       ),
                       _SettingsSwitchTile(
-                        label: 'Haptic Feedback',
-                        description: 'Vibrations for physical impact',
-                        icon: state.isHapticsEnabled
-                            ? Icons.vibration_rounded
-                            : Icons.vibration_outlined,
-                        value: state.isHapticsEnabled,
-                        onChanged: (v) => notifier.toggleHaptics(),
+                        label: 'Battleground',
+                        description: 'Battleground gameplay',
+                        icon: state.isBattlegroundSoundEnabled
+                            ? Icons.sports_esports_rounded
+                            : Icons.sports_esports_outlined,
+                        value: state.isBattlegroundSoundEnabled,
+                        onChanged: (v) => notifier.toggleBattlegroundSound(),
                       ),
                       _NotificationSettingsTile(
                         label: 'Notifications',
@@ -90,9 +100,41 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     ],
                   ),
 
+                  const SizedBox(height: 16),
+
+                  // Group 3: VIBRATIONS
+                  _SettingsCategory(
+                    title: 'VIBRATIONS',
+                    icon: Icons.vibration_rounded,
+                    children: [
+                      _SettingsSwitchTile(
+                        label: 'Haptic Feedback',
+                        description: 'Vibrations for physical impact',
+                        icon: state.isHapticsEnabled
+                            ? Icons.vibration_rounded
+                            : Icons.vibration_outlined,
+                        value: state.isHapticsEnabled,
+                        onChanged: (v) => notifier.toggleHaptics(),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Group 4: UPDATES
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 4),
+                    child: JuicySectionHeader(
+                      title: 'UPDATES',
+                      icon: Icons.system_update_rounded,
+                      color: ScholarlyTheme.accentBlue,
+                    ),
+                  ),
                   const UpdateCheckTile(),
 
-                  // DANGER ZONE
+                  const SizedBox(height: 16),
+
+                  // Group 5: DANGER ZONE
                   _DangerZoneSection(
                     onResetTap: () => _showResetConfirmationDialog(context, ref),
                   ),
@@ -102,8 +144,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               ),
             ],
           ),
-
-          _buildActionRow(context),
         ],
       ),
     );
@@ -135,35 +175,20 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       }
     }
   }
-
-  Widget _buildActionRow(BuildContext context) {
-    return Positioned(
-      bottom: 24,
-      left: 20,
-      right: 20,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          Text(
-            'GLOBAL SETTINGS',
-            style: GoogleFonts.inter(
-              color: ScholarlyTheme.textSubtle,
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 1.5,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _SettingsCategory extends StatelessWidget {
   final String title;
+  final IconData icon;
   final List<Widget> children;
+  final Color headerColor;
 
-  const _SettingsCategory({required this.title, required this.children});
+  const _SettingsCategory({
+    required this.title,
+    required this.icon,
+    required this.children,
+    this.headerColor = ScholarlyTheme.accentBlue,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -171,18 +196,40 @@ class _SettingsCategory extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
           child: JuicySectionHeader(
             title: title,
-            color: ScholarlyTheme.accentBlue,
+            icon: icon,
+            color: headerColor,
           ),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: JuicyGlassCard(
-            padding: EdgeInsets.zero,
+            padding: const EdgeInsets.symmetric(vertical: 4),
             borderRadius: 24,
-            child: Column(children: children),
+            child: Column(
+              children: children.asMap().entries.map((entry) {
+                final idx = entry.key;
+                final child = entry.value;
+                if (idx == children.length - 1) {
+                  return child;
+                }
+                return Column(
+                  children: [
+                    child,
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Divider(
+                        color: Colors.white.withValues(alpha: 0.12),
+                        height: 1,
+                        thickness: 1,
+                      ),
+                    ),
+                  ],
+                );
+              }).toList(),
+            ),
           ),
         ),
       ],
@@ -204,6 +251,7 @@ class _DangerZoneSection extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
           child: JuicySectionHeader(
             title: 'DANGER ZONE',
+            icon: Icons.dangerous_rounded,
             color: Colors.redAccent,
           ),
         ),
@@ -262,14 +310,14 @@ class _DangerZoneSection extends StatelessWidget {
 
 class _SettingsSwitchTile extends ConsumerWidget {
   final String label;
-  final String description;
+  final String? description;
   final IconData icon;
   final bool value;
   final ValueChanged<bool> onChanged;
 
   const _SettingsSwitchTile({
     required this.label,
-    required this.description,
+    this.description,
     required this.icon,
     required this.value,
     required this.onChanged,
@@ -307,10 +355,12 @@ class _SettingsSwitchTile extends ConsumerWidget {
           fontWeight: FontWeight.w600,
         ),
       ),
-      subtitle: Text(
-        description,
-        style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 11),
-      ),
+      subtitle: description != null && description!.isNotEmpty
+          ? Text(
+              description!,
+              style: GoogleFonts.inter(color: ScholarlyTheme.textMuted, fontSize: 11),
+            )
+          : null,
       activeThumbColor: ScholarlyTheme.accentBlue,
       activeTrackColor: ScholarlyTheme.accentBlue.withValues(alpha: 0.3),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),

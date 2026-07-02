@@ -13,7 +13,8 @@ bool validMove(const Board &board, Move move) {
     const Square dest = DestSquare(move);
     if (!OnBoard(start) || !OnBoard(dest) || pieceMoved == Empty || !validPiece(board[start]) ||
         !validPiece(board[dest]) || (TypeOfPiece(board[start]) != pieceMoved) ||
-        (board[dest] != EmptyPiece && (PieceColor(board[dest]) == board.sideToMove())) ||
+        (board[dest] != EmptyPiece && (PieceColor(board[dest]) == board.sideToMove()) &&
+         !(board.isChess960() && IsCastling(move) && board[dest] == MakePiece(Rook, board.sideToMove()))) ||
         (PieceColor(board[start]) != board.sideToMove())) {
         return false;
     } else if (TypeOfMove(move) == EnPassant) {
@@ -21,8 +22,8 @@ bool validMove(const Board &board, Move move) {
         if (board.enPassantSq() == InvalidSquare || dest2 != board.enPassantSq() ||
             board[dest2] != MakePiece(Pawn, board.oppositeSide()))
             return false;
-    } else if (Capture(move) != TypeOfPiece(board[dest]) ||
-               board[dest] != MakePiece(Capture(move), board.oppositeSide())) {
+    } else if (!IsCastling(move) && (Capture(move) != TypeOfPiece(board[dest]) ||
+               board[dest] != MakePiece(Capture(move), board.oppositeSide()))) {
         return false;
     }
     if (TypeOfMove(move) == Promotion &&
@@ -35,7 +36,7 @@ bool validMove(const Board &board, Move move) {
     case King: {
         const Square kp = board.kingSquare(board.sideToMove());
         if (kp != start) return false;
-        if (IsCastling(move)) {
+        if (IsCastling(move) && !board.isChess960()) {
             if (board.sideToMove() == White) {
                 if (kp != chess::E1) return false;
             } else {
@@ -44,20 +45,82 @@ bool validMove(const Board &board, Move move) {
         }
         if (TypeOfMove(move) == KCastle) {
             CastleType CS = board.castleStatus(board.sideToMove());
-            return board[kp] == MakePiece(King, board.sideToMove()) &&
-                   ((CS == CanCastleEitherSide) || (CS == CanCastleKSide)) &&
-                   board[kp + 1] == EmptyPiece && board[kp + 2] == EmptyPiece &&
-                   board.checkStatus() != InCheck &&
-                   !board.anyAttacks(kp + 1, board.oppositeSide()) &&
-                   !board.anyAttacks(kp + 2, board.oppositeSide());
+            if (!((CS == CanCastleEitherSide) || (CS == CanCastleKSide))) {
+                return false;
+            }
+            if (board.isChess960()) {
+                Square rp = board.getRookStartSq(board.sideToMove(), Kingside);
+                if (rp == InvalidSquare || board[rp] != MakePiece(Rook, board.sideToMove()) || board.checkStatus() == InCheck) {
+                    return false;
+                }
+                int k_start = kp % 8;
+                int k_end = 6;
+                int r_start = rp % 8;
+                int r_end = 5;
+                int rank_offset = (board.sideToMove() == White) ? 0 : 56;
+                
+                int step = (k_end > k_start) ? 1 : -1;
+                for (int f = k_start; f != k_end + step; f += step) {
+                   Square sq = rank_offset + f;
+                   if (sq != kp && board.anyAttacks(sq, board.oppositeSide())) {
+                      return false;
+                   }
+                }
+                int min_f = std::min({k_start, k_end, r_start, r_end});
+                int max_f = std::max({k_start, k_end, r_start, r_end});
+                for (int f = min_f; f <= max_f; ++f) {
+                   Square sq = rank_offset + f;
+                   if (sq != kp && sq != rp && board[sq] != EmptyPiece) {
+                      return false;
+                   }
+                }
+                return true;
+            } else {
+                return board[kp] == MakePiece(King, board.sideToMove()) &&
+                       board[kp + 1] == EmptyPiece && board[kp + 2] == EmptyPiece &&
+                       board.checkStatus() != InCheck &&
+                       !board.anyAttacks(kp + 1, board.oppositeSide()) &&
+                       !board.anyAttacks(kp + 2, board.oppositeSide());
+            }
         } else if (TypeOfMove(move) == QCastle) {
             CastleType CS = board.castleStatus(board.sideToMove());
-            return board[kp] == MakePiece(King, board.sideToMove()) &&
-                   ((CS == CanCastleEitherSide) || (CS == CanCastleQSide)) &&
-                   board[kp - 1] == EmptyPiece && board[kp - 2] == EmptyPiece &&
-                   board[kp - 3] == EmptyPiece && board.checkStatus() != InCheck &&
-                   !board.anyAttacks(kp - 1, board.oppositeSide()) &&
-                   !board.anyAttacks(kp - 2, board.oppositeSide());
+            if (!((CS == CanCastleEitherSide) || (CS == CanCastleQSide))) {
+                return false;
+            }
+            if (board.isChess960()) {
+                Square rp = board.getRookStartSq(board.sideToMove(), Queenside);
+                if (rp == InvalidSquare || board[rp] != MakePiece(Rook, board.sideToMove()) || board.checkStatus() == InCheck) {
+                    return false;
+                }
+                int k_start = kp % 8;
+                int k_end = 2;
+                int r_start = rp % 8;
+                int r_end = 3;
+                int rank_offset = (board.sideToMove() == White) ? 0 : 56;
+                
+                int step = (k_end > k_start) ? 1 : -1;
+                for (int f = k_start; f != k_end + step; f += step) {
+                   Square sq = rank_offset + f;
+                   if (sq != kp && board.anyAttacks(sq, board.oppositeSide())) {
+                      return false;
+                   }
+                }
+                int min_f = std::min({k_start, k_end, r_start, r_end});
+                int max_f = std::max({k_start, k_end, r_start, r_end});
+                for (int f = min_f; f <= max_f; ++f) {
+                   Square sq = rank_offset + f;
+                   if (sq != kp && sq != rp && board[sq] != EmptyPiece) {
+                      return false;
+                   }
+                }
+                return true;
+            } else {
+                return board[kp] == MakePiece(King, board.sideToMove()) &&
+                       board[kp - 1] == EmptyPiece && board[kp - 2] == EmptyPiece &&
+                       board[kp - 3] == EmptyPiece && board.checkStatus() != InCheck &&
+                       !board.anyAttacks(kp - 1, board.oppositeSide()) &&
+                       !board.anyAttacks(kp - 2, board.oppositeSide());
+            }
         } else {
             return Attacks::king_attacks[start].isSet(dest);
         }

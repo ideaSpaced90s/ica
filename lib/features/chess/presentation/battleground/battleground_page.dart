@@ -92,12 +92,13 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.inactive ||
-        state == AppLifecycleState.detached) {
-      final bgState = ref.read(battlegroundProvider);
-      if (bgState.activeRatedMatchId != null) {
-        ref.read(battlegroundProvider.notifier).resignRatedGame();
+    final bgState = ref.read(battlegroundProvider);
+    if (bgState.activeRatedMatchId != null) {
+      if (state == AppLifecycleState.paused ||
+          state == AppLifecycleState.inactive) {
+        ref.read(battlegroundProvider.notifier).pauseGame();
+      } else if (state == AppLifecycleState.resumed) {
+        ref.read(battlegroundProvider.notifier).resumeGame();
       }
     }
   }
@@ -175,11 +176,9 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
           setState(() => _hasShownRatedCaution = true);
           final isReady = await _showRatedCautionDialog(context);
           if (isReady && context.mounted) {
-            await _showModeSelectionDialog(context);
-            if (context.mounted) {
-              await _showTimeArenaSelectionDialog(context);
-              _triggerDiceRoll();
-            }
+            // Mode is always Classic — skip mode selection, go straight to time control.
+            await _showTimeArenaSelectionDialog(context);
+            _triggerDiceRoll();
           }
         }
       });
@@ -709,20 +708,16 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
               if (context.mounted && !_checkRatedLimitAndUpsell(context, ref)) return;
               await ref.read(battlegroundProvider.notifier).resignRatedGame();
               if (context.mounted) {
-                await _showModeSelectionDialog(context);
-                if (context.mounted) {
-                  await _showTimeArenaSelectionDialog(context);
-                  _triggerDiceRoll();
-                }
+                // Mode is always Classic — skip mode selection, go straight to time control.
+                await _showTimeArenaSelectionDialog(context);
+                _triggerDiceRoll();
               }
             }
           } else {
             if (!_checkRatedLimitAndUpsell(context, ref)) return;
-            await _showModeSelectionDialog(context);
-            if (context.mounted) {
-              await _showTimeArenaSelectionDialog(context);
-              _triggerDiceRoll();
-            }
+            // Mode is always Classic — skip mode selection, go straight to time control.
+            await _showTimeArenaSelectionDialog(context);
+            _triggerDiceRoll();
           }
         },
       ),
@@ -1229,65 +1224,9 @@ class _BattlegroundPageState extends ConsumerState<BattlegroundPage> with Widget
     return result ?? false;
   }
 
-  Future<void> _showModeSelectionDialog(BuildContext context) async {
-    await showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        backgroundColor: ScholarlyTheme.panelBase,
-        surfaceTintColor: ScholarlyTheme.accentBlue,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28), side: BorderSide(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.2), width: 1)),
-        title: Column(mainAxisSize: MainAxisSize.min, children: [
-          Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: ScholarlyTheme.accentBlue.withValues(alpha: 0.1), shape: BoxShape.circle), child: const Icon(Icons.settings_suggest_rounded, color: ScholarlyTheme.accentBlue, size: 24)),
-          const SizedBox(height: 16),
-          Text('Select Arena Mode', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: ScholarlyTheme.textPrimary, fontSize: 20)),
-        ]),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: FilledButton(
-                    onPressed: () {
-                      ref.read(battlegroundProvider.notifier).setGameMode('classic');
-                      Navigator.pop(context);
-                    },
-                    style: FilledButton.styleFrom(
-                      backgroundColor: ScholarlyTheme.accentBlue,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: const Text('CLASSIC CHESS', style: TextStyle(fontWeight: FontWeight.bold)),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: OutlinedButton(
-                    onPressed: () {
-                      ref.read(battlegroundProvider.notifier).setGameMode('chess960');
-                      Navigator.pop(context);
-                    },
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: ScholarlyTheme.accentBlue,
-                      side: BorderSide(color: ScholarlyTheme.accentBlue, width: 1),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: const Text('CHESS 960', style: TextStyle(fontWeight: FontWeight.bold)),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+
+  // _showModeSelectionDialog removed: Battleground is Classic chess only.
+  // Chess 960 is available in Arena and Academy.
 
   Future<void> _showTimeArenaSelectionDialog(BuildContext context) async {
     await showDialog(

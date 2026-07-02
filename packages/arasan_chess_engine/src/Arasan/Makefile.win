@@ -17,7 +17,7 @@ BUILD_ROOT=..
 UTIL=util
 
 # set to enable compliation with Syzygy tablebase support
-SYZYGY_TBS = 1
+# SYZYGY_TBS = 1
 
 # location of SYZYGY tablebase code
 STB=syzygy\src

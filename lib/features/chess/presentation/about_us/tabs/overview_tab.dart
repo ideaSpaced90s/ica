@@ -17,15 +17,15 @@ class OverviewTab extends StatelessWidget {
         AnimatedEntryCard(
           index: 0,
           child: JuicyGlassCard(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             borderRadius: 24,
             child: Column(
               children: [
                 Container(
-                  width: 70,
-                  height: 70,
+                  width: 60,
+                  height: 60,
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(18),
+                    borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withValues(alpha: 0.15),
@@ -35,7 +35,7 @@ class OverviewTab extends StatelessWidget {
                     ],
                   ),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(18),
+                    borderRadius: BorderRadius.circular(16),
                     child: Image.asset(
                       'assets/splash/light_knight.png',
                       fit: BoxFit.contain,
@@ -48,7 +48,7 @@ class OverviewTab extends StatelessWidget {
                         child: const Center(
                           child: Icon(
                             Icons.emoji_events_rounded,
-                            size: 36,
+                            size: 30,
                             color: Colors.white,
                           ),
                         ),
@@ -56,62 +56,62 @@ class OverviewTab extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 10),
                 FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Text(
                     'Chess Academy',
                     maxLines: 1,
                     style: GoogleFonts.pirataOne(
-                      fontSize: 32,
+                      fontSize: 30,
                       fontWeight: FontWeight.bold,
                       color: ScholarlyTheme.textPrimary,
                     ),
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
                 FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Text(
                     'Learn Chess Intently',
                     maxLines: 1,
                     style: GoogleFonts.inter(
-                      fontSize: 14,
+                      fontSize: 13,
                       fontWeight: FontWeight.w700,
                       color: Colors.indigo,
                     ),
                   ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 10),
                 Text(
                   'IdeaSpace Chess Academy is engineered as an advanced tactical sandbox for serious students of the royal game. We combine the mathematical precision of neural-network chess models with cognitive visualization methods to help players transition from rote calculation to powerful, intuitive grandmaster sight.',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.inter(
-                    fontSize: 13,
+                    fontSize: 12.5,
                     color: ScholarlyTheme.textMuted,
-                    height: 1.45,
+                    height: 1.4,
                   ),
                 ),
               ],
             ),
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         AnimatedEntryCard(
           index: 1,
           child: _buildPillarSection(),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
         const AnimatedEntryCard(
           index: 2,
           child: PersonaSection(),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
         AnimatedEntryCard(
           index: 3,
           child: _buildThemeChips(),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
         AnimatedEntryCard(
           index: 4,
           child: _buildQuickStats(),
@@ -128,13 +128,13 @@ class OverviewTab extends StatelessWidget {
           title: 'Cognitive Visualization',
           description: 'High-fidelity visual indicators are designed to strengthen pattern recognition. Liquid evaluation bars and pulse clocks visually anchor tactical themes in working memory.',
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 8),
         _buildPillarCard(
           icon: Icons.android_rounded,
           title: 'Persona-Driven AI Simulation',
-          description: 'Simulates real-world competitive styles through custom Arasan profiles, coaching you against attackers, endgames, and defensive specialists.',
+          description: 'Simulates real-world competitive styles through custom Kingslayer 1.0 profiles, coaching you against attackers, endgames, and defensive specialists.',
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 8),
         _buildPillarCard(
           icon: Icons.insights_rounded,
           title: 'Rigorous Training Loops',
@@ -199,9 +199,9 @@ class OverviewTab extends StatelessWidget {
 
   Widget _buildThemeChips() {
     final themes = [
-      'Classic', 'Scholar', 'B&W/Glass', 'Champions', 'Forest', 'Copper',
-      'Calligraphy/Ink', 'Overgrown', 'Wood', 'Ivory', 'Steampunk', 'Seasons',
-      'Sand', 'Timber', 'Platinum', 'Fairytale', 'Shadow', 'Royal', 'Bubblegum',
+      'Classic', 'Scholar', 'B&W', 'Champions', 'Forest', 'Copper',
+      'Calligraphy', 'Overgrown', 'Wood', 'Ivory', 'Steampunk', 'Seasons',
+      'Timber', 'Platinum', 'Fairytale', 'Persia', 'Shadow', 'Royal', 'Bubblegum',
       'Silver & Gold', 'Marble', 'Desert', 'Plasma', 'Lightning', 'Diamonds', 'Arc'
     ];
 
@@ -220,16 +220,16 @@ class OverviewTab extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 8),
         Wrap(
-          spacing: 6,
-          runSpacing: 6,
+          spacing: 5,
+          runSpacing: 5,
           children: themes.map((theme) {
             return Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
               decoration: BoxDecoration(
                 color: Colors.indigo.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(10),
                 border: Border.all(
                   color: Colors.indigo.withValues(alpha: 0.15),
                   width: 1.0,
@@ -238,7 +238,7 @@ class OverviewTab extends StatelessWidget {
               child: Text(
                 theme,
                 style: GoogleFonts.inter(
-                  fontSize: 11,
+                  fontSize: 10.5,
                   fontWeight: FontWeight.w600,
                   color: ScholarlyTheme.textPrimary,
                 ),

@@ -227,8 +227,10 @@ class ArasanService implements ChessEngineService {
 
   @override
   Future<void> setChess960Mode(bool isEnabled) async {
-    // Arasan does not support Chess960 UCI options natively.
-    // Chess960 is bypassed at the application provider level.
+    if (Platform.isAndroid && _ffiEngine == null) return;
+    if (!Platform.isAndroid) return;
+    if (!_isReady) await _readyCompleter.future;
+    await sendCommand('setoption name UCI_Chess960 value $isEnabled');
   }
 
   @override

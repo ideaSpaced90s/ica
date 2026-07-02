@@ -243,12 +243,23 @@ static MoveType get_move_type(const Board &board, Square start, Square dest)
        }
        break;
     case King:
-       if (std::abs((int)start - (int)dest) == 2)
-       {
-          if (start > dest)
-	         move_type = QCastle;
-          else
-	         move_type = KCastle;
+       if (board.isChess960()) {
+          if (board[dest] == MakePiece(Rook, board.sideToMove())) {
+             if (dest > start) move_type = KCastle;
+             else move_type = QCastle;
+          }
+          else if (std::abs((int)start - (int)dest) == 2) {
+             if (start > dest) move_type = QCastle;
+             else move_type = KCastle;
+          }
+       } else {
+          if (std::abs((int)start - (int)dest) == 2)
+          {
+             if (start > dest)
+                move_type = QCastle;
+             else
+                move_type = KCastle;
+          }
        }
        break;
     default:
@@ -264,6 +275,9 @@ Move CreateMove(const Board &board, Square start, Square dest, PieceType promoti
       return NullMove;
    }
    MoveType type = get_move_type(board,start,dest);
+   if (board.isChess960() && (type == KCastle || type == QCastle)) {
+      dest = board.getRookStartSq(board.sideToMove(), (type == KCastle) ? Kingside : Queenside);
+   }
    PieceType piece_moved = TypeOfPiece(board[start]);
    if (piece_moved == Empty) {
       return NullMove;
@@ -271,6 +285,8 @@ Move CreateMove(const Board &board, Square start, Square dest, PieceType promoti
       PieceType capture;
       if (type == EnPassant)
          capture = Pawn;
+      else if (type == KCastle || type == QCastle)
+         capture = Empty;
       else
          capture = TypeOfPiece(board[dest]);
       MoveUnion mu(start,dest,piece_moved,promotion,capture,type);

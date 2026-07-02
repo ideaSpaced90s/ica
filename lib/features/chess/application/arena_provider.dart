@@ -655,49 +655,7 @@ class ArenaNotifier extends Notifier<ArenaState> {
 
     _currentCandidates.clear();
     final is960 = state.gameMode == 'chess960';
-    if (is960) {
-      _searchFen = state.game.fen;
-      final moves = state.game.generateMoves();
-      if (moves.isEmpty) return;
-
-      chess_lib.Move bestM = moves.first;
-      int bestScore = -99999;
-      for (final m in moves) {
-        int score = 0;
-        if (m.captured != null) {
-          score += 100;
-          switch (m.captured) {
-            case chess_lib.PieceType.PAWN: score += 10; break;
-            case chess_lib.PieceType.KNIGHT: score += 30; break;
-            case chess_lib.PieceType.BISHOP: score += 30; break;
-            case chess_lib.PieceType.ROOK: score += 50; break;
-            case chess_lib.PieceType.QUEEN: score += 90; break;
-          }
-        }
-        if (m.promotion != null) {
-          score += 80;
-        }
-        score += (m.hashCode % 10);
-        if (score > bestScore) {
-          bestScore = score;
-          bestM = m;
-        }
-      }
-
-      final fromStr = chess_lib.Chess.algebraic(bestM.from);
-      final toStr = chess_lib.Chess.algebraic(bestM.to);
-      final promoStr = bestM.promotion != null ? bestM.promotion!.name.toLowerCase() : '';
-      final uciMove = '$fromStr$toStr$promoStr';
-
-      Timer(const Duration(milliseconds: 600), () {
-        if (!_isDisposed && _searchFen == state.game.fen) {
-          _handleEngineOutput('bestmove $uciMove');
-        }
-      });
-      return;
-    }
-
-    await _engine.setChess960Mode(false);
+    await _engine.setChess960Mode(is960);
     final avatar = AiAvatar.getAvatar(_activeAvatarId);
     final config = rust_persona.getPersonaConfig(avatarName: avatar.name);
     await _engine.setSkillLevel(config.skillLevel, multiPV: config.multiPv);
@@ -1666,9 +1624,6 @@ class ArenaNotifier extends Notifier<ArenaState> {
     state = state.copyWith(isGameOverDismissed: true);
   }
 
-  void playNotify() {
-    _soundService.playNotify();
-  }
 
   void _startClockTicker() {
     _clockTimer?.cancel();
@@ -1721,7 +1676,10 @@ class ArenaNotifier extends Notifier<ArenaState> {
       // Digital clock alarm for human user only when <= 10% time remains
       if (state.activeClockSide == userSide) {
         final remaining = state.isPlayerWhite ? state.whiteTimeLeft : state.blackTimeLeft;
-        final alarmThreshold = state.baseTimeDuration * 0.1;
+        final tenPercent = state.baseTimeDuration * 0.1;
+        final alarmThreshold = tenPercent < const Duration(seconds: 10)
+            ? tenPercent
+            : const Duration(seconds: 10);
         if (remaining <= alarmThreshold && remaining > Duration.zero) {
           _soundService.startAlarm();
         } else {

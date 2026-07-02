@@ -141,13 +141,21 @@ void Board::reset()
    state.moveCount = 0;
    state.movesFromNull = 0;
    repListHead = repList;
-   setSecondaryVars();
+    chess960 = false;
+    kingStartSq[White] = chess::E1;
+    kingStartSq[Black] = chess::E8;
+    rookStartSq[White][Queenside] = chess::A1;
+    rookStartSq[White][Kingside] = chess::H1;
+    rookStartSq[Black][Queenside] = chess::A8;
+    rookStartSq[Black][Kingside] = chess::H8;
+    setSecondaryVars();
    *(repListHead)++ = hashCode();
 }
 
 void Board::makeEmpty() {
    for (Square sq = 0; sq < 64; sq++) contents[sq] = EmptyPiece;
    state.castleStatus[White] = state.castleStatus[Black] = CantCastleEitherSide;
+   chess960 = false;
 }
 
 Board::Board()
@@ -193,19 +201,19 @@ const Piece &Board::operator[]( const Square sq ) const
 }
 #endif
 
-static inline CastleType UpdateCastleStatusW( CastleType cs, Square sq )
+static inline CastleType UpdateCastleStatusW( CastleType cs, Square sq, Square qr_sq, Square kr_sq )
 // after a move of or capture of the rook on 'sq', update castle status
 // for 'side'
 {
    assert(cs<3);
-   if (sq == chess::A1) // Queen Rook moved or captured
+   if (sq == qr_sq) // Queen Rook moved or captured
    {
       if (cs == CanCastleEitherSide)
          return CanCastleKSide;
       else if (cs == CanCastleQSide)
          return CantCastleEitherSide;
    }
-   else if (sq == chess::H1) // King Rook moved or captured
+   else if (sq == kr_sq) // King Rook moved or captured
    {
       if (cs == CanCastleEitherSide)
          return CanCastleQSide;
@@ -215,19 +223,19 @@ static inline CastleType UpdateCastleStatusW( CastleType cs, Square sq )
    return cs;
 }
 
-static inline CastleType UpdateCastleStatusB(CastleType cs, Square sq)
+static inline CastleType UpdateCastleStatusB(CastleType cs, Square sq, Square qr_sq, Square kr_sq)
 // after a move of or capture of the rook on 'sq', update castle status
 // for 'side'
 {
    assert(cs<3);
-   if (sq == chess::A8) // Queen Rook moved or captured
+   if (sq == qr_sq) // Queen Rook moved or captured
    {
       if (cs == CanCastleEitherSide)
          return CanCastleKSide;
       else if (cs == CanCastleQSide)
          return CantCastleEitherSide;
    }
-   else if (sq==chess::H8) // King Rook moved or captured
+   else if (sq==kr_sq) // King Rook moved or captured
    {
       if (cs == CanCastleEitherSide)
          return CanCastleQSide;
@@ -304,88 +312,94 @@ void Board::doMove( Move move, [[maybe_unused]] NodeInfo *node )
 #endif
    if (side == White)
    {
-      if (moveType == KCastle)
-      {
-         state.moveCount = 0;
+       if (moveType == KCastle)
+       {
+          state.moveCount = 0;
 
-         // update the hash code
-         const Square kp = kingSquare(White);
-         Xor(state.hashCode, kp+3, WhiteRook);
-         Xor(state.hashCode, kp, WhiteKing);
-         Xor(state.hashCode, kp+1, WhiteRook);
-         Xor(state.hashCode, kp+2, WhiteKing);
-         Xor(state.nonPawnHashCodeW, kp+3, WhiteRook);
-         Xor(state.nonPawnHashCodeW, kp, WhiteKing);
-         Xor(state.nonPawnHashCodeW, kp+1, WhiteRook);
-         Xor(state.nonPawnHashCodeW, kp+2, WhiteKing);
+          const Square kp = kingSquare(White);
+          const Square oldrooksq = isChess960() ? DestSquare(move) : (kp + 3);
+          const Square newkp = chess::G1;
+          const Square newrooksq = chess::F1;
 
-         state.hashCode ^= w_castle_status[(int)state.castleStatus[White]];
-         state.hashCode ^= w_castle_status[(int)CantCastleEitherSide];
+          // update the hash code
+          Xor(state.hashCode, oldrooksq, WhiteRook);
+          Xor(state.hashCode, kp, WhiteKing);
+          Xor(state.hashCode, newrooksq, WhiteRook);
+          Xor(state.hashCode, newkp, WhiteKing);
+          Xor(state.nonPawnHashCodeW, oldrooksq, WhiteRook);
+          Xor(state.nonPawnHashCodeW, kp, WhiteKing);
+          Xor(state.nonPawnHashCodeW, newrooksq, WhiteRook);
+          Xor(state.nonPawnHashCodeW, newkp, WhiteKing);
 
-         const int newkp = kp + 2;
-         kingPos[White] = newkp;
-         king_bits[White].clear(kp);
-         king_bits[White].set(newkp);
-         state.castleStatus[White] = CantCastleEitherSide;
-         // find old square of rook
-         Square oldrooksq = kp + 3;
-         Square newrooksq = kp + 1;
-         contents[kp] = contents[oldrooksq] = EmptyPiece;
-         contents[newrooksq] = WhiteRook;
-         contents[newkp] = WhiteKing;
-         rook_bits[White].clear(oldrooksq);
-         rook_bits[White].set(newrooksq);
-         clearAll(White,kp);
-         clearAll(White,oldrooksq);
-         setAll(White,newkp);
-         setAll(White,newrooksq);
-         if (node) {
-             (node+1)->dirty_num = 2;
-             (node+1)->dirty[0] = nnue::DirtyState(kp, newkp, WhiteKing);
-             (node+1)->dirty[1] = nnue::DirtyState(oldrooksq, newrooksq, WhiteRook);
-         }
-      }
-      else if (moveType == QCastle)
-      {
-         state.moveCount = 0;
+          state.hashCode ^= w_castle_status[(int)state.castleStatus[White]];
+          state.hashCode ^= w_castle_status[(int)CantCastleEitherSide];
 
-         // update the hash code
-         const Square kp = kingSquare(White);
-         Xor(state.hashCode, kp-4, WhiteRook);
-         Xor(state.hashCode, kp, WhiteKing);
-         Xor(state.hashCode, kp-1, WhiteRook);
-         Xor(state.hashCode, kp-2, WhiteKing);
-         Xor(state.nonPawnHashCodeW, kp-4, WhiteRook);
-         Xor(state.nonPawnHashCodeW, kp, WhiteKing);
-         Xor(state.nonPawnHashCodeW, kp-1, WhiteRook);
-         Xor(state.nonPawnHashCodeW, kp-2, WhiteKing);
+          kingPos[White] = newkp;
+          king_bits[White].clear(kp);
+          king_bits[White].set(newkp);
+          state.castleStatus[White] = CantCastleEitherSide;
 
-         state.hashCode ^= w_castle_status[(int)state.castleStatus[White]];
-         state.hashCode ^= w_castle_status[(int)CantCastleEitherSide];
+          contents[kp] = EmptyPiece;
+          contents[oldrooksq] = EmptyPiece;
+          contents[newrooksq] = WhiteRook;
+          contents[newkp] = WhiteKing;
 
-         const int newkp = kp - 2;
-         kingPos[White] = newkp;
-         king_bits[White].clear(kp);
-         king_bits[White].set(newkp);
-         state.castleStatus[White] = CantCastleEitherSide;
-         // find old square of rook
-         Square oldrooksq = kp - 4;
-         Square newrooksq = kp - 1;
-         contents[kp] = contents[oldrooksq] = Piece();
-         contents[newrooksq] = WhiteRook;
-         contents[kp-2] = WhiteKing;
-         rook_bits[White].clear(oldrooksq);
-         rook_bits[White].set(newrooksq);
-         clearAll(White,kp);
-         clearAll(White,oldrooksq);
-         setAll(White,newkp);
-         setAll(White,newrooksq);
-         if (node) {
-             (node+1)->dirty_num = 2;
-             (node+1)->dirty[0] = nnue::DirtyState(kp, newkp, WhiteKing);
-             (node+1)->dirty[1] = nnue::DirtyState(oldrooksq, newrooksq, WhiteRook);
-         }
-      }
+          rook_bits[White].clear(oldrooksq);
+          rook_bits[White].set(newrooksq);
+          clearAll(White,kp);
+          clearAll(White,oldrooksq);
+          setAll(White,newkp);
+          setAll(White,newrooksq);
+          if (node) {
+              (node+1)->dirty_num = 2;
+              (node+1)->dirty[0] = nnue::DirtyState(kp, newkp, WhiteKing);
+              (node+1)->dirty[1] = nnue::DirtyState(oldrooksq, newrooksq, WhiteRook);
+          }
+       }
+       else if (moveType == QCastle)
+       {
+          state.moveCount = 0;
+
+          const Square kp = kingSquare(White);
+          const Square oldrooksq = isChess960() ? DestSquare(move) : (kp - 4);
+          const Square newkp = chess::C1;
+          const Square newrooksq = chess::D1;
+
+          // update the hash code
+          Xor(state.hashCode, oldrooksq, WhiteRook);
+          Xor(state.hashCode, kp, WhiteKing);
+          Xor(state.hashCode, newrooksq, WhiteRook);
+          Xor(state.hashCode, newkp, WhiteKing);
+          Xor(state.nonPawnHashCodeW, oldrooksq, WhiteRook);
+          Xor(state.nonPawnHashCodeW, kp, WhiteKing);
+          Xor(state.nonPawnHashCodeW, newrooksq, WhiteRook);
+          Xor(state.nonPawnHashCodeW, newkp, WhiteKing);
+
+          state.hashCode ^= w_castle_status[(int)state.castleStatus[White]];
+          state.hashCode ^= w_castle_status[(int)CantCastleEitherSide];
+
+          kingPos[White] = newkp;
+          king_bits[White].clear(kp);
+          king_bits[White].set(newkp);
+          state.castleStatus[White] = CantCastleEitherSide;
+
+          contents[kp] = EmptyPiece;
+          contents[oldrooksq] = EmptyPiece;
+          contents[newrooksq] = WhiteRook;
+          contents[newkp] = WhiteKing;
+
+          rook_bits[White].clear(oldrooksq);
+          rook_bits[White].set(newrooksq);
+          clearAll(White,kp);
+          clearAll(White,oldrooksq);
+          setAll(White,newkp);
+          setAll(White,newrooksq);
+          if (node) {
+              (node+1)->dirty_num = 2;
+              (node+1)->dirty[0] = nnue::DirtyState(kp, newkp, WhiteKing);
+              (node+1)->dirty[1] = nnue::DirtyState(oldrooksq, newrooksq, WhiteRook);
+          }
+       }
       else // not castling
       {
          assert(contents[start] != EmptyPiece);
@@ -498,7 +512,7 @@ void Board::doMove( Move move, [[maybe_unused]] NodeInfo *node )
             rook_bits[White].setClear(bits);
             if ((int)state.castleStatus[White]<3) {
                state.hashCode ^= w_castle_status[(int)state.castleStatus[White]];
-               state.castleStatus[White] = UpdateCastleStatusW(state.castleStatus[White],start);
+               state.castleStatus[White] = UpdateCastleStatusW(state.castleStatus[White],start, rookStartSq[White][Queenside], rookStartSq[White][Kingside]);
                state.hashCode ^= w_castle_status[(int)state.castleStatus[White]];
             }
             break;
@@ -554,7 +568,7 @@ void Board::doMove( Move move, [[maybe_unused]] NodeInfo *node )
                material[Black].removePiece(Rook);
                if ((int)state.castleStatus[Black]<3) {
                   state.hashCode ^= b_castle_status[(int)state.castleStatus[Black]];
-                  state.castleStatus[Black] = UpdateCastleStatusB(state.castleStatus[Black],dest);
+                  state.castleStatus[Black] = UpdateCastleStatusB(state.castleStatus[Black],dest, rookStartSq[Black][Queenside], rookStartSq[Black][Kingside]);
                   state.hashCode ^= b_castle_status[(int)state.castleStatus[Black]];
                }
                break;
@@ -586,10 +600,9 @@ void Board::doMove( Move move, [[maybe_unused]] NodeInfo *node )
                break;
             }
          }
+         setAll(White,dest);
+         clearAll(White,start);
       }
-      setAll(White,dest);
-      clearAll(White,start);
-
    }
    else // side == Black
    {
@@ -597,31 +610,33 @@ void Board::doMove( Move move, [[maybe_unused]] NodeInfo *node )
       {
          state.moveCount = 0;
          const Square kp = kingSquare(Black);
+         const Square oldrooksq = isChess960() ? DestSquare(move) : (kp + 3);
+         const Square newkp = chess::G8;
+         const Square newrooksq = chess::F8;
 
          // update the hash code
-         Xor(state.hashCode, kp+3, BlackRook);
+         Xor(state.hashCode, oldrooksq, BlackRook);
          Xor(state.hashCode, kp, BlackKing);
-         Xor(state.hashCode, kp+1, BlackRook);
-         Xor(state.hashCode, kp+2, BlackKing);
-         Xor(state.nonPawnHashCodeB, kp+3, BlackRook);
+         Xor(state.hashCode, newrooksq, BlackRook);
+         Xor(state.hashCode, newkp, BlackKing);
+         Xor(state.nonPawnHashCodeB, oldrooksq, BlackRook);
          Xor(state.nonPawnHashCodeB, kp, BlackKing);
-         Xor(state.nonPawnHashCodeB, kp+1, BlackRook);
-         Xor(state.nonPawnHashCodeB, kp+2, BlackKing);
+         Xor(state.nonPawnHashCodeB, newrooksq, BlackRook);
+         Xor(state.nonPawnHashCodeB, newkp, BlackKing);
 
          state.hashCode ^= b_castle_status[(int)state.castleStatus[Black]];
          state.hashCode ^= b_castle_status[(int)CantCastleEitherSide];
 
-         const int newkp = kp + 2;
          kingPos[Black] = newkp;
          king_bits[Black].clear(kp);
          king_bits[Black].set(newkp);
          state.castleStatus[Black] = CantCastleEitherSide;
-         // find old square of rook
-         Square oldrooksq = kp + 3;
-         Square newrooksq = kp + 1;
-         contents[kp] = contents[oldrooksq] = EmptyPiece;
+
+         contents[kp] = EmptyPiece;
+         contents[oldrooksq] = EmptyPiece;
          contents[newrooksq] = BlackRook;
-         contents[kp+2] = BlackKing;
+         contents[newkp] = BlackKing;
+
          rook_bits[Black].clear(oldrooksq);
          rook_bits[Black].set(newrooksq);
          clearAll(Black,kp);
@@ -639,30 +654,33 @@ void Board::doMove( Move move, [[maybe_unused]] NodeInfo *node )
          state.moveCount = 0;
          const Square kp = kingSquare(Black);
 
+         const Square oldrooksq = isChess960() ? DestSquare(move) : (kp - 4);
+         const Square newkp = chess::C8;
+         const Square newrooksq = chess::D8;
+
          // update the hash code
-         Xor(state.hashCode, kp-4, BlackRook);
+         Xor(state.hashCode, oldrooksq, BlackRook);
          Xor(state.hashCode, kp, BlackKing);
-         Xor(state.hashCode, kp-1, BlackRook);
-         Xor(state.hashCode, kp-2, BlackKing);
-         Xor(state.nonPawnHashCodeB, kp-4, BlackRook);
+         Xor(state.hashCode, newrooksq, BlackRook);
+         Xor(state.hashCode, newkp, BlackKing);
+         Xor(state.nonPawnHashCodeB, oldrooksq, BlackRook);
          Xor(state.nonPawnHashCodeB, kp, BlackKing);
-         Xor(state.nonPawnHashCodeB, kp-1, BlackRook);
-         Xor(state.nonPawnHashCodeB, kp-2, BlackKing);
+         Xor(state.nonPawnHashCodeB, newrooksq, BlackRook);
+         Xor(state.nonPawnHashCodeB, newkp, BlackKing);
 
          state.hashCode ^= b_castle_status[(int)state.castleStatus[Black]];
          state.hashCode ^= b_castle_status[(int)CantCastleEitherSide];
 
-         const int newkp = kp - 2;
          kingPos[Black] = newkp;
          king_bits[Black].clear(kp);
          king_bits[Black].set(newkp);
          state.castleStatus[Black] = CantCastleEitherSide;
-         // find old square of rook
-         Square oldrooksq = kp - 4;
-         Square newrooksq = kp - 1;
-         contents[kp] = contents[oldrooksq] = EmptyPiece;
+
+         contents[kp] = EmptyPiece;
+         contents[oldrooksq] = EmptyPiece;
          contents[newrooksq] = BlackRook;
-         contents[kp-2] = BlackKing;
+         contents[newkp] = BlackKing;
+
          rook_bits[Black].clear(oldrooksq);
          rook_bits[Black].set(newrooksq);
          clearAll(Black,kp);
@@ -786,9 +804,9 @@ void Board::doMove( Move move, [[maybe_unused]] NodeInfo *node )
             contents[dest] = BlackRook;
             rook_bits[Black].setClear(bits);
             if ((int)state.castleStatus[Black]<3) {
-                state.hashCode ^= b_castle_status[(int)state.castleStatus[Black]];
-                state.castleStatus[Black] = UpdateCastleStatusB(state.castleStatus[Black],start);
-                state.hashCode ^= b_castle_status[(int)state.castleStatus[Black]];
+                 state.hashCode ^= b_castle_status[(int)state.castleStatus[Black]];
+                 state.castleStatus[Black] = UpdateCastleStatusB(state.castleStatus[Black],start, rookStartSq[Black][Queenside], rookStartSq[Black][Kingside]);
+                 state.hashCode ^= b_castle_status[(int)state.castleStatus[Black]];
             }
             break;
          case Queen:
@@ -840,11 +858,11 @@ void Board::doMove( Move move, [[maybe_unused]] NodeInfo *node )
                rook_bits[White].clear(target);
                Xor(state.nonPawnHashCodeW, target, capture);
                material[White].removePiece(Rook);
-               if ((int)state.castleStatus[White]<3) {
-                  state.hashCode ^= w_castle_status[(int)state.castleStatus[White]];
-                  state.castleStatus[White] = UpdateCastleStatusW(state.castleStatus[White],dest);
-                  state.hashCode ^= w_castle_status[(int)state.castleStatus[White]];
-               }
+                if ((int)state.castleStatus[White]<3) {
+                   state.hashCode ^= w_castle_status[(int)state.castleStatus[White]];
+                   state.castleStatus[White] = UpdateCastleStatusW(state.castleStatus[White],dest, rookStartSq[White][Queenside], rookStartSq[White][Kingside]);
+                   state.hashCode ^= w_castle_status[(int)state.castleStatus[White]];
+                }
                break;
             case Knight:
                knight_bits[White].clear(target);
@@ -872,12 +890,12 @@ void Board::doMove( Move move, [[maybe_unused]] NodeInfo *node )
                break;
             default:
                break;
-            }
-         }
-         setAll(Black,dest);
-         clearAll(Black,start);
-      }
-   }
+             }
+          }
+          setAll(Black,dest);
+          clearAll(Black,start);
+       }
+    }
 
    // changing side to move so flip those bits
    state.hashCode = BoardHash::setSideToMove(state.hashCode,oppositeSide());
@@ -933,24 +951,30 @@ hash_t Board::hashCode( Move move ) const
    {
       if (moveType == KCastle)
       {
-         const Square kp = kingSquare(White);
-         Xor(newHash, kp+3, WhiteRook);
-         Xor(newHash, kp, WhiteKing);
-         Xor(newHash, kp+1, WhiteRook);
-         Xor(newHash, kp+2, WhiteKing);
-         newHash ^= w_castle_status[(int)state.castleStatus[White]];
-         newHash ^= w_castle_status[(int)CantCastleEitherSide];
-      }
-      else if (moveType == QCastle)
-      {
-         const Square kp = kingSquare(White);
-         Xor(newHash, kp-4, WhiteRook);
-         Xor(newHash, kp, WhiteKing);
-         Xor(newHash, kp-1, WhiteRook);
-         Xor(newHash, kp-2, WhiteKing);
-         newHash ^= w_castle_status[(int)state.castleStatus[White]];
-         newHash ^= w_castle_status[(int)CantCastleEitherSide];
-      }
+          const Square kp = kingSquare(White);
+          Square oldrooksq = isChess960() ? dest : (kp+3);
+          Square newkp = isChess960() ? chess::G1 : (kp+2);
+          Square newrooksq = isChess960() ? chess::F1 : (kp+1);
+          Xor(newHash, oldrooksq, WhiteRook);
+          Xor(newHash, kp, WhiteKing);
+          Xor(newHash, newrooksq, WhiteRook);
+          Xor(newHash, newkp, WhiteKing);
+          newHash ^= w_castle_status[(int)state.castleStatus[White]];
+          newHash ^= w_castle_status[(int)CantCastleEitherSide];
+       }
+       else if (moveType == QCastle)
+       {
+          const Square kp = kingSquare(White);
+          Square oldrooksq = isChess960() ? dest : (kp-4);
+          Square newkp = isChess960() ? chess::C1 : (kp-2);
+          Square newrooksq = isChess960() ? chess::D1 : (kp-1);
+          Xor(newHash, oldrooksq, WhiteRook);
+          Xor(newHash, kp, WhiteKing);
+          Xor(newHash, newrooksq, WhiteRook);
+          Xor(newHash, newkp, WhiteKing);
+          newHash ^= w_castle_status[(int)state.castleStatus[White]];
+          newHash ^= w_castle_status[(int)CantCastleEitherSide];
+       }
       else // not castling
       {
          Square target = dest; // where we captured
@@ -997,7 +1021,7 @@ hash_t Board::hashCode( Move move ) const
             Xor(newHash, dest, WhiteRook );
             if ((int)state.castleStatus[White]<3) {
                newHash ^= w_castle_status[(int)state.castleStatus[White]];
-               newHash ^= w_castle_status[(int)UpdateCastleStatusW(state.castleStatus[White],start)];
+               newHash ^= w_castle_status[(int)UpdateCastleStatusW(state.castleStatus[White],start, rookStartSq[White][Queenside], rookStartSq[White][Kingside])];
             }
             break;
          case Queen:
@@ -1019,7 +1043,7 @@ hash_t Board::hashCode( Move move ) const
             if (Capture(move) == Rook) {
                if ((int)state.castleStatus[Black]<3) {
                   newHash ^= b_castle_status[(int)state.castleStatus[Black]];
-                  newHash ^= b_castle_status[(int)UpdateCastleStatusB(state.castleStatus[Black],dest)];
+                  newHash ^= b_castle_status[(int)UpdateCastleStatusB(state.castleStatus[Black],dest, rookStartSq[Black][Queenside], rookStartSq[Black][Kingside])];
                }
             }
          }
@@ -1031,20 +1055,26 @@ hash_t Board::hashCode( Move move ) const
       if (moveType == KCastle)
       {
          const Square kp = kingSquare(Black);
-         Xor(newHash, kp+3, BlackRook);
+         Square oldrooksq = isChess960() ? dest : (kp+3);
+         Square newkp = isChess960() ? chess::G8 : (kp+2);
+         Square newrooksq = isChess960() ? chess::F8 : (kp+1);
+         Xor(newHash, oldrooksq, BlackRook);
          Xor(newHash, kp, BlackKing);
-         Xor(newHash, kp+1, BlackRook);
-         Xor(newHash, kp+2, BlackKing);
+         Xor(newHash, newrooksq, BlackRook);
+         Xor(newHash, newkp, BlackKing);
          newHash ^= b_castle_status[(int)state.castleStatus[Black]];
          newHash ^= b_castle_status[(int)CantCastleEitherSide];
       }
       else if (moveType == QCastle)
       {
          const Square kp = kingSquare(Black);
-         Xor(newHash, kp-4, BlackRook);
+         Square oldrooksq = isChess960() ? dest : (kp-4);
+         Square newkp = isChess960() ? chess::C8 : (kp-2);
+         Square newrooksq = isChess960() ? chess::D8 : (kp-1);
+         Xor(newHash, oldrooksq, BlackRook);
          Xor(newHash, kp, BlackKing);
-         Xor(newHash, kp-1, BlackRook);
-         Xor(newHash, kp-2, BlackKing);
+         Xor(newHash, newrooksq, BlackRook);
+         Xor(newHash, newkp, BlackKing);
          newHash ^= b_castle_status[(int)state.castleStatus[Black]];
          newHash ^= b_castle_status[(int)CantCastleEitherSide];
       }
@@ -1094,7 +1124,7 @@ hash_t Board::hashCode( Move move ) const
             Xor(newHash, dest, BlackRook );
             if ((int)state.castleStatus[Black]<3) {
                newHash ^= b_castle_status[(int)state.castleStatus[Black]];
-               newHash ^= b_castle_status[(int)UpdateCastleStatusB(state.castleStatus[Black],dest)];
+               newHash ^= b_castle_status[(int)UpdateCastleStatusB(state.castleStatus[Black],dest, rookStartSq[Black][Queenside], rookStartSq[Black][Kingside])];
             }
             break;
          case Queen:
@@ -1116,7 +1146,7 @@ hash_t Board::hashCode( Move move ) const
             if (Capture(move) == Rook) {
                if ((int)state.castleStatus[White]<3) {
                   newHash ^= w_castle_status[(int)state.castleStatus[White]];
-                  newHash ^= w_castle_status[(int)UpdateCastleStatusW(state.castleStatus[White],dest)];
+                  newHash ^= w_castle_status[(int)UpdateCastleStatusW(state.castleStatus[White],dest, rookStartSq[White][Queenside], rookStartSq[White][Kingside])];
                }
             }
          }
@@ -1135,19 +1165,19 @@ void Board::undoCastling(Square kp, Square oldkingsq, Square newrooksq,
                           Square oldrooksq)
 {
    contents[kp] = EmptyPiece;
-   contents[oldrooksq] = MakePiece(Rook,side);
    contents[newrooksq] = EmptyPiece;
+   contents[oldrooksq] = MakePiece(Rook,side);
    contents[oldkingsq] = MakePiece(King,side);
    kingPos[side] = oldkingsq;
    king_bits[side].clear(kp);
    king_bits[side].set(oldkingsq);
-   rook_bits[side].set(oldrooksq);
    rook_bits[side].clear(newrooksq);
+   rook_bits[side].set(oldrooksq);
 
-   setAll(side,oldrooksq);
-   setAll(side,oldkingsq);
    clearAll(side,kp);
    clearAll(side,newrooksq);
+   setAll(side,oldrooksq);
+   setAll(side,oldkingsq);
 }
 
 void Board::undoMove( Move move, const BoardState &old_state )
@@ -1161,17 +1191,17 @@ void Board::undoMove( Move move, const BoardState &old_state )
       if (moveType == KCastle)
       {
          Square kp = kingSquare(side);
-         Square oldrooksq = kp+1;
+         Square oldkingsq = start;
+         Square oldrooksq = isChess960() ? dest : (kp+1);
          Square newrooksq = kp-1;
-         Square oldkingsq = kp-2;
          undoCastling(kp,oldkingsq,newrooksq,oldrooksq);
       }
       else if (moveType == QCastle)
       {
          Square kp = kingSquare(side);
-         Square oldrooksq = kp-2;
+         Square oldkingsq = start;
+         Square oldrooksq = isChess960() ? dest : (kp-2);
          Square newrooksq = kp+1;
-         Square oldkingsq = kp+2;
          undoCastling(kp,oldkingsq,newrooksq,oldrooksq);
       }
       else if (side == White)

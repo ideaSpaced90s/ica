@@ -1,9 +1,12 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../scholarly_theme.dart';
+import '../../services/chess_sound_service.dart';
+import '../../application/chess_provider.dart';
 
-class CountdownOverlay extends StatefulWidget {
+class CountdownOverlay extends ConsumerStatefulWidget {
   final VoidCallback onComplete;
 
   const CountdownOverlay({
@@ -12,10 +15,10 @@ class CountdownOverlay extends StatefulWidget {
   });
 
   @override
-  State<CountdownOverlay> createState() => _CountdownOverlayState();
+  ConsumerState<CountdownOverlay> createState() => _CountdownOverlayState();
 }
 
-class _CountdownOverlayState extends State<CountdownOverlay>
+class _CountdownOverlayState extends ConsumerState<CountdownOverlay>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
@@ -70,6 +73,9 @@ class _CountdownOverlayState extends State<CountdownOverlay>
     if (_currentIndex < _steps.length) {
       _controller.reset();
       _controller.forward();
+
+      // Trigger police whistle SFX on each count (3, 2, 1, GO!)
+      ref.read(chessSoundServiceProvider).playBattlegroundSfx(SoundEffect.policeWhistle);
 
       // Hold each step for 900 milliseconds
       _timer = Timer(const Duration(milliseconds: 900), () {

@@ -6,9 +6,12 @@
 
 #include <cassert>
 #include <sstream>
+#include <cctype>
 
 int BoardIO::readFEN(Board &board, const std::string &buf) {
+    bool is_c960 = board.isChess960();
     board.reset();
+    board.setChess960(is_c960);
     for (int i = 0; i < 64; i++) {
         board.contents[i] = EmptyPiece;
     }
@@ -93,6 +96,38 @@ int BoardIO::readFEN(Board &board, const std::string &buf) {
         return 0;
     }
     bp++;
+
+    // Scan back ranks for King and Rook starting positions (needed for Chess960)
+    Square w_king_sq = InvalidSquare;
+    Square b_king_sq = InvalidSquare;
+    for (int file = 0; file < 8; ++file) {
+        if (board.contents[file] == WhiteKing) {
+            w_king_sq = file;
+        }
+        if (board.contents[56 + file] == BlackKing) {
+            b_king_sq = 56 + file;
+        }
+    }
+    // Fallbacks to standard squares if not found
+    if (w_king_sq == InvalidSquare) w_king_sq = chess::E1;
+    if (b_king_sq == InvalidSquare) b_king_sq = chess::E8;
+
+    board.kingStartSq[White] = w_king_sq;
+    board.kingStartSq[Black] = b_king_sq;
+
+    // Initialize rooks to invalid
+    board.rookStartSq[White][Queenside] = board.rookStartSq[White][Kingside] = InvalidSquare;
+    board.rookStartSq[Black][Queenside] = board.rookStartSq[Black][Kingside] = InvalidSquare;
+
+    if (!board.isChess960()) {
+        board.kingStartSq[White] = chess::E1;
+        board.kingStartSq[Black] = chess::E8;
+        board.rookStartSq[White][Queenside] = chess::A1;
+        board.rookStartSq[White][Kingside] = chess::H1;
+        board.rookStartSq[Black][Queenside] = chess::A8;
+        board.rookStartSq[Black][Kingside] = chess::H8;
+    }
+
     while (bp != buf.end() && isspace(*bp))
         bp++;
     if (bp == buf.end())
@@ -102,24 +137,107 @@ int BoardIO::readFEN(Board &board, const std::string &buf) {
         board.state.castleStatus[White] = board.state.castleStatus[Black] = CantCastleEitherSide;
         bp++;
     } else {
-        int k = 0;
+        bool w_k = false, w_q = false, b_k = false, b_q = false;
         for (; bp != buf.end() && !isspace(*bp); bp++) {
-            if (*bp == 'K')
-                k += 1;
-            else if (*bp == 'Q')
-                k += 2;
-            else if (*bp == 'k')
-                k += 4;
-            else if (*bp == 'q')
-                k += 8;
+            char ch = *bp;
+            if (ch == 'K') {
+                w_k = true;
+                // Scan to the right of the White King for a rook
+                Square rsq = InvalidSquare;
+                for (int f = (w_king_sq % 8) + 1; f < 8; ++f) {
+                    if (board.contents[f] == WhiteRook) { rsq = f; break; }
+                }
+                if (rsq != InvalidSquare) board.rookStartSq[White][Kingside] = rsq;
+            }
+            else if (ch == 'Q') {
+                w_q = true;
+                // Scan to the left of the White King for a rook
+                Square rsq = InvalidSquare;
+                for (int f = (w_king_sq % 8) - 1; f >= 0; --f) {
+                    if (board.contents[f] == WhiteRook) { rsq = f; break; }
+                }
+                if (rsq != InvalidSquare) board.rookStartSq[White][Queenside] = rsq;
+            }
+            else if (ch == 'k') {
+                b_k = true;
+                // Scan to the right of the Black King for a rook
+                Square rsq = InvalidSquare;
+                for (int f = (b_king_sq % 8) + 1; f < 8; ++f) {
+                    if (board.contents[56 + f] == BlackRook) { rsq = 56 + f; break; }
+                }
+                if (rsq != InvalidSquare) board.rookStartSq[Black][Kingside] = rsq;
+            }
+            else if (ch == 'q') {
+                b_q = true;
+                // Scan to the left of the Black King for a rook
+                Square rsq = InvalidSquare;
+                for (int f = (b_king_sq % 8) - 1; f >= 0; --f) {
+                    if (board.contents[56 + f] == BlackRook) { rsq = 56 + f; break; }
+                }
+                if (rsq != InvalidSquare) board.rookStartSq[Black][Queenside] = rsq;
+            }
+            else if (ch >= 'A' && ch <= 'H') {
+                int f = ch - 'A';
+                if (f > (w_king_sq % 8)) {
+                    w_k = true;
+                    board.rookStartSq[White][Kingside] = f;
+                } else {
+                    w_q = true;
+                    board.rookStartSq[White][Queenside] = f;
+                }
+            }
+            else if (ch >= 'a' && ch <= 'h') {
+                int f = ch - 'a';
+                if (f > (b_king_sq % 8)) {
+                    b_k = true;
+                    board.rookStartSq[Black][Kingside] = 56 + f;
+                } else {
+                    b_q = true;
+                    board.rookStartSq[Black][Queenside] = 56 + f;
+                }
+            }
             else {
-                return 0;
+                return 0; // Invalid character
             }
         }
-        static const CastleType vals[4] = {CantCastleEitherSide, CanCastleKSide, CanCastleQSide,
-                                           CanCastleEitherSide};
-        board.state.castleStatus[White] = vals[k % 4];
-        board.state.castleStatus[Black] = vals[k / 4];
+        
+        // If we found castling rights but the rook squares were not set,
+        // use default standard squares or fallback to backrank rook positions.
+        if (w_k && board.rookStartSq[White][Kingside] == InvalidSquare) {
+            for (int f = (w_king_sq % 8) + 1; f < 8; ++f) {
+                if (board.contents[f] == WhiteRook) { board.rookStartSq[White][Kingside] = f; break; }
+            }
+            if (board.rookStartSq[White][Kingside] == InvalidSquare) board.rookStartSq[White][Kingside] = chess::H1;
+        }
+        if (w_q && board.rookStartSq[White][Queenside] == InvalidSquare) {
+            for (int f = (w_king_sq % 8) - 1; f >= 0; --f) {
+                if (board.contents[f] == WhiteRook) { board.rookStartSq[White][Queenside] = f; break; }
+            }
+            if (board.rookStartSq[White][Queenside] == InvalidSquare) board.rookStartSq[White][Queenside] = chess::A1;
+        }
+        if (b_k && board.rookStartSq[Black][Kingside] == InvalidSquare) {
+            for (int f = (b_king_sq % 8) + 1; f < 8; ++f) {
+                if (board.contents[56 + f] == BlackRook) { board.rookStartSq[Black][Kingside] = 56 + f; break; }
+            }
+            if (board.rookStartSq[Black][Kingside] == InvalidSquare) board.rookStartSq[Black][Kingside] = chess::H8;
+        }
+        if (b_q && board.rookStartSq[Black][Queenside] == InvalidSquare) {
+            for (int f = (b_king_sq % 8) - 1; f >= 0; --f) {
+                if (board.contents[56 + f] == BlackRook) { board.rookStartSq[Black][Queenside] = 56 + f; break; }
+            }
+            if (board.rookStartSq[Black][Queenside] == InvalidSquare) board.rookStartSq[Black][Queenside] = chess::A8;
+        }
+
+        // Set castleStatus using CastleType values
+        if (w_k && w_q) board.state.castleStatus[White] = CanCastleEitherSide;
+        else if (w_k) board.state.castleStatus[White] = CanCastleKSide;
+        else if (w_q) board.state.castleStatus[White] = CanCastleQSide;
+        else board.state.castleStatus[White] = CantCastleEitherSide;
+
+        if (b_k && b_q) board.state.castleStatus[Black] = CanCastleEitherSide;
+        else if (b_k) board.state.castleStatus[Black] = CanCastleKSide;
+        else if (b_q) board.state.castleStatus[Black] = CanCastleQSide;
+        else board.state.castleStatus[Black] = CantCastleEitherSide;
     }
     board.setSecondaryVars();
     while (bp != buf.end() && isspace(*bp))
@@ -206,14 +324,37 @@ void BoardIO::writeFEN(const Board &board, std::ostream &o, bool addMoveInfo) {
     if (wcs == 3 && bcs == 3) {
         o << '-';
     } else {
-        if (kcastle[wcs])
-            o << 'K';
-        if (qcastle[wcs])
-            o << 'Q';
-        if (kcastle[bcs])
-            o << 'k';
-        if (qcastle[bcs])
-            o << 'q';
+        if (board.isChess960()) {
+            if (kcastle[wcs]) {
+                Square rsq = board.rookStartSq[White][1];
+                if (rsq == chess::H1) o << 'K';
+                else o << (char)std::toupper(FileImage(rsq));
+            }
+            if (qcastle[wcs]) {
+                Square rsq = board.rookStartSq[White][0];
+                if (rsq == chess::A1) o << 'Q';
+                else o << (char)std::toupper(FileImage(rsq));
+            }
+            if (kcastle[bcs]) {
+                Square rsq = board.rookStartSq[Black][1];
+                if (rsq == chess::H8) o << 'k';
+                else o << FileImage(rsq);
+            }
+            if (qcastle[bcs]) {
+                Square rsq = board.rookStartSq[Black][0];
+                if (rsq == chess::A8) o << 'q';
+                else o << FileImage(rsq);
+            }
+        } else {
+            if (kcastle[wcs])
+                o << 'K';
+            if (qcastle[wcs])
+                o << 'Q';
+            if (kcastle[bcs])
+                o << 'k';
+            if (qcastle[bcs])
+                o << 'q';
+        }
     }
     o << ' ';
     Square epsq = board.enPassantSq();

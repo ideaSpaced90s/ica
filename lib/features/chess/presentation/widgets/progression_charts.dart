@@ -402,7 +402,7 @@ class TacticalRadarChart extends ConsumerWidget {
 
     final aggression = playstyle.aggression;
     final power = playstyle.power;
-    final versatility = playstyle.versatility;
+    final composure = playstyle.composure;
     final intensity = playstyle.intensity;
     final speed = playstyle.speed;
 
@@ -421,9 +421,9 @@ class TacticalRadarChart extends ConsumerWidget {
         const Color(0xFFF59E0B),
       ),
       (
-        versatility,
-        'Universalist',
-        'You are highly versatile, regularly transitioning between Chess960 and Classic formats.',
+        composure,
+        'Iron Composure',
+        'You hold your nerve in the toughest moments, converting or saving positions even when under material pressure.',
         const Color(0xFF8B5CF6),
       ),
       (
@@ -486,7 +486,7 @@ class TacticalRadarChart extends ConsumerWidget {
                 dataEntries: const [
                   RadarEntry(value: 0.50), // ATK Aggression
                   RadarEntry(value: 0.45), // POW Power
-                  RadarEntry(value: 0.35), // VER Versatility
+                  RadarEntry(value: 0.35), // CMP Composure
                   RadarEntry(value: 0.55), // INT Intensity
                   RadarEntry(value: 0.60), // SPD Speed
                 ],
@@ -500,7 +500,7 @@ class TacticalRadarChart extends ConsumerWidget {
                 dataEntries: [
                   RadarEntry(value: aggression),
                   RadarEntry(value: power),
-                  RadarEntry(value: versatility),
+                  RadarEntry(value: composure),
                   RadarEntry(value: intensity),
                   RadarEntry(value: speed),
                 ],
@@ -517,7 +517,7 @@ class TacticalRadarChart extends ConsumerWidget {
             borderData: FlBorderData(show: false),
             radarBorderData: const BorderSide(color: Color(0xFFF3E8FF), width: 1),
             getTitle: (index, angle) {
-              final text = ['ATK', 'POW', 'VER', 'INT', 'SPD'][index];
+              final text = ['ATK', 'POW', 'CMP', 'INT', 'SPD'][index];
               final color = [
                 const Color(0xFFEF4444),
                 const Color(0xFFF59E0B),
@@ -525,7 +525,7 @@ class TacticalRadarChart extends ConsumerWidget {
                 const Color(0xFF10B981),
                 const Color(0xFF06B6D4),
               ][index];
-              final val = [aggression, power, versatility, intensity, speed][index];
+              final val = [aggression, power, composure, intensity, speed][index];
               final percentText = '${(val * 100).toStringAsFixed(0)}%';
               return RadarChartTitle(
                 text: '',
@@ -634,9 +634,9 @@ class TacticalRadarChart extends ConsumerWidget {
         ),
         const SizedBox(height: 10),
         _buildLegendItem(
-          'VER',
-          'Versatility Index',
-          'Ratio of Chess960 variants played compared to Classic chess matches.',
+          'CMP',
+          'Composure',
+          'Measures how well you hold or save difficult positions under material pressure or against stronger opponents.',
           const Color(0xFF8B5CF6),
         ),
         const SizedBox(height: 10),
@@ -841,17 +841,17 @@ class TacticalRadarChart extends ConsumerWidget {
   }
 }
 
-class ModeDistributionChart extends ConsumerWidget {
+class TimeControlChart extends ConsumerWidget {
   final bool isMobile;
-  const ModeDistributionChart({super.key, this.isMobile = false});
+  const TimeControlChart({super.key, this.isMobile = false});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final bgState = ref.watch(battlegroundProvider);
-    final ledger = bgState.cachedLedgerEntries;
-    final classic = ledger.where((s) => s.gameMode == 'classic').length;
-    final nineSixty = ledger.where((s) => s.gameMode == 'chess960').length;
-    final total = classic + nineSixty;
+    final bullet = bgState.bulletGamesClassic;
+    final blitz = bgState.blitzGamesClassic;
+    final rapid = bgState.rapidGamesClassic;
+    final total = bullet + blitz + rapid;
 
     if (total == 0) {
       return Center(
@@ -866,8 +866,9 @@ class ModeDistributionChart extends ConsumerWidget {
       );
     }
 
-    final classicPct = total > 0 ? (classic / total * 100).toInt() : 0;
-    final nineSixtyPct = total > 0 ? (nineSixty / total * 100).toInt() : 0;
+    final bulletPct = total > 0 ? (bullet / total * 100).toInt() : 0;
+    final blitzPct = total > 0 ? (blitz / total * 100).toInt() : 0;
+    final rapidPct = total > 0 ? (rapid / total * 100).toInt() : 0;
 
     if (isMobile) {
       return Column(
@@ -878,7 +879,7 @@ class ModeDistributionChart extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'GAME MODES',
+                'TIME CONTROLS',
                 style: GoogleFonts.inter(
                   color: ScholarlyTheme.textPrimary,
                   fontSize: 12,
@@ -902,21 +903,30 @@ class ModeDistributionChart extends ConsumerWidget {
               height: 6,
               child: Row(
                 children: [
-                  if (classic > 0)
+                  if (bullet > 0)
                     Expanded(
-                      flex: classic,
+                      flex: bullet,
                       child: Container(
                         decoration: const BoxDecoration(
-                          color: Color(0xFF8B5CF6), // Classic Violet
+                          color: Colors.cyan,
                         ),
                       ),
                     ),
-                  if (nineSixty > 0)
+                  if (blitz > 0)
                     Expanded(
-                      flex: nineSixty,
+                      flex: blitz,
                       child: Container(
                         decoration: const BoxDecoration(
-                          color: Color(0xFFF59E0B), // 960 Gold
+                          color: Colors.orangeAccent,
+                        ),
+                      ),
+                    ),
+                  if (rapid > 0)
+                    Expanded(
+                      flex: rapid,
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF6366F1),
                         ),
                       ),
                     ),
@@ -925,12 +935,17 @@ class ModeDistributionChart extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 6),
-          Row(
-            children: [
-              _buildMiniLegend(const Color(0xFF8B5CF6), 'Classic', '$classicPct% ($classic)'),
-              const SizedBox(width: 16),
-              _buildMiniLegend(const Color(0xFFF59E0B), '960', '$nineSixtyPct% ($nineSixty)'),
-            ],
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _buildMiniLegend(Colors.cyan, 'Bullet', '$bulletPct% ($bullet)'),
+                const SizedBox(width: 8),
+                _buildMiniLegend(Colors.orangeAccent, 'Blitz', '$blitzPct% ($blitz)'),
+                const SizedBox(width: 8),
+                _buildMiniLegend(const Color(0xFF6366F1), 'Rapid', '$rapidPct% ($rapid)'),
+              ],
+            ),
           ),
         ],
       );
@@ -947,14 +962,20 @@ class ModeDistributionChart extends ConsumerWidget {
                 centerSpaceRadius: 24,
                 sections: [
                   PieChartSectionData(
-                    color: const Color(0xFF8B5CF6), // Electric Violet
-                    value: classic.toDouble(),
+                    color: Colors.cyan,
+                    value: bullet.toDouble(),
                     title: '',
                     radius: 14,
                   ),
                   PieChartSectionData(
-                    color: const Color(0xFFF59E0B), // Sunny Gold
-                    value: nineSixty.toDouble(),
+                    color: Colors.orangeAccent,
+                    value: blitz.toDouble(),
+                    title: '',
+                    radius: 14,
+                  ),
+                  PieChartSectionData(
+                    color: const Color(0xFF6366F1),
+                    value: rapid.toDouble(),
                     title: '',
                     radius: 14,
                   ),
@@ -969,8 +990,9 @@ class ModeDistributionChart extends ConsumerWidget {
           runSpacing: 4,
           alignment: WrapAlignment.center,
           children: [
-            _buildMiniLegend(const Color(0xFF8B5CF6), 'Classic', '$classicPct%'),
-            _buildMiniLegend(const Color(0xFFF59E0B), '960', '$nineSixtyPct%'),
+            _buildMiniLegend(Colors.cyan, 'Bullet', '$bulletPct%'),
+            _buildMiniLegend(Colors.orangeAccent, 'Blitz', '$blitzPct%'),
+            _buildMiniLegend(const Color(0xFF6366F1), 'Rapid', '$rapidPct%'),
           ],
         ),
       ],
@@ -1188,6 +1210,10 @@ class _DominanceHeatmapState extends ConsumerState<DominanceHeatmap> {
               Widget buildMatchRow(PerformanceLedgerEntry match) {
                 final matchTime = DateFormat('jm').format(match.timestamp);
                 final modeLabel =
+                    // Historical ledger entries recorded before Battleground
+                    // became Classic-only may have gameMode == 'chess960'.
+                    // This label is kept for archive display only;
+                    // all new Battleground entries will show 'Classic'.
                     '${match.ratingCategory.toUpperCase()} ${match.gameMode == 'chess960' ? '960' : 'Classic'}';
 
                 Color outcomeColor;

@@ -20,7 +20,7 @@ The application features a sidebar-based navigation structure with 12 distinct p
 | 1 | **Home** | `Home` | Master dashboard displaying live stats, active daily challenges, rating progress, and the overall cognitive radar chart. |
 | 2 | **Assignment** | `Assignment` | Curated daily tasks served by GM Chanakya to provide structured daily practice. |
 | 3 | **Arena** | `Arena` | Rated competitive matchmaking system against 20 custom AI personas with varying ELO ratings, styles, and time controls. |
-| 4 | **Battleground** | `Battleground` | A free-play sandbox mode against the raw Arasan engine with a live evaluation bar, side switching, and on-demand commentary. |
+| 4 | **Battleground** | `Battleground` | A free-play sandbox mode against the raw Kingslayer 1.0 engine with a live evaluation bar, side switching, and on-demand commentary. |
 | 5 | **Academy** | `Academy` | Active training lobby where GM Chanakya plays against the student, adaptively targeting their specific cognitive weaknesses. |
 | 6 | **Puzzles** | `Puzzles` | Thematic tactical chess puzzles served dynamically based on diagnosed scotomas (blind spots). |
 | 7 | **Analysis** | `Analysis` | Study Lab containing a free board for PGN loading, move exploration, custom position setup, and manual move trees. |
@@ -127,8 +127,8 @@ The 20 personas, ordered from lowest to highest difficulty, are:
 ## 7. Mode: Battleground
 Battleground serves as a sandbox environment:
 - **No Rating Pressure**: Games here do not impact the player's ELO or stats.
-- **Live Evaluation Bar**: A real-time centipawn visual gauge powered by native Arasan calculations.
-- **Dual Engine / Robot Mode**: A toggle allowing Arasan to play against itself at adjustable levels.
+- **Live Evaluation Bar**: A real-time centipawn visual gauge powered by the Kingslayer 1.0 engine.
+- **Dual Engine / Robot Mode**: A toggle allowing Kingslayer 1.0 to play against itself at adjustable levels.
 - **Mid-Game Control**: Players can pause, undo moves, swap colors mid-game, or request strategic analysis from the High Council.
 
 ---
@@ -227,11 +227,11 @@ The application runs a coordinated hybrid architecture across three processing l
 ```mermaid
 graph TD
     UI[Flutter UI / Dart State] <-->|FFI / flutter_rust_bridge| Rust[Bare-Metal Core / Shakmaty]
-    UI <-->|STDIN / STDOUT Pipe| Arasan[Arasan C++ Engine / Native Binaries]
+    UI <-->|STDIN / STDOUT Pipe| Arasan[Kingslayer 1.0 / Native Binaries]
 ```
 
 1. **State & UI Layer (Flutter/Dart)**: Manages visual components, user gestures, clocks, audio, and state coordination (via Riverpod).
-2. **Computational Engine (Native Arasan)**: An ARMv8-optimized C++ binary (`libarasan_chess_engine.so`) loaded via native platform FFI. It provides fast positional evaluations and moves.
+2. **Computational Engine (Kingslayer 1.0)**: IdeaSpace's proprietary chess engine (based on Arasan 25.4 by Jon Dart, MIT License; extended for Chess 960 support). An ARMv8-optimized C++ binary (`libarasan_chess_engine.so`) loaded via native platform FFI, providing fast positional evaluations and move generation.
 3. **Bare-Metal Core (Rust)**: A compiled Rust library integrated via `flutter_rust_bridge`. It manages chess logic (`shakmaty`), validates moves, checks for checks/mates, compiles PGN strings, and runs the scotoma diagnostic engine.
 
 ---
@@ -272,20 +272,20 @@ The app contains **26 visual board themes**:
 |---|---|---|
 | **Classic** | Light Oak / Walnut | Traditional wooden aesthetic. |
 | **Scholar** | Matte Cream / Slate Gray | Professional high-contrast academic style. |
-| **BnW / Glass** | Frosted White / Obsidian | Modern glass design. |
+| **B&W** | Frosted White / Obsidian | Modern glass design. |
 | **Champions** | Royal Blue / Gold Accent | Commemorative championship style. |
 | **Forest** | Moss Green / Forest Oak | Natural tones. |
 | **Copper** | Brushed Bronze / Copper | Metallic styling. |
-| **Calligraphy / Ink**| Rice Paper / Charcoal Ink | Hand-drawn styling. |
+| **Calligraphy** | Rice Paper / Charcoal Ink | Hand-drawn styling. |
 | **Overgrown** | Pale Leaf / Ivy Vines | Organic design. |
 | **Wood** | Cedar / Rosewood | Classic wood grain. |
 | **Ivory** | Ivory White / Onyx Black | Polished luxury style. |
 | **Steampunk** | Brass / Riveted Iron | Industrial design. |
 | **Seasons** | Sakura Pink / Autumn Maple | Seasonal theme. |
-| **Sand** | Dune Gold / Clay Brown | Desert aesthetic. |
 | **Timber** | Pine Wood / Dark Spruce | Forest logging style. |
 | **Platinum** | Satin Silver / Titanium | Clean metallic styling. |
 | **Fairytale** | Lavender / Magic Blue | Whimsical theme. |
+| **Persia** | Rose-tinted Regal Crimson | Elegant Persian style. |
 | **Shadow** | Dark Gray / Jet Black | Low-light theme. |
 | **Royal** | Deep Crimson / Gold Dust | Majestic design. |
 | **Bubblegum** | Pastel Pink / Baby Blue | Vibrant pastel styling. |
@@ -322,7 +322,7 @@ Tracks tactical slip-ups across 8 visual-spatial channels using coordinate-delta
 ## 20. Implementation Roadmap
 
 ### Phase 1: Engine Stability
-- [x] Integrate native Arasan FFI engine.
+- [x] Integrate native Kingslayer 1.0 engine (based on Arasan 25.4, MIT License) via FFI.
 - [x] Implement UCI communication pipe.
 - [x] Fix cross-platform pathing for Windows and Android.
 
@@ -367,7 +367,19 @@ Tracks tactical slip-ups across 8 visual-spatial channels using coordinate-delta
 - **Core Framework**: Flutter (Dart 3.x)
 - **State Management**: Riverpod (for app state, game loop coordination)
 - **Local Database / Storage**: JSON File (`app_settings.json` for settings, themes, and tutorial progress), SQLite (`ideaspace_games.db` via Rust FFI for game logs and puzzles)
-- **Native Engine FFI**: Arasan 25.4 (compiled C++ for Android ARMv8)
+- **Native Engine FFI**: Kingslayer 1.0 — powered by IdeaSpace (based on Arasan 25.4 by Jon Dart, MIT License; extended for Chess 960 support; compiled C++ for Android ARMv8)
 - **Bare-Metal Core**: Rust + `shakmaty` library via `flutter_rust_bridge`
 - **Typography**: Outfit, Inter, JetBrains Mono, Pirata One (loaded via Google Fonts)
 - **Platform Targets**: Android (Primary / ARMv8 optimized), Windows (Secondary)
+
+---
+
+## 22. Engine Attribution
+The chess computation engine used in IdeaSpace Chess Academy is **Kingslayer 1.0**, a proprietary derivative developed and maintained by IdeaSpace.
+
+It is based on **Arasan 25.4**, an open-source UCI chess engine authored by **Jon Dart**, distributed under the **MIT License** (Copyright 1994–2026 Jon Dart).
+
+**Modifications made by IdeaSpace:**
+- Extended Chess 960 (Fischer Random Chess) support
+- Custom persona-level calibration parameters (skill level, multi-PV, contempt, depth)
+- Integration into the Flutter/Rust FFI architecture via standard I/O pipes on Android (ARMv8)

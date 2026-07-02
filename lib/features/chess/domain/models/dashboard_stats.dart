@@ -1,14 +1,14 @@
 class TacticalPlaystyleStats {
   final double aggression;
   final double power;
-  final double versatility;
+  final double composure;
   final double intensity;
   final double speed;
 
   const TacticalPlaystyleStats({
     required this.aggression,
     required this.power,
-    required this.versatility,
+    required this.composure,
     required this.intensity,
     required this.speed,
   });
@@ -16,7 +16,7 @@ class TacticalPlaystyleStats {
   const TacticalPlaystyleStats.empty()
       : aggression = 0.5,
         power = 0.5,
-        versatility = 0.0,
+        composure = 0.5,
         intensity = 0.5,
         speed = 0.7;
 }

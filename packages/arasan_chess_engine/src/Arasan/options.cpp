@@ -84,7 +84,9 @@ void Options::setMemoryOption(size_t &value, const std::string &valueString) {
 }
 
 void Options::set_option(const std::string &name, const std::string &value) {
-    if (name == "store_games") {
+    if (name == "UCI_Chess960") {
+        setOption<bool>(name, value, uci_chess960);
+    } else if (name == "store_games") {
         setOption<bool>(name, value, games.store_games);
     } else if (name == "game_pathname") {
         games.game_pathname = value;

@@ -447,6 +447,7 @@ class PuzzlesNotifier extends Notifier<PuzzlesState> {
       if (chessSettings.isHapticsEnabled) {
         _hapticsService.errorFeedback();
       }
+      ref.read(chessSoundServiceProvider).playSfx(SoundEffect.illegal);
 
       final piece = state.game.getPiece(from);
       final colorPrefix = piece?.color == chess_lib.Color.WHITE ? 'w' : 'b';

@@ -72,3 +72,8 @@ lifetime_xp_settings.json
 **/android/.gradle/
 **/android/build/
 
+# Native Windows build outputs
+packages/arasan_chess_engine/src/win64/
+
+# Tester target outputs
+arasanengine-tester/target/

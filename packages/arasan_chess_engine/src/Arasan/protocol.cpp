@@ -1597,6 +1597,10 @@ void Protocol::processWinboardOptions(const std::string &args) {
 }
 
 uint64_t Protocol::perft(Board &board, int depth) {
+   return perft_internal(board, depth, true);
+}
+
+uint64_t Protocol::perft_internal(Board &board, int depth, bool root) {
    if (depth == 0) return 1;
 
    uint64_t nodes = 0ULL;
@@ -1605,9 +1609,14 @@ uint64_t Protocol::perft(Board &board, int depth) {
    BoardState state = board.state;
    int order = 0;
    while ((m = mg.nextMove(order)) != NullMove) {
+      if (root && doTrace) {
+         std::cout << "info string move ";
+         Notation::image(board, m, Notation::OutputFormat::UCI, std::cout);
+         std::cout << std::endl;
+      }
       if (depth > 1) {
          board.doMove(m);
-         nodes += perft(board,depth-1);
+         nodes += perft_internal(board,depth-1, false);
          board.undoMove(m,state);
       } else {
          // skip do/undo
@@ -1675,7 +1684,11 @@ bool Protocol::uciOptionCompare(const std::string &a, const std::string &b) {
    }
 }
 
-bool Protocol::do_command(const std::string &cmd, Board &board) {
+bool Protocol::do_command(const std::string &raw_cmd, Board &board) {
+    std::string cmd = raw_cmd;
+    while (!cmd.empty() && (cmd.back() == '\r' || cmd.back() == '\n' || cmd.back() == ' ' || cmd.back() == '\t')) {
+        cmd.pop_back();
+    }
     if (doTrace && debugPrefix.size() > 0) {
         std::cout << debugPrefix << "do_command: " << cmd << std::endl;
     }
@@ -1698,6 +1711,7 @@ bool Protocol::do_command(const std::string &cmd, Board &board) {
         std::cout << "option name Ponder type check default " << std::boolalpha <<
             globals::options.search.ponder << std::endl;
         std::cout << "option name Contempt type spin default 0 min -200 max 200" << std::endl;
+        std::cout << "option name UCI_Chess960 type check default false" << std::endl;
 #ifdef SYZYGY_TBS
         std::cout << "option name Use tablebases type check default ";
         if (globals::options.search.use_tablebases) std::cout << "true"; else std::cout << "false";
@@ -1783,6 +1797,9 @@ bool Protocol::do_command(const std::string &cmd, Board &board) {
         else if (uciOptionCompare(name,"Ponder")) {
             globals::options.setOption<bool>(value, globals::options.search.ponder);
             searcher->updateSearchOptions();
+        }
+        else if (uciOptionCompare(name,"UCI_Chess960")) {
+            Options::setOption<bool>(value, globals::options.uci_chess960);
         }
         else if (uciOptionCompare(name,"Contempt")) {
             std::stringstream buf(value);
@@ -1926,12 +1943,14 @@ bool Protocol::do_command(const std::string &cmd, Board &board) {
         std::cout << "readyok" << std::endl;
     }
     else if (uci && cmd_word == "position") {
+        board.setChess960(globals::options.uci_chess960);
         ponder_move = NullMove;
         lastAdded = 0;
         if (cmd_args.substr(0,3) == "fen" || cmd_args.substr(0,8) == "startpos") {
             std::string fen;
             if (cmd_args.substr(0,8) == "startpos") {
                 board.reset();
+                board.setChess960(globals::options.uci_chess960);
                 BoardIO::writeFEN(board,fen,0);
             }
             else {
@@ -2119,8 +2138,8 @@ bool Protocol::do_command(const std::string &cmd, Board &board) {
           if ((ss >> depth).fail()) {
              std::cerr << "usage: perft <depth>" << std::endl;
           } else {
-             Board b;
-             std::cout << "perft " << depth << " = " << perft(b,depth) << std::endl;
+             uint64_t nodes = perft(board,depth);
+             std::cout << "perft " << depth << " = " << nodes << std::endl;
           }
        }
        else {

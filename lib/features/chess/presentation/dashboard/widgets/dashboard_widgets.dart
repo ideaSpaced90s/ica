@@ -9,17 +9,15 @@ import '../../widgets/mini_board_preview.dart';
 import '../../../application/chess_provider.dart';
 import '../../../application/battleground_provider.dart';
 
-class MatchBreakdownRow extends StatelessWidget {
+class ClassicMatchRow extends StatelessWidget {
   final String label;
-  final int classic;
-  final int nineSixty;
+  final int count;
   final Color dotColor;
 
-  const MatchBreakdownRow({
+  const ClassicMatchRow({
     super.key,
     required this.label,
-    required this.classic,
-    required this.nineSixty,
+    required this.count,
     required this.dotColor,
   });
 
@@ -46,7 +44,7 @@ class MatchBreakdownRow extends StatelessWidget {
         ),
         const Spacer(),
         Text(
-          'C:$classic | 960:$nineSixty',
+          '$count games',
           style: GoogleFonts.jetBrainsMono(
             color: ScholarlyTheme.textMuted,
             fontSize: 9,
@@ -58,17 +56,15 @@ class MatchBreakdownRow extends StatelessWidget {
   }
 }
 
-class MobileMatchBreakdownRow extends StatelessWidget {
+class MobileClassicMatchRow extends StatelessWidget {
   final String label;
-  final int classic;
-  final int nineSixty;
+  final int count;
   final Color dotColor;
 
-  const MobileMatchBreakdownRow({
+  const MobileClassicMatchRow({
     super.key,
     required this.label,
-    required this.classic,
-    required this.nineSixty,
+    required this.count,
     required this.dotColor,
   });
 
@@ -95,7 +91,7 @@ class MobileMatchBreakdownRow extends StatelessWidget {
         ),
         const Spacer(),
         Text(
-          'Classic: $classic  |  960: $nineSixty',
+          '$count games',
           style: GoogleFonts.jetBrainsMono(
             color: Colors.white.withValues(alpha: 0.9),
             fontSize: 10,
@@ -305,24 +301,21 @@ class TotalMatchesCard extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              MatchBreakdownRow(
+              ClassicMatchRow(
                 label: 'BULLET',
-                classic: bgState.bulletGamesClassic,
-                nineSixty: bgState.bulletGames960,
+                count: bgState.bulletGamesClassic,
                 dotColor: Colors.cyan,
               ),
               const SizedBox(height: 3),
-              MatchBreakdownRow(
+              ClassicMatchRow(
                 label: 'BLITZ',
-                classic: bgState.blitzGamesClassic,
-                nineSixty: bgState.blitzGames960,
+                count: bgState.blitzGamesClassic,
                 dotColor: Colors.orangeAccent,
               ),
               const SizedBox(height: 3),
-              MatchBreakdownRow(
+              ClassicMatchRow(
                 label: 'RAPID',
-                classic: bgState.rapidGamesClassic,
-                nineSixty: bgState.rapidGames960,
+                count: bgState.rapidGamesClassic,
                 dotColor: ScholarlyTheme.accentBlue,
               ),
             ],
@@ -498,9 +491,9 @@ class MasterCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bulletCount = bgState.bulletGamesClassic + bgState.bulletGames960;
-    final blitzCount = bgState.blitzGamesClassic + bgState.blitzGames960;
-    final rapidCount = bgState.rapidGamesClassic + bgState.rapidGames960;
+    final bulletCount = bgState.bulletGamesClassic;
+    final blitzCount = bgState.blitzGamesClassic;
+    final rapidCount = bgState.rapidGamesClassic;
     final totalCount = bulletCount + blitzCount + rapidCount;
 
     double avgDominance = 0.0;
@@ -672,24 +665,21 @@ class MasterCard extends StatelessWidget {
                 const SizedBox(height: 8),
                 const Divider(color: Colors.white24, height: 1),
                 const SizedBox(height: 8),
-                MobileMatchBreakdownRow(
+                MobileClassicMatchRow(
                   label: 'BULLET',
-                  classic: bgState.bulletGamesClassic,
-                  nineSixty: bgState.bulletGames960,
+                  count: bgState.bulletGamesClassic,
                   dotColor: Colors.cyan,
                 ),
                 const SizedBox(height: 4),
-                MobileMatchBreakdownRow(
+                MobileClassicMatchRow(
                   label: 'BLITZ',
-                  classic: bgState.blitzGamesClassic,
-                  nineSixty: bgState.blitzGames960,
+                  count: bgState.blitzGamesClassic,
                   dotColor: Colors.orangeAccent,
                 ),
                 const SizedBox(height: 4),
-                MobileMatchBreakdownRow(
+                MobileClassicMatchRow(
                   label: 'RAPID',
-                  classic: bgState.rapidGamesClassic,
-                  nineSixty: bgState.rapidGames960,
+                  count: bgState.rapidGamesClassic,
                   dotColor: ScholarlyTheme.accentBlue,
                 ),
               ],
@@ -732,7 +722,6 @@ class TierCard extends StatelessWidget {
   final int elo;
   final int streak;
   final int classic;
-  final int nineSixty;
   final double dominance;
 
   const TierCard({
@@ -742,7 +731,6 @@ class TierCard extends StatelessWidget {
     required this.elo,
     required this.streak,
     required this.classic,
-    required this.nineSixty,
     required this.dominance,
   });
 
@@ -864,9 +852,9 @@ class TierCard extends StatelessWidget {
   }
 }
 
-class GameModesCard extends StatelessWidget {
+class TimeControlCard extends StatelessWidget {
   final bool isMobile;
-  const GameModesCard({super.key, this.isMobile = false});
+  const TimeControlCard({super.key, this.isMobile = false});
 
   @override
   Widget build(BuildContext context) {
@@ -907,7 +895,7 @@ class GameModesCard extends StatelessWidget {
               ),
               const SizedBox(width: 16),
               const Expanded(
-                child: ModeDistributionChart(isMobile: true),
+                child: TimeControlChart(isMobile: true),
               ),
             ],
           ),
@@ -942,7 +930,7 @@ class GameModesCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 10),
                   Text(
-                    'GAME MODES',
+                    'TIME CONTROLS',
                     style: GoogleFonts.outfit(
                       color: ScholarlyTheme.textPrimary,
                       fontSize: 12,
@@ -953,7 +941,7 @@ class GameModesCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 12),
-              const Expanded(child: ModeDistributionChart(isMobile: false)),
+              const Expanded(child: TimeControlChart(isMobile: false)),
             ],
           ),
         ),

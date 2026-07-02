@@ -502,46 +502,47 @@ class AnalysisEngineController extends Notifier<AnalysisEngineState> {
 
       MoveClassification classification = MoveClassification.best;
 
+      // Use white-perspective scores throughout for consistent loss calculation
+      final double scoreBeforeWhite = _parseScoreToWhitePerspective(beforeEval, fenBefore);
+      final double scoreAfterWhite = scorePlayedWhite; // already computed above
+      // Loss from side-to-move's perspective (positive = worse for them)
+      final double cpLossPawn = isWhite
+          ? (scoreBeforeWhite - scoreAfterWhite).clamp(0.0, double.infinity)
+          : (scoreAfterWhite - scoreBeforeWhite).clamp(0.0, double.infinity);
+      final double cpLoss = cpLossPawn * 100;
+
       if (playedMove == bestMove) {
-        // Did we play the best move? Check if it can be considered Brilliant or Great
-        final double scoreBefore = _parseScoreToDouble(beforeEval);
+        // Best move played — check for Brilliant (sacrifice or checkmate delivery)
         final isMateThreat = beforeEval['scoreType'] == 'mate';
-        
-        if (playedMove.length >= 4 && (afterGame.inCheckmate || (isMateThreat && scoreBefore.abs() < 5.0))) {
+        final isSacrifice = playedMove.length > 4; // promotion counts as complex
+        if (afterGame.inCheckmate || (isMateThreat && scoreBeforeWhite.abs() < 500)) {
           classification = MoveClassification.brilliant;
-        } else if (i > 2 && (playedMove.contains('x') || playedMove.length > 4)) {
+        } else if (i > 2 && isSacrifice) {
           classification = MoveClassification.brilliant;
         } else {
           classification = MoveClassification.best;
         }
-
         if (isWhite) {
           whiteLosses.add(0.0);
         } else {
           blackLosses.add(0.0);
         }
       } else {
-        final double scoreBefore = _parseScoreToDouble(beforeEval);
-        final double scoreAfterOpponent = _parseScoreToDouble(afterEval);
-        final double scorePlayed = -scoreAfterOpponent;
-        final double loss = scoreBefore - scorePlayed;
-
         // Accumulate cp loss for accuracy computation
-        final double cpLoss = (loss * 100).clamp(0.0, double.infinity);
         if (isWhite) {
           whiteLosses.add(cpLoss);
         } else {
           blackLosses.add(cpLoss);
         }
 
-        // Expanded Classification Rules
-        if (loss < 0.15) {
+        // Classification by centipawn loss
+        if (cpLossPawn < 0.15) {
           classification = MoveClassification.best;
-        } else if (loss < 0.35) {
+        } else if (cpLossPawn < 0.35) {
           classification = MoveClassification.good;
-        } else if (loss < 0.7) {
+        } else if (cpLossPawn < 0.7) {
           classification = MoveClassification.inaccuracy;
-        } else if (loss < 1.5) {
+        } else if (cpLossPawn < 1.5) {
           classification = MoveClassification.mistake;
         } else {
           classification = MoveClassification.blunder;
