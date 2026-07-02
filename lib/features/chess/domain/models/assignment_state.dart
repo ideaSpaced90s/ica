@@ -123,6 +123,7 @@ class AssignmentState {
   final List<DailyTask> dailyTasks;
   final DateTime lastResetDate;
   final Map<String, bool> historyLog;
+  final Map<String, bool> attendanceLaunchLog;
   final bool weeklyReviewSubmitted;
   final String? submittedGameId;
   final String? weeklyReport;
@@ -156,6 +157,7 @@ class AssignmentState {
     this.dailyTasks = const [],
     required this.lastResetDate,
     this.historyLog = const {},
+    this.attendanceLaunchLog = const {},
     this.weeklyReviewSubmitted = false,
     this.submittedGameId,
     this.weeklyReport,
@@ -184,6 +186,7 @@ class AssignmentState {
     List<DailyTask>? dailyTasks,
     DateTime? lastResetDate,
     Map<String, bool>? historyLog,
+    Map<String, bool>? attendanceLaunchLog,
     bool? weeklyReviewSubmitted,
     String? submittedGameId,
     String? weeklyReport,
@@ -211,6 +214,7 @@ class AssignmentState {
       dailyTasks: dailyTasks ?? this.dailyTasks,
       lastResetDate: lastResetDate ?? this.lastResetDate,
       historyLog: historyLog ?? this.historyLog,
+      attendanceLaunchLog: attendanceLaunchLog ?? this.attendanceLaunchLog,
       weeklyReviewSubmitted: weeklyReviewSubmitted ?? this.weeklyReviewSubmitted,
       submittedGameId: submittedGameId ?? this.submittedGameId,
       weeklyReport: weeklyReport ?? this.weeklyReport,
@@ -242,6 +246,7 @@ class AssignmentState {
     'dailyTasks': dailyTasks.map((e) => e.toJson()).toList(),
     'lastResetDate': lastResetDate.toIso8601String(),
     'historyLog': historyLog,
+    'attendanceLaunchLog': attendanceLaunchLog,
     'weeklyReviewSubmitted': weeklyReviewSubmitted,
     'submittedGameId': submittedGameId,
     'weeklyReport': weeklyReport,
@@ -273,6 +278,7 @@ class AssignmentState {
           .toList(),
       lastResetDate: json['lastResetDate'] != null ? DateTime.parse(json['lastResetDate'] as String) : DateTime.now(),
       historyLog: Map<String, bool>.from(json['historyLog'] ?? {}),
+      attendanceLaunchLog: Map<String, bool>.from(json['attendanceLaunchLog'] ?? {}),
       weeklyReviewSubmitted: json['weeklyReviewSubmitted'] as bool? ?? false,
       submittedGameId: json['submittedGameId'] as String?,
       weeklyReport: json['weeklyReport'] as String?,

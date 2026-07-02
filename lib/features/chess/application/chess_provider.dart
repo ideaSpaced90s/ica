@@ -1090,10 +1090,27 @@ class ChessNotifier extends Notifier<ChessState> {
     await service.cancelAllNotifications();
     if (state.isNotificationsEnabled) {
       if (state.dailyBriefingEnabled) {
-        await service.scheduleDailyBriefing(state.dailyBriefingTime);
+        await service.scheduleDailyBriefing(
+          state.dailyBriefingTime,
+          quietHoursEnabled: state.quietHoursEnabled,
+          quietHoursStart: state.quietHoursStart,
+          quietHoursEnd: state.quietHoursEnd,
+        );
       }
       if (state.streakProtectionEnabled) {
-        await service.scheduleStreakProtection(state.streakWarningHoursBeforeReset);
+        await service.scheduleStreakProtection(
+          state.streakWarningHoursBeforeReset,
+          quietHoursEnabled: state.quietHoursEnabled,
+          quietHoursStart: state.quietHoursStart,
+          quietHoursEnd: state.quietHoursEnd,
+        );
+      }
+      if (state.weeklyDiagnosticsEnabled) {
+        await service.scheduleWeeklyDiagnostics(
+          quietHoursEnabled: state.quietHoursEnabled,
+          quietHoursStart: state.quietHoursStart,
+          quietHoursEnd: state.quietHoursEnd,
+        );
       }
     }
   }

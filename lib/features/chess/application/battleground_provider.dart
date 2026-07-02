@@ -184,7 +184,6 @@ class BattlegroundState {
     this.cachedLedgerEntries = const [],
   });
 
-  // Battleground is always Classic chess — Chess 960 is available in Arena and Academy only.
   bool get isCalibrating => totalRatedGamesCount < 10;
   bool get isCalibrated => totalRatedGamesCount >= 10 && recalibrationGamesRemaining == 0;
   int get calibrationGamesRemaining => math.max(0, 10 - totalRatedGamesCount);

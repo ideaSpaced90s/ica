@@ -37,7 +37,7 @@ class NotificationService {
     await _androidNotifications.initialize(
       initializationSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
-        ref.read(mobileNavIndexProvider.notifier).state = 11; // Route to Assignment (11)
+        ref.read(mobileNavIndexProvider.notifier).state = 0; // Route to Dashboard (0)
       },
     );
   }
@@ -72,7 +72,12 @@ class NotificationService {
   }
 
   /// Schedule the daily briefing at a specific time (Android only)
-  Future<void> scheduleDailyBriefing(String timeStr) async {
+  Future<void> scheduleDailyBriefing(
+    String timeStr, {
+    required bool quietHoursEnabled,
+    required String quietHoursStart,
+    required String quietHoursEnd,
+  }) async {
 
     try {
       final parts = timeStr.split(':');
@@ -80,7 +85,13 @@ class NotificationService {
       final hour = int.parse(parts[0]);
       final minute = int.parse(parts[1]);
 
-      final scheduledTime = _nextInstanceOfTime(hour, minute);
+      var scheduledTime = _nextInstanceOfTime(hour, minute);
+      scheduledTime = _applyQuietHours(
+        scheduledTime,
+        quietHoursEnabled,
+        quietHoursStart,
+        quietHoursEnd,
+      );
 
       const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
         'daily_briefings',
@@ -108,13 +119,24 @@ class NotificationService {
 
   /// Schedule the evening streak protection reminder (Android only)
   /// Calculates alert time based on warning hours before midnight (e.g. 4 hours = 8:00 PM)
-  Future<void> scheduleStreakProtection(int hoursBeforeReset) async {
+  Future<void> scheduleStreakProtection(
+    int hoursBeforeReset, {
+    required bool quietHoursEnabled,
+    required String quietHoursStart,
+    required String quietHoursEnd,
+  }) async {
 
     try {
       final hour = 24 - hoursBeforeReset;
       if (hour < 0 || hour >= 24) return;
 
-      final scheduledTime = _nextInstanceOfTime(hour, 0);
+      var scheduledTime = _nextInstanceOfTime(hour, 0);
+      scheduledTime = _applyQuietHours(
+        scheduledTime,
+        quietHoursEnabled,
+        quietHoursStart,
+        quietHoursEnd,
+      );
 
       const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
         'streak_protection',
@@ -138,6 +160,129 @@ class NotificationService {
     } catch (e) {
       debugPrint('Failed to schedule streak protection notification: $e');
     }
+  }
+
+  /// Schedule the weekly diagnostic briefing on Sundays at 9:00 AM (Android only)
+  Future<void> scheduleWeeklyDiagnostics({
+    required bool quietHoursEnabled,
+    required String quietHoursStart,
+    required String quietHoursEnd,
+  }) async {
+    try {
+      var scheduledTime = _nextInstanceOfSundayNineAM();
+      scheduledTime = _applyQuietHours(
+        scheduledTime,
+        quietHoursEnabled,
+        quietHoursStart,
+        quietHoursEnd,
+      );
+
+      const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+        'weekly_diagnostics',
+        'Weekly Diagnostics',
+        channelDescription: 'GM Chanakya\'s weekly diagnostic analysis briefings',
+        importance: Importance.defaultImportance,
+        priority: Priority.defaultPriority,
+      );
+
+      await _androidNotifications.zonedSchedule(
+        1003, // Weekly Diagnostics ID
+        'Weekly Diagnostics Report',
+        'GM Chanakya has finished analyzing your games. Tap to view your diagnostic report.',
+        scheduledTime,
+        const NotificationDetails(android: androidDetails),
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+      );
+    } catch (e) {
+      debugPrint('Failed to schedule weekly diagnostics notification: $e');
+    }
+  }
+
+  /// Show an immediate milestone notification (works on Android and Windows)
+  Future<void> showMilestoneNotification(String title, String body) async {
+    const AndroidNotificationDetails androidPlatformChannelSpecifics =
+        AndroidNotificationDetails(
+      'milestones',
+      'Milestones & Triumphs',
+      channelDescription: 'Real-time rating milestones and island landfall notifications',
+      importance: Importance.high,
+      priority: Priority.high,
+    );
+    
+    const NotificationDetails platformChannelSpecifics = NotificationDetails(
+      android: androidPlatformChannelSpecifics,
+    );
+    
+    await _androidNotifications.show(
+      1004, // Milestone ID
+      title,
+      body,
+      platformChannelSpecifics,
+    );
+  }
+
+  /// Helper to calculate the next occurrence of Sunday 9:00 AM in local timezone
+  tz.TZDateTime _nextInstanceOfSundayNineAM() {
+    tz.TZDateTime scheduledDate = _nextInstanceOfTime(9, 0);
+    while (scheduledDate.weekday != DateTime.sunday) {
+      scheduledDate = scheduledDate.add(const Duration(days: 1));
+    }
+    return scheduledDate;
+  }
+
+  /// Checks if a time is within quiet hours and shifts it forward to the end of quiet hours if it is.
+  tz.TZDateTime _applyQuietHours(
+    tz.TZDateTime scheduledTime,
+    bool quietHoursEnabled,
+    String quietHoursStart,
+    String quietHoursEnd,
+  ) {
+    if (!quietHoursEnabled) return scheduledTime;
+
+    try {
+      final startParts = quietHoursStart.split(':');
+      final endParts = quietHoursEnd.split(':');
+      if (startParts.length != 2 || endParts.length != 2) return scheduledTime;
+
+      final startHour = int.parse(startParts[0]);
+      final startMin = int.parse(startParts[1]);
+      final endHour = int.parse(endParts[0]);
+      final endMin = int.parse(endParts[1]);
+
+
+      tz.TZDateTime qEnd = tz.TZDateTime(
+        tz.local,
+        scheduledTime.year,
+        scheduledTime.month,
+        scheduledTime.day,
+        endHour,
+        endMin,
+      );
+
+      bool isInside = false;
+      final schedMinOfDay = scheduledTime.hour * 60 + scheduledTime.minute;
+      final startMinOfDay = startHour * 60 + startMin;
+      final endMinOfDay = endHour * 60 + endMin;
+
+      if (startMinOfDay > endMinOfDay) {
+        isInside = (schedMinOfDay >= startMinOfDay || schedMinOfDay <= endMinOfDay);
+      } else {
+        isInside = (schedMinOfDay >= startMinOfDay && schedMinOfDay <= endMinOfDay);
+      }
+
+      if (isInside) {
+        if (schedMinOfDay >= startMinOfDay) {
+          qEnd = qEnd.add(const Duration(days: 1));
+        }
+        return qEnd;
+      }
+    } catch (e) {
+      debugPrint('Error applying quiet hours adjustment: $e');
+    }
+    return scheduledTime;
   }
 
   /// Schedule alert 5 minutes before batch start

@@ -36,11 +36,18 @@ class AssignmentPage extends ConsumerStatefulWidget {
 class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   bool _showChanakyaIntro = true;
+  bool _hasCheckedInAttendance = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && !_hasCheckedInAttendance) {
+        _hasCheckedInAttendance = true;
+        ref.read(assignmentProvider.notifier).checkInAttendance();
+      }
+    });
   }
 
   @override
@@ -55,12 +62,6 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
     final bgState = ref.watch(battlegroundProvider);
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 900;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        ref.read(assignmentProvider.notifier).checkInAttendance();
-      }
-    });
 
     ref.listen<int>(mobileNavIndexProvider, (previous, current) {
       if (current != 11) {
@@ -780,8 +781,11 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
             ),
           );
         } else {
-          // Fallback to Tutorial tab if games not loaded
-          ref.read(mobileNavIndexProvider.notifier).state = 7; 
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Historical games could not be loaded. Please try again later.')),
+            );
+          }
         }
         break;
       case DailyTaskType.analysis:
@@ -799,7 +803,7 @@ class _AssignmentPageState extends ConsumerState<AssignmentPage> with SingleTick
         text = "Completed automatically upon entering the Assignment Desk.";
         break;
       case DailyTaskType.arena:
-        text = "Complete pre-configured rated game in Battleground";
+        text = "Go to Arena — play the assigned opponent to complete this task";
         break;
       case DailyTaskType.puzzle:
         text = "Go to Puzzles tab — solve 3 puzzles on target axis";

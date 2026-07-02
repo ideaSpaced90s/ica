@@ -445,7 +445,8 @@ void exitToDashboardWithSidebar(BuildContext context, WidgetRef ref) {
         container.read(chessProvider.notifier).initializeAcademySession();
       }
       container.read(mobileNavIndexProvider.notifier).state = 0;
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('[exitToDashboardWithSidebar] Navigation error: $e\n$st');
       if (ref.context.mounted) {
         final currentIndex = ref.read(mobileNavIndexProvider);
         if (currentIndex == 1) {

@@ -17,6 +17,7 @@ import '../domain/models/tutorial_lesson.dart';
 import 'store_provider.dart';
 import 'chess_provider.dart';
 import '../services/cloud_sync_service.dart';
+import '../services/notification_service.dart';
 import 'package:kingslayer_chess/src/rust/api/assignment.dart'
     as rust_assignment;
 import 'package:kingslayer_chess/src/rust/api/cognitive.dart' as rust_cognitive;
@@ -46,8 +47,12 @@ class AssignmentNotifier extends Notifier<AssignmentState> {
     final loaded = await _repository.loadAssignment();
     state = loaded;
 
-    // Wait for battleground provider to finish loading settings from disk
+    // Wait for battleground provider to finish loading settings from disk (max 5 seconds)
+    final startTime = DateTime.now();
     while (!ref.read(battlegroundProvider).hasLoadedSettings) {
+      if (DateTime.now().difference(startTime).inSeconds >= 5) {
+        break;
+      }
       await Future.delayed(const Duration(milliseconds: 20));
     }
 
@@ -86,6 +91,9 @@ class AssignmentNotifier extends Notifier<AssignmentState> {
     scheduleMicrotask(() {
       _checkInitialCalibration();
     });
+
+    // Auto check-in attendance on load
+    checkInAttendance();
   }
 
   /// Reloads assignment state from disk.
@@ -207,38 +215,7 @@ class AssignmentNotifier extends Notifier<AssignmentState> {
           _refreshMonthlyStats(next);
         }
 
-        // Also run the Arena Task progress update on ANY game ending
-        final previousEnded = previous != null && (previous.game.gameOver || previous.isTimeOut || previous.isResigned || previous.isDrawAgreed);
-        final currentEnded = next.game.gameOver || next.isTimeOut || next.isResigned || next.isDrawAgreed;
-
-        if (currentEnded && !previousEnded) {
-          final arenaTaskIndex = state.dailyTasks.indexWhere(
-            (t) => t.taskType == DailyTaskType.arena,
-          );
-          if (arenaTaskIndex != -1) {
-            final task = state.dailyTasks[arenaTaskIndex];
-            final wasRated = previous?.activeRatedMatchId != null || next.activeRatedMatchId != null;
-            if (wasRated && next.activeOpponent?.id == task.targetId && !task.isCompleted) {
-              final newProgress = task.currentValue + 1;
-              final isTaskCompleted = newProgress >= task.targetValue;
-
-              final updated = List<DailyTask>.from(state.dailyTasks);
-              updated[arenaTaskIndex] = task.copyWith(
-                currentValue: newProgress,
-                isCompleted: isTaskCompleted,
-              );
-
-              state = state.copyWith(
-                dailyTasks: updated,
-                newlyCompletedTaskIndex: isTaskCompleted ? arenaTaskIndex : -1,
-              );
-              _saveState();
-
-              // Check if all daily tasks are completed (excluding tutorial weekly task)
-              _checkAllDailyCompleted();
-            }
-          }
-        }
+        // Battleground no longer updates Arena tasks directly.
       }
     });
 
@@ -687,7 +664,7 @@ class AssignmentNotifier extends Notifier<AssignmentState> {
     // 4. Saved Game Analysis Task
     final analysisTask = DailyTask(
       title: "Saved Game Analysis",
-      description: "Study a rated lost game in Analysis: open it from your Game Library, annotate, comment, and spar with it.",
+      description: "Active Analysis: open a saved game, annotate moves, comment, or spar. (Earn progress by interacting; 10 active minutes = complete)",
       taskType: DailyTaskType.analysis,
       targetId: "analysis",
       targetValue: 10,
@@ -695,7 +672,20 @@ class AssignmentNotifier extends Notifier<AssignmentState> {
       isCompleted: false,
     );
 
-    final dailyTasks = [arenaTask, puzzleTask, cinemaTask, analysisTask];
+    final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final isAttendanceDone = state.attendanceLaunchLog[todayStr] == true;
+
+    final attendanceTask = DailyTask(
+      title: "Daily Attendance",
+      description: "Keep your training consistent: check in by opening the Academy today.",
+      taskType: DailyTaskType.attendance,
+      targetId: todayStr,
+      targetValue: 1,
+      currentValue: isAttendanceDone ? 1 : 0,
+      isCompleted: isAttendanceDone,
+    );
+
+    final dailyTasks = [attendanceTask, arenaTask, puzzleTask, cinemaTask, analysisTask];
 
     // Preserve completion status and progress from existing daily tasks if it is NOT a new day
     final finalTasks = dailyTasks.map((newTask) {
@@ -845,6 +835,15 @@ class AssignmentNotifier extends Notifier<AssignmentState> {
       landfallPending = newIndex;
       // Award landfall Lifetime XP
       ref.read(lifetimeXpProvider.notifier).addLandfall(newIndex, islandTiers[newIndex].name);
+
+      // Trigger Milestone notification if enabled
+      final isMilestonesEnabled = ref.read(chessProvider).milestonesEnabled;
+      if (isMilestonesEnabled) {
+        ref.read(notificationServiceProvider).showMilestoneNotification(
+          '🏝️ New Territory Reached!',
+          'You have reached the ${islandTiers[newIndex].name} tier. GM Chanakya acknowledges your progress.',
+        );
+      }
     }
 
     return state.copyWith(
@@ -951,8 +950,8 @@ class AssignmentNotifier extends Notifier<AssignmentState> {
 
   void _checkAllDailyCompleted() {
     if (!state.isCalibrated) return;
-    // Check daily completion of the 4 daily tasks (Arena, Puzzle, Cinema, Analysis)
-    final dailyOnly = state.dailyTasks.where((t) => t.taskType != DailyTaskType.tutorial && t.taskType != DailyTaskType.attendance);
+    // Check daily completion of the daily tasks (Attendance, Arena, Puzzle, Cinema, Analysis)
+    final dailyOnly = state.dailyTasks.where((t) => t.taskType != DailyTaskType.tutorial);
     if (dailyOnly.isNotEmpty && dailyOnly.every((t) => t.isCompleted)) {
       // Award +15 LP to monthly Form Factor and +150 XP bonus to Lifetime XP
       final dateKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
@@ -1264,12 +1263,36 @@ class AssignmentNotifier extends Notifier<AssignmentState> {
   }
 
   void checkInAttendance() {
-    if (state.dailyTasks.isEmpty) return;
+    final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    if (state.attendanceLaunchLog[todayStr] == true) return;
+
+    final updatedLaunchLog = Map<String, bool>.from(state.attendanceLaunchLog);
+    updatedLaunchLog[todayStr] = true;
+
+    state = state.copyWith(attendanceLaunchLog: updatedLaunchLog);
+
+    if (state.dailyTasks.isEmpty) {
+      _saveState();
+      return;
+    }
+
     final index = state.dailyTasks.indexWhere(
       (t) => t.taskType == DailyTaskType.attendance,
     );
     if (index != -1 && !state.dailyTasks[index].isCompleted) {
-      _markTaskCompleted(index);
+      final updatedTasks = List<DailyTask>.from(state.dailyTasks);
+      updatedTasks[index] = updatedTasks[index].copyWith(
+        currentValue: 1,
+        isCompleted: true,
+      );
+      state = state.copyWith(
+        dailyTasks: updatedTasks,
+        newlyCompletedTaskIndex: index,
+      );
+      _saveState();
+      _checkAllDailyCompleted();
+    } else {
+      _saveState();
     }
   }
 
