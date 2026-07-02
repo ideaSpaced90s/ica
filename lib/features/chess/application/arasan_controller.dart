@@ -1,0 +1,167 @@
+import 'dart:async';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../data/arasan_service.dart';
+import '../data/uci_parser.dart';
+import '../domain/models/candidate_move.dart';
+
+/// State of the Arasan engine controller.
+class ArasanControllerState {
+  final bool isReady;
+  final bool isError;
+  final String lastOutput;
+  final String? bestMove;
+  final String? pondermove;
+  final String? evaluation;
+  final List<CandidateMove> candidates;
+
+  ArasanControllerState({
+    this.isReady = false,
+    this.isError = false,
+    this.lastOutput = '',
+    this.bestMove,
+    this.pondermove,
+    this.evaluation,
+    this.candidates = const [],
+  });
+
+  ArasanControllerState copyWith({
+    bool? isReady,
+    bool? isError,
+    String? lastOutput,
+    String? bestMove,
+    String? pondermove,
+    String? evaluation,
+    List<CandidateMove>? candidates,
+  }) {
+    return ArasanControllerState(
+      isReady: isReady ?? this.isReady,
+      isError: isError ?? this.isError,
+      lastOutput: lastOutput ?? this.lastOutput,
+      bestMove: bestMove ?? this.bestMove,
+      pondermove: pondermove ?? this.pondermove,
+      evaluation: evaluation ?? this.evaluation,
+      candidates: candidates ?? this.candidates,
+    );
+  }
+}
+
+/// A controller to manage the Arasan engine using StateNotifier/Notifier.
+class ArasanController extends Notifier<ArasanControllerState> {
+  late final ArasanService _service;
+  StreamSubscription? _subscription;
+  DateTime _lastUpdateTime = DateTime.fromMillisecondsSinceEpoch(0);
+
+  @override
+  ArasanControllerState build() {
+    _service = ref.watch(arasanServiceProvider);
+    _init();
+    ref.onDispose(() {
+      _subscription?.cancel();
+    });
+
+    return ArasanControllerState();
+  }
+
+  void _init() {
+    _subscription = _service.outputStream.listen(_handleOutput);
+    _service.init().then((_) {
+      state = state.copyWith(
+        isReady: _service.isReady,
+        isError: _service.isError,
+      );
+    });
+  }
+
+  void _handleOutput(String line) {
+    if (line.startsWith('info')) {
+      final parsed = UCIParser.parseLine(line);
+      if (parsed.containsKey('multipv') && parsed.containsKey('pv')) {
+        final mpv = parsed['multipv'] as int;
+        final pvList = parsed['pv'] as List<String>;
+        if (pvList.isNotEmpty) {
+          final uciMove = pvList.first;
+          double eval = 0.0;
+          if (parsed.containsKey('score')) {
+            final score = parsed['score'] as int;
+            eval = parsed['scoreType'] == 'mate'
+                ? (score > 0 ? 99.0 : -99.0)
+                : score / 100.0;
+          }
+
+          final candidate = CandidateMove(
+            multipvIndex: mpv,
+            uciMove: uciMove,
+            evaluation: eval,
+            fullPv: pvList,
+          );
+
+          final newList = List<CandidateMove>.from(state.candidates);
+          final idx = newList.indexWhere((c) => c.multipvIndex == mpv);
+          if (idx != -1) {
+            newList[idx] = candidate;
+          } else {
+            newList.add(candidate);
+            newList.sort((a, b) => a.multipvIndex.compareTo(b.multipvIndex));
+          }
+          state = state.copyWith(candidates: newList);
+        }
+      }
+
+      final now = DateTime.now();
+      if (now.difference(_lastUpdateTime).inMilliseconds < 250) {
+        return;
+      }
+      _lastUpdateTime = now;
+    }
+
+    state = state.copyWith(lastOutput: line);
+
+    if (line == 'readyok') {
+      state = state.copyWith(isReady: true);
+    } else if (line.startsWith('bestmove')) {
+      final parts = line.split(' ');
+      if (parts.length >= 2) {
+        state = state.copyWith(bestMove: parts[1]);
+        if (parts.length >= 4 && parts[2] == 'ponder') {
+          state = state.copyWith(pondermove: parts[3]);
+        }
+      }
+    } else if (line.contains('score')) {
+      state = state.copyWith(evaluation: line);
+    }
+  }
+
+  /// Sends a UCI command to the engine.
+  Future<void> sendCommand(String command) async {
+    await _service.sendCommand(command);
+  }
+
+  /// Sets the position and starts analysis.
+  Future<void> analyzePosition(
+    String fen, {
+    int depth = 15,
+    Duration? wTime,
+    Duration? bTime,
+    Duration? wInc,
+    Duration? bInc,
+  }) async {
+    state = state.copyWith(candidates: const []);
+    await _service.analyzePosition(
+      fen,
+      depth: depth,
+      wTime: wTime,
+      bTime: bTime,
+      wInc: wInc,
+      bInc: bInc,
+    );
+  }
+
+  /// Enables or disables Chess 960 rules inside Arasan.
+  Future<void> setChess960Mode(bool isEnabled) async {
+    await _service.setChess960Mode(isEnabled);
+  }
+}
+
+/// Provider for the ArasanController.
+final arasanControllerProvider =
+    NotifierProvider<ArasanController, ArasanControllerState>(ArasanController.new);

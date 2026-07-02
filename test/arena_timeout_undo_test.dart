@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kingslayer_chess/features/chess/application/arena_provider.dart';
-import 'package:kingslayer_chess/features/chess/data/stockfish_service.dart';
+import 'package:kingslayer_chess/features/chess/data/arasan_service.dart';
 import 'package:kingslayer_chess/features/chess/services/chess_sound_service.dart';
 import 'package:kingslayer_chess/features/chess/services/chess_haptics_service.dart';
 import 'package:kingslayer_chess/features/chess/data/saved_game_repository.dart';
@@ -11,7 +11,7 @@ import 'package:kingslayer_chess/features/chess/application/chess_provider.dart'
 import 'package:kingslayer_chess/features/chess/data/settings_repository.dart';
 import 'package:kingslayer_chess/features/chess/application/store_provider.dart';
 
-class FakeStockfishService extends Fake implements StockfishService {
+class FakeArasanService extends Fake implements ArasanService {
   final _controller = StreamController<String>.broadcast();
 
   @override
@@ -77,7 +77,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   test('Verify undo after timeout resets isTimeOut and isGameOverDismissed', () async {
-    final fakeStockfish = FakeStockfishService();
+    final fakeArasan = FakeArasanService();
     final fakeSavedGameRepo = FakeSavedGameRepository();
     final fakeSoundService = FakeChessSoundService();
     final fakeHapticsService = FakeChessHapticsService();
@@ -85,7 +85,7 @@ void main() {
 
     final container = ProviderContainer(
       overrides: [
-        stockfishServiceProvider.overrideWithValue(fakeStockfish),
+        arasanServiceProvider.overrideWithValue(fakeArasan),
         savedGameRepositoryProvider.overrideWithValue(fakeSavedGameRepo),
         chessSoundServiceProvider.overrideWithValue(fakeSoundService),
         chessHapticsServiceProvider.overrideWithValue(fakeHapticsService),
@@ -130,7 +130,7 @@ void main() {
   });
 
   test('Verify isEngineThinking shows up immediately when AI goes first on game start or board flip', () async {
-    final fakeStockfish = FakeStockfishService();
+    final fakeArasan = FakeArasanService();
     final fakeSavedGameRepo = FakeSavedGameRepository();
     final fakeSoundService = FakeChessSoundService();
     final fakeHapticsService = FakeChessHapticsService();
@@ -138,7 +138,7 @@ void main() {
 
     final container = ProviderContainer(
       overrides: [
-        stockfishServiceProvider.overrideWithValue(fakeStockfish),
+        arasanServiceProvider.overrideWithValue(fakeArasan),
         savedGameRepositoryProvider.overrideWithValue(fakeSavedGameRepo),
         chessSoundServiceProvider.overrideWithValue(fakeSoundService),
         chessHapticsServiceProvider.overrideWithValue(fakeHapticsService),

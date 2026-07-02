@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kingslayer_chess/features/chess/application/battleground_provider.dart';
-import 'package:kingslayer_chess/features/chess/data/stockfish_service.dart';
+import 'package:kingslayer_chess/features/chess/data/arasan_service.dart';
 import 'package:kingslayer_chess/features/chess/services/chess_sound_service.dart';
 import 'package:kingslayer_chess/features/chess/services/chess_haptics_service.dart';
 import 'package:kingslayer_chess/features/chess/data/performance_ledger_repository.dart';
@@ -15,7 +15,7 @@ import 'package:kingslayer_chess/features/chess/application/store_provider.dart'
 import 'package:kingslayer_chess/features/chess/services/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-class FakeStockfishService extends Fake implements StockfishService {
+class FakeArasanService extends Fake implements ArasanService {
   final _controller = StreamController<String>.broadcast();
 
   @override
@@ -120,13 +120,13 @@ class FakeSettingsRepository extends Fake implements SettingsRepository {
 void main() {
   late ProviderContainer container;
   late BattlegroundNotifier notifier;
-  late FakeStockfishService fakeStockfish;
+  late FakeArasanService fakeArasan;
 
   setUp(() {
-    fakeStockfish = FakeStockfishService();
+    fakeArasan = FakeArasanService();
     container = ProviderContainer(
       overrides: [
-        stockfishServiceProvider.overrideWithValue(fakeStockfish),
+        arasanServiceProvider.overrideWithValue(fakeArasan),
         savedGameRepositoryProvider.overrideWithValue(FakeSavedGameRepository()),
         performanceLedgerRepositoryProvider.overrideWithValue(FakePerformanceLedgerRepository()),
         chessSoundServiceProvider.overrideWithValue(FakeChessSoundService()),
@@ -154,7 +154,7 @@ void main() {
       if (isPlayerTurn) {
         await notifier.makeMove(from, to);
       } else {
-        fakeStockfish.emitBestMove('$from$to');
+        fakeArasan.emitBestMove('$from$to');
       }
       await Future.delayed(const Duration(milliseconds: 30));
     }

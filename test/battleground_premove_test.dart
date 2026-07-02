@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kingslayer_chess/features/chess/application/battleground_provider.dart';
-import 'package:kingslayer_chess/features/chess/data/stockfish_service.dart';
+import 'package:kingslayer_chess/features/chess/data/arasan_service.dart';
 import 'package:kingslayer_chess/features/chess/services/chess_sound_service.dart';
 import 'package:kingslayer_chess/features/chess/services/chess_haptics_service.dart';
 import 'package:kingslayer_chess/features/chess/data/performance_ledger_repository.dart';
@@ -16,7 +16,7 @@ import 'package:chess/chess.dart' as chess_lib;
 import 'package:kingslayer_chess/features/chess/services/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-class FakeStockfishService extends Fake implements StockfishService {
+class FakeArasanService extends Fake implements ArasanService {
   final _controller = StreamController<String>.broadcast();
 
   @override
@@ -120,7 +120,7 @@ class FakeSettingsRepository extends Fake implements SettingsRepository {
 
 void main() {
   test('Verify pre-move setup and auto-execution after bot move', () async {
-    final fakeStockfish = FakeStockfishService();
+    final fakeArasan = FakeArasanService();
     final fakeSavedGameRepo = FakeSavedGameRepository();
     final fakeLedgerRepo = FakePerformanceLedgerRepository();
     final fakeSoundService = FakeChessSoundService();
@@ -129,7 +129,7 @@ void main() {
 
     final container = ProviderContainer(
       overrides: [
-        stockfishServiceProvider.overrideWithValue(fakeStockfish),
+        arasanServiceProvider.overrideWithValue(fakeArasan),
         savedGameRepositoryProvider.overrideWithValue(fakeSavedGameRepo),
         performanceLedgerRepositoryProvider.overrideWithValue(fakeLedgerRepo),
         chessSoundServiceProvider.overrideWithValue(fakeSoundService),
@@ -160,7 +160,7 @@ void main() {
     expect(notifier.state.game.turn, chess_lib.Color.BLACK); // Still Black's turn
 
     // 3. Emit bot move: d7d5
-    fakeStockfish.emitBestMove('d7d5');
+    fakeArasan.emitBestMove('d7d5');
 
     // Wait for the asynchronous events and delayed pre-move execution (300ms)
     await Future.delayed(const Duration(milliseconds: 500));

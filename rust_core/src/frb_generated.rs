@@ -470,7 +470,7 @@ fn wire__crate__api__tactics__generate_tactics_analysis_impl(
             let api_fen = <String>::sse_decode(&mut deserializer);
             let api_user_uci_moves = <Vec<String>>::sse_decode(&mut deserializer);
             let api_engine_alternatives =
-                <Vec<crate::api::tactics::StockfishTacticLine>>::sse_decode(&mut deserializer);
+                <Vec<crate::api::tactics::ArasanTacticLine>>::sse_decode(&mut deserializer);
             let api_is_chess960 = <bool>::sse_decode(&mut deserializer);
             deserializer.end();
             transform_result_sse::<_, ()>((move || {
@@ -1257,6 +1257,20 @@ impl SseDecode for String {
     }
 }
 
+impl SseDecode for crate::api::tactics::ArasanTacticLine {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_moveUci = <String>::sse_decode(deserializer);
+        let mut var_evaluation = <f64>::sse_decode(deserializer);
+        let mut var_pv = <Vec<String>>::sse_decode(deserializer);
+        return crate::api::tactics::ArasanTacticLine {
+            move_uci: var_moveUci,
+            evaluation: var_evaluation,
+            pv: var_pv,
+        };
+    }
+}
+
 impl SseDecode for bool {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -1445,6 +1459,20 @@ impl SseDecode for Vec<String> {
     }
 }
 
+impl SseDecode for Vec<crate::api::tactics::ArasanTacticLine> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::tactics::ArasanTacticLine>::sse_decode(
+                deserializer,
+            ));
+        }
+        return ans_;
+    }
+}
+
 impl SseDecode for Vec<crate::api::chanakya::ChanakyaCandidate> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -1544,20 +1572,6 @@ impl SseDecode for Vec<crate::api::cognitive::SavedGameUci> {
         let mut ans_ = Vec::with_capacity(len_ as usize);
         for idx_ in 0..len_ {
             ans_.push(<crate::api::cognitive::SavedGameUci>::sse_decode(
-                deserializer,
-            ));
-        }
-        return ans_;
-    }
-}
-
-impl SseDecode for Vec<crate::api::tactics::StockfishTacticLine> {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
-        let mut len_ = <i32>::sse_decode(deserializer);
-        let mut ans_ = Vec::with_capacity(len_ as usize);
-        for idx_ in 0..len_ {
-            ans_.push(<crate::api::tactics::StockfishTacticLine>::sse_decode(
                 deserializer,
             ));
         }
@@ -1791,20 +1805,6 @@ impl SseDecode for crate::api::cognitive::ScotomaResult {
     }
 }
 
-impl SseDecode for crate::api::tactics::StockfishTacticLine {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
-        let mut var_moveUci = <String>::sse_decode(deserializer);
-        let mut var_evaluation = <f64>::sse_decode(deserializer);
-        let mut var_pv = <Vec<String>>::sse_decode(deserializer);
-        return crate::api::tactics::StockfishTacticLine {
-            move_uci: var_moveUci,
-            evaluation: var_evaluation,
-            pv: var_pv,
-        };
-    }
-}
-
 impl SseDecode for crate::api::tactics::TacticData {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -1945,6 +1945,28 @@ fn pde_ffi_dispatcher_sync_impl(
 
 // Section: rust2dart
 
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::tactics::ArasanTacticLine {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.move_uci.into_into_dart().into_dart(),
+            self.evaluation.into_into_dart().into_dart(),
+            self.pv.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::tactics::ArasanTacticLine
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::tactics::ArasanTacticLine>
+    for crate::api::tactics::ArasanTacticLine
+{
+    fn into_into_dart(self) -> crate::api::tactics::ArasanTacticLine {
+        self
+    }
+}
 // Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::chanakya::ChanakyaCandidate {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
@@ -2377,28 +2399,6 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::cognitive::ScotomaResult>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
-impl flutter_rust_bridge::IntoDart for crate::api::tactics::StockfishTacticLine {
-    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
-        [
-            self.move_uci.into_into_dart().into_dart(),
-            self.evaluation.into_into_dart().into_dart(),
-            self.pv.into_into_dart().into_dart(),
-        ]
-        .into_dart()
-    }
-}
-impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
-    for crate::api::tactics::StockfishTacticLine
-{
-}
-impl flutter_rust_bridge::IntoIntoDart<crate::api::tactics::StockfishTacticLine>
-    for crate::api::tactics::StockfishTacticLine
-{
-    fn into_into_dart(self) -> crate::api::tactics::StockfishTacticLine {
-        self
-    }
-}
-// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::tactics::TacticData {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -2448,6 +2448,15 @@ impl SseEncode for String {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <Vec<u8>>::sse_encode(self.into_bytes(), serializer);
+    }
+}
+
+impl SseEncode for crate::api::tactics::ArasanTacticLine {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.move_uci, serializer);
+        <f64>::sse_encode(self.evaluation, serializer);
+        <Vec<String>>::sse_encode(self.pv, serializer);
     }
 }
 
@@ -2586,6 +2595,16 @@ impl SseEncode for Vec<String> {
     }
 }
 
+impl SseEncode for Vec<crate::api::tactics::ArasanTacticLine> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::tactics::ArasanTacticLine>::sse_encode(item, serializer);
+        }
+    }
+}
+
 impl SseEncode for Vec<crate::api::chanakya::ChanakyaCandidate> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -2662,16 +2681,6 @@ impl SseEncode for Vec<crate::api::cognitive::SavedGameUci> {
         <i32>::sse_encode(self.len() as _, serializer);
         for item in self {
             <crate::api::cognitive::SavedGameUci>::sse_encode(item, serializer);
-        }
-    }
-}
-
-impl SseEncode for Vec<crate::api::tactics::StockfishTacticLine> {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
-        <i32>::sse_encode(self.len() as _, serializer);
-        for item in self {
-            <crate::api::tactics::StockfishTacticLine>::sse_encode(item, serializer);
         }
     }
 }
@@ -2825,15 +2834,6 @@ impl SseEncode for crate::api::cognitive::ScotomaResult {
         <i32>::sse_encode(self.total_rated_games, serializer);
         <i32>::sse_encode(self.analyzed_games, serializer);
         <i32>::sse_encode(self.skipped_games, serializer);
-    }
-}
-
-impl SseEncode for crate::api::tactics::StockfishTacticLine {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
-        <String>::sse_encode(self.move_uci, serializer);
-        <f64>::sse_encode(self.evaluation, serializer);
-        <Vec<String>>::sse_encode(self.pv, serializer);
     }
 }
 

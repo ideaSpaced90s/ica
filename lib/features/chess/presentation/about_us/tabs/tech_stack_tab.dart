@@ -25,8 +25,8 @@ class TechStackTab extends StatelessWidget {
       {
         'icon': Icons.memory_rounded,
         'category': 'LOCAL CHESS ENGINE',
-        'technology': 'Stockfish 18 (Native FFI)',
-        'description': 'Runs locally via an ARMv8 optimized C++ binary (`libstockfish.so`) interacting via non-blocking standard I/O pipes.',
+        'technology': 'Arasan 25.4 (Native FFI)',
+        'description': 'Runs locally via an ARMv8 optimized C++ binary (`libarasan_chess_engine.so`) interacting via non-blocking standard I/O pipes.',
       },
       {
         'icon': Icons.settings_suggest_rounded,

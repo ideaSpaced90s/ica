@@ -10,7 +10,7 @@ import '../domain/models/candidate_move.dart';
 import '../domain/chess_persona_evaluator.dart';
 import '../services/chess_sound_service.dart';
 import '../services/chess_haptics_service.dart';
-import '../data/stockfish_service.dart';
+import '../data/arasan_service.dart';
 import '../data/chess_engine_service.dart';
 import '../data/uci_parser.dart';
 import '../data/saved_game.dart';
@@ -343,7 +343,7 @@ class ArenaState {
 }
 
 class ArenaNotifier extends Notifier<ArenaState> {
-  late final StockfishService _stockfishEngine;
+  late final ArasanService _arasanEngine;
   late final ChessSoundService _soundService;
   late final ChessHapticsService _hapticsService;
 
@@ -353,7 +353,7 @@ class ArenaNotifier extends Notifier<ArenaState> {
   Timer? _clockTimer;
   Timer? _engineMoveTimer;
   String? _scheduledMove;
-  StreamSubscription<String>? _stockfishSubscription;
+  StreamSubscription<String>? _arasanSubscription;
 
   Future<void>? _startupFuture;
   bool _isDisposed = false;
@@ -365,7 +365,7 @@ class ArenaNotifier extends Notifier<ArenaState> {
 
   @override
   ArenaState build() {
-    _stockfishEngine = ref.watch(stockfishServiceProvider);
+    _arasanEngine = ref.watch(arasanServiceProvider);
     _soundService = ref.watch(chessSoundServiceProvider);
     _hapticsService = ref.watch(chessHapticsServiceProvider);
 
@@ -437,7 +437,7 @@ class ArenaNotifier extends Notifier<ArenaState> {
       _clockTimer?.cancel();
       _engineMoveTimer?.cancel();
       _scheduledMove = null;
-      _stockfishSubscription?.cancel();
+      _arasanSubscription?.cancel();
       _soundService.stopAlarm();
     });
 
@@ -554,7 +554,7 @@ class ArenaNotifier extends Notifier<ArenaState> {
   }
 
   ChessEngineService get _engine {
-    return _stockfishEngine;
+    return _arasanEngine;
   }
 
   String get _activeAvatarId {
@@ -574,7 +574,7 @@ class ArenaNotifier extends Notifier<ArenaState> {
     int? depth,
   }) async {
     if (_isDisposed) return;
-    if (state.servicesStarted && _stockfishEngine.isReady) {
+    if (state.servicesStarted && _arasanEngine.isReady) {
       if (analyzeCurrentPosition) {
         _startAnalysis(depth: depth);
       }
@@ -607,19 +607,19 @@ class ArenaNotifier extends Notifier<ArenaState> {
     required bool analyzeCurrentPosition,
   }) async {
     try {
-      _stockfishSubscription ??= _stockfishEngine.outputStream.listen(_handleEngineOutput);
+      _arasanSubscription ??= _arasanEngine.outputStream.listen(_handleEngineOutput);
 
-      await _stockfishEngine.init();
+      await _arasanEngine.init();
 
       final is960 = state.gameMode == 'chess960';
-      await _stockfishEngine.setChess960Mode(is960);
+      await _arasanEngine.setChess960Mode(is960);
 
       final avatar = AiAvatar.getAvatar(state.engineLevel);
       final config = rust_persona.getPersonaConfig(avatarName: avatar.name);
-      await _stockfishEngine.setSkillLevel(config.skillLevel, multiPV: config.multiPv);
-      _stockfishEngine.sendCommand('setoption name MultiPV value ${config.multiPv}');
-      _stockfishEngine.sendCommand('setoption name Hash value ${avatar.hashSize}');
-      _stockfishEngine.sendCommand('setoption name Contempt value ${avatar.contempt}');
+      await _arasanEngine.setSkillLevel(config.skillLevel, multiPV: config.multiPv);
+      _arasanEngine.sendCommand('setoption name MultiPV value ${config.multiPv}');
+      _arasanEngine.sendCommand('setoption name Hash value ${avatar.hashSize}');
+      _arasanEngine.sendCommand('setoption name Contempt value ${avatar.contempt}');
 
       state = state.copyWith(
         servicesStarted: true,
@@ -655,8 +655,49 @@ class ArenaNotifier extends Notifier<ArenaState> {
 
     _currentCandidates.clear();
     final is960 = state.gameMode == 'chess960';
-    await _engine.setChess960Mode(is960);
+    if (is960) {
+      _searchFen = state.game.fen;
+      final moves = state.game.generateMoves();
+      if (moves.isEmpty) return;
 
+      chess_lib.Move bestM = moves.first;
+      int bestScore = -99999;
+      for (final m in moves) {
+        int score = 0;
+        if (m.captured != null) {
+          score += 100;
+          switch (m.captured) {
+            case chess_lib.PieceType.PAWN: score += 10; break;
+            case chess_lib.PieceType.KNIGHT: score += 30; break;
+            case chess_lib.PieceType.BISHOP: score += 30; break;
+            case chess_lib.PieceType.ROOK: score += 50; break;
+            case chess_lib.PieceType.QUEEN: score += 90; break;
+          }
+        }
+        if (m.promotion != null) {
+          score += 80;
+        }
+        score += (m.hashCode % 10);
+        if (score > bestScore) {
+          bestScore = score;
+          bestM = m;
+        }
+      }
+
+      final fromStr = chess_lib.Chess.algebraic(bestM.from);
+      final toStr = chess_lib.Chess.algebraic(bestM.to);
+      final promoStr = bestM.promotion != null ? bestM.promotion!.name.toLowerCase() : '';
+      final uciMove = '$fromStr$toStr$promoStr';
+
+      Timer(const Duration(milliseconds: 600), () {
+        if (!_isDisposed && _searchFen == state.game.fen) {
+          _handleEngineOutput('bestmove $uciMove');
+        }
+      });
+      return;
+    }
+
+    await _engine.setChess960Mode(false);
     final avatar = AiAvatar.getAvatar(_activeAvatarId);
     final config = rust_persona.getPersonaConfig(avatarName: avatar.name);
     await _engine.setSkillLevel(config.skillLevel, multiPV: config.multiPv);

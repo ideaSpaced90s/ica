@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:chess/chess.dart' as chess_lib;
-import '../data/stockfish_service.dart';
+import '../data/arasan_service.dart';
 import '../data/chess_engine_service.dart';
 import '../data/uci_parser.dart';
 import '../services/chess_sound_service.dart';
@@ -33,6 +33,7 @@ class PracticeLabState {
   final String? pendingPromoTo;
   final int? startNodeIndex;
   final int? viewingMoveIndex;
+  final bool isChess960;
 
   // Timer additions
   final bool showTimer;
@@ -62,6 +63,7 @@ class PracticeLabState {
     this.pendingPromoTo,
     this.startNodeIndex,
     this.viewingMoveIndex,
+    this.isChess960 = false,
 
     // Timer additions defaults
     this.showTimer = false,
@@ -97,6 +99,7 @@ class PracticeLabState {
     // Using the same pattern as clearViewingMoveIndex because passing null
     // via a nullable String? parameter cannot be distinguished from "not provided".
     bool clearPendingPromo = false,
+    bool? isChess960,
 
     // Timer copyWith addition
     bool? showTimer,
@@ -127,6 +130,7 @@ class PracticeLabState {
       pendingPromoTo: clearPendingPromo ? null : (pendingPromoTo ?? this.pendingPromoTo),
       startNodeIndex: startNodeIndex ?? this.startNodeIndex,
       viewingMoveIndex: clearViewingMoveIndex ? null : (viewingMoveIndex ?? this.viewingMoveIndex),
+      isChess960: isChess960 ?? this.isChess960,
 
       showTimer: showTimer ?? this.showTimer,
       isClockRunning: isClockRunning ?? this.isClockRunning,
@@ -148,7 +152,7 @@ class PracticeLabNotifier extends Notifier<PracticeLabState> {
 
   @override
   PracticeLabState build() {
-    _service = ref.watch(practiceStockfishServiceProvider);
+    _service = ref.watch(practiceArasanServiceProvider);
     _subscription = _service.outputStream.listen(_handleEngineOutput);
     _logDebug('PracticeLabNotifier initialized, listening to dedicated Practice Lab engine');
 
@@ -163,7 +167,9 @@ class PracticeLabNotifier extends Notifier<PracticeLabState> {
   }
 
   void _handleEngineOutput(String line) {
-    _logDebug('[RECV] Active=${state.isSessionActive} Thinking=${state.isEngineThinking}: $line');
+    if (!line.startsWith('info')) {
+      _logDebug('[RECV] Active=${state.isSessionActive} Thinking=${state.isEngineThinking}: $line');
+    }
     if (!state.isSessionActive || !state.isEngineThinking) return;
 
     if (line.startsWith('info')) {
@@ -337,6 +343,7 @@ class PracticeLabNotifier extends Notifier<PracticeLabState> {
     final currentIncrement = state.incrementDuration;
 
     final studyState = _ref.read(studyLabProvider);
+    final isChess960 = _ref.read(chessProvider).isChess960;
     state = PracticeLabState(
       isSessionActive: true,
       fen: fen,
@@ -353,6 +360,7 @@ class PracticeLabNotifier extends Notifier<PracticeLabState> {
       gameConclusion: gameConclusion,
       isBoardFlipped: !playerIsWhite,
       startNodeIndex: studyState.currentNodeIndex,
+      isChess960: isChess960,
 
       showTimer: currentShowTimer,
       baseTimeDuration: currentBaseTime,
@@ -546,7 +554,79 @@ class PracticeLabNotifier extends Notifier<PracticeLabState> {
 
   Future<void> _triggerEngineMove() async {
     _logDebug('_triggerEngineMove: Setting isEngineThinking=true');
-    
+    _engineTimer?.cancel();
+    state = state.copyWith(isEngineThinking: true);
+
+    if (state.isChess960) {
+      final chess = chess_lib.Chess.fromFEN(state.fen);
+      final moves = chess.generate_moves();
+      if (moves.isEmpty) return;
+
+      chess_lib.Move bestM = moves.first;
+      int bestScore = -99999;
+      for (final m in moves) {
+        int score = 0;
+        if (m.captured != null) {
+          score += 100;
+          switch (m.captured) {
+            case chess_lib.PieceType.PAWN: score += 10; break;
+            case chess_lib.PieceType.KNIGHT: score += 30; break;
+            case chess_lib.PieceType.BISHOP: score += 30; break;
+            case chess_lib.PieceType.ROOK: score += 50; break;
+            case chess_lib.PieceType.QUEEN: score += 90; break;
+          }
+        }
+        if (m.promotion != null) {
+          score += 80;
+        }
+        score += (m.hashCode % 10);
+        if (score > bestScore) {
+          bestScore = score;
+          bestM = m;
+        }
+      }
+
+      final fromStr = chess_lib.Chess.algebraic(bestM.from);
+      final toStr = chess_lib.Chess.algebraic(bestM.to);
+      final promoStr = bestM.promotion != null ? bestM.promotion!.name.toLowerCase() : '';
+      final uciMove = '$fromStr$toStr$promoStr';
+
+      // Compute a basic material balance evaluation score for Chess960 eval bar
+      double eval = 0.0;
+      for (int i = 0; i < 120; i++) {
+        final piece = chess.board[i];
+        if (piece != null) {
+          double val = 0.0;
+          switch (piece.type) {
+            case chess_lib.PieceType.PAWN: val = 1.0; break;
+            case chess_lib.PieceType.KNIGHT: val = 3.0; break;
+            case chess_lib.PieceType.BISHOP: val = 3.0; break;
+            case chess_lib.PieceType.ROOK: val = 5.0; break;
+            case chess_lib.PieceType.QUEEN: val = 9.0; break;
+            default: val = 0.0;
+          }
+          if (piece.color == chess_lib.Color.WHITE) {
+            eval += val;
+          } else {
+            eval -= val;
+          }
+        }
+      }
+
+      state = state.copyWith(
+        evalScore: eval,
+        isMate: false,
+        mateIn: null,
+      );
+
+      Timer(const Duration(milliseconds: 600), () {
+        if (state.isSessionActive && state.fen == chess.fen) {
+          _handleEngineOutput('bestmove $uciMove');
+        }
+      });
+      return;
+    }
+
     // Ensure service is ready
     if (!_service.isReady) {
       _logDebug('_triggerEngineMove: Service not ready, calling init()...');
@@ -558,14 +638,11 @@ class PracticeLabNotifier extends Notifier<PracticeLabState> {
       _logDebug('_triggerEngineMove: Service readiness after wait: ${_service.isReady}');
     }
 
-    _engineTimer?.cancel();
-
-    state = state.copyWith(isEngineThinking: true);
-
-    _logDebug('Triggering engine analysis: FEN=${state.fen} (fixed depth=22)');
+    final targetDepth = (5 + (state.botSkillLevel ~/ 2)).clamp(5, 15);
+    _logDebug('Triggering engine analysis: FEN=${state.fen} (depth=$targetDepth, skillLevel=${state.botSkillLevel})');
     await _service.analyzePosition(
       state.fen,
-      depth: 22,
+      depth: targetDepth,
     );
 
     // Calculate safety fallback duration.

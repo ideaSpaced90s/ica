@@ -11,7 +11,7 @@ import '../domain/models/candidate_move.dart';
 import '../domain/chess_persona_evaluator.dart';
 import '../services/chess_sound_service.dart';
 import '../services/chess_haptics_service.dart';
-import '../data/stockfish_service.dart';
+import '../data/arasan_service.dart';
 import '../data/uci_parser.dart';
 import '../data/saved_game.dart';
 import '../data/saved_game_repository.dart';
@@ -380,7 +380,7 @@ class BattlegroundState {
 }
 
 class BattlegroundNotifier extends Notifier<BattlegroundState> {
-  late final StockfishService _stockfishEngine;
+  late final ArasanService _arasanEngine;
   late final SavedGameRepository _savedGameRepository;
   late final PerformanceLedgerRepository _performanceLedgerRepository;
   // ignore: unused_field
@@ -391,7 +391,7 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
 
   Timer? _clockTimer;
   Timer? _engineMoveTimer;
-  StreamSubscription<String>? _stockfishSubscription;
+  StreamSubscription<String>? _arasanSubscription;
 
   Future<void>? _startupFuture;
   bool _isDisposed = false;
@@ -403,7 +403,7 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
 
   @override
   BattlegroundState build() {
-    _stockfishEngine = ref.watch(stockfishServiceProvider);
+    _arasanEngine = ref.watch(arasanServiceProvider);
     _savedGameRepository = ref.watch(savedGameRepositoryProvider);
     _performanceLedgerRepository = ref.watch(performanceLedgerRepositoryProvider);
     _soundService = ref.watch(chessSoundServiceProvider);
@@ -414,7 +414,7 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
       _isDisposed = true;
       _clockTimer?.cancel();
       _engineMoveTimer?.cancel();
-      _stockfishSubscription?.cancel();
+      _arasanSubscription?.cancel();
     });
 
     _loadInitialStateAndLedger();
@@ -549,7 +549,7 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
     int? depth,
   }) async {
     if (_isDisposed) return;
-    if (state.servicesStarted && _stockfishEngine.isReady) {
+    if (state.servicesStarted && _arasanEngine.isReady) {
       if (analyzeCurrentPosition) {
         _startAnalysis(depth: depth);
       }
@@ -592,36 +592,36 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
     required bool analyzeCurrentPosition,
   }) async {
     try {
-      _stockfishSubscription ??= _stockfishEngine.outputStream.listen(
+      _arasanSubscription ??= _arasanEngine.outputStream.listen(
         _handleEngineOutput,
       );
-      await _stockfishEngine.init();
+      await _arasanEngine.init();
 
       final is960 = state.gameMode == 'chess960';
-      await _stockfishEngine.setChess960Mode(is960);
+      await _arasanEngine.setChess960Mode(is960);
 
       final opponent =
           state.activeOpponent ??
           AiAvatar.getBestMatch(state.consolidatedRating);
       final config = _getPersonaConfigSafely(opponent.name);
-      await _stockfishEngine.setSkillLevel(
+      await _arasanEngine.setSkillLevel(
         config.skillLevel,
         multiPV: config.multiPv,
       );
-      _stockfishEngine.sendCommand(
+      _arasanEngine.sendCommand(
         'setoption name MultiPV value ${config.multiPv}',
       );
-      _stockfishEngine.sendCommand(
+      _arasanEngine.sendCommand(
         'setoption name Hash value ${opponent.hashSize}',
       );
-      _stockfishEngine.sendCommand(
+      _arasanEngine.sendCommand(
         'setoption name Contempt value ${opponent.contempt}',
       );
 
       state = state.copyWith(
         servicesStarted: true,
         servicesStarting: false,
-        engineReady: _stockfishEngine.isReady,
+        engineReady: _arasanEngine.isReady,
         startupError: null,
       );
 
@@ -650,29 +650,71 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
 
     _currentCandidates.clear();
     final is960 = state.gameMode == 'chess960';
-    await _stockfishEngine.setChess960Mode(is960);
+    if (is960) {
+      _searchFen = state.game.fen;
+      final moves = state.game.generateMoves();
+      if (moves.isEmpty) return;
+
+      chess_lib.Move bestM = moves.first;
+      int bestScore = -99999;
+      for (final m in moves) {
+        int score = 0;
+        if (m.captured != null) {
+          score += 100;
+          switch (m.captured) {
+            case chess_lib.PieceType.PAWN: score += 10; break;
+            case chess_lib.PieceType.KNIGHT: score += 30; break;
+            case chess_lib.PieceType.BISHOP: score += 30; break;
+            case chess_lib.PieceType.ROOK: score += 50; break;
+            case chess_lib.PieceType.QUEEN: score += 90; break;
+          }
+        }
+        if (m.promotion != null) {
+          score += 80;
+        }
+        score += (m.hashCode % 10);
+        if (score > bestScore) {
+          bestScore = score;
+          bestM = m;
+        }
+      }
+
+      final fromStr = chess_lib.Chess.algebraic(bestM.from);
+      final toStr = chess_lib.Chess.algebraic(bestM.to);
+      final promoStr = bestM.promotion != null ? bestM.promotion!.name.toLowerCase() : '';
+      final uciMove = '$fromStr$toStr$promoStr';
+
+      Timer(const Duration(milliseconds: 600), () {
+        if (!_isDisposed && _searchFen == state.game.fen) {
+          _handleEngineOutput('bestmove $uciMove');
+        }
+      });
+      return;
+    }
+
+    await _arasanEngine.setChess960Mode(false);
 
     final opponent =
         state.activeOpponent ?? AiAvatar.getBestMatch(state.consolidatedRating);
     final config = _getPersonaConfigSafely(opponent.name);
-    await _stockfishEngine.setSkillLevel(
+    await _arasanEngine.setSkillLevel(
       config.skillLevel,
       multiPV: config.multiPv,
     );
-    _stockfishEngine.sendCommand(
+    _arasanEngine.sendCommand(
       'setoption name MultiPV value ${config.multiPv}',
     );
-    _stockfishEngine.sendCommand(
+    _arasanEngine.sendCommand(
       'setoption name Hash value ${opponent.hashSize}',
     );
-    _stockfishEngine.sendCommand(
+    _arasanEngine.sendCommand(
       'setoption name Contempt value ${opponent.contempt}',
     );
 
     _searchFen = state.game.fen;
     final targetDepth = depth ?? config.depth;
     if (!state.game.gameOver) {
-      _stockfishEngine.analyzePosition(
+      _arasanEngine.analyzePosition(
         state.game.fen,
         depth: targetDepth,
         wTime: state.whiteTimeLeft,
@@ -688,19 +730,19 @@ class BattlegroundNotifier extends Notifier<BattlegroundState> {
       _engineMoveTimer = Timer(Duration(milliseconds: safetyTimeoutMs), () {
         if (!_isDisposed && _searchFen == state.game.fen && _isAiTurn()) {
           debugPrint('BattlegroundNotifier: Safety timer fired after ${safetyTimeoutMs}ms. Forcing bestmove.');
-          _stockfishEngine.stopAnalysis();
+          _arasanEngine.stopAnalysis();
         }
       });
     } else {
-      _stockfishEngine.analyzePosition(state.game.fen, depth: targetDepth);
+      _arasanEngine.analyzePosition(state.game.fen, depth: targetDepth);
     }
   }
 
   void _stopAnalysisAndReset() {
     if (!state.servicesStarted || !state.engineReady) return;
     _waitingForReady = true;
-    _stockfishEngine.sendCommand('stop');
-    _stockfishEngine.sendCommand('isready');
+    _arasanEngine.sendCommand('stop');
+    _arasanEngine.sendCommand('isready');
   }
 
   void _handleEngineOutput(String line) {

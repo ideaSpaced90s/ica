@@ -20,7 +20,7 @@ The application features a sidebar-based navigation structure with 12 distinct p
 | 1 | **Home** | `Home` | Master dashboard displaying live stats, active daily challenges, rating progress, and the overall cognitive radar chart. |
 | 2 | **Assignment** | `Assignment` | Curated daily tasks served by GM Chanakya to provide structured daily practice. |
 | 3 | **Arena** | `Arena` | Rated competitive matchmaking system against 20 custom AI personas with varying ELO ratings, styles, and time controls. |
-| 4 | **Battleground** | `Battleground` | A free-play sandbox mode against the raw Stockfish engine with a live evaluation bar, side switching, and on-demand commentary. |
+| 4 | **Battleground** | `Battleground` | A free-play sandbox mode against the raw Arasan engine with a live evaluation bar, side switching, and on-demand commentary. |
 | 5 | **Academy** | `Academy` | Active training lobby where GM Chanakya plays against the student, adaptively targeting their specific cognitive weaknesses. |
 | 6 | **Puzzles** | `Puzzles` | Thematic tactical chess puzzles served dynamically based on diagnosed scotomas (blind spots). |
 | 7 | **Analysis** | `Analysis` | Study Lab containing a free board for PGN loading, move exploration, custom position setup, and manual move trees. |
@@ -127,8 +127,8 @@ The 20 personas, ordered from lowest to highest difficulty, are:
 ## 7. Mode: Battleground
 Battleground serves as a sandbox environment:
 - **No Rating Pressure**: Games here do not impact the player's ELO or stats.
-- **Live Evaluation Bar**: A real-time centipawn visual gauge powered by native Stockfish calculations.
-- **Dual Engine / Robot Mode**: A toggle allowing Stockfish to play against itself at adjustable levels.
+- **Live Evaluation Bar**: A real-time centipawn visual gauge powered by native Arasan calculations.
+- **Dual Engine / Robot Mode**: A toggle allowing Arasan to play against itself at adjustable levels.
 - **Mid-Game Control**: Players can pause, undo moves, swap colors mid-game, or request strategic analysis from the High Council.
 
 ---
@@ -136,14 +136,14 @@ Battleground serves as a sandbox environment:
 ## 8. Mode: Academy (Adaptive Intelligence Engine)
 In the Academy, GM Chanakya's move selection is calculated via an adaptive heuristic weight function instead of playing the absolute best engine line:
 
-$$\text{Heuristic Score(Move)} = \text{Eval}_{\text{Stockfish}} + J_{\text{decay}} + \sum B_{\text{scotoma}} + \sum S_{\text{playstyle}}$$
+$$\text{Heuristic Score(Move)} = \text{Eval}_{\text{Arasan}} + J_{\text{decay}} + \sum B_{\text{scotoma}} + \sum S_{\text{playstyle}}$$
 $$\text{Selected Move} = \text{argmax}\left(\text{Heuristic Score}(M)\right)$$
 
 ### 1. Opening Jitter & Decay ($J_{\text{decay}}$)
 Allows for human-like opening variety, decaying to zero as the game reaches critical stages:
 $$J_{\text{decay}} = \text{base\_jitter}(\text{FEN}, \text{Move}) \times \text{Scale}$$
 $$\text{Scale} = \begin{cases} \frac{24 - \text{plies}}{24} & \text{if plies } < 24 \text{ and } \text{Tight Fight is False} \\ 0.0 & \text{otherwise} \end{cases}$$
-- **Tight Fight**: Triggered when $|\text{Eval}_{\text{Stockfish}}| \le 1.5$ centipawns and plies $\ge 20$. When active, jitter is immediately disabled to prevent blunders in close matches.
+- **Tight Fight**: Triggered when $|\text{Eval}_{\text{Arasan}}| \le 1.5$ centipawns and plies $\ge 20$. When active, jitter is immediately disabled to prevent blunders in close matches.
 
 ### 2. Scotoma Bonuses ($B_{\text{scotoma}}$)
 Chanakya increases the score of moves that set up tactical patterns matching the student's weaknesses:
@@ -181,7 +181,7 @@ The Analysis interface provides an offline sandbox for deep game dissection:
 - **PGN Core**: Supports full parsing and generation of Portable Game Notation (PGN) strings.
 - **FEN Import/Export**: Users can set up custom positions using Forsyth-Edwards Notation.
 - **Move Tree**: Tracks and saves branch lines (variations) taken during exploration.
-- **Engine Panel**: Configurable Stockfish analysis showing the top 3 calculated lines (pv lines) along with centipawn scores.
+- **Engine Panel**: Configurable Arasan analysis showing the top 3 calculated lines (pv lines) along with centipawn scores.
 
 ---
 
@@ -227,11 +227,11 @@ The application runs a coordinated hybrid architecture across three processing l
 ```mermaid
 graph TD
     UI[Flutter UI / Dart State] <-->|FFI / flutter_rust_bridge| Rust[Bare-Metal Core / Shakmaty]
-    UI <-->|STDIN / STDOUT Pipe| Stockfish[Stockfish C++ Engine / Native Binaries]
+    UI <-->|STDIN / STDOUT Pipe| Arasan[Arasan C++ Engine / Native Binaries]
 ```
 
 1. **State & UI Layer (Flutter/Dart)**: Manages visual components, user gestures, clocks, audio, and state coordination (via Riverpod).
-2. **Computational Engine (Native Stockfish)**: An ARMv8-optimized C++ binary (`libstockfish.so`) loaded via native platform FFI. It provides fast positional evaluations and moves.
+2. **Computational Engine (Native Arasan)**: An ARMv8-optimized C++ binary (`libarasan_chess_engine.so`) loaded via native platform FFI. It provides fast positional evaluations and moves.
 3. **Bare-Metal Core (Rust)**: A compiled Rust library integrated via `flutter_rust_bridge`. It manages chess logic (`shakmaty`), validates moves, checks for checks/mates, compiles PGN strings, and runs the scotoma diagnostic engine.
 
 ---
@@ -311,7 +311,7 @@ Tracks tactical slip-ups across 8 visual-spatial channels using coordinate-delta
 4. **Time Panic (TMP)**: Blundering with less than 45 seconds remaining.
    $$\text{Condition: } T_{\text{rem}} < 45\text{s}$$
 5. **Material Greed (GRD)**: Capturing a poisoned piece that leads to a drop in evaluation.
-   $$\text{Condition: } \Delta\text{Eval}_{\text{Stockfish}} \le -1.8$$
+    $$\text{Condition: } \Delta\text{Eval}_{\text{Arasan}} \le -1.8$$
 6. **Tunnel Vision (TNL)**: Missing a threat on the opposite side of the board from active play.
    $$\text{Condition: } |x_{\text{threat}} - \text{mean}(x_{\text{recent}})| \ge 4$$
 7. **Pinned Pieces (PIN)**: Moving a pinned piece or missing an opponent's pin threat.
@@ -322,7 +322,7 @@ Tracks tactical slip-ups across 8 visual-spatial channels using coordinate-delta
 ## 20. Implementation Roadmap
 
 ### Phase 1: Engine Stability
-- [x] Integrate native Stockfish process management.
+- [x] Integrate native Arasan FFI engine.
 - [x] Implement UCI communication pipe.
 - [x] Fix cross-platform pathing for Windows and Android.
 
@@ -367,7 +367,7 @@ Tracks tactical slip-ups across 8 visual-spatial channels using coordinate-delta
 - **Core Framework**: Flutter (Dart 3.x)
 - **State Management**: Riverpod (for app state, game loop coordination)
 - **Local Database / Storage**: JSON File (`app_settings.json` for settings, themes, and tutorial progress), SQLite (`ideaspace_games.db` via Rust FFI for game logs and puzzles)
-- **Native Engine FFI**: Stockfish 18 (compiled C++ for Android/Windows ARMv8)
+- **Native Engine FFI**: Arasan 25.4 (compiled C++ for Android ARMv8)
 - **Bare-Metal Core**: Rust + `shakmaty` library via `flutter_rust_bridge`
 - **Typography**: Outfit, Inter, JetBrains Mono, Pirata One (loaded via Google Fonts)
 - **Platform Targets**: Android (Primary / ARMv8 optimized), Windows (Secondary)

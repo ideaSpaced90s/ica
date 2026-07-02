@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:math' show exp;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../data/analysis_stockfish_service.dart';
+import '../data/analysis_arasan_service.dart';
 import '../data/uci_parser.dart';
 import '../domain/chess_game.dart';
 import 'study_lab_provider.dart';
@@ -100,7 +100,7 @@ const Object _sentinel = Object();
 
 
 class AnalysisEngineController extends Notifier<AnalysisEngineState> {
-  late final AnalysisStockfishService _service;
+  late final AnalysisArasanService _service;
   StreamSubscription? _subscription;
 
   // Throttling fields
@@ -113,7 +113,7 @@ class AnalysisEngineController extends Notifier<AnalysisEngineState> {
 
   @override
   AnalysisEngineState build() {
-    _service = ref.watch(analysisStockfishServiceProvider);
+    _service = ref.watch(analysisArasanServiceProvider);
     _init();
     ref.onDispose(() {
       _throttleTimer?.cancel();
@@ -125,7 +125,7 @@ class AnalysisEngineController extends Notifier<AnalysisEngineState> {
   void _init() {
     _subscription = _service.outputStream.listen(_handleLiveOutput);
     _service.init().then((_) {
-      debugPrint('AnalysisEngineController: Analysis Stockfish service initialized.');
+      debugPrint('AnalysisEngineController: Analysis Arasan service initialized.');
     });
   }
 

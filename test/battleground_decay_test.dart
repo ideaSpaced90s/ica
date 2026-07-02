@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kingslayer_chess/features/chess/application/battleground_provider.dart';
-import 'package:kingslayer_chess/features/chess/data/stockfish_service.dart';
+import 'package:kingslayer_chess/features/chess/data/arasan_service.dart';
 import 'package:kingslayer_chess/features/chess/services/chess_sound_service.dart';
 import 'package:kingslayer_chess/features/chess/services/chess_haptics_service.dart';
 import 'package:kingslayer_chess/features/chess/data/performance_ledger_repository.dart';
@@ -14,7 +14,7 @@ import 'package:kingslayer_chess/features/chess/application/chess_provider.dart'
 import 'package:kingslayer_chess/features/chess/services/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-class FakeStockfishService extends Fake implements StockfishService {
+class FakeArasanService extends Fake implements ArasanService {
   @override
   bool get isReady => true;
   @override
@@ -101,14 +101,14 @@ class TestSettingsRepository implements SettingsRepository {
 
 void main() {
   group('ELO Inactivity Decay and Calibration Tests', () {
-    late FakeStockfishService fakeStockfish;
+    late FakeArasanService fakeArasan;
     late FakeSavedGameRepository fakeSavedGameRepo;
     late FakePerformanceLedgerRepository fakeLedgerRepo;
     late FakeChessSoundService fakeSoundService;
     late FakeChessHapticsService fakeHapticsService;
 
     setUp(() {
-      fakeStockfish = FakeStockfishService();
+      fakeArasan = FakeArasanService();
       fakeSavedGameRepo = FakeSavedGameRepository();
       fakeLedgerRepo = FakePerformanceLedgerRepository();
       fakeSoundService = FakeChessSoundService();
@@ -125,7 +125,7 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
-          stockfishServiceProvider.overrideWithValue(fakeStockfish),
+          arasanServiceProvider.overrideWithValue(fakeArasan),
           savedGameRepositoryProvider.overrideWithValue(fakeSavedGameRepo),
           performanceLedgerRepositoryProvider.overrideWithValue(fakeLedgerRepo),
           chessSoundServiceProvider.overrideWithValue(fakeSoundService),
@@ -159,7 +159,7 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
-          stockfishServiceProvider.overrideWithValue(fakeStockfish),
+          arasanServiceProvider.overrideWithValue(fakeArasan),
           savedGameRepositoryProvider.overrideWithValue(fakeSavedGameRepo),
           performanceLedgerRepositoryProvider.overrideWithValue(fakeLedgerRepo),
           chessSoundServiceProvider.overrideWithValue(fakeSoundService),
@@ -201,7 +201,7 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
-          stockfishServiceProvider.overrideWithValue(fakeStockfish),
+          arasanServiceProvider.overrideWithValue(fakeArasan),
           savedGameRepositoryProvider.overrideWithValue(fakeSavedGameRepo),
           performanceLedgerRepositoryProvider.overrideWithValue(fakeLedgerRepo),
           chessSoundServiceProvider.overrideWithValue(fakeSoundService),

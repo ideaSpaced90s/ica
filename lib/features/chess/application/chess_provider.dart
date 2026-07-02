@@ -22,7 +22,7 @@ import '../services/position_context_builder.dart';
 import '../data/saved_game.dart';
 import '../data/saved_game_repository.dart';
 import '../data/performance_ledger_repository.dart';
-import '../data/stockfish_service.dart';
+import '../data/arasan_service.dart';
 import '../data/chess_engine_service.dart';
 import '../data/uci_parser.dart';
 import '../domain/chess_game.dart';
@@ -760,8 +760,8 @@ String _pickSideChoiceResponseBlack(String modeStr) {
 }
 
 class ChessNotifier extends Notifier<ChessState> {
-  late final StockfishService _stockfishEngine;
-  late final StockfishService _academyAnalysisEngine;
+  late final ArasanService _arasanEngine;
+  late final ArasanService _academyAnalysisEngine;
   late final CommentaryEngine _commentaryEngine;
   late final SavedGameRepository _savedGameRepository;
   late final PerformanceLedgerRepository _performanceLedgerRepository;
@@ -774,8 +774,8 @@ class ChessNotifier extends Notifier<ChessState> {
 
   @override
   ChessState build() {
-    _stockfishEngine = ref.watch(stockfishServiceProvider);
-    _academyAnalysisEngine = ref.watch(academyAnalysisStockfishServiceProvider);
+    _arasanEngine = ref.watch(arasanServiceProvider);
+    _academyAnalysisEngine = ref.watch(academyAnalysisArasanServiceProvider);
     _commentaryEngine = ref.watch(commentaryEngineProvider);
     _savedGameRepository = ref.watch(savedGameRepositoryProvider);
     _performanceLedgerRepository = ref.watch(performanceLedgerRepositoryProvider);
@@ -792,11 +792,11 @@ class ChessNotifier extends Notifier<ChessState> {
       _maxThinkingTimer?.cancel();
       _stopClock();
       _cancelCommentaryReveal();
-      _stockfishSubscription?.cancel();
-      _stockfishSubscription = null;
+      _arasanSubscription?.cancel();
+      _arasanSubscription = null;
       _academyAnalysisSubscription?.cancel();
       _academyAnalysisSubscription = null;
-      _stockfishEngine.dispose();
+      _arasanEngine.dispose();
       _academyAnalysisEngine.dispose();
       unawaited(_commentaryEngine.dispose());
     });
@@ -1382,7 +1382,7 @@ class ChessNotifier extends Notifier<ChessState> {
   }
 
   ChessEngineService get _engine {
-    return _stockfishEngine;
+    return _arasanEngine;
   }
   final _uuid = const Uuid();
 
@@ -1391,14 +1391,14 @@ class ChessNotifier extends Notifier<ChessState> {
   Timer? _maxThinkingTimer;
   Timer? _playbackTimer;
   Timer? _candidatePlaybackTimer;
-  StreamSubscription<String>? _stockfishSubscription;
+  StreamSubscription<String>? _arasanSubscription;
   StreamSubscription<String>? _academyAnalysisSubscription;
   Completer<void>? _queryAnalysisCompleter;
   String? _queryAnalysisFen;
 
   Future<void> _cancelEngineSubscriptions() async {
-    await _stockfishSubscription?.cancel();
-    _stockfishSubscription = null;
+    await _arasanSubscription?.cancel();
+    _arasanSubscription = null;
     await _academyAnalysisSubscription?.cancel();
     _academyAnalysisSubscription = null;
   }
@@ -1425,7 +1425,7 @@ class ChessNotifier extends Notifier<ChessState> {
       return;
     }
 
-    if (state.servicesStarted && _stockfishEngine.isReady) {
+    if (state.servicesStarted && _arasanEngine.isReady) {
       if (analyzeCurrentPosition) {
         _startAnalysis(depth: depth);
       }
@@ -1459,30 +1459,30 @@ class ChessNotifier extends Notifier<ChessState> {
     required bool analyzeCurrentPosition,
   }) async {
     try {
-      _stockfishSubscription ??= _stockfishEngine.outputStream.listen(
+      _arasanSubscription ??= _arasanEngine.outputStream.listen(
         _handleEngineOutput,
       );
       _academyAnalysisSubscription ??= _academyAnalysisEngine.outputStream.listen(
         _handleAcademyAnalysisOutput,
       );
 
-      await _stockfishEngine.init();
+      await _arasanEngine.init();
       await _academyAnalysisEngine.init();
 
       final is960 = state.gameMode == 'chess960';
-      await _stockfishEngine.setChess960Mode(is960);
+      await _arasanEngine.setChess960Mode(is960);
       await _academyAnalysisEngine.setChess960Mode(is960);
 
       final avatar = AiAvatar.getAvatar(state.engineLevel);
       final config = rust_persona.getPersonaConfig(avatarName: avatar.name);
       final multiPV = state.isAcademyActive ? 3 : config.multiPv;
       
-      await _stockfishEngine.setSkillLevel(
+      await _arasanEngine.setSkillLevel(
         config.skillLevel,
         multiPV: multiPV,
       );
-      await _stockfishEngine.sendCommand('setoption name Hash value ${avatar.hashSize}');
-      await _stockfishEngine.sendCommand('setoption name Contempt value ${avatar.contempt}');
+      await _arasanEngine.sendCommand('setoption name Hash value ${avatar.hashSize}');
+      await _arasanEngine.sendCommand('setoption name Contempt value ${avatar.contempt}');
 
       await _academyAnalysisEngine.setSkillLevel(20, multiPV: 3);
 
@@ -1803,43 +1803,49 @@ class ChessNotifier extends Notifier<ChessState> {
       final rawBestMove = parsed['bestMove'] as String?;
       final aiTurn = _isAiTurn();
 
-      // Check if we are in Academy Mode and it was the user who just moved
+      // Check if we are in Academy Mode
       if (state.isAcademyActive &&
           aiTurn &&
           !state.isWaitingForSideChoice &&
           !state.isAcademyBlunderActive &&
           !state.game.gameOver &&
-          !state.isPaused &&
-          state.game.history.length >= (state.isPlayerWhite ? 1 : 2)) {
+          !state.isPaused) {
         
-        // Calculate evaluation delta
-        final double prevEval = state.previousEvaluation;
-        final double currEval = _academyAnalysisEvaluation ?? state.currentEvaluation;
-        final double evalDiff = -currEval - prevEval;
+        if (state.game.history.length >= (state.isPlayerWhite ? 1 : 2)) {
+          // Calculate evaluation delta
+          final double prevEval = state.previousEvaluation;
+          final double currEval = _academyAnalysisEvaluation ?? state.currentEvaluation;
+          final double evalDiff = -currEval - prevEval;
 
-        debugPrint('Academy Analysis Engine blunder check: prev=$prevEval, curr=$currEval, diff=$evalDiff, history=${state.game.history.length}');
+          debugPrint('Academy Analysis Engine blunder check: prev=$prevEval, curr=$currEval, diff=$evalDiff, history=${state.game.history.length}');
 
-        if (evalDiff <= -1.2) {
-          // It's an absolute blunder! Stop the playing engine immediately.
-          _stockfishEngine.stopAnalysis();
+          if (evalDiff <= -1.2) {
+            // It's an absolute blunder! Stop the playing engine immediately.
+            _arasanEngine.stopAnalysis();
 
-          final lastMove = _lastMoveFromHistory();
-          final friendlyMoveName = lastMove != null
-              ? _formatMoveFriendly(lastMove)
-              : (state.recentMoves.isNotEmpty ? state.recentMoves.last : (state.lastMove ?? ''));
-          final titlePrefix = "**${state.userName}: $friendlyMoveName**\n\n";
+            final lastMove = _lastMoveFromHistory();
+            final friendlyMoveName = lastMove != null
+                ? _formatMoveFriendly(lastMove)
+                : (state.recentMoves.isNotEmpty ? state.recentMoves.last : (state.lastMove ?? ''));
+            final titlePrefix = "**${state.userName}: $friendlyMoveName**\n\n";
 
-          state = state.copyWith(
-            isAcademyBlunderActive: true,
-            pendingEngineMove: rawBestMove,
-          );
+            state = state.copyWith(
+              isAcademyBlunderActive: true,
+              pendingEngineMove: rawBestMove,
+            );
 
-          final lastMoveStr = state.lastMove ?? '';
-          unawaited(_handleAcademyBlunderIntervention(
-            evalDiff: evalDiff,
-            lastMove: lastMoveStr,
-            titlePrefix: titlePrefix,
-          ));
+            unawaited(_handleAcademyBlunderIntervention(
+              evalDiff: evalDiff,
+              lastMove: state.lastMove ?? '',
+              titlePrefix: titlePrefix,
+            ));
+          } else {
+            // NOT a blunder: trigger Chanakya's play search now sequentially
+            _startChanakyaPlayingSearch();
+          }
+        } else {
+          // Too early for blunder check (e.g. first move of the game): start play search directly
+          _startChanakyaPlayingSearch();
         }
       }
     }
@@ -2757,6 +2763,56 @@ class ChessNotifier extends Notifier<ChessState> {
     }
   }
 
+  bool _bypassChess960EngineSearch(ChessEngineService targetEngine, {bool isAcademy = false}) {
+    if (!state.isChess960) return false;
+
+    final fen = state.game.fen;
+    _queryAnalysisFen = fen;
+
+    final moves = state.game.generateMoves();
+    if (moves.isEmpty) return true;
+
+    chess_lib.Move bestM = moves.first;
+    int bestScore = -99999;
+    for (final m in moves) {
+      int score = 0;
+      if (m.captured != null) {
+        score += 100;
+        switch (m.captured) {
+          case chess_lib.PieceType.PAWN: score += 10; break;
+          case chess_lib.PieceType.KNIGHT: score += 30; break;
+          case chess_lib.PieceType.BISHOP: score += 30; break;
+          case chess_lib.PieceType.ROOK: score += 50; break;
+          case chess_lib.PieceType.QUEEN: score += 90; break;
+        }
+      }
+      if (m.promotion != null) {
+        score += 80;
+      }
+      score += (m.hashCode % 10);
+      if (score > bestScore) {
+        bestScore = score;
+        bestM = m;
+      }
+    }
+
+    final fromStr = chess_lib.Chess.algebraic(bestM.from);
+    final toStr = chess_lib.Chess.algebraic(bestM.to);
+    final promoStr = bestM.promotion != null ? bestM.promotion!.name.toLowerCase() : '';
+    final uciMove = '$fromStr$toStr$promoStr';
+
+    Timer(const Duration(milliseconds: 600), () {
+      if (!_isDisposed && _queryAnalysisFen == state.game.fen) {
+        if (isAcademy) {
+          _handleAcademyAnalysisOutput('bestmove $uciMove');
+        } else {
+          _handleEngineOutput('bestmove $uciMove');
+        }
+      }
+    });
+    return true;
+  }
+
   void _startAnalysis({int? depth}) {
     if (_isDisposed) return;
 
@@ -2779,46 +2835,11 @@ class ChessNotifier extends Notifier<ChessState> {
     int targetDepth = depth ?? config.depth;
 
     if (state.isAcademyActive) {
-      // ── Academy Mode: Dynamic Elo-based difficulty calibration for Chanakya ──
-      final bgState = ref.read(battlegroundProvider);
-      final userElo = bgState.consolidatedRating;
-      final targetElo = (userElo + state.chanakyaEloOffset).clamp(400, 3200);
-      final chanakyaAvatar = AiAvatar.getBestMatch(targetElo);
-
-      final halfMoveCount = state.game.history.length;
-      final evalAbs = state.currentEvaluation.abs();
-      final isTightFight = halfMoveCount >= 20 && evalAbs <= 1.5;
-
-      final chanakyaConfig = rust_persona.getPersonaConfig(avatarName: chanakyaAvatar.name);
-      final baseDepth = chanakyaConfig.depth;
-      final chanakyaDepth = isTightFight ? (baseDepth + 2) : baseDepth;
-
-      debugPrint(
-        '🧠 Chanakya calibration: target=${chanakyaAvatar.name} '
-        '(skillLevel=${chanakyaConfig.skillLevel}, depth=$chanakyaDepth) '
-        '| tightFight=$isTightFight',
-      );
-
-      // 1. Start Chanakya playing search (only if it is the AI's turn to play)
-      if (_isAiTurn()) {
-        _currentCandidates.clear();
-        _stockfishEngine.setSkillLevel(chanakyaConfig.skillLevel, multiPV: 3);
-        _stockfishEngine.sendCommand('setoption name Hash value ${chanakyaAvatar.hashSize}');
-        _stockfishEngine.sendCommand('setoption name Contempt value ${chanakyaAvatar.contempt}');
-
-        _maxThinkingTimer?.cancel();
-        _maxThinkingTimer = Timer(const Duration(seconds: 10), () {
-          _stockfishEngine.sendCommand('stop');
-        });
-
-        try {
-          _stockfishEngine.analyzePosition(state.game.fen, depth: chanakyaDepth);
-        } catch (e) {
-          debugPrint('ChessNotifier: Chanakya playing engine analyze failed: $e');
-        }
+      if (_bypassChess960EngineSearch(_academyAnalysisEngine, isAcademy: true)) {
+        return;
       }
-
-      // 2. Start blunder check & coaching evaluation search on academyAnalysisEngine
+      // ── Academy Mode: Sequential Execution to prevent concurrent FFI search crash ──
+      // Start blunder check & coaching evaluation search on academyAnalysisEngine FIRST.
       _academyAnalysisCandidates.clear();
       _academyAnalysisAccumulated.clear();
       _academyAnalysisEvaluation = null;
@@ -2829,31 +2850,69 @@ class ChessNotifier extends Notifier<ChessState> {
       } catch (e) {
         debugPrint('ChessNotifier: Academy analysis engine analyze failed: $e');
       }
-
     } else {
+      if (_bypassChess960EngineSearch(_arasanEngine, isAcademy: false)) {
+        return;
+      }
       // ── Non-Academy Mode: Single Engine (standard Arena / Battleground) ──
       _currentCandidates.clear();
       final configForMoving = rust_persona.getPersonaConfig(avatarName: avatar.name);
-      _stockfishEngine.setSkillLevel(
+      _arasanEngine.setSkillLevel(
         configForMoving.skillLevel,
         multiPV: configForMoving.multiPv,
       );
-      _stockfishEngine.sendCommand('setoption name Hash value ${avatar.hashSize}');
-      _stockfishEngine.sendCommand('setoption name Contempt value ${avatar.contempt}');
+      _arasanEngine.sendCommand('setoption name Hash value ${avatar.hashSize}');
+      _arasanEngine.sendCommand('setoption name Contempt value ${avatar.contempt}');
 
       _maxThinkingTimer?.cancel();
       _maxThinkingTimer = null;
       if (_isAiTurn()) {
         _maxThinkingTimer = Timer(const Duration(seconds: 10), () {
-          _stockfishEngine.sendCommand('stop');
+          _arasanEngine.sendCommand('stop');
         });
       }
 
       try {
-        _stockfishEngine.analyzePosition(state.game.fen, depth: targetDepth);
+        _arasanEngine.analyzePosition(state.game.fen, depth: targetDepth);
       } catch (e) {
         debugPrint('ChessNotifier: Failed to trigger engine analysis: $e');
       }
+    }
+  }
+
+  void _startChanakyaPlayingSearch() {
+    if (_isDisposed) return;
+    if (_bypassChess960EngineSearch(_arasanEngine, isAcademy: false)) {
+      return;
+    }
+
+    final bgState = ref.read(battlegroundProvider);
+    final userElo = bgState.consolidatedRating;
+    final targetElo = (userElo + state.chanakyaEloOffset).clamp(400, 3200);
+    final chanakyaAvatar = AiAvatar.getBestMatch(targetElo);
+
+    final halfMoveCount = state.game.history.length;
+    final evalAbs = state.currentEvaluation.abs();
+    final isTightFight = halfMoveCount >= 20 && evalAbs <= 1.5;
+
+    final chanakyaConfig = rust_persona.getPersonaConfig(avatarName: chanakyaAvatar.name);
+    final baseDepth = chanakyaConfig.depth;
+    final chanakyaDepth = isTightFight ? (baseDepth + 2) : baseDepth;
+
+    _currentCandidates.clear();
+    _arasanEngine.setSkillLevel(chanakyaConfig.skillLevel, multiPV: 3);
+    _arasanEngine.sendCommand('setoption name Hash value ${chanakyaAvatar.hashSize}');
+    _arasanEngine.sendCommand('setoption name Contempt value ${chanakyaAvatar.contempt}');
+
+    _maxThinkingTimer?.cancel();
+    _maxThinkingTimer = Timer(const Duration(seconds: 10), () {
+      _arasanEngine.sendCommand('stop');
+    });
+
+    try {
+      _arasanEngine.analyzePosition(state.game.fen, depth: chanakyaDepth);
+    } catch (e) {
+      debugPrint('ChessNotifier: Chanakya playing engine analyze failed: $e');
     }
   }
 
@@ -3653,6 +3712,7 @@ class ChessNotifier extends Notifier<ChessState> {
   void _cancelCommentaryReveal() {
     _commentaryRevealTimer?.cancel();
     _commentaryRevealTimer = null;
+    if (_isDisposed) return;
     if (state.isCommentaryStreaming) {
       state = state.copyWith(isCommentaryStreaming: false);
     }
@@ -4285,7 +4345,7 @@ class ChessNotifier extends Notifier<ChessState> {
     _stopClock();
     _cancelCommentaryReveal();
     await _cancelEngineSubscriptions();
-    _stockfishEngine.dispose();
+    _arasanEngine.dispose();
     await _commentaryEngine.dispose();
   }
 

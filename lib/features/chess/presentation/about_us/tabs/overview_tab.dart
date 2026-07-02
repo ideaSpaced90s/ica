@@ -132,7 +132,7 @@ class OverviewTab extends StatelessWidget {
         _buildPillarCard(
           icon: Icons.android_rounded,
           title: 'Persona-Driven AI Simulation',
-          description: 'Simulates real-world competitive styles through custom Stockfish profiles, coaching you against attackers, endgames, and defensive specialists.',
+          description: 'Simulates real-world competitive styles through custom Arasan profiles, coaching you against attackers, endgames, and defensive specialists.',
         ),
         const SizedBox(height: 10),
         _buildPillarCard(

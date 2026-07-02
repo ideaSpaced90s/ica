@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kingslayer_chess/features/chess/data/stockfish_service.dart';
+import 'package:kingslayer_chess/features/chess/data/arasan_service.dart';
 
 void main() {
-  test('StockfishService setChess960Mode returns immediately when process is null', () async {
-    final service = StockfishService();
+  test('ArasanService setChess960Mode returns immediately when process is null', () async {
+    final service = ArasanService();
     
     // We haven't called service.init(), so process is null.
     // setChess960Mode should return immediately without hanging.
@@ -16,8 +16,8 @@ void main() {
     );
   });
 
-  test('StockfishService setSkillLevel returns immediately when process is null', () async {
-    final service = StockfishService();
+  test('ArasanService setSkillLevel returns immediately when process is null', () async {
+    final service = ArasanService();
     
     final future = service.setSkillLevel(10);
     

@@ -9,7 +9,7 @@ pub struct TacticData {
 }
 
 #[derive(Clone, Debug)]
-pub struct StockfishTacticLine {
+pub struct ArasanTacticLine {
     pub move_uci: String,
     pub evaluation: f64,
     pub pv: Vec<String>,
@@ -74,7 +74,7 @@ fn parse_uci_to_move(pos: &Chess, uci: &str) -> Option<Move> {
 pub fn generate_tactics_analysis(
     fen: String,
     user_uci_moves: Vec<String>,
-    engine_alternatives: Vec<StockfishTacticLine>,
+    engine_alternatives: Vec<ArasanTacticLine>,
     is_chess960: bool,
 ) -> TacticsResult {
     let setup = match fen.parse::<Fen>() {

@@ -12,7 +12,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 TacticsResult generateTacticsAnalysis({
   required String fen,
   required List<String> userUciMoves,
-  required List<StockfishTacticLine> engineAlternatives,
+  required List<ArasanTacticLine> engineAlternatives,
   required bool isChess960,
 }) => RustLib.instance.api.crateApiTacticsGenerateTacticsAnalysis(
   fen: fen,
@@ -21,12 +21,12 @@ TacticsResult generateTacticsAnalysis({
   isChess960: isChess960,
 );
 
-class StockfishTacticLine {
+class ArasanTacticLine {
   final String moveUci;
   final double evaluation;
   final List<String> pv;
 
-  const StockfishTacticLine({
+  const ArasanTacticLine({
     required this.moveUci,
     required this.evaluation,
     required this.pv,
@@ -38,7 +38,7 @@ class StockfishTacticLine {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is StockfishTacticLine &&
+      other is ArasanTacticLine &&
           runtimeType == other.runtimeType &&
           moveUci == other.moveUci &&
           evaluation == other.evaluation &&

@@ -191,7 +191,7 @@ class _GameReportPanelState extends ConsumerState<GameReportPanel> {
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 32.0),
                       child: Text(
-                        'Get a move-by-move accuracy report and a comprehensive evaluation graph powered by Stockfish.',
+                        'Get a move-by-move accuracy report and a comprehensive evaluation graph powered by Arasan.',
                         textAlign: TextAlign.center,
                         style: GoogleFonts.inter(
                           color: ScholarlyTheme.textMuted,

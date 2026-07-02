@@ -260,8 +260,8 @@ class _GameLibraryTabState extends ConsumerState<GameLibraryTab> {
     buffer.writeln('[Site "IdeaSpace Chess Academy"]');
     buffer.writeln('[Date "$dateStr"]');
     buffer.writeln('[Round "1"]');
-    buffer.writeln('[White "${game.isPlayerWhite ? "Player" : "Stockfish"}"]');
-    buffer.writeln('[Black "${game.isPlayerWhite ? "Stockfish" : "Player"}"]');
+    buffer.writeln('[White "${game.isPlayerWhite ? "Player" : "Arasan"}"]');
+    buffer.writeln('[Black "${game.isPlayerWhite ? "Arasan" : "Player"}"]');
     buffer.writeln('[Result "*"]');
     if (game.gameMode == 'chess960') {
       buffer.writeln('[Variant "Chess960"]');

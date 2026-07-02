@@ -418,7 +418,7 @@ class CommentaryEngine {
       }
       yield _pick(_tacticsLoaders);
       try {
-        final engineAlternatives = (tacticsCandidates ?? []).map((c) => StockfishTacticLine(
+        final engineAlternatives = (tacticsCandidates ?? []).map((c) => ArasanTacticLine(
           moveUci: c.uciMove,
           evaluation: c.evaluation,
           pv: c.fullPv,

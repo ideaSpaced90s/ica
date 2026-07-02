@@ -39,6 +39,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   String dco_decode_String(dynamic raw);
 
   @protected
+  ArasanTacticLine dco_decode_arasan_tactic_line(dynamic raw);
+
+  @protected
   bool dco_decode_bool(dynamic raw);
 
   @protected
@@ -99,6 +102,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<String> dco_decode_list_String(dynamic raw);
 
   @protected
+  List<ArasanTacticLine> dco_decode_list_arasan_tactic_line(dynamic raw);
+
+  @protected
   List<ChanakyaCandidate> dco_decode_list_chanakya_candidate(dynamic raw);
 
   @protected
@@ -124,9 +130,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<SavedGameUci> dco_decode_list_saved_game_uci(dynamic raw);
-
-  @protected
-  List<StockfishTacticLine> dco_decode_list_stockfish_tactic_line(dynamic raw);
 
   @protected
   List<TacticData> dco_decode_list_tactic_data(dynamic raw);
@@ -171,9 +174,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ScotomaResult dco_decode_scotoma_result(dynamic raw);
 
   @protected
-  StockfishTacticLine dco_decode_stockfish_tactic_line(dynamic raw);
-
-  @protected
   TacticData dco_decode_tactic_data(dynamic raw);
 
   @protected
@@ -193,6 +193,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   String sse_decode_String(SseDeserializer deserializer);
+
+  @protected
+  ArasanTacticLine sse_decode_arasan_tactic_line(SseDeserializer deserializer);
 
   @protected
   bool sse_decode_bool(SseDeserializer deserializer);
@@ -269,6 +272,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<String> sse_decode_list_String(SseDeserializer deserializer);
 
   @protected
+  List<ArasanTacticLine> sse_decode_list_arasan_tactic_line(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<ChanakyaCandidate> sse_decode_list_chanakya_candidate(
     SseDeserializer deserializer,
   );
@@ -302,11 +310,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<SavedGameUci> sse_decode_list_saved_game_uci(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  List<StockfishTacticLine> sse_decode_list_stockfish_tactic_line(
     SseDeserializer deserializer,
   );
 
@@ -355,11 +358,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ScotomaResult sse_decode_scotoma_result(SseDeserializer deserializer);
 
   @protected
-  StockfishTacticLine sse_decode_stockfish_tactic_line(
-    SseDeserializer deserializer,
-  );
-
-  @protected
   TacticData sse_decode_tactic_data(SseDeserializer deserializer);
 
   @protected
@@ -379,6 +377,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_String(String self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_arasan_tactic_line(
+    ArasanTacticLine self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_bool(bool self, SseSerializer serializer);
@@ -477,6 +481,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_list_String(List<String> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_arasan_tactic_line(
+    List<ArasanTacticLine> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_chanakya_candidate(
     List<ChanakyaCandidate> self,
     SseSerializer serializer,
@@ -524,12 +534,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_saved_game_uci(
     List<SavedGameUci> self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_list_stockfish_tactic_line(
-    List<StockfishTacticLine> self,
     SseSerializer serializer,
   );
 
@@ -592,12 +596,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_scotoma_result(ScotomaResult self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_stockfish_tactic_line(
-    StockfishTacticLine self,
-    SseSerializer serializer,
-  );
 
   @protected
   void sse_encode_tactic_data(TacticData self, SseSerializer serializer);
