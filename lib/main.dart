@@ -83,6 +83,44 @@ class _IdeaSpaceAppView extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ScholarlyTheme.themeData,
       home: const SplashScreen(),
+      builder: (context, child) {
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final width = constraints.maxWidth;
+            final height = constraints.maxHeight;
+            if (height > 0 && width / height > 0.72) {
+              final targetWidth = height * 0.5625;
+              final mediaQuery = MediaQuery.of(context);
+              final adjustedPadding = mediaQuery.padding.copyWith(
+                left: 0,
+                right: 0,
+              );
+              final adjustedViewPadding = mediaQuery.viewPadding.copyWith(
+                left: 0,
+                right: 0,
+              );
+
+              return Container(
+                color: Colors.black,
+                child: Center(
+                  child: SizedBox(
+                    width: targetWidth,
+                    child: MediaQuery(
+                      data: mediaQuery.copyWith(
+                        size: Size(targetWidth, height),
+                        padding: adjustedPadding,
+                        viewPadding: adjustedViewPadding,
+                      ),
+                      child: child ?? const SizedBox.shrink(),
+                    ),
+                  ),
+                ),
+              );
+            }
+            return child ?? const SizedBox.shrink();
+          },
+        );
+      },
     );
   }
 }
