@@ -58,6 +58,7 @@ class ProfileTab extends ConsumerWidget {
                         : Image.file(
                             File(state.userAvatarPath),
                             fit: BoxFit.cover,
+                            cacheWidth: 300,
                           ),
                   ),
                 ),

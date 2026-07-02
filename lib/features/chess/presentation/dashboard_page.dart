@@ -355,6 +355,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                             : Image.file(
                                 File(state.userAvatarPath),
                                 fit: BoxFit.cover,
+                                cacheWidth: 200,
                               ),
                       ),
                     ),

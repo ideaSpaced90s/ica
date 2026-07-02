@@ -112,6 +112,7 @@ class _UserAvatarIndicatorState extends State<UserAvatarIndicator> {
                           : Image.file(
                               File(avatarPath),
                               fit: BoxFit.cover,
+                              cacheWidth: 100,
                             ),
                     ),
                   ),

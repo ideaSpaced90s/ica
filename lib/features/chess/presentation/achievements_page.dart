@@ -1668,7 +1668,11 @@ class _UserAvatar extends StatelessWidget {
       child: ClipOval(
         child: path.startsWith('assets/')
             ? Image.asset(path, fit: BoxFit.cover)
-            : Image.file(File(path), fit: BoxFit.cover),
+            : Image.file(
+                File(path),
+                fit: BoxFit.cover,
+                cacheWidth: (size * 2).round(),
+              ),
       ),
     );
   }
