@@ -612,8 +612,8 @@ pub struct SingleGameAnalysisResult {
     pub is_analyzed: bool,
 }
 
-fn detect_opening(moves: &[String], game_mode: &str) -> String {
-    if game_mode == "chess960" {
+fn detect_opening(moves: &[String], is_chess960: bool) -> String {
+    if is_chess960 {
         return "Chess 960 Variant".to_string();
     }
     if moves.is_empty() {
@@ -704,7 +704,7 @@ fn detect_opening(moves: &[String], game_mode: &str) -> String {
 
 #[flutter_rust_bridge::frb(sync)]
 pub fn analyze_single_game(game: SavedGameUci) -> SingleGameAnalysisResult {
-    let opening_name = detect_opening(&game.recent_moves, &game.game_mode);
+    let opening_name = detect_opening(&game.recent_moves, game.is_chess960);
     
     let replayed = match replay_game(&game) {
         Some(r) if !r.moves.is_empty() => r,
